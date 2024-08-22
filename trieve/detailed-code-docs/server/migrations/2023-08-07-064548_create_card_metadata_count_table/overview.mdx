@@ -1,0 +1,69 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and managing a `card_metadata_count` table in a database. The purpose of this table is to maintain an up-to-date count of rows in the `card_metadata` table, likely for performance optimization in querying the total number of card metadata entries.
+
+## What does it do?
+The migration scripts in this directory set up a system to efficiently track the total number of rows in the `card_metadata` table. Instead of running a potentially expensive COUNT query on a large table, the system maintains a separate table with a single row containing the total count. This count is automatically updated whenever rows are added to or removed from the `card_metadata` table.
+
+The workflow is as follows:
+1. A new table called `card_metadata_count` is created to store the total row count.
+2. The initial count is populated from the existing `card_metadata` table.
+3. A trigger function is created to update this count.
+4. A trigger is set up on the `card_metadata` table to call this function whenever rows are inserted or deleted.
+
+This setup allows for fast retrieval of the total row count without the need for a full table scan, which can be beneficial for large datasets or frequently accessed counts.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to set up the `card_metadata_count` table and the associated trigger system. It performs the following actions:
+
+1. Creates the `card_metadata_count` table with columns:
+   - `id`: A UUID serving as the primary key
+   - `total_rows`: A BIGINT representing the total number of rows in the `card_metadata` table
+
+2. Inserts the initial count from the `card_metadata` table into `card_metadata_count`.
+
+3. Creates a trigger function `update_card_metadata_count()` that updates the `total_rows` value in `card_metadata_count` whenever a row is inserted or deleted from `card_metadata`.
+
+4. Sets up a trigger `card_metadata_count_trigger` on the `card_metadata` table that calls the `update_card_metadata_count()` function after each INSERT or DELETE operation.
+
+Here's a snippet of the trigger function:
+
+```sql
+CREATE OR REPLACE FUNCTION update_card_metadata_count() RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE card_metadata_count SET total_rows = total_rows + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE card_metadata_count SET total_rows = total_rows - 1;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`. It performs the following actions:
+
+1. Drops the trigger `card_metadata_count_trigger` from the `card_metadata` table.
+2. Drops the trigger function `update_card_metadata_count()`.
+3. Drops the `card_metadata_count` table.
+
+Here's the content of `down.sql`:
+
+```sql
+DROP TRIGGER IF EXISTS card_metadata_count_trigger ON card_metadata;
+DROP FUNCTION IF EXISTS update_card_metadata_count();
+DROP TABLE IF EXISTS card_metadata_count;
+```
+
+## Performance Considerations
+This migration introduces a performance optimization for counting rows in the `card_metadata` table. By maintaining a separate count table, it allows for fast retrieval of the total row count without performing a full table scan on `card_metadata`. This can be particularly beneficial for large datasets or scenarios where the count is frequently accessed.
+
+However, it's worth noting that this approach adds a small overhead to INSERT and DELETE operations on the `card_metadata` table due to the trigger execution. In most cases, this overhead should be negligible compared to the performance gain in count retrieval, but it's something to keep in mind for high-volume insert/delete scenarios.
+
+The use of a trigger ensures that the count remains accurate even in the face of concurrent operations, as the trigger is executed as part of the same transaction as the insert or delete operation.

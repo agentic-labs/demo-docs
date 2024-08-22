@@ -1,0 +1,70 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the unique constraints on the `chunk_metadata` table in a database. The migration aims to change the uniqueness requirement for the `tracking_id` column, making it unique only within the scope of a specific `dataset_id`, rather than globally unique across the entire table.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" direction (applying the migration):
+   - It removes the existing unique constraint on the `tracking_id` column of the `chunk_metadata` table.
+   - It then adds a new unique constraint that combines both `tracking_id` and `dataset_id` columns.
+
+2. In the "down" direction (reverting the migration):
+   - It removes the combined unique constraint on `tracking_id` and `dataset_id`.
+   - It then restores the original unique constraint on just the `tracking_id` column.
+
+This change allows the same `tracking_id` to be used in different datasets, while still ensuring uniqueness within each dataset. This can be useful in scenarios where tracking IDs are generated independently for different datasets but may have overlapping values.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+```sql
+ALTER TABLE chunk_metadata DROP CONSTRAINT card_metadata_tracking_id_key;
+ALTER TABLE chunk_metadata ADD CONSTRAINT chunk_metadata_tracking_id_dataset_id_key UNIQUE (tracking_id, dataset_id);
+```
+
+The first command drops the existing unique constraint on `tracking_id`, and the second command adds a new unique constraint on the combination of `tracking_id` and `dataset_id`.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+ALTER TABLE chunk_metadata DROP CONSTRAINT chunk_metadata_tracking_id_dataset_id_key;
+ALTER TABLE chunk_metadata ADD CONSTRAINT card_metadata_tracking_id_key UNIQUE (tracking_id);
+```
+
+The first command removes the combined unique constraint, and the second command restores the original unique constraint on just `tracking_id`.
+
+## Configuration
+The migration is identified by its timestamp: `2024-01-29-164440`. This timestamp is likely used by a migration management system to track which migrations have been applied and in what order.
+
+It's worth noting that the constraint names in the `up.sql` and `down.sql` files are slightly inconsistent:
+- The original constraint is named `card_metadata_tracking_id_key`, which suggests the table might have been renamed from `card_metadata` to `chunk_metadata` at some point.
+- The new constraint is named `chunk_metadata_tracking_id_dataset_id_key`, which follows the current table name.
+
+This inconsistency doesn't affect the functionality but might be worth addressing for clarity and maintainability in future migrations.
+
+## Dependencies
+This migration doesn't explicitly depend on any external libraries or frameworks. However, it assumes the existence of a database system that supports SQL ALTER TABLE statements and unique constraints. The specific database system (e.g., PostgreSQL, MySQL) is not specified in these scripts, but the syntax is compatible with common SQL databases.
+
+The migration also assumes the existence of a `chunk_metadata` table with `tracking_id` and `dataset_id` columns. The data types of these columns are not specified in the migration scripts but are crucial for the proper functioning of the unique constraint.
+
+## Side Effects
+Applying this migration could potentially have the following side effects:
+
+1. If there were any duplicate `tracking_id` values across different datasets in the `chunk_metadata` table before applying the migration, the new constraint would allow these to remain. However, it would prevent any future insertions or updates that would create duplicates within the same dataset.
+
+2. If any application logic was relying on the global uniqueness of `tracking_id` across all datasets, it would need to be updated to account for the new scoped uniqueness.
+
+3. The migration might fail if there are existing duplicate combinations of `tracking_id` and `dataset_id` in the table when applying the "up" migration.
+
+4. When reverting the migration (applying the "down" script), it could potentially fail if the reversion would create duplicate `tracking_id` values across different datasets.
+
+5. Depending on the size of the `chunk_metadata` table and the database system being used, adding or removing these constraints could temporarily lock the table, potentially affecting database performance during the migration.
+
+It's important to thoroughly test this migration on a copy of the production data before applying it to the live system to ensure that it doesn't cause any data integrity issues or unexpected application behavior.

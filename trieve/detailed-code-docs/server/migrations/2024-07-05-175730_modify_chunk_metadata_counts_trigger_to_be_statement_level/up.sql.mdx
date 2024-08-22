@@ -1,0 +1,44 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script modifies the existing trigger mechanism for updating chunk metadata counts in a PostgreSQL database. It replaces the previous row-level trigger with two new statement-level triggers that handle INSERT and DELETE operations on the `chunk_metadata` table, updating the `dataset_usage_counts` table accordingly.
+
+## Symbols
+
+### `update_chunk_metadata_counts()`
+#### Description
+This is a PostgreSQL function that updates the chunk count for a dataset in the `dataset_usage_counts` table. It's designed to be used as a trigger function for both INSERT and DELETE operations on the `chunk_metadata` table.
+
+#### Inputs
+This function doesn't take explicit inputs but uses the `TG_OP` (trigger operation) system variable and the `modified` table reference.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| RETURN | TRIGGER | Returns NULL as required for trigger functions |
+
+#### Internal Logic
+1. Retrieves the `dataset_id` and count of modified rows from the `modified` table.
+2. For INSERT operations:
+   - Inserts or updates the `dataset_usage_counts` table, incrementing the `chunk_count`.
+3. For DELETE operations:
+   - Updates the `dataset_usage_counts` table, decrementing the `chunk_count`.
+
+### `increase_chunk_metadata_counts_trigger`
+#### Description
+This is a statement-level AFTER INSERT trigger on the `chunk_metadata` table that calls the `update_chunk_metadata_counts()` function.
+
+### `delete_chunk_metadata_counts_trigger`
+#### Description
+This is a statement-level AFTER DELETE trigger on the `chunk_metadata` table that calls the `update_chunk_metadata_counts()` function.
+
+## Side Effects
+- Drops the existing `update_chunk_metadata_counts_trigger` and `update_chunk_metadata_counts` function.
+- Creates a new `update_chunk_metadata_counts()` function.
+- Creates two new triggers: `increase_chunk_metadata_counts_trigger` and `delete_chunk_metadata_counts_trigger`.
+- Modifies the `dataset_usage_counts` table when chunks are inserted or deleted from the `chunk_metadata` table.
+
+## Performance Considerations
+The use of statement-level triggers instead of row-level triggers can potentially improve performance for bulk insert or delete operations, as the trigger function is called once per statement rather than once per affected row.

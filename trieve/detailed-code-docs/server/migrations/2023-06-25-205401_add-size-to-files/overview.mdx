@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for adding a `size` column to the `files` table in the database. It consists of two files: `up.sql` for applying the change, and `down.sql` for reverting it. These migrations are part of a database schema version control system, allowing for structured and reversible changes to the database schema.
+
+## What does it do?
+The migration in this directory modifies the structure of the `files` table in the database. Specifically:
+
+1. The `up.sql` file adds a new column called `size` to the `files` table. This column is designed to store the size of files, likely in bytes, as a non-nullable `bigint` with a default value of 0.
+
+2. The `down.sql` file provides the reverse operation, removing the `size` column from the `files` table. This allows the change to be undone if necessary.
+
+These migrations enable the application to store and manage file size information within the database, which could be useful for various purposes such as storage management, reporting, or user quotas.
+
+## Key Files
+
+1. `up.sql`:
+   This file contains the SQL command to add the `size` column to the `files` table. Here's the content:
+
+   ```sql
+   ALTER TABLE files
+   ADD COLUMN size bigint NOT NULL DEFAULT 0;
+   ```
+
+   This command modifies the `files` table by adding a new `size` column of type `bigint`. The column is set to be non-nullable (`NOT NULL`) and has a default value of 0.
+
+2. `down.sql`:
+   This file contains the SQL command to remove the `size` column from the `files` table. Here's the content:
+
+   ```sql
+   ALTER TABLE files
+   DROP COLUMN size;
+   ```
+
+   This command removes the `size` column from the `files` table, effectively undoing the change made by the `up.sql` file.
+
+## Side Effects
+Executing these migrations will have the following effects:
+
+- Running `up.sql`:
+  - Modifies the schema of the `files` table in the database.
+  - Adds a new `size` column to all existing rows in the `files` table, with a default value of 0.
+  - Future insertions into the `files` table will require a value for the `size` column (or will use the default value of 0 if not specified).
+
+- Running `down.sql`:
+  - Removes the `size` column and all its data from the `files` table.
+  - This operation cannot be undone without restoring from a backup or re-running the `up` migration.
+
+## Performance Considerations
+- Adding a column to an existing table with a default value (as in `up.sql`) is generally a fast operation in most database systems, as it doesn't require updating existing rows.
+- However, if the `files` table contains a large number of rows, this operation might take some time to complete, depending on the database system and hardware.
+- Removing a column (as in `down.sql`) can also be a relatively quick operation, but again, the duration may depend on the size of the table and the database system being used.
+
+## Dependencies
+These migrations assume the existence of:
+1. A database with a `files` table
+2. A database management system that supports `ALTER TABLE` operations for adding and dropping columns
+
+## Error Handling
+No explicit error handling is implemented in these migration files. If there are any issues (e.g., the `files` table doesn't exist, or there are dependencies on the `size` column when trying to remove it), the database system will likely raise an error when executing the migration.
+
+## Notes
+- The use of `bigint` for the `size` column allows for storing very large file sizes (up to 8 bytes or 64 bits), suitable for files up to approximately 8 exabytes in size.
+- The timestamp in the directory name (2023-06-25-205401) indicates when this migration was created and helps maintain the order of migrations.
+- It's crucial to ensure that the `down.sql` file correctly reverses all changes made in the `up.sql` file to maintain database consistency during migrations.

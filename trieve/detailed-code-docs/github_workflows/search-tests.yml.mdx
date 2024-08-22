@@ -1,0 +1,87 @@
+---
+title: "search-tests.yml"
+---
+
+## High-level description
+This code defines a GitHub Actions workflow named "search test suite" that runs on pull requests modifying specific frontend code paths. It executes two jobs, "build-test" and "eslint", to build and lint the search-related code, ensuring code quality and consistency.
+
+## Code Structure
+The code defines a single workflow with two jobs: "build-test" and "eslint". Both jobs run on the same runner type and execute a series of steps, including checking out the code, installing dependencies, and running specific commands. The "eslint" job additionally uses an action to annotate code linting results.
+
+## Symbols
+### `name: search test suite`
+#### Description
+Defines the name of the workflow as "search test suite". This name will be displayed in the GitHub Actions interface.
+
+### `concurrency`
+#### Description
+Configures concurrency for the workflow, ensuring that only one workflow run is active for a given branch at a time. This prevents multiple workflow runs from conflicting with each other.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group | string | `${{ github.workflow }}-${{ github.head_ref }}` - Defines the concurrency group based on the workflow name and branch name. |
+| cancel-in-progress | boolean | `true` - Cancels any in-progress workflow runs within the same concurrency group. |
+
+### `on:`
+#### Description
+Specifies the events that trigger the workflow. In this case, the workflow is triggered on pull requests that modify files within specific paths.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pull_request | object | An object defining the pull request event that triggers the workflow. |
+| paths | array | `- "frontends/search/**"
+      - "frontends/shared/**"
+      - "frontends/config/**"
+      - "clients/fetch-client/**"` - An array of file paths that, when modified in a pull request, will trigger the workflow. |
+
+### `jobs`
+#### Description
+Defines the jobs that are executed within the workflow. Each job runs in its own environment and performs a specific set of tasks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| build-test | object | Defines the "build-test" job, responsible for building the search-related code. |
+| eslint | object | Defines the "eslint" job, responsible for linting the search-related code. |
+
+### `build-test`
+#### Description
+This job builds the search-related code after installing dependencies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| runs-on | string | `blacksmith-2vcpu-ubuntu-2204` - Specifies the type of runner to use for this job. |
+| steps | array | An array of steps to execute within the job. |
+
+#### Internal Logic
+1. **Checkout code:** Uses the `actions/checkout@v4` action to check out the repository's code.
+2. **Install dependencies:** Runs `yarn --frozen-lockfile` to install project dependencies according to the lockfile.
+3. **Build:** Executes `yarn build --filter search` to build the search-related code.
+
+### `eslint`
+#### Description
+This job lints the search-related code using ESLint and annotates the results in the pull request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| runs-on | string | `blacksmith-2vcpu-ubuntu-2204` - Specifies the type of runner to use for this job. |
+| steps | array | An array of steps to execute within the job. |
+
+#### Internal Logic
+1. **Checkout code:** Uses the `actions/checkout@v4` action to check out the repository's code.
+2. **Install dependencies:** Runs `yarn --frozen-lockfile` to install project dependencies according to the lockfile.
+3. **Lint:** Executes `yarn lint:CI --filter search` to lint the search-related code using ESLint in CI mode.
+4. **Annotate results:** Uses the `ataylorme/eslint-annotate-action@1.0.4` action to annotate the linting results in the pull request, providing feedback directly within the GitHub interface.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository's code within the workflow. |
+| ataylorme/eslint-annotate-action | Annotates ESLint results directly in the pull request on GitHub. |
+
+## Error Handling
+The workflow does not implement specific error handling beyond the default behavior of GitHub Actions. If any step within a job fails, the job will fail, and the workflow run will be marked as failed.

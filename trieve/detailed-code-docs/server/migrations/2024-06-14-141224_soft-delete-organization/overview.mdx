@@ -1,0 +1,54 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for implementing a soft delete functionality for the organizations table in the database. The migration is dated 2024-06-14 and includes both 'up' and 'down' scripts to apply and revert the changes respectively.
+
+## What does it do?
+The migration adds a new column called 'deleted' to the organizations table. This column allows for logical deletion of organization records without physically removing them from the database. When an organization is "deleted", instead of removing the record, the 'deleted' column is set to a non-zero value (presumably 1). This approach, known as soft delete, preserves the data for potential future recovery or auditing purposes while allowing the application to filter out "deleted" records during normal operations.
+
+The migration also creates an index on the 'deleted' column to improve query performance when filtering organizations based on their deletion status.
+
+## Key Files
+
+1. up.sql
+   This file contains the SQL commands to implement the soft delete functionality:
+   - It adds a 'deleted' column to the organizations table, defined as an integer with a default value of 0 and set to NOT NULL.
+   - It creates an index named 'idx_organization_deleted' on the 'deleted' column.
+
+   Here's the content of up.sql:
+
+   ```sql
+   ALTER TABLE organizations
+   ADD COLUMN deleted INT NOT NULL DEFAULT 0;
+
+   CREATE INDEX IF NOT EXISTS idx_organization_deleted
+   ON organizations (deleted);
+   ```
+
+2. down.sql
+   This file contains the SQL commands to revert the changes made by up.sql:
+   - It drops the 'deleted' column from the organizations table.
+   - It drops the index 'idx_organization_deleted'.
+
+   Here's the content of down.sql:
+
+   ```sql
+   ALTER TABLE organizations DROP COLUMN IF EXISTS deleted;
+   DROP INDEX IF EXISTS idx_organization_deleted;
+   ```
+
+## Performance Considerations
+The addition of the 'deleted' column should be a relatively quick operation, even on tables with many rows, as it doesn't require updating existing data. However, creating an index can be more time-consuming, especially on tables with a large number of rows, as it needs to process all existing data.
+
+The new index will slightly slow down insert and update operations on the organizations table but will significantly speed up queries that filter on the 'deleted' column. This trade-off is generally beneficial in systems where read operations (especially those filtering on the soft delete status) are more frequent than write operations.
+
+When reverting the migration, dropping a column and an index are typically fast operations, but they may briefly lock the table during execution. The impact on a production system would depend on the size of the table and the current load on the database.
+
+## Error Handling
+Both scripts use 'IF EXISTS' clauses in their SQL commands to prevent errors if the column or index doesn't exist when trying to drop them. This makes the migration more robust and idempotent, allowing it to be run multiple times without causing errors.
+
+However, the scripts do not include explicit error handling beyond this. If an error occurs during execution (e.g., if the table doesn't exist when trying to add the column), the database management system will handle it according to its default behavior, typically rolling back the changes and reporting the error.
+
+In conclusion, this migration implements a soft delete mechanism for organizations, providing a way to logically remove records without physically deleting them from the database. This approach offers benefits in terms of data recovery and auditing capabilities.

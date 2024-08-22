@@ -1,0 +1,77 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains custom hooks for a SolidJS-based analytics frontend application. These hooks provide various functionalities such as pagination management, pathname retrieval, and determining if click-through rate (CTR) analytics need setup for a dataset.
+
+## What does it do?
+The hooks in this directory serve different purposes:
+
+1. `useCTRNeedsSetup`: This hook checks if CTR analytics have been set up for a given dataset. It fetches CTR summary data from the backend and determines if key metrics are present. This is useful for prompting users to set up CTR tracking if it hasn't been done yet.
+
+2. `usePagination`: This hook manages pagination state and actions. It keeps track of the current page, allows navigation between pages, and determines if further navigation is possible. This is essential for implementing paginated views of data in the analytics frontend.
+
+3. `usePathname`: This hook provides access to the current URL pathname of the application. It's useful for components that need to react to changes in the current route or perform actions based on the current path.
+
+## Key Files
+
+1. `useCTRNeedsSetup.ts`:
+   - Fetches CTR summary data using `@tanstack/solid-query`.
+   - Determines if CTR setup is needed based on the presence of key metrics.
+   - Uses `DatasetContext` to access the current dataset information.
+
+2. `usePagination.ts`:
+   - Manages pagination state using SolidJS's `createSignal` and `createMemo`.
+   - Provides functions for navigating between pages and updating pagination state.
+   - Tracks the highest page discovered to determine if further navigation is possible.
+
+3. `usePathname.ts`:
+   - Utilizes `useLocation` from `@solidjs/router` to access the current location.
+   - Creates a memoized value of the pathname for performance optimization.
+
+## Dependencies
+1. solid-js: Core library for reactive primitives like `createMemo`, `createSignal`, and `useContext`.
+2. @tanstack/solid-query: Used for data fetching and caching in the `useCTRNeedsSetup` hook.
+3. @solidjs/router: Provides the `useLocation` hook for accessing the current route information.
+
+These dependencies were likely chosen for their compatibility with SolidJS and their specific functionalities:
+- solid-js is the core framework, providing reactive primitives essential for building performant UI components.
+- @tanstack/solid-query offers a robust solution for managing server state, including caching and automatic refetching.
+- @solidjs/router is the official routing solution for SolidJS applications, providing seamless integration with the framework.
+
+## Configuration
+There are no explicit configuration files or environment variables used in these hooks. However, the `useCTRNeedsSetup` hook relies on a `DatasetContext` and an API function `getSearchCTRSummary`, which may have their own configurations elsewhere in the application.
+
+Here's an example of how these hooks might be used together in a component:
+
+```typescript
+import { createEffect } from 'solid-js';
+import { useCTRNeedsSetup } from './hooks/useCTRNeedsSetup';
+import { usePagination } from './hooks/usePagination';
+import { usePathname } from './hooks/usePathname';
+
+const AnalyticsComponent = () =&gt; {
+  const ctrNeedsSetup = useCTRNeedsSetup();
+  const { page, nextPage, prevPage, canGoNext } = usePagination();
+  const pathname = usePathname();
+
+  createEffect(() =&gt; {
+    if (ctrNeedsSetup()) {
+      console.log('CTR setup is needed for this dataset');
+    }
+  });
+
+  return (
+    &lt;div&gt;
+      &lt;p&gt;Current path: {pathname()}&lt;/p&gt;
+      &lt;p&gt;Current page: {page()}&lt;/p&gt;
+      &lt;button onClick={prevPage} disabled={page() === 1}&gt;Previous&lt;/button&gt;
+      &lt;button onClick={nextPage} disabled={!canGoNext()}&gt;Next&lt;/button&gt;
+      {ctrNeedsSetup() && &lt;p&gt;Please set up CTR analytics for this dataset&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+};
+```
+
+This example demonstrates how these hooks can be combined to create a component that displays the current pathname, manages pagination, and shows a message if CTR setup is needed. The hooks provide a clean and reusable way to handle these common functionalities across the analytics frontend.

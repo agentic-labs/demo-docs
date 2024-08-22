@@ -1,0 +1,29 @@
+---
+title: "down.sql"
+---
+
+## High-level description
+This SQL script reverts database changes made by a migration that likely added a foreign key constraint referencing the `datasets` table to several other tables. It drops the foreign key constraints and then re-adds them, effectively undoing the intended change of the original migration.
+
+## Symbols
+### `down.sql`
+#### Description
+This SQL script is designed to be executed as a down migration, reverting changes applied by a corresponding up migration. It specifically targets foreign key constraints related to a `datasets` table in the database schema.
+
+#### Internal Logic
+The script iterates through various tables (`dataset_usage_counts`, `events`, `chunk_metadata`, `chunk_group`, `files`, `chunk_files`, `messages`, `topics`), performing the following actions for each:
+
+1. **Drop Existing Foreign Key Constraint (if exists):** It attempts to drop a foreign key constraint that references the `datasets` table. The `IF EXISTS` clause ensures the operation doesn't fail if the constraint isn't present.
+   - Example: `ALTER TABLE dataset_usage_counts DROP CONSTRAINT IF EXISTS dataset_usage_counts_dataset_id_fkey;`
+
+2. **Add Foreign Key Constraint:** It adds back a foreign key constraint to the table, referencing the `id` column of the `datasets` table. This re-establishes the relationship that might have been removed in the up migration.
+   - Example: `ALTER TABLE dataset_usage_counts ADD CONSTRAINT dataset_usage_counts_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);`
+
+The naming convention used for the constraints (e.g., `dataset_usage_counts_dataset_id_fkey`) suggests a relationship where the `dataset_id` column in each table references the `id` column of the `datasets` table.
+
+#### Side Effects
+- **Database Schema Change:** The script modifies the database schema by removing and then re-adding foreign key constraints.
+- **Data Integrity:** The re-added constraints enforce referential integrity, ensuring that values in the `dataset_id` columns of the affected tables correspond to existing entries in the `datasets` table.
+
+#### Performance Considerations
+Dropping and re-adding foreign key constraints can be time-consuming operations, especially on large tables. This script should be executed with caution in a production environment.

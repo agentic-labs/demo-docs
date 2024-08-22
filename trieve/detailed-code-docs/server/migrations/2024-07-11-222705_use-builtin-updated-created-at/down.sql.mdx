@@ -1,0 +1,89 @@
+---
+title: "down.sql"
+---
+
+## High-level description
+This SQL script reverts the database changes made by the migration `2024-07-11-222705_use-builtin-updated-created-at`. It removes triggers and functions related to automatically updating the `updated_at` column and replaces them with a custom implementation.
+
+## Code Structure
+The code first drops triggers and functions created by a previous migration. Then it defines two new functions: `update_updated_at` and `update_main_table_updated_at`. Finally, it creates triggers on various tables that call these functions to update the `updated_at` column on row updates.
+
+## Symbols
+
+### `DROP TRIGGER IF EXISTS set_updated_at ON ...`
+#### Description
+These statements attempt to drop triggers named `set_updated_at` on multiple tables if they exist. This is to clean up triggers created by a previous migration.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `IF EXISTS` clause ensures that the statement doesn't fail if the trigger doesn't exist.
+
+### `DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass)`
+#### Description
+This statement drops the function `diesel_manage_updated_at` if it exists. This function was likely created by a previous migration.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `IF EXISTS` clause ensures that the statement doesn't fail if the function doesn't exist.
+
+### `DROP FUNCTION IF EXISTS diesel_set_updated_at()`
+#### Description
+This statement drops the function `diesel_set_updated_at` if it exists. This function was likely created by a previous migration.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `IF EXISTS` clause ensures that the statement doesn't fail if the function doesn't exist.
+
+### `CREATE OR REPLACE FUNCTION update_updated_at() ...`
+#### Description
+This statement defines a function `update_updated_at` that sets the `updated_at` column of a row to the current timestamp.
+
+#### Inputs
+None
+
+#### Outputs
+Returns the updated row (`NEW`).
+
+#### Internal Logic
+The function sets the `updated_at` column of the `NEW` row (representing the row being updated) to `current_timestamp`.
+
+### `CREATE OR REPLACE FUNCTION update_main_table_updated_at() ...`
+#### Description
+This statement defines a function `update_main_table_updated_at` that updates the `updated_at` column of a "main" table based on the `collection_id` of the inserted/updated row.
+
+#### Inputs
+None
+
+#### Outputs
+Returns the updated row (`NEW`).
+
+#### Internal Logic
+The function updates the `updated_at` column of the "main" table to `current_timestamp` where the `id` matches the `collection_id` of the `NEW` row. This suggests a relationship between the table this trigger is on and a "main" table.
+
+### `CREATE TRIGGER update_updated_at ...`
+#### Description
+These statements create triggers named `update_updated_at` on various tables. The triggers are set to fire before an update operation on each row.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+Each trigger calls either the `update_updated_at` function or the `update_main_table_updated_at` function depending on the table. This ensures that the `updated_at` column is updated whenever a row in these tables is updated.

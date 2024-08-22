@@ -1,0 +1,83 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This Docker Compose file defines a multi-container application setup for running various text embedding and reranking models using the Hugging Face Text Embeddings Inference service. It sets up five different services, each running a specific model for tasks such as text embedding, reranking, and sparse encoding.
+
+## Code Structure
+The file defines five services: `jina`, `bgem3`, `reranker`, `splade-doc`, and `splade-query`. Each service is configured to run a specific model using the same base Docker image but with different command-line arguments.
+
+## Symbols
+
+### `jina` Service
+#### Description
+This service runs the Jina Embeddings v2 base model for English text.
+
+#### Internal Logic
+- Uses the `ghcr.io/huggingface/text-embeddings-inference:turing-1.2` image
+- Runs the `jinaai/jina-embeddings-v2-base-en` model
+- Exposes port 7000 for external access
+- Mounts a local `./data` directory to `/data` in the container
+- Uses NVIDIA runtime for GPU acceleration
+
+### `bgem3` Service
+#### Description
+This service runs the BAAI BGE-M3 model for text embeddings.
+
+#### Internal Logic
+- Uses the same base image as `jina`
+- Runs the `BAAI/bge-m3` model
+- Exposes port 8000 for external access
+- Shares the same volume and runtime configuration as `jina`
+
+### `reranker` Service
+#### Description
+This service runs the BAAI BGE-Reranker-Large model for text reranking.
+
+#### Internal Logic
+- Uses the same base image as other services
+- Runs the `BAAI/bge-reranker-large` model from a specific PR revision
+- Exposes port 9000 for external access
+- Shares the same volume and runtime configuration as other services
+
+### `splade-doc` Service
+#### Description
+This service runs the Naver Efficient-SPLADE-VI-BT-Large model for document encoding.
+
+#### Internal Logic
+- Uses the same base image as other services
+- Runs the `naver/efficient-splade-VI-BT-large-doc` model
+- Uses SPLADE pooling
+- Exposes port 5000 for external access
+- Shares the same volume and runtime configuration as other services
+
+### `splade-query` Service
+#### Description
+This service runs the Naver Efficient-SPLADE-VI-BT-Large model for query encoding.
+
+#### Internal Logic
+- Uses the same base image as other services
+- Runs the `naver/efficient-splade-VI-BT-large-query` model
+- Uses SPLADE pooling
+- Exposes port 6000 for external access
+- Shares the same volume and runtime configuration as other services
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Docker | Container runtime for running the services |
+| NVIDIA Docker Runtime | GPU acceleration for the models |
+| Hugging Face Text Embeddings Inference | Base image for running the models |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `version` | string | '3' | Specifies the Docker Compose file format version |
+| `image` | string | ghcr.io/huggingface/text-embeddings-inference:turing-1.2 | The Docker image used for all services |
+| `command` | string | varies | Specifies the model and configuration for each service |
+| `ports` | array | varies | Maps container ports to host ports for each service |
+| `volumes` | array | ./data:/data | Mounts local data directory to the container |
+| `runtime` | string | nvidia | Specifies the use of NVIDIA runtime for GPU acceleration |
+
+This Docker Compose configuration allows for easy deployment and management of multiple text embedding and reranking models, each running in its own container with GPU acceleration. The services can be accessed through their respective exposed ports, enabling integration with other applications or services that require text embedding or reranking capabilities.

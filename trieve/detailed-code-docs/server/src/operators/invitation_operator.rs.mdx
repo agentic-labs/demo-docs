@@ -1,0 +1,188 @@
+---
+title: "invitation_operator.rs"
+---
+
+## High-level description
+The `invitation_operator.rs` file contains functions that handle the creation, retrieval, validation, and deletion of user invitations within the Trieve application. These functions interact with the database to manage invitation records and utilize the `email_operator` to send invitation emails.
+
+## References
+- `crate::data::models::Invitation`: This struct represents an invitation in the system.
+- `crate::data::models::Pool`: This type alias represents a database connection pool.
+- `crate::errors::ServiceError`: This enum represents errors that can occur within the service.
+- `super::email_operator::send_email`: This function sends an email.
+
+## Symbols
+### `create_invitation_query`
+#### Description
+This function creates a new invitation record in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `email` | `String` | The email address of the invitee. |
+| `organization_id` | `uuid::Uuid` | The ID of the organization the invitee is being invited to. |
+| `user_role` | `i32` | The role the invitee will have in the organization. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;Invitation, ServiceError&gt;` |  | A `Result` containing the newly created `Invitation` on success, or a `ServiceError` on failure. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Creates a new `Invitation` instance using the provided details.
+3. Inserts the new invitation into the `invitations` table.
+4. Returns the inserted `Invitation` on success.
+
+### `get_invitation_by_id_query`
+#### Description
+This function retrieves an invitation record from the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `id` | `uuid::Uuid` | The ID of the invitation to retrieve. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;Invitation, ServiceError&gt;` |  | A `Result` containing the retrieved `Invitation` on success, or a `ServiceError` on failure. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Queries the `invitations` table for an invitation with the matching ID.
+3. Returns the retrieved `Invitation` on success.
+
+### `send_invitation`
+#### Description
+This function sends an invitation email to the invitee.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `inv_url` | `String` | The URL of the invitation, which allows the invitee to register. |
+| `invitation` | `Invitation` | The `Invitation` object containing the invitee's email address. |
+| `org_name` | `String` | The name of the organization the invitee is being invited to. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure in sending the invitation email. |
+
+#### Internal Logic
+1. Constructs the email content using the provided invitation URL, organization name, and invitee's email address.
+2. Calls the `send_email` function from the `email_operator` module to send the email.
+
+### `send_invitation_for_existing_user`
+#### Description
+This function sends an email notification to an existing user when they are added to an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `email` | `String` | The email address of the user. |
+| `org_name` | `String` | The name of the organization the user was added to. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure in sending the email notification. |
+
+#### Internal Logic
+1. Constructs the email content using the provided organization name and user's email address.
+2. Calls the `send_email` function from the `email_operator` module to send the email.
+
+### `set_invitation_used`
+#### Description
+This function marks an invitation as used in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `id` | `uuid::Uuid` | The ID of the invitation to mark as used. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure in updating the invitation record. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Updates the `invitations` table, setting the `used` flag to `true` for the invitation with the matching ID.
+
+### `check_inv_valid`
+#### Description
+This function checks if an invitation is valid and marks it as used if it is.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `inv_code` | `uuid::Uuid` | The ID of the invitation to check. |
+| `email` | `String` | The email address of the user attempting to use the invitation. |
+| `organization_id` | `Option&lt;uuid::Uuid&gt;` | The ID of the organization the invitation is associated with. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;Invitation, ServiceError&gt;` |  | A `Result` containing the validated `Invitation` on success, or a `ServiceError` if the invitation is invalid or has already been used. |
+
+#### Internal Logic
+1. Retrieves the invitation from the database using `get_invitation_by_id_query`.
+2. Verifies that the provided email address matches the email address associated with the invitation.
+3. Verifies that the provided organization ID matches the organization ID associated with the invitation.
+4. Checks if the invitation has already been used.
+5. If all checks pass, marks the invitation as used using `set_invitation_used` and returns the `Invitation` object.
+
+### `get_invitations_for_organization_query`
+#### Description
+This function retrieves all invitations associated with a specific organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `organization_id` | `uuid::Uuid` | The ID of the organization to retrieve invitations for. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;Vec&lt;Invitation&gt;, ServiceError&gt;` |  | A `Result` containing a vector of `Invitation` objects associated with the organization on success, or a `ServiceError` on failure. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Queries the `invitations` table for all invitations with the matching organization ID.
+3. Returns the retrieved invitations on success.
+
+### `delete_invitation_by_id_query`
+#### Description
+This function deletes an invitation from the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `id` | `uuid::Uuid` | The ID of the invitation to delete. |
+| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure in deleting the invitation record. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Deletes the invitation with the matching ID from the `invitations` table.
+
+
+## Dependencies
+- `actix-web`: Used for web framework functionality.
+- `diesel`: Used for database interactions.
+- `diesel-async`: Used for asynchronous database interactions.
+- `uuid`: Used for generating and working with UUIDs.
+- `tracing`: Used for logging and tracing.
+
+## Error Handling
+The functions in this file primarily use the `Result` type and the `ServiceError` enum to handle errors. If an error occurs during database interaction or email sending, a `ServiceError` is returned, which can be handled by the calling code.

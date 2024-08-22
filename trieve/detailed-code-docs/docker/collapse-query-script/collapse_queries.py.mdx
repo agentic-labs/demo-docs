@@ -1,0 +1,129 @@
+---
+title: "collapse_queries.py"
+---
+
+## High-level description
+This code defines a Python script that processes and collapses search queries stored in a ClickHouse database. It identifies and marks duplicate queries within specified time windows and datasets, updating the database accordingly.
+
+## Code Structure
+The script consists of several functions that interact with the ClickHouse database to retrieve, process, and update search query data. The main function orchestrates the overall process, iterating through datasets and collapsing queries in batches.
+
+## Symbols
+
+### `get_search_queries`
+#### Description
+Retrieves search queries from the ClickHouse database for a specific dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | ClickHouseClient | ClickHouse database client |
+| dataset_id | uuid.UUID | ID of the dataset to query |
+| limit | int | Maximum number of queries to retrieve (default: 5000) |
+| offset | Optional[datetime.datetime] | Timestamp to start retrieving queries from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result_rows | List[Tuple] | List of search query data rows |
+
+#### Internal Logic
+Constructs and executes a SQL query to retrieve search queries, optionally filtering by creation time if an offset is provided.
+
+### `get_datasets`
+#### Description
+Retrieves all unique dataset IDs from the search queries table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | ClickHouseClient | ClickHouse database client |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result_rows | List[Tuple] | List of unique dataset IDs |
+
+### `get_dataset_last_collapsed`
+#### Description
+Retrieves the timestamp of the last collapse operation for a specific dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | ClickHouseClient | ClickHouse database client |
+| dataset_id | uuid.UUID | ID of the dataset to query |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| last_collapsed | Optional[datetime.datetime] | Timestamp of the last collapse operation |
+
+### `set_dataset_last_collapsed`
+#### Description
+Updates the timestamp of the last collapse operation for a specific dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | ClickHouseClient | ClickHouse database client |
+| dataset_id | uuid.UUID | ID of the dataset to update |
+| last_collapsed | datetime.datetime | New timestamp of the last collapse operation |
+
+### `collapse_queries`
+#### Description
+Identifies duplicate queries within a set of rows based on time proximity and query similarity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rows | List[Tuple] | List of search query data rows |
+| look_range | int | Number of rows to look ahead/behind for duplicates (default: 10) |
+| time_window | int | Time window (in seconds) to consider for duplicates (default: 10) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rows_to_be_deleted | List[Tuple] | List of rows identified as duplicates |
+
+#### Internal Logic
+Iterates through the rows, comparing each query with nearby queries within the specified time window. Marks shorter queries as duplicates if they are substrings of longer queries.
+
+### `insert_duplicate_rows`
+#### Description
+Inserts identified duplicate rows back into the database with the `is_duplicate` flag set to 1.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | ClickHouseClient | ClickHouse database client |
+| rows | List[Tuple] | List of duplicate rows to insert |
+
+### `main`
+#### Description
+Orchestrates the overall process of collapsing queries for all datasets.
+
+#### Internal Logic
+1. Connects to the ClickHouse database
+2. Retrieves all datasets
+3. For each dataset:
+   a. Retrieves the last collapse timestamp
+   b. Fetches search queries in batches
+   c. Collapses queries and marks duplicates
+   d. Updates the last collapse timestamp
+4. Optimizes the database tables
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| clickhouse_connect | Interact with ClickHouse database |
+| os | Access environment variables |
+| dotenv | Load environment variables from .env file |
+| uuid | Handle UUID data types |
+| datetime | Work with date and time data |
+
+## Error Handling
+The main function includes a try-except block to catch and print any exceptions that occur during the process.
+
+## Performance Considerations
+The script processes queries in batches (default 5000) to manage memory usage and improve performance when dealing with large datasets.

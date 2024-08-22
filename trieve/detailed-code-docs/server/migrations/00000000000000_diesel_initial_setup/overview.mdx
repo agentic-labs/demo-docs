@@ -1,0 +1,77 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the initial setup migration for the Diesel ORM in a PostgreSQL database. It consists of two SQL scripts: `up.sql` for creating the necessary functions and `down.sql` for removing them. These scripts are responsible for managing an `updated_at` timestamp column in database tables, automating the process of updating this column whenever a row is modified.
+
+## What does it do?
+The migration scripts in this directory set up and tear down a system for automatically managing `updated_at` timestamps in database tables. Here's a breakdown of what happens:
+
+1. When applied (using `up.sql`):
+   - It creates two functions:
+     a. `diesel_manage_updated_at`: This function sets up a trigger on a specified table to automatically update the `updated_at` column when a row is modified.
+     b. `diesel_set_updated_at`: This function is called by the trigger and actually performs the update of the `updated_at` column.
+   - These functions work together to ensure that whenever a row in a table is updated, its `updated_at` column is automatically set to the current timestamp.
+
+2. When reverted (using `down.sql`):
+   - It removes both functions created by the `up.sql` script.
+   - This effectively disables the automatic updating of `updated_at` columns.
+
+This setup allows developers to easily add "last modified" tracking to their database tables without having to manually manage the `updated_at` column in their application code.
+
+## Key Files
+
+1. `up.sql`:
+   - Creates the `diesel_manage_updated_at` function, which sets up a trigger on a specified table.
+   - Creates the `diesel_set_updated_at` function, which is called by the trigger to update the `updated_at` column.
+   - Uses PostgreSQL-specific features like PL/pgSQL, trigger functions, and dynamic SQL execution.
+
+2. `down.sql`:
+   - Removes the `diesel_manage_updated_at` and `diesel_set_updated_at` functions.
+   - Uses `DROP FUNCTION IF EXISTS` to safely remove the functions even if they don't exist.
+
+## Dependencies
+The migration scripts are designed to work with:
+- PostgreSQL database
+- Diesel ORM (Object-Relational Mapping) for Rust
+
+The scripts utilize PostgreSQL-specific features, indicating a strong dependency on PostgreSQL as the database system.
+
+## Configuration
+These migration scripts don't require any specific configuration. However, they are part of the Diesel ORM setup, so the overall project should be configured to use Diesel with PostgreSQL.
+
+It's worth noting that both scripts include a comment indicating that they are safe to edit and that future changes will be added as new migrations. This suggests that while developers can modify these scripts if needed, it's generally recommended to create new migrations for changes rather than modifying these initial setup scripts.
+
+Here's an example of how the `diesel_manage_updated_at` function is created in `up.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION diesel_manage_updated_at(_tbl regclass) RETURNS VOID AS $$
+BEGIN
+    EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s
+                    FOR EACH ROW EXECUTE PROCEDURE diesel_set_updated_at()', _tbl);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+This function dynamically creates a trigger on the specified table to call `diesel_set_updated_at` before each update operation.
+
+The `diesel_set_updated_at` function, which is called by the trigger, looks like this:
+
+```sql
+CREATE OR REPLACE FUNCTION diesel_set_updated_at() RETURNS trigger AS $$
+BEGIN
+    IF (
+        NEW IS DISTINCT FROM OLD AND
+        NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at
+    ) THEN
+        NEW.updated_at := current_timestamp;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+This function checks if the row has been modified and if the `updated_at` column hasn't been explicitly changed, and if so, it updates the `updated_at` column to the current timestamp.
+
+These functions provide a robust and efficient way to manage `updated_at` timestamps in PostgreSQL databases when using the Diesel ORM with Rust applications.

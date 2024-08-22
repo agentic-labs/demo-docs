@@ -1,0 +1,162 @@
+---
+title: "Overview"
+---
+
+Here's a high-level description and documentation of the `user_operator.rs` file:
+
+## High-level description
+The `user_operator.rs` file contains functions for managing user-related operations in the Trieve application. It handles tasks such as user retrieval, API key management, user organization roles, and user creation. The file interacts with both a PostgreSQL database (using Diesel ORM) and a Redis cache for various operations.
+
+## Code Structure
+The file consists of several functions that perform specific user-related tasks. These functions often interact with the database and Redis cache, and they handle error cases using a custom `ServiceError` type.
+
+## Symbols
+
+### `get_user_by_id_query`
+#### Description
+Retrieves a user by their ID, along with their associated organizations and roles.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | &uuid::Uuid | The ID of the user to retrieve |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(User, Vec&lt;UserOrganization&gt;, Vec&lt;Organization&gt;), ServiceError&gt; | Result | User data, organizations, and roles, or an error |
+
+### `add_existing_user_to_org`
+#### Description
+Adds an existing user to an organization by their email address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | String | User's email address |
+| organization_id | uuid::Uuid | Organization ID |
+| user_role | UserRole | User's role in the organization |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;bool, ServiceError&gt; | Result | True if user was added, false if user doesn't exist, or an error |
+
+### `update_user_org_role_query`
+#### Description
+Updates a user's role in an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | User ID |
+| organization_id | uuid::Uuid | Organization ID |
+| role | UserRole | New user role |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### `set_user_api_key_query`
+#### Description
+Creates a new API key for a user and stores it in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | User ID |
+| name | String | API key name |
+| role | ApiKeyRole | API key role |
+| dataset_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional dataset IDs |
+| organization_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional organization IDs |
+| scopes | Option&lt;Vec&lt;String&gt;&gt; | Optional scopes |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;String, ServiceError&gt; | Result | The raw API key or an error |
+
+### `get_user_from_api_key_query`
+#### Description
+Retrieves a user and their API key information based on a provided API key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | &str | The API key |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(SlimUser, UserApiKey), ServiceError&gt; | Result | User and API key information or an error |
+
+### `get_user_api_keys_query`
+#### Description
+Retrieves all API keys associated with a specific user ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | User ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;ApiKeyRespBody&gt;, ServiceError&gt; | Result | List of API keys or an error |
+
+### `delete_user_api_keys_query`
+#### Description
+Deletes a specific API key associated with a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | User ID |
+| api_key_id | uuid::Uuid | API key ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### `create_user_query`
+#### Description
+Creates a new user in the database and adds them to a specific organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | User | User data |
+| organization_id | uuid::Uuid | Organization ID |
+| user_role | UserRole | User's role in the organization |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;User, ServiceError&gt; | Result | Created user or an error |
+
+## Dependencies
+- `diesel`: ORM for database operations
+- `redis`: For caching and session management
+- `argon2`: For password hashing
+- `blake3`: For API key hashing
+- `uuid`: For handling UUIDs
+
+## Error Handling
+The file uses a custom `ServiceError` type for error handling, which is returned in the `Result` of most functions.
+
+## Logging
+The code uses the `log` crate for logging errors and important information.
+
+This file is crucial for managing user-related operations in the Trieve application, handling various aspects of user data, authentication, and authorization.

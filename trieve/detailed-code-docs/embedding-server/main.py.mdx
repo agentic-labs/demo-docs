@@ -1,0 +1,82 @@
+---
+title: "main.py"
+---
+
+## High-level description
+This code defines a FastAPI application that serves as an embedding server. It loads a pre-trained Hugging Face Transformer model and exposes an API endpoint `/embeddings` to generate embeddings for given text inputs. 
+
+The application can handle both single string inputs and lists of strings, returning the corresponding embeddings in the OpenAI embedding format.
+
+## Code Structure
+The code first loads environment variables and initializes a Hugging Face model. Then, it defines Pydantic models for request and response data structures. Finally, it sets up a FastAPI app with a single POST endpoint `/embeddings` that uses the loaded model to generate embeddings for the input text.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `transformers` | Provides utilities for loading and using Hugging Face Transformer models. |
+| `fastapi` | Used to build the API server. |
+| `pydantic` | Defines data models for request and response validation. |
+| `numpy` | Used for numerical operations, specifically for calculating vector norms. |
+| `dotenv` | Loads environment variables from a .env file. |
+
+## Symbols
+
+### `model_name`
+#### Description
+This variable stores the name of the Hugging Face Transformer model to be used for generating embeddings. It is loaded from the environment variable `MODEL`.
+
+### `model`
+#### Description
+This variable holds the instance of the loaded Hugging Face Transformer model. It is initialized with the model specified by `model_name`, configured to use GPU if available (`device_map='cuda'`), and stores downloaded models in the `./models` directory.
+
+### `app`
+#### Description
+An instance of the FastAPI application. It serves as the main entry point for handling incoming requests and routing them to the appropriate endpoint.
+
+### `OpenAIEmbeddingInput`
+#### Description
+A Pydantic model defining the structure of the expected input data for the `/embeddings` endpoint. It accepts either a single string or a list of strings as input.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| input | `Union[List[str], str]` | The text input for which to generate embeddings. Can be a single string or a list of strings. |
+
+### `_EmbeddingObject`
+#### Description
+A Pydantic model defining the structure of a single embedding object within the response data. It includes the embedding vector, the object type ("embedding"), and the index of the input text corresponding to this embedding.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| embedding | `list[float]` | The generated embedding vector for the input text. |
+| index | `int` | The index of the input text corresponding to this embedding. |
+
+### `OpenAIEmbeddingResult`
+#### Description
+A Pydantic model defining the structure of the response data returned by the `/embeddings` endpoint. It includes a list of embedding objects and the object type ("list").
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `List[_EmbeddingObject]` | A list of embedding objects, each containing the embedding vector, object type, and index. |
+
+### `embed`
+#### Description
+This function defines the logic for the `/embeddings` endpoint. It receives the input text data, generates embeddings using the loaded Hugging Face model, and returns the results in the OpenAI embedding format.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `OpenAIEmbeddingInput` | The input data containing the text to be embedded. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | `dict` | A dictionary containing the generated embeddings in the OpenAI embedding format. |
+
+#### Internal Logic
+1. Receives the input text data from the request.
+2. Uses the loaded Hugging Face model (`model`) to generate embeddings for the input text.
+3. Constructs the response dictionary in the OpenAI embedding format, including the embedding vectors, object type, model name, and index for each input text.
+4. Returns the response dictionary.

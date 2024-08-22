@@ -1,0 +1,123 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains Kubernetes resource templates for deploying an application named `$NAME`. The templates are designed to be used with Helm, a package manager for Kubernetes. The directory includes templates for a Deployment, PersistentVolume (PV), PersistentVolumeClaim (PVC), and Service.
+
+## What does it do?
+These templates work together to define the infrastructure for deploying and running an application in a Kubernetes cluster. Here's a breakdown of what each template does:
+
+1. The Deployment template (`deployment.yaml`) defines how the application should be deployed, including which container image to use, environment variables, and volume mounts.
+
+2. The PersistentVolume template (`pv.yaml`) creates a storage resource in the cluster, specifically tailored for local development environments.
+
+3. The PersistentVolumeClaim template (`pvc.yaml`) requests storage resources for the application, with different configurations based on the deployment environment (local or AWS).
+
+4. The Service template (`service.yaml`) exposes the application within the cluster, making it accessible on specific ports.
+
+Together, these resources ensure that the application has the necessary compute resources, storage, and network access to run effectively in a Kubernetes environment.
+
+## Key Files
+
+### deployment.yaml
+This file defines the Kubernetes Deployment resource. It specifies:
+- The container image to use, which is dynamically set based on the environment (local or AWS).
+- Port mappings for the container (9000 and 42625).
+- A volume mount for persistent data storage.
+- An environment variable `ENV_VAR` (note: this appears to be a placeholder).
+
+Key features:
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: $NAME
+          image: {{ if eq .Values.environment "local" }}...{{ else }}...{{ end }}
+          ports:
+            - containerPort: 9000
+            - containerPort: 42625
+          volumeMounts:
+            - name: $NAME-data
+              mountPath: /data
+          env:
+            - name: ENV_VAR
+              value: {{ .Values.config.fixme }}
+```
+
+### pv.yaml
+This template creates a PersistentVolume for local development environments. It dynamically sets the PV name and storage size:
+
+```yaml
+{{- if eq $.Values.environment "local" }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $NAME }}-pv
+spec:
+  capacity:
+    storage: {{ ternary "500Gi" "10Gi" (eq $.Values.environment "local") }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+{{- end }}
+```
+
+### pvc.yaml
+This template defines a PersistentVolumeClaim, with storage size and class determined by the environment:
+
+```yaml
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if eq .Values.environment "aws" }}
+  storageClassName: gp2
+  {{- else }}
+  storageClassName: ""
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $storage }}
+```
+
+### service.yaml
+This template creates a Kubernetes Service to expose the application within the cluster:
+
+```yaml
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      targetPort: 9000
+    - port: 42625
+      targetPort: 42625
+  selector:
+    app: $NAME
+    instance: {{ .Release.Name }}
+```
+
+## Dependencies
+These templates are designed to be used with Helm, a package manager for Kubernetes. They rely on Helm's templating engine to render the final Kubernetes manifests.
+
+## Configuration
+The templates use various Helm values for configuration:
+
+| Option | Description |
+|:-------|:------------|
+| `.Values.environment` | Deployment environment (e.g., "local" or "aws") |
+| `.Values.accountId` | AWS account ID for ECR image URL |
+| `.Values.region` | AWS region for ECR image URL |
+| `.Values.containers.$NAME.tag` | Docker image tag |
+| `.Values.config.fixme` | Value for the `ENV_VAR` environment variable |
+| `.Release.Name` | Name of the Helm release |
+
+## TODOs
+1. In `deployment.yaml`, the `ENV_VAR` environment variable is set to `{{ .Values.config.fixme }}`, which appears to be a placeholder. This should be replaced with an actual configuration value.
+
+2. The storage size in `pv.yaml` and `pvc.yaml` is set to either 500Gi or 10Gi based on the environment. These values should be reviewed to ensure they meet the application's actual storage requirements.
+
+3. The `pv.yaml` template only creates a PersistentVolume for local environments. If PVs are needed for non-local environments, additional logic should be added to handle those cases.
+
+4. The Service in `service.yaml` is of type ClusterIP, which means it's only accessible within the cluster. If external access is required, consider changing the service type to LoadBalancer or NodePort, or setting up an Ingress resource.

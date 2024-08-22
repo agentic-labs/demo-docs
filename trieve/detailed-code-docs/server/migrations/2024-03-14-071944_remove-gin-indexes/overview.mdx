@@ -1,0 +1,52 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for removing and re-adding several indexes on the `chunk_metadata` table in a database. The migration is designed to modify the database schema, specifically focusing on the management of indexes for various columns in the `chunk_metadata` table.
+
+## What does it do?
+The migration scripts in this directory perform two main operations:
+
+1. **Removing Indexes (Up Migration)**: The `up.sql` script removes six specific indexes from the `chunk_metadata` table. These indexes were previously used to optimize queries on columns such as `link`, `metadata`, `tag_set`, `updated_at`, `created_at`, and `time_stamp`. Removing these indexes can potentially improve the performance of write operations (inserts and updates) on the `chunk_metadata` table, as maintaining indexes during writes can be computationally expensive.
+
+2. **Re-adding Indexes (Down Migration)**: The `down.sql` script provides a way to revert the changes made by the up migration. It re-creates the six indexes that were removed. This ensures that if the migration needs to be rolled back, the database can be returned to its previous state with all the original indexes in place.
+
+The purpose of this migration could be to optimize database performance, possibly in response to changing query patterns or data volume. By removing these indexes, the database might perform faster for write-heavy operations, but at the cost of potentially slower read operations that previously benefited from these indexes.
+
+## Key Files
+
+1. **up.sql**
+   This file contains the SQL commands to remove the indexes from the `chunk_metadata` table. It uses `DROP INDEX` statements to remove each of the six indexes:
+   ```sql
+   DROP INDEX idx_gist;
+   DROP INDEX idx_link_gin;
+   DROP INDEX json_gin;
+   DROP INDEX idx_card_metadata_updated_at;
+   DROP INDEX idx_card_metadata_created_at;
+   DROP INDEX card_time_stamp_index;
+   ```
+
+2. **down.sql**
+   This file contains the SQL commands to re-add the indexes to the `chunk_metadata` table. It uses `CREATE INDEX` statements to recreate each of the six indexes:
+   ```sql
+   CREATE INDEX idx_link_gin ON chunk_metadata USING gin (link gin_trgm_ops);
+   CREATE INDEX json_gin ON chunk_metadata USING gin (metadata);
+   CREATE INDEX idx_gist ON chunk_metadata USING gin (tag_set gin_trgm_ops);
+   CREATE INDEX idx_card_metadata_updated_at ON chunk_metadata (updated_at);
+   CREATE INDEX idx_card_metadata_created_at ON chunk_metadata (created_at);
+   CREATE INDEX card_time_stamp_index ON chunk_metadata (time_stamp);
+   ```
+
+These files work together to provide a reversible database migration. The `up.sql` script is typically run when applying the migration, while the `down.sql` script is used if the migration needs to be rolled back.
+
+## Configuration
+While there are no explicit configuration files in this directory, the migration scripts themselves serve as a form of configuration for the database schema. The naming convention of the directory (2024-03-14-071944_remove-gin-indexes) suggests that this migration was created on March 14, 2024, at 07:19:44, and its purpose is to remove GIN indexes.
+
+It's important to note the following about the indexes being managed:
+
+1. `idx_link_gin` and `idx_gist` use the `gin_trgm_ops` operator class, which is typically used for trigram similarity searches on text fields.
+2. `json_gin` is a GIN index on the `metadata` column, suggesting that this column likely stores JSON data.
+3. The other indexes (`idx_card_metadata_updated_at`, `idx_card_metadata_created_at`, and `card_time_stamp_index`) are standard B-tree indexes on date/time fields.
+
+When applying or rolling back this migration, database administrators should be aware of the potential performance implications, especially for queries that may have been relying on these indexes for efficient execution.

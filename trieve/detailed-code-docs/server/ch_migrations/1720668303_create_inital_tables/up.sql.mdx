@@ -1,0 +1,143 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script creates several tables in a ClickHouse database for managing various aspects of a dataset-centric search and recommendation system. The tables are designed to store information about dataset events, search queries, cluster topics, search cluster memberships, RAG (Retrieval-Augmented Generation) queries, and recommendations.
+
+## Code Structure
+The script consists of six `CREATE TABLE` statements, each defining a table with specific columns, storage engine, ordering, partitioning, and TTL (Time-To-Live) settings where applicable.
+
+## Symbols
+
+### `dataset_events` Table
+#### Description
+Stores events related to datasets.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the event |
+| created_at | DateTime | Timestamp of event creation |
+| dataset_id | UUID | Identifier of the associated dataset |
+| event_type | String | Type of the event |
+| event_data | String | Data associated with the event |
+
+#### Internal Logic
+- Uses MergeTree engine
+- Ordered by dataset_id, created_at, event_type, and id
+- Partitioned by month of creation and dataset_id
+- TTL of 30 days from creation
+
+### `search_queries` Table
+#### Description
+Stores information about search queries.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the search query |
+| search_type | String | Type of search performed |
+| query | String | The actual search query |
+| request_params | String | Parameters of the search request |
+| latency | Float32 | Search latency |
+| top_score | Float32 | Highest score in search results |
+| results | Array(String) | Array of search results |
+| query_vector | Array(Float32) | Vector representation of the query |
+| dataset_id | UUID | Identifier of the associated dataset |
+| created_at | DateTime | Timestamp of query creation |
+| is_duplicate | UInt8 | Flag to mark duplicate entries |
+
+#### Internal Logic
+- Uses ReplacingMergeTree engine with is_duplicate column
+- Ordered by dataset_id, created_at, top_score, latency, and id
+- Partitioned by month of creation and dataset_id
+- TTL of 30 days from creation
+
+### `cluster_topics` Table
+#### Description
+Stores information about cluster topics.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the cluster topic |
+| dataset_id | UUID | Identifier of the associated dataset |
+| topic | String | The topic of the cluster |
+| density | Int32 | Density of the cluster |
+| avg_score | Float32 | Average score of the cluster |
+| created_at | DateTime | Timestamp of cluster creation |
+
+#### Internal Logic
+- Uses MergeTree engine
+- Ordered by dataset_id and id
+- Partitioned by dataset_id
+
+### `search_cluster_memberships` Table
+#### Description
+Stores memberships of search queries in clusters.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the membership |
+| search_id | UUID | Identifier of the associated search query |
+| cluster_id | UUID | Identifier of the associated cluster |
+| distance_to_centroid | Float32 | Distance of the search query to the cluster centroid |
+
+#### Internal Logic
+- Uses MergeTree engine
+- Ordered by id
+
+### `rag_queries` Table
+#### Description
+Stores information about RAG (Retrieval-Augmented Generation) queries.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the RAG query |
+| rag_type | String | Type of RAG query |
+| user_message | String | User's input message |
+| search_id | UUID | Identifier of the associated search query |
+| results | Array(String) | Array of query results |
+| llm_response | String | Response from the language model |
+| dataset_id | UUID | Identifier of the associated dataset |
+| created_at | DateTime | Timestamp of query creation |
+
+#### Internal Logic
+- Uses MergeTree engine
+- Ordered by id and created_at
+- Partitioned by month of creation and dataset_id
+- TTL of 30 days from creation
+
+### `recommendations` Table
+#### Description
+Stores information about recommendations.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for the recommendation |
+| recommendation_type | String | Type of recommendation |
+| positive_ids | Array(String) | Array of positively rated item IDs |
+| negative_ids | Array(String) | Array of negatively rated item IDs |
+| positive_tracking_ids | Array(String) | Array of positively rated tracking IDs |
+| negative_tracking_ids | Array(String) | Array of negatively rated tracking IDs |
+| request_params | String | Parameters of the recommendation request |
+| results | Array(String) | Array of recommendation results |
+| top_score | Float32 | Highest score in recommendation results |
+| dataset_id | UUID | Identifier of the associated dataset |
+| created_at | DateTime | Timestamp of recommendation creation |
+
+#### Internal Logic
+- Uses MergeTree engine
+- Ordered by id and created_at
+- Partitioned by month of creation and dataset_id
+- TTL of 30 days from creation
+
+## Performance Considerations
+- The use of MergeTree and ReplacingMergeTree engines allows for efficient data insertion and querying.
+- Partitioning by month and dataset_id helps in organizing data for faster access and easier management.
+- TTL settings ensure automatic data cleanup after 30 days for most tables, helping to manage storage efficiently.
+- Ordering columns are chosen to optimize common query patterns, such as filtering by dataset_id and time range.

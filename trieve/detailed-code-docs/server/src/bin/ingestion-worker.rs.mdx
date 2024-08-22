@@ -1,0 +1,185 @@
+---
+title: "ingestion-worker.rs"
+---
+
+## High-level description
+The code defines an ingestion worker that processes messages from a Redis queue, performs necessary data transformations and embedding calculations, and stores the processed data in a PostgreSQL database and a Qdrant vector database. It handles both bulk uploads and updates of chunks, ensuring data integrity and managing potential errors.
+
+## Code Structure
+The code consists of a main function that sets up the environment and starts the ingestion worker, and two main functions: `bulk_upload_chunks` and `update_chunk`. These functions handle the processing of bulk upload and update messages respectively. They both rely on several helper functions for data transformation, embedding calculation, and database interaction.
+
+## References
+- `models`: Module containing data models for various entities like `ChunkMetadata`, `DatasetConfiguration`, `QdrantPayload`, etc.
+- `chunk_handler`: Module containing handlers for chunk-related operations.
+- `group_handler`: Module containing handlers for group-related operations.
+- `chunk_operator`: Module containing operators for chunk-related database operations.
+- `clickhouse_operator`: Module containing operators for interacting with ClickHouse for analytics.
+- `dataset_operator`: Module containing operators for dataset-related database operations.
+- `group_operator`: Module containing operators for group-related database operations.
+- `model_operator`: Module containing operators for embedding calculations.
+- `parse_operator`: Module containing operators for parsing and transforming data.
+- `qdrant_operator`: Module containing operators for interacting with the Qdrant vector database.
+
+## Symbols
+
+### `ingestion_worker`
+#### Description
+This function is the main loop of the ingestion worker. It continuously polls a Redis queue for ingestion messages, processes them, and updates the database and Qdrant accordingly.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| should_terminate | Arc&lt;AtomicBool&gt; | A shared atomic boolean flag indicating whether the worker should terminate. |
+| redis_pool | actix_web::web::Data&lt;models::RedisPool&gt; | A shared Redis connection pool. |
+| web_pool | actix_web::web::Data&lt;models::Pool&gt; | A shared PostgreSQL connection pool. |
+| event_queue | actix_web::web::Data&lt;EventQueue&gt; | A shared event queue for sending analytics events to ClickHouse. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. Connects to the Redis queue.
+2. Enters an infinite loop that continues until the `should_terminate` flag is set.
+3. Pops a message from the "ingestion" queue and pushes it to the "processing" queue.
+4. Deserializes the message into an `IngestionMessage` enum.
+5. Retrieves the dataset associated with the message.
+6. Processes the message based on its type:
+    - `BulkUpload`: Calls `bulk_upload_chunks` to process the bulk upload message.
+    - `Update`: Calls `update_chunk` to process the update message.
+7. Removes the processed message from the "processing" queue.
+8. Handles errors by logging them and re-adding the message to the "ingestion" queue for retry, up to a maximum of 10 attempts.
+
+### `bulk_upload_chunks`
+#### Description
+This function processes a bulk upload message, inserts the chunks into the database, calculates embeddings, and upserts the data into Qdrant.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | BulkUploadIngestionMessage | The bulk upload message containing a list of chunks to be ingested. |
+| dataset_config | DatasetConfiguration | The configuration of the dataset associated with the chunks. |
+| web_pool | actix_web::web::Data&lt;models::Pool&gt; | A shared PostgreSQL connection pool. |
+| reqwest_client | reqwest::Client | A Reqwest client for making HTTP requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;uuid::Uuid&gt;, ServiceError&gt; | A vector of chunk IDs that were successfully inserted, or a `ServiceError` if an error occurred. |
+
+#### Internal Logic
+1. Prepares the chunk data for insertion, including converting HTML to text, extracting timestamps, and creating `ChunkMetadata` objects.
+2. If split averaging is used, processes each chunk individually using the `upload_chunk` function.
+3. Inserts the chunk metadata into the database using `bulk_insert_chunk_metadata_query`.
+4. Calculates semantic embeddings using `get_dense_vectors` if semantic search is enabled.
+5. Calculates sparse embeddings using `get_sparse_vectors` if full-text search is enabled.
+6. Calculates BM25 embeddings using `get_bm25_embeddings` if BM25 search is enabled.
+7. Creates Qdrant points from the chunk data, embeddings, and group information.
+8. Upserts the Qdrant points into the appropriate collection using `bulk_upsert_qdrant_points_query`.
+9. Handles errors by reverting the database insertions and returning a `ServiceError`.
+
+### `upload_chunk`
+#### Description
+This function processes a single chunk, inserts it into the database, calculates embeddings, and upserts the data into Qdrant. It is used for individual chunk processing when split averaging is enabled.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | UploadIngestionMessage | The ingestion message containing the chunk to be ingested. |
+| dataset_config | DatasetConfiguration | The configuration of the dataset associated with the chunk. |
+| ingestion_data | ChunkDataWithEmbeddingText | The chunk data with pre-calculated embedding text. |
+| web_pool | actix_web::web::Data&lt;models::Pool&gt; | A shared PostgreSQL connection pool. |
+| reqwest_client | reqwest::Client | A Reqwest client for making HTTP requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;uuid::Uuid, ServiceError&gt; | The ID of the chunk that was successfully inserted, or a `ServiceError` if an error occurred. |
+
+#### Internal Logic
+1. Prepares the chunk data for insertion, including converting HTML to text, extracting timestamps, and creating a `ChunkMetadata` object.
+2. Calculates semantic embeddings using `get_dense_vector` or `average_embeddings` depending on whether split averaging is enabled.
+3. Calculates sparse embeddings using `get_sparse_vectors` if full-text search is enabled.
+4. Calculates BM25 embeddings using `get_bm25_embeddings` if BM25 search is enabled.
+5. Inserts the chunk metadata into the database using `insert_chunk_metadata_query`.
+6. Creates a Qdrant point from the chunk data, embeddings, and group information.
+7. Upserts the Qdrant point into the appropriate collection using `bulk_upsert_qdrant_points_query`.
+8. Handles errors by reverting the database insertion and returning a `ServiceError`.
+
+### `update_chunk`
+#### Description
+This function processes an update message, updates the chunk metadata in the database, and updates the corresponding Qdrant point.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | UpdateIngestionMessage | The update message containing the updated chunk metadata. |
+| web_pool | actix_web::web::Data&lt;models::Pool&gt; | A shared PostgreSQL connection pool. |
+| dataset_config | DatasetConfiguration | The configuration of the dataset associated with the chunk. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Returns `Ok(())` if the update was successful, or a `ServiceError` if an error occurred. |
+
+#### Internal Logic
+1. Prepares the chunk data for update, including converting HTML to text and extracting timestamps.
+2. Calculates semantic embeddings using `get_dense_vector` if semantic search is enabled.
+3. Calculates sparse embeddings using `get_sparse_vectors` if full-text search is enabled.
+4. Calculates BM25 embeddings using `get_bm25_embeddings` if BM25 search is enabled.
+5. Updates the chunk metadata in the database using `update_chunk_metadata_query`.
+6. Updates the corresponding Qdrant point using `update_qdrant_point_query`.
+7. Handles errors by returning a `ServiceError`.
+
+### `readd_error_to_queue`
+#### Description
+This function handles errors during chunk ingestion by re-adding the failed message to the ingestion queue for retry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| message | IngestionMessage | The original ingestion message that failed. |
+| error | ServiceError | The error that occurred during processing. |
+| redis_pool | actix_web::web::Data&lt;models::RedisPool&gt; | A shared Redis connection pool. |
+| event_queue | actix_web::web::Data&lt;EventQueue&gt; | A shared event queue for sending analytics events to ClickHouse. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Returns `Ok(())` if the message was successfully re-added to the queue, or a `ServiceError` if an error occurred. |
+
+#### Internal Logic
+1. Checks if the error is a `DuplicateTrackingId` error. If so, it logs the error and returns `Ok(())` without re-adding the message to the queue.
+2. If the message is a `BulkUpload` message, increments the `attempt_number` field.
+3. If the `attempt_number` reaches 10, logs an error, sends a `BulkChunkUploadFailed` event to ClickHouse, and moves the message to the "dead_letters" queue.
+4. Otherwise, re-serializes the message and pushes it back to the "ingestion" queue for retry.
+
+## Dependencies
+- `chrono`: For date and time handling.
+- `dateparser`: For parsing date and time strings.
+- `diesel_async`: For asynchronous database interaction with PostgreSQL.
+- `futures_util`: For working with asynchronous futures.
+- `itertools`: For iterator manipulation.
+- `qdrant_client`: For interacting with the Qdrant vector database.
+- `sentry`: For error monitoring and reporting.
+- `signal_hook`: For handling system signals.
+- `tracing_subscriber`: For logging and tracing.
+- `trieve_server`: The main server library containing data models, handlers, and operators.
+- `bb8_redis`: For managing a Redis connection pool.
+- `clickhouse`: For interacting with ClickHouse for analytics.
+- `reqwest`: For making HTTP requests.
+- `redis`: For interacting with Redis.
+- `serde_json`: For JSON serialization and deserialization.
+
+## Error Handling
+The code implements error handling by:
+- Logging errors using the `log` crate.
+- Returning `ServiceError` objects to indicate errors.
+- Re-adding failed messages to the ingestion queue for retry, up to a maximum of 10 attempts.
+- Moving messages that fail 10 times to the "dead_letters" queue.
+- Sending analytics events to ClickHouse to track errors.
+
+## Logging
+The code uses the `tracing_subscriber` crate for logging and tracing. The log level is set to `INFO` by default, and can be configured using the `RUST_LOG` environment variable.
+
+## TODOs
+None.

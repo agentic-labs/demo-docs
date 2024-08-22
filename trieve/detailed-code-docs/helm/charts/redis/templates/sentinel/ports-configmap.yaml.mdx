@@ -1,0 +1,58 @@
+---
+title: "ports-configmap.yaml"
+---
+
+## High-level description
+This code defines a Helm template that generates a Kubernetes ConfigMap named `&lt;release-name&gt;-redis-ports-configmap` in the specified namespace. This ConfigMap stores a mapping of service names to dynamically allocated NodePort values, specifically for Redis Sentinel and Redis instances in a replication architecture.
+
+## Code Structure
+The code first checks if Redis replication and Sentinel are enabled and if NodePort is the chosen service type without predefined node ports. Then it retrieves a list of already used NodePorts in the cluster. Based on the desired replica count, it calculates the required number of NodePorts and iterates to find unused port numbers, avoiding collisions. Finally, it creates a ConfigMap containing the assigned NodePorts for each Redis Sentinel and Redis instance.
+
+## Symbols
+
+### `ports-configmap.yaml`
+#### Description
+This code block defines a Helm template for a Kubernetes ConfigMap. This ConfigMap is intended to store a mapping of Redis service names (Sentinel and Redis instances) to their corresponding NodePort values. This is particularly useful in a setup where NodePort is used for external access, and the port numbers need to be dynamically assigned to avoid conflicts.
+
+#### Inputs
+This template uses values from `Values` object passed to it by Helm.
+* `.Values.architecture`: Defines the Redis architecture. The logic within this template is applied only if the architecture is set to "replication".
+* `.Values.sentinel.enabled`:  A boolean indicating whether Redis Sentinel is enabled.
+* `.Values.sentinel.service.type`: Defines the type of Kubernetes Service for Sentinel. The logic is applied only if the type is "NodePort".
+* `.Values.sentinel.service.nodePorts.redis`: This conditional checks if node ports are predefined. If not, the template proceeds to dynamically allocate them.
+* `.Values.replica.replicaCount`: The number of Redis replicas to be deployed. This value is used to calculate the total number of NodePorts required.
+* `.Values.commonLabels`: A dictionary of common labels to be applied to the ConfigMap.
+* `.Values.commonAnnotations`: A dictionary of common annotations to be applied to the ConfigMap.
+
+#### Outputs
+The template outputs a Kubernetes ConfigMap resource defined in YAML format. The ConfigMap has the following structure:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: &lt;release-name&gt;-redis-ports-configmap
+  namespace: &lt;namespace&gt;
+  labels:
+    # Common labels
+  annotations:
+    # Common annotations
+data:
+  &lt;service-name1&gt;: &lt;nodePort1&gt;
+  &lt;service-name2&gt;: &lt;nodePort2&gt;
+  ...
+```
+
+#### Internal Logic
+1. **Check for Conditions:** The template starts by checking if the Redis architecture is set to "replication", Sentinel is enabled, the service type is "NodePort", and node ports are not predefined. If any of these conditions are not met, the template execution stops.
+2. **Get Used NodePorts:** It retrieves a list of all currently used NodePorts in the Kubernetes cluster by iterating over all services and their ports.
+3. **Sort Used NodePorts:** The list of used NodePorts is sorted alphanumerically.
+4. **Calculate Required NodePorts:** Based on the number of replicas and a predefined constant (`$numberofPortsPerNodeService`), the template calculates the total number of NodePorts required.
+5. **Find Unused NodePorts:** The template iterates through a range of potential NodePort values (starting from 30000) and checks if they are already in use. If a collision is detected, the port number is incremented, and the check continues until an unused port is found.
+6. **Create ConfigMap Data:**  The found NodePorts are then assigned to specific service names based on their index. For example, the first two ports are assigned to the main Sentinel and Redis services, and the subsequent ports are assigned to the replica instances.
+7. **Create ConfigMap Resource:** Finally, the template renders a Kubernetes ConfigMap resource with the calculated NodePort mappings in the `data` section.
+
+## Side Effects
+This template creates a new ConfigMap in the Kubernetes cluster or updates an existing one if a ConfigMap with the same name already exists.
+
+## Dependencies
+This template doesn't have external dependencies in terms of libraries. However, it depends on the Helm engine for rendering and on Kubernetes for deploying the generated ConfigMap resource.

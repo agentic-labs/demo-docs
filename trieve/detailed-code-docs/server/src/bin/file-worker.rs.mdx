@@ -1,0 +1,122 @@
+---
+title: "file-worker.rs"
+---
+
+## High-level description
+The `file-worker.rs` file defines a worker service that processes file ingestion requests from a Redis queue. It retrieves file data from AWS S3, extracts text content using Tika, and stores file metadata and chunks in a PostgreSQL database. It also handles errors during processing and sends analytics events to ClickHouse.
+
+## Code Structure
+The main function initializes the worker service, establishes connections to Redis, PostgreSQL, and ClickHouse (if analytics is enabled), and starts the file worker loop. The `file_worker` function continuously polls the Redis queue for file ingestion requests, processes them, and acknowledges successful processing. The `upload_file` function handles the actual file upload and processing logic, including retrieving file data, extracting text, and storing metadata. The `readd_error_to_queue` function handles errors during processing, re-adding the request to the queue for retry or moving it to a dead letter queue after multiple failures.
+
+## References
+- `trieve_server::data::models`: Defines data models used by the worker service, such as `FileWorkerMessage`, `RedisPool`, and `Pool`.
+- `trieve_server::errors::ServiceError`: Defines custom service errors.
+- `trieve_server::establish_connection`: Provides a function to establish a database connection.
+- `trieve_server::get_env`: Provides a helper function to retrieve environment variables.
+- `trieve_server::operators`: Defines various operators used for interacting with external services, such as ClickHouse and AWS S3.
+
+## Symbols
+
+### `main`
+#### Description
+Initializes the file worker service, establishes connections to Redis, PostgreSQL, and ClickHouse (if analytics is enabled), and starts the file worker loop.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+1. Initializes environment variables from a `.env` file.
+2. Initializes Sentry for error monitoring if `SENTRY_URL` is set.
+3. Initializes a tracing subscriber for logging.
+4. Creates a PostgreSQL connection pool using `diesel_async`.
+5. Creates a Redis connection pool using `bb8_redis`.
+6. Initializes a ClickHouse event queue if analytics is enabled.
+7. Registers a signal handler for `SIGTERM` to gracefully shut down the service.
+8. Starts the `file_worker` function in a new Tokio runtime.
+
+### `file_worker`
+#### Description
+Continuously polls the Redis queue for file ingestion requests, processes them, and acknowledges successful processing.
+
+#### Inputs
+- `should_terminate`: An atomic boolean flag indicating whether the service should terminate.
+- `redis_pool`: A Redis connection pool.
+- `web_pool`: A PostgreSQL connection pool.
+- `event_queue`: A ClickHouse event queue.
+
+#### Outputs
+None
+
+#### Internal Logic
+1. Enters an infinite loop that continues until the `should_terminate` flag is set.
+2. Attempts to retrieve a file ingestion request from the `file_ingestion` Redis queue using the `brpoplpush` command, which atomically moves the request to the `file_processing` queue.
+3. If a request is retrieved:
+    - Deserializes the request payload from JSON into a `FileWorkerMessage` struct.
+    - Calls the `upload_file` function to process the file.
+    - If the upload is successful, removes the request from the `file_processing` queue using the `LREM` command.
+    - If the upload fails, logs the error and calls the `readd_error_to_queue` function to handle the error.
+4. If no request is retrieved or an error occurs during processing, sleeps for a short duration before retrying.
+
+### `upload_file`
+#### Description
+Handles the actual file upload and processing logic, including retrieving file data, extracting text, and storing metadata.
+
+#### Inputs
+- `file_worker_message`: A `FileWorkerMessage` struct containing information about the file to be uploaded.
+- `web_pool`: A PostgreSQL connection pool.
+- `event_queue`: A ClickHouse event queue.
+- `redis_conn`: A Redis connection.
+
+#### Outputs
+- `Result&lt;Option&lt;uuid::Uuid&gt;, ServiceError&gt;`: Returns `Ok(Some(file_id))` if the file was successfully uploaded and chunks were created, `Ok(None)` if the file was successfully uploaded but no chunks were created, or an error if the upload failed.
+
+#### Internal Logic
+1. Retrieves the file data from AWS S3 using the file ID from the `file_worker_message`.
+2. Extracts text content from the file using Tika.
+3. Creates a new file record in the database using the `create_file_query` function.
+4. If the `create_chunks` flag is set in the `file_worker_message`, creates file chunks using the `create_file_chunks` function.
+5. Returns the file ID if the upload was successful.
+
+### `readd_error_to_queue`
+#### Description
+Handles errors during processing, re-adding the request to the queue for retry or moving it to a dead letter queue after multiple failures.
+
+#### Inputs
+- `payload`: The original `FileWorkerMessage` payload.
+- `error`: The error that occurred during processing.
+- `event_queue`: A ClickHouse event queue.
+- `redis_pool`: A Redis connection pool.
+
+#### Outputs
+- `Result&lt;(), ServiceError&gt;`: Returns `Ok(())` if the error was handled successfully, or an error if an error occurred while handling the error.
+
+#### Internal Logic
+1. Increments the `attempt_number` in the `payload`.
+2. Removes the original request from the `file_processing` queue.
+3. If the `attempt_number` is less than 3, re-adds the request to the `file_ingestion` queue for retry.
+4. If the `attempt_number` is 3, logs an error, sends a `FileUploadFailed` event to ClickHouse, and moves the request to the `dead_letters_file` queue.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `diesel_async` | Asynchronous PostgreSQL database client |
+| `redis` | Redis client |
+| `sentry` | Error monitoring and reporting |
+| `signal_hook` | Signal handling |
+| `tracing_subscriber` | Structured logging |
+| `bb8_redis` | Redis connection pool |
+| `clickhouse` | ClickHouse database client |
+| `dotenvy` | Loads environment variables from `.env` files |
+| `tokio` | Asynchronous runtime |
+| `uuid` | UUID generation |
+| `serde_json` | JSON serialization and deserialization |
+| `reqwest` | HTTP client |
+
+## Error Handling
+The `readd_error_to_queue` function implements the main error handling mechanism. It retries failed requests up to three times before moving them to a dead letter queue. Errors are also logged and reported to Sentry if enabled.
+
+## Logging
+The code uses the `tracing_subscriber` crate for structured logging. Log messages are output to the console at the `INFO` level by default. If `SENTRY_URL` is set, log messages are also sent to Sentry.

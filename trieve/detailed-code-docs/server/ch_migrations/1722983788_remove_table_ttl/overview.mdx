@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for removing Time-To-Live (TTL) settings from five specific tables in a database. The migration consists of two files: `up.sql` for applying the changes (removing TTL) and `down.sql` for reverting the changes (re-adding TTL).
+
+## What does it do?
+The migration scripts in this directory modify the structure of five database tables:
+1. `dataset_events`
+2. `search_queries`
+3. `rag_queries`
+4. `recommendations`
+5. `ctr_data`
+
+The `up.sql` script removes the TTL settings from these tables, which means that the data in these tables will no longer be automatically deleted after a certain period. This allows the data to persist indefinitely in the database.
+
+The `down.sql` script does the opposite by adding back the TTL settings to these tables. It sets a 30-day TTL for each table, meaning that records will be automatically deleted 30 days after their creation date.
+
+These changes affect how long data is retained in the database and can have implications for data management, storage, and query performance.
+
+## Key Files
+
+### up.sql
+This file contains SQL statements to remove the TTL settings from the five specified tables. Here's an example of one of the statements:
+
+```sql
+ALTER TABLE dataset_events REMOVE TTL;
+```
+
+This statement is repeated for each of the five tables, effectively disabling automatic data expiration for all of them.
+
+### down.sql
+This file contains SQL statements to add back the TTL settings to the five tables. Each statement sets a 30-day TTL based on the `created_at` column. Here's an example:
+
+```sql
+ALTER TABLE dataset_events MODIFY TTL created_at + INTERVAL 30 DAY;
+```
+
+This pattern is repeated for all five tables, ensuring that if the migration needs to be rolled back, the original TTL settings are restored.
+
+## Configuration
+The migration scripts do not use any external configuration files or environment variables. However, there are some implicit configuration aspects to note:
+
+1. Table names: The scripts are hardcoded to work with five specific table names. If these table names change or if additional tables need similar treatment, the scripts would need to be modified.
+
+2. TTL duration: In the `down.sql` script, the TTL duration is set to 30 days for all tables. This is a fixed value and would need to be changed in the script if a different retention period is desired.
+
+3. TTL column: The scripts assume that each table has a `created_at` column which is used as the basis for the TTL calculation. If this column name changes or if a different column should be used, the scripts would need to be updated.
+
+## Performance Considerations
+While the execution of these migration scripts is likely to be quick, the changes they implement can have significant performance implications:
+
+1. Removing TTL (up.sql):
+   - May lead to increased database size over time as data is no longer automatically deleted.
+   - Could potentially impact query performance on these tables as they grow larger.
+   - Might affect storage costs and backup times due to increased data volume.
+
+2. Adding TTL (down.sql):
+   - Introduces automatic data deletion, which can help manage database size.
+   - May slightly increase the overhead of insert operations.
+   - Could affect query performance during cleanup operations when TTL causes deletions.
+
+It's important to monitor the affected tables after applying these changes to ensure that the database performance remains acceptable and that data growth is managed appropriately.
+
+## TODOs and Recommendations
+1. Error handling: Consider adding checks to ensure tables and columns exist before attempting to modify them.
+2. Data management strategy: With TTL removed, implement an alternative strategy for managing data growth in these tables.
+3. Monitoring: Set up monitoring for table sizes and query performance on the affected tables.
+4. Flexible configuration: Consider making the TTL duration configurable, perhaps through environment variables, to allow easier adjustments in different environments.
+5. Documentation: Ensure that the reasons for removing (or re-adding) TTL are well-documented for future reference.
+
+By implementing these migrations, the development team is making a significant change to the data retention policy of the application. It's crucial to understand the long-term implications of this change and to have a plan for managing the data lifecycle in the absence of automatic TTL-based deletion.

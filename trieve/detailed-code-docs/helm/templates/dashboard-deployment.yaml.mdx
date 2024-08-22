@@ -1,0 +1,55 @@
+---
+title: "dashboard-deployment.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes Deployment for a "dashboard" application. It specifies the container image, port mappings, and environment variables for the dashboard service. The deployment is configured to use an image from either a local registry or "trieve/" based on the environment.
+
+## References
+This code references values from a `values.yaml` file (not shown) using Helm templating syntax (e.g., `{{ .Values.containers.dashboard.tag }}`). These values likely include:
+* `.Release.Name`: The name of the Helm release.
+* `.Values.environment`: The target environment (e.g., "local", "production").
+* `.Values.containers.dashboard.tag`: The Docker tag for the dashboard image.
+* `.Values.config.vite.*`: Various configuration values prefixed with "VITE_", likely related to API endpoints.
+
+## Symbols
+### `dashboard` Deployment
+#### Description
+This deployment manages the deployment of the "dashboard" application within a Kubernetes cluster. It ensures a specified number of replicas of the application are running and manages their lifecycle.
+
+#### Inputs
+This deployment uses values from a `values.yaml` file, passed to it through Helm.
+
+#### Outputs
+A deployed "dashboard" application within the Kubernetes cluster.
+
+#### Internal Logic
+The deployment defines:
+* **Selector:** Matches pods labeled with `app.kubernetes.io/name: dashboard` and `app.kubernetes.io/instance: {{ .Release.Name }}`.
+* **Template:** Defines the pod template for the deployment.
+    * **Metadata:** Labels the pods for service discovery.
+    * **Spec:** Defines the pod specification.
+        * **Containers:** Specifies the containers to run within the pod.
+            * **dashboard:** The main container running the dashboard application.
+                * **Image:** Uses a conditional expression to determine the image repository based on the environment. If the environment is "local", it uses "localhost:5001/". Otherwise, it uses "trieve/". The image tag is appended from the `values.yaml` file.
+                * **Ports:** Exposes port 80 for HTTP traffic.
+                * **Env:** Sets environment variables for the container:
+                    * `VITE_API_HOST`: API host URL.
+                    * `VITE_SEARCH_UI_URL`: Search UI URL.
+                    * `VITE_CHAT_UI_URL`: Chat UI URL.
+                    * `VITE_ANALYTICS_UI_URL`: Analytics UI URL.
+
+## Dependencies
+This code depends on Kubernetes and Helm.
+
+### Configuration
+Configuration is managed through a `values.yaml` file used by Helm. The following values are referenced:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `.Release.Name` | string |  | Name of the Helm release. |
+| `.Values.environment` | string |  | Target environment (e.g., "local", "production"). |
+| `.Values.containers.dashboard.tag` | string |  | Docker tag for the dashboard image. |
+| `.Values.config.vite.apiHost` | string |  | API host URL. |
+| `.Values.config.vite.searchUiUrl` | string |  | Search UI URL. |
+| `.Values.config.vite.chatUiUrl` | string |  | Chat UI URL. |
+| `.Values.config.vite.analyticsUiUrl` | string |  | Analytics UI URL. | 

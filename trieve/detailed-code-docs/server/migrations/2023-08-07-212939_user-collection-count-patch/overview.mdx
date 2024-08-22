@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for implementing and reverting changes related to user card collection counts in a database. The migration introduces a new table, a function, and a trigger to maintain an up-to-date count of collections for each user.
+
+## What does it do?
+The migration scripts in this directory perform the following tasks:
+
+1. Create a new table called `user_collection_counts` to store the number of collections each user has.
+2. Implement a function `update_collection_counts()` that automatically updates the count in `user_collection_counts` whenever a collection is added, modified, or deleted.
+3. Set up a trigger `update_collection_counts_trigger` on the `card_collection` table to call the `update_collection_counts()` function after each INSERT, UPDATE, or DELETE operation.
+4. Populate the `user_collection_counts` table with initial values based on existing `card_collection` data.
+5. Provide a way to revert these changes by dropping the created table, function, and trigger.
+
+This implementation ensures that the count of collections for each user is always accurate and up-to-date without requiring manual updates or separate queries to calculate the count each time it's needed.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to implement the new functionality:
+
+1. Creates the `user_collection_counts` table with columns:
+   - `id` (UUID): Unique identifier for each row
+   - `user_id` (UUID): Foreign key referencing the `users` table
+   - `collection_count` (INTEGER): Number of collections for the user
+
+2. Defines the `update_collection_counts()` function:
+   - Handles INSERT, UPDATE, and DELETE operations on the `card_collection` table
+   - Updates the `user_collection_counts` table accordingly
+
+3. Creates the `update_collection_counts_trigger` on the `card_collection` table
+
+4. Populates the `user_collection_counts` table with initial data
+
+Here's a snippet of the function definition:
+
+```sql
+CREATE OR REPLACE FUNCTION update_collection_counts() RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+        INSERT INTO user_collection_counts (user_id, collection_count)
+        VALUES (NEW.user_id, 1)
+        ON CONFLICT (user_id) DO UPDATE
+        SET collection_count = user_collection_counts.collection_count + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE user_collection_counts
+        SET collection_count = collection_count - 1
+        WHERE user_id = OLD.user_id;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`:
+
+1. Drops the `update_collection_counts_trigger` from the `card_collection` table
+2. Drops the `update_collection_counts()` function
+3. Drops the `user_collection_counts` table
+
+Here's the content of `down.sql`:
+
+```sql
+DROP TRIGGER IF EXISTS update_collection_counts_trigger ON card_collection;
+DROP FUNCTION IF EXISTS update_collection_counts();
+DROP TABLE IF EXISTS user_collection_counts;
+```
+
+## Configuration
+The migration scripts use the following database objects:
+
+1. `card_collection` table: An existing table that stores information about user collections.
+2. `users` table: An existing table that stores user information.
+
+The scripts assume these tables already exist in the database. The `user_id` column in the `user_collection_counts` table is set up as a foreign key referencing the `users` table, ensuring data integrity.
+
+No additional configuration files or environment variables are required for these migration scripts.

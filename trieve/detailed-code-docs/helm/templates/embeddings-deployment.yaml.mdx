@@ -1,0 +1,50 @@
+---
+title: "embeddings-deployment.yaml"
+---
+
+## High-level description
+This code defines a Helm template for deploying multiple text embedding inference services as Kubernetes Deployments. Each service is configured with a specific embedding model, revision, and optional arguments.
+
+## Code Structure
+The code uses a range loop to iterate over a list of embedding service configurations provided in the `Values.embeddings` object. For each service, it renders a Kubernetes Deployment resource with specific settings derived from the configuration.
+
+## Symbols
+### `helm/templates/embeddings-deployment.yaml`
+#### Description
+This file is a Helm template that defines a Kubernetes Deployment for a text embedding inference service. It allows deploying multiple instances of the service, each with a different embedding model and configuration.
+
+#### Inputs
+This template uses values from `Values.yaml` or provided during Helm install/upgrade. The key values used are:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `.Values.embeddings` | list | A list of embedding service configurations. Each configuration is a dictionary with keys like `name`, `model`, `revision`, and `args`. |
+| `.Values.environment` | string | The environment where the deployment is happening. Used to determine node selectors. |
+| `.Values.useGpu` | boolean | Whether to use GPU for the embedding service. |
+
+#### Outputs
+Renders a Kubernetes Deployment resource for each embedding service defined in `.Values.embeddings`.
+
+#### Internal Logic
+1. **Iterate through Embeddings:** The template iterates through the `.Values.embeddings` list.
+2. **Extract Configuration:** For each embedding service, it extracts the `name`, `model`, `revision`, and `args`.
+3. **Conditional Rendering:** It conditionally adds a `---` separator between deployments.
+4. **Define Deployment:** It defines a Kubernetes Deployment with the extracted configuration:
+    - `metadata.name`: Set to `embedding-{name}`.
+    - `spec.selector`: Selects pods with matching labels.
+    - `spec.template.metadata.labels`: Sets labels for the pods.
+    - `spec.template.spec.nodeSelector`: If `environment` is "gcloud", it adds a node selector for GPU nodes.
+    - `spec.template.spec.containers`: Defines a container named `embedding-{name}`:
+        - `readinessProbe`: Checks service readiness on port 80.
+        - `image`: Uses either the GPU or CPU image based on `useGpu`.
+        - `args`: Passes model ID, revision, and additional arguments to the container.
+        - `ports`: Exposes port 80.
+        - `resources`: If `useGpu` is true, requests a GPU resource.
+
+## Dependencies
+This template relies on Kubernetes and Helm for deployment and management. It also depends on the Docker images for text embedding inference provided by Hugging Face.
+
+## Configuration
+This template uses values from `Values.yaml` or provided during Helm install/upgrade. See the "Inputs" section for details.
+
+## Side Effects
+This template creates Kubernetes Deployments, which in turn create Pods and other resources. It might also schedule pods on specific nodes based on the configured node selectors.

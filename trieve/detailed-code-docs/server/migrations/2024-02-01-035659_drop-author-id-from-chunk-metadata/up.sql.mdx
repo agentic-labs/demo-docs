@@ -1,0 +1,55 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script performs several database schema modifications. It removes the `author_id` column from the `chunk_metadata` table and updates foreign key constraints on multiple tables to include `ON UPDATE CASCADE` and `ON DELETE CASCADE` actions, ensuring referential integrity with the `users` table.
+
+## Symbols
+
+### ALTER TABLE chunk_metadata
+#### Description
+This command removes the `author_id` column from the `chunk_metadata` table.
+
+#### Internal Logic
+The `DROP COLUMN` clause is used to remove the specified column from the table.
+
+### ALTER TABLE user_organizations
+#### Description
+This set of commands modifies the foreign key constraint on the `user_organizations` table.
+
+#### Internal Logic
+1. Drops the existing foreign key constraint named `fk_user_id` if it exists.
+2. Creates a new foreign key constraint `fk_user_id` referencing the `id` column in the `users` table, with `ON UPDATE CASCADE` and `ON DELETE CASCADE` actions.
+
+### ALTER TABLE user_api_key
+#### Description
+These commands update the foreign key constraint on the `user_api_key` table.
+
+#### Internal Logic
+1. Drops the existing foreign key constraint `user_api_key_user_id_fkey`.
+2. Adds a new foreign key constraint with the same name, referencing the `id` column in the `users` table, with `ON UPDATE CASCADE` and `ON DELETE CASCADE` actions.
+
+### ALTER TABLE files
+#### Description
+These commands update the foreign key constraint on the `files` table.
+
+#### Internal Logic
+1. Drops the existing foreign key constraint `files_user_id_fkey`.
+2. Adds a new foreign key constraint with the same name, referencing the `id` column in the `users` table, with `ON UPDATE CASCADE` and `ON DELETE CASCADE` actions.
+
+### ALTER TABLE topics
+#### Description
+These commands update the foreign key constraint on the `topics` table.
+
+#### Internal Logic
+1. Drops the existing foreign key constraint `topics_user_id_fkey`.
+2. Adds a new foreign key constraint with the same name, referencing the `id` column in the `users` table, with `ON UPDATE CASCADE` and `ON DELETE CASCADE` actions.
+
+## Side Effects
+- The `author_id` column in the `chunk_metadata` table will be permanently removed, potentially causing data loss if it contained important information.
+- The updated foreign key constraints will now cascade updates and deletes from the `users` table to the related tables (`user_organizations`, `user_api_key`, `files`, and `topics`). This means that when a user record is updated or deleted, the corresponding records in these tables will be automatically updated or deleted as well.
+
+## Performance Considerations
+- Dropping columns and modifying constraints on large tables may temporarily lock the tables and could impact database performance during the migration. It's recommended to run this migration during low-traffic periods.
+- The new cascading constraints may slightly increase the time taken for delete operations on the `users` table, as the database will need to propagate the deletions to related tables.

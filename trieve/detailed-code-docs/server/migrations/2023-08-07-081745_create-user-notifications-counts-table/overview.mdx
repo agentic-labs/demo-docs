@@ -1,0 +1,94 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and managing a `user_notification_counts` table in a database system. The migration is designed to track and maintain accurate counts of notifications for each user in real-time.
+
+## What does it do?
+The migration scripts in this directory accomplish the following:
+
+1. Create a new table called `user_notification_counts` to store the number of notifications for each user.
+2. Implement a trigger function that automatically updates the notification count when notifications are added or removed.
+3. Set up triggers on existing notification tables to call this function and keep the counts up-to-date.
+4. Initialize the new table with existing notification data from the system.
+5. Provide a way to undo these changes if needed.
+
+This system allows for efficient querying of notification counts without the need to recalculate them each time, improving performance for user interfaces that display notification badges or counters.
+
+## Key Files
+The directory contains two main SQL files:
+
+1. `up.sql`: This file contains the SQL commands to create the new table, implement the trigger function, set up triggers, and initialize the data.
+
+2. `down.sql`: This file contains the SQL commands to undo the changes made by `up.sql`, removing the triggers, function, and table.
+
+### up.sql
+The `up.sql` file performs the following operations:
+
+1. Creates the `user_notification_counts` table with columns for user UUID and notification count.
+2. Defines a trigger function `update_notification_count()` that increments or decrements the count based on INSERT or DELETE operations.
+3. Creates triggers on `verification_notifications` and `file_upload_completed_notifications` tables to call this function.
+4. Initializes the `user_notification_counts` table with existing notification data.
+
+Here's a snippet of the table creation:
+
+```sql
+CREATE TABLE user_notification_counts (
+    user_uuid UUID PRIMARY KEY REFERENCES users(uuid),
+    notification_count INTEGER NOT NULL DEFAULT 0
+);
+```
+
+And a part of the trigger function:
+
+```sql
+CREATE OR REPLACE FUNCTION update_notification_count() RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO user_notification_counts (user_uuid, notification_count)
+        VALUES (NEW.user_uuid, 1)
+        ON CONFLICT (user_uuid) DO UPDATE
+        SET notification_count = user_notification_counts.notification_count + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE user_notification_counts
+        SET notification_count = notification_count - 1
+        WHERE user_uuid = OLD.user_uuid;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+The `down.sql` file reverses the changes made by `up.sql`:
+
+1. Drops the triggers created on the notification tables.
+2. Drops the `update_notification_count()` function.
+3. Drops the `user_notification_counts` table.
+
+Here's an example of the drop statements:
+
+```sql
+DROP TRIGGER IF EXISTS update_verification_notification_count ON verification_notifications;
+DROP TRIGGER IF EXISTS update_file_upload_notification_count ON file_upload_completed_notifications;
+DROP FUNCTION IF EXISTS update_notification_count();
+DROP TABLE IF EXISTS user_notification_counts;
+```
+
+## Dependencies
+The migration scripts depend on the following existing database objects:
+
+1. `users` table: Referenced by the `user_notification_counts` table for user UUIDs.
+2. `verification_notifications` table: Used for counting existing notifications and as a target for one of the triggers.
+3. `file_upload_completed_notifications` table: Used for counting existing notifications and as a target for one of the triggers.
+
+## Configuration
+These migration scripts do not require any external configuration. They are designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the application's backend.
+
+## Performance Considerations
+1. The use of triggers ensures real-time updates of notification counts, which may impact performance on high-volume insert/delete operations on the notification tables.
+2. The initial data population query in `up.sql` uses subqueries, which might be slow for large datasets. For production systems with a large amount of existing data, it may be advisable to optimize this query or perform the initial population in batches.
+3. The `user_notification_counts` table improves read performance for notification counts at the cost of some write overhead and additional storage.
+
+In conclusion, this migration sets up a system for efficiently tracking user notification counts, ensuring that the counts are always up-to-date through the use of triggers, and provides a way to initialize the system with existing data as well as roll back the changes if needed.

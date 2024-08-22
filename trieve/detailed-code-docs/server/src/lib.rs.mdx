@@ -1,0 +1,102 @@
+---
+title: "lib.rs"
+---
+
+## High-level description
+This code represents the server-side implementation of the Trieve API, a system for managing and searching datasets, chunks of information, and providing RAG (Retrieval-Augmented Generation) capabilities. It includes functionality for authentication, data management, search operations, analytics, and integration with external services like Stripe for payments and OpenAI for language model interactions.
+
+## Code Structure
+The codebase is organized into several modules and files, each handling specific aspects of the system:
+
+1. `lib.rs`: The main entry point that sets up the server, defines routes, and initializes various services.
+2. Handler files (e.g., `auth_handler.rs`, `message_handler.rs`): Handle specific API endpoints and their logic.
+3. Operator files (e.g., `qdrant_operator.rs`, `stripe_operator.rs`): Contain business logic and interactions with external services.
+4. Model files (e.g., `models.rs`): Define data structures used throughout the application.
+5. Utility files (e.g., `errors.rs`): Provide common functionality and error handling.
+6. Worker files (e.g., `delete-worker.rs`, `reindex-worker.rs`): Handle background tasks and data processing.
+
+## Symbols
+
+### `main` function in lib.rs
+#### Description
+The main entry point for the Trieve server. It sets up the server configuration, initializes databases and services, and defines the API routes.
+
+#### Internal Logic
+1. Sets up environment variables and logging
+2. Initializes database connections (PostgreSQL and Redis)
+3. Sets up Qdrant collections for vector search
+4. Configures API routes and middleware
+5. Starts the HTTP server
+
+### `create_message` function in message_handler.rs
+#### Description
+Handles the creation of a new message in a chat topic, potentially using RAG for generating responses.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | CreateMessageReqPayload | Request payload containing message details |
+| user | AdminOnly | Authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization details |
+| event_queue | web::Data&lt;EventQueue&gt; | Queue for analytics events |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Internal Logic
+1. Validates the request and checks usage limits
+2. Retrieves previous messages in the topic
+3. Performs a search to retrieve relevant chunks
+4. Generates a response using a language model (e.g., OpenAI)
+5. Stores the new message and sends analytics events
+
+### `search_hybrid_chunks` function in search_operator.rs
+#### Description
+Performs a hybrid search (combining semantic and full-text search) over chunks in a dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| search_chunks_req_payload | SearchChunksReqPayload | Search parameters |
+| parsed_query | ParsedQuery | Parsed search query |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| dataset | Dataset | Dataset to search in |
+| dataset_config | &DatasetConfiguration | Dataset configuration |
+| timer | &mut Timer | Timer for performance tracking |
+
+#### Internal Logic
+1. Performs semantic search using vector embeddings
+2. Performs full-text search using BM25 or other algorithms
+3. Combines and ranks results
+4. Applies filters and highlighting
+5. Returns ranked and formatted search results
+
+## Dependencies
+The project relies on several external libraries and services:
+- Actix-web for the web framework
+- Diesel for database ORM
+- Qdrant for vector search
+- OpenAI for language model interactions
+- Stripe for payment processing
+- Redis for caching and queue management
+- ClickHouse for analytics data storage
+
+## Error Handling
+The application uses a custom `ServiceError` enum to handle and propagate errors throughout the system. This allows for consistent error handling and appropriate HTTP responses.
+
+## Logging
+The application uses the `log` crate for logging, with different log levels (INFO, ERROR, etc.) used throughout the code for debugging and monitoring purposes.
+
+## API/Interface Reference
+The API is documented using OpenAPI (Swagger) specifications. Key endpoints include:
+- Authentication (/api/auth)
+- Chunk management (/api/chunk)
+- Message handling (/api/message)
+- Search operations (/api/chunk/search)
+- Analytics (/api/analytics)
+
+## Performance Considerations
+- The system uses asynchronous programming (async/await) for improved concurrency.
+- Vector search operations are optimized using Qdrant.
+- Redis is used for caching and as a message queue for background tasks.
+- The application supports streaming responses for long-running operations like chat completions.
+
+This codebase represents a complex system with many interacting parts. It's designed to be scalable and extensible, with clear separation of concerns between different modules and services.

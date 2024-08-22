@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for implementing a new user management system. The migration introduces a many-to-many relationship between users and organizations, replacing the previous one-to-many relationship. This change allows users to belong to multiple organizations with different roles.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" migration:
+   - Removes the `organization_id` column from the `users` table.
+   - Creates a new `user_organizations` table to manage user-organization relationships.
+   - Adds foreign key constraints to link the `user_organizations` table with the `users` and `organizations` tables.
+
+2. In the "down" migration:
+   - Removes the foreign key constraints from the `user_organizations` table.
+   - Drops the `user_organizations` table.
+   - Adds the `organization_id` column back to the `users` table.
+
+These changes enable a more flexible user management system where users can be associated with multiple organizations, each with a specific role. This is particularly useful for scenarios where users might need different levels of access or responsibilities across various organizations within the system.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to implement the new user management structure. It creates the `user_organizations` table and modifies the `users` table.
+
+2. `down.sql`: This file contains the SQL commands to revert the changes made by `up.sql`, restoring the database to its previous state.
+
+## Configuration
+The migration scripts use SQL commands and do not require additional configuration. However, they rely on the existence of `users` and `organizations` tables in the database.
+
+Key configurable fields in the `user_organizations` table include:
+
+- `user_id`: UUID linking to the `users` table
+- `organization_id`: UUID linking to the `organizations` table
+- `role`: An integer representing the user's role in the organization
+
+## Side Effects and Considerations
+
+1. Data Migration: When applying this migration to an existing system, careful consideration must be given to migrating existing user-organization relationships from the `users` table to the new `user_organizations` table.
+
+2. Application Code Updates: Any existing application code that relies on the `organization_id` column in the `users` table will need to be updated to use the new `user_organizations` table for querying user-organization relationships.
+
+3. Performance: Queries involving user-organization relationships may become more complex and potentially slower, as they now require joining with the `user_organizations` table. Proper indexing should be considered for performance optimization.
+
+4. Data Integrity: The new structure enforces referential integrity through foreign key constraints, ensuring that user-organization relationships always refer to valid users and organizations.
+
+5. Flexibility: The new structure allows for more flexible user management, supporting scenarios where users need different roles or access levels across multiple organizations.
+
+6. Reversibility: The `down.sql` script allows for reverting the changes, but care must be taken to ensure no data loss occurs when transitioning back to the old structure.
+
+Example of how the new structure might be used in application code:
+
+```sql
+-- Query to get all organizations a user belongs to
+SELECT o.* 
+FROM organizations o
+JOIN user_organizations uo ON o.id = uo.organization_id
+WHERE uo.user_id = 'user_uuid_here';
+
+-- Query to get a user's role in a specific organization
+SELECT role 
+FROM user_organizations 
+WHERE user_id = 'user_uuid_here' AND organization_id = 'org_uuid_here';
+```
+
+These migration scripts represent a significant change in the database schema and should be applied with caution, ensuring that all related application code is updated accordingly to work with the new structure.

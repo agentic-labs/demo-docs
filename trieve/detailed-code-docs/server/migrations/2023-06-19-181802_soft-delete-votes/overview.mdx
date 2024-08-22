@@ -1,0 +1,51 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for implementing soft delete functionality for card votes in the database. The migration is identified by the timestamp 2023-06-19-181802 and is named "soft-delete-votes". It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them.
+
+## What does it do?
+The migration adds a new feature to the card voting system: the ability to mark votes as deleted without permanently removing them from the database. This is achieved by adding a new boolean column called `deleted` to the `card_votes` table. 
+
+When a vote is "deleted", instead of removing it from the database entirely, its `deleted` flag is set to `true`. This allows the system to hide these votes from normal operations while still retaining the data for potential future use or auditing purposes. Votes that are not deleted have this flag set to `false`.
+
+If needed, this change can be undone by running the down migration, which removes the `deleted` column entirely, reverting the table to its previous state.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL command to add the `deleted` column to the `card_votes` table. The new column is defined as a boolean that cannot be null and defaults to `false`. This means that when the migration is run, all existing votes will be marked as not deleted by default.
+
+   ```sql
+   ALTER TABLE card_votes ADD COLUMN deleted boolean NOT NULL DEFAULT false;
+   ```
+
+2. `down.sql`: This file contains the SQL command to remove the `deleted` column from the `card_votes` table, effectively undoing the changes made by the up migration.
+
+   ```sql
+   ALTER TABLE card_votes DROP COLUMN deleted;
+   ```
+
+## Configuration
+This migration does not require any specific configuration. It is designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the main application.
+
+## Dependencies
+This migration doesn't introduce any new dependencies. It relies on standard SQL commands that should be supported by most relational database management systems.
+
+## Side Effects and Considerations
+
+1. **Data Preservation**: The up migration (`up.sql`) is non-destructive. It adds a new column without removing any existing data. However, the down migration (`down.sql`) will result in data loss if executed after the `deleted` column has been in use. Any information about which votes were marked as deleted will be permanently lost.
+
+2. **Default Behavior**: After running the up migration, all existing votes will have their `deleted` flag set to `false`. This ensures that the addition of the new column doesn't change the visibility of existing votes in the system.
+
+3. **Application Logic**: While this migration sets up the database structure for soft deletes, it doesn't implement the actual soft delete functionality. The application code will need to be updated to:
+   - Set the `deleted` flag to `true` when a vote is to be "deleted" instead of removing the record.
+   - Filter out votes where `deleted` is `true` when retrieving active votes.
+
+4. **Performance**: Adding a new column to the `card_votes` table may have a performance impact, especially if the table is large. The database might need to rewrite the entire table to add the new column, which could take some time for tables with many rows.
+
+5. **Indexing**: Depending on how frequently the application queries for deleted or non-deleted votes, it might be beneficial to add an index on the `deleted` column in a future migration to improve query performance.
+
+6. **Cascading Effects**: If there are any foreign key relationships or triggers involving the `card_votes` table, they may need to be reviewed and possibly updated to account for the new `deleted` column.
+
+This migration represents a significant change in how the application handles the deletion of votes, moving from a hard delete approach to a soft delete approach. This change provides more flexibility and data retention but also requires careful consideration in terms of data privacy, storage requirements, and application logic updates.

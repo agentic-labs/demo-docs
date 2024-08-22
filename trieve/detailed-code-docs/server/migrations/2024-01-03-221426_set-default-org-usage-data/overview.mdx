@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the database schema and behavior related to organization usage data. The migration is identified by the timestamp 2024-01-03-221426 and is titled "set-default-org-usage-data". It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them.
+
+## What does it do?
+The migration accomplishes the following:
+
+1. It creates a mechanism to automatically insert a default record into the `organization_usage_counts` table whenever a new organization is added to the `organizations` table. This ensures that every organization has an associated usage count record.
+
+2. It removes a unique constraint on the `name` column of the `organizations` table, allowing multiple organizations to have the same name.
+
+The `up.sql` script sets up this new behavior, while the `down.sql` script provides a way to undo these changes if needed.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+1. It creates a function `set_default_org_usage_data` that inserts a new row into the `organization_usage_counts` table for a newly created organization.
+2. It sets up a trigger `set_default_org_usage_data_trigger` on the `organizations` table to automatically call this function after each insert.
+3. It removes the unique constraint on the `name` column of the `organizations` table.
+
+Here's a snippet of the function definition:
+
+```sql
+CREATE OR REPLACE FUNCTION set_default_org_usage_data()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO organization_usage_counts (org_id)
+  VALUES (NEW.id)
+  ON CONFLICT (org_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+1. It drops the trigger `set_default_org_usage_data_trigger`.
+2. It drops the function `set_default_org_usage_data`.
+3. It re-adds the unique constraint on the `name` column of the `organizations` table.
+
+Here's a snippet from the `down.sql` file:
+
+```sql
+DROP TRIGGER IF EXISTS set_default_org_usage_data_trigger ON organizations;
+DROP FUNCTION IF EXISTS set_default_org_usage_data;
+ALTER TABLE organizations ADD CONSTRAINT organizations_name_key UNIQUE (name);
+```
+
+## Dependencies
+This migration relies on the PostgreSQL database system, as evidenced by the use of PostgreSQL-specific syntax such as the `RETURNS TRIGGER` clause and the `plpgsql` language.
+
+## Configuration
+The migration doesn't require any specific configuration. However, it assumes the existence of two tables:
+
+1. `organizations`: The main table storing organization data.
+2. `organization_usage_counts`: A table storing usage counts for each organization.
+
+The migration also assumes that the `organizations` table has an `id` column and previously had a unique constraint on the `name` column.
+
+It's important to note that this migration changes the behavior of the database in a way that might affect other parts of the application:
+
+1. After this migration, multiple organizations can have the same name. Any code that relied on unique organization names will need to be updated.
+2. The application no longer needs to manually create entries in the `organization_usage_counts` table, as this is now handled automatically by the database trigger.
+
+When applying this migration, developers should be aware of these changes and update any affected application code accordingly.

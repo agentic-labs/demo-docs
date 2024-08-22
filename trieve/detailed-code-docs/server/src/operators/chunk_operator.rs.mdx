@@ -1,0 +1,115 @@
+---
+title: "chunk_operator.rs"
+---
+
+Here's a high-level description of the `chunk_operator.rs` file:
+
+The `chunk_operator.rs` file is a core component of the Trieve server, responsible for managing chunk operations. It handles various tasks related to chunk metadata, including retrieval, creation, updating, and deletion. The file also contains functions for searching, highlighting, and managing chunk groups. It interacts with both a PostgreSQL database and a Qdrant vector database to store and retrieve chunk information and embeddings.
+
+## Code Structure
+
+The file is organized into several main sections:
+
+1. Imports and use statements
+2. Functions for retrieving chunk metadata
+3. Functions for creating and updating chunks
+4. Functions for deleting chunks
+5. Functions for searching and highlighting chunks
+6. Helper functions for various chunk operations
+
+The main symbols in the code are mostly functions that perform specific operations on chunks or chunk metadata. These functions often interact with each other, with database operations being a common thread throughout the file.
+
+## Symbols
+
+Here are some of the key symbols (functions) in the code:
+
+### get_chunk_metadatas_from_point_ids
+#### Description
+Retrieves chunk metadata for given point IDs from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| point_ids | Vec&lt;uuid::Uuid&gt; | List of point IDs to retrieve metadata for |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;ChunkMetadataTypes&gt;, ServiceError&gt; | Result | Vector of chunk metadata or an error |
+
+### create_chunk_metadata
+#### Description
+Creates new chunk metadata entries in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chunks | Vec&lt;ChunkReqPayload&gt; | List of chunks to create |
+| dataset_uuid | uuid::Uuid | Dataset ID |
+| dataset_configuration | DatasetConfiguration | Dataset configuration |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(BulkUploadIngestionMessage, Vec&lt;ChunkMetadata&gt;), ServiceError&gt; | Result | Ingestion message and created chunk metadata or an error |
+
+### delete_chunk_metadata_query
+#### Description
+Deletes chunk metadata from the database and Qdrant.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chunk_uuid | Vec&lt;uuid::Uuid&gt; | List of chunk IDs to delete |
+| deleted_at | chrono::NaiveDateTime | Timestamp of deletion |
+| dataset | Dataset | Dataset information |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| dataset_config | DatasetConfiguration | Dataset configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### get_highlights
+#### Description
+Generates highlights for a chunk based on a search query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| input | ChunkMetadata | Chunk metadata |
+| query | String | Search query |
+| threshold | Option&lt;f64&gt; | Similarity threshold |
+| delimiters | Vec&lt;String&gt; | Delimiters for splitting text |
+| max_length | Option&lt;u32&gt; | Maximum length of highlight |
+| max_num | Option&lt;u32&gt; | Maximum number of highlights |
+| window_size | Option&lt;u32&gt; | Window size for context |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(ChunkMetadata, Vec&lt;String&gt;), ServiceError&gt; | Result | Updated chunk metadata with highlights and highlight phrases |
+
+## Dependencies
+The file relies on several external crates and internal modules:
+
+- `actix-web` for web framework functionality
+- `chrono` for date and time operations
+- `diesel` and `diesel_async` for database operations
+- `itertools` for iterator extensions
+- `qdrant_client` for interacting with Qdrant vector database
+- `serde` for serialization and deserialization
+- `uuid` for working with UUIDs
+
+Internal dependencies include various models, errors, and other operators from the Trieve server codebase.
+
+## Error Handling
+The file uses a custom `ServiceError` type for error handling, which is propagated through the `Result` type in function returns. Many functions use the `?` operator for concise error propagation.
+
+## Logging
+The file uses the `log` crate for logging errors and important information throughout the code.
+
+This file is crucial for the Trieve server's chunk management functionality, handling the core operations for creating, retrieving, updating, and deleting chunks, as well as performing searches and generating highlights.

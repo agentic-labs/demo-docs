@@ -1,0 +1,48 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the structure of the `datasets` table in a database. The migration introduces a new `client_configuration` column and renames the existing `configuration` column to `server_configuration`. These changes appear to be part of a system that manages dataset configurations, potentially separating client-side and server-side configurations.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" migration:
+   - Renames the existing `configuration` column to `server_configuration` in the `datasets` table.
+   - Adds a new `client_configuration` column to the `datasets` table, which stores JSON data.
+
+2. In the "down" migration (rollback):
+   - Removes the newly added `client_configuration` column from the `datasets` table.
+   - Renames the `server_configuration` column back to `configuration`.
+
+These changes allow the system to store separate configurations for client-side and server-side operations related to datasets. The use of JSONB data type for the `client_configuration` column provides flexibility in storing structured data specific to client requirements.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to apply the migration. It renames the existing `configuration` column and adds the new `client_configuration` column.
+
+   ```sql
+   ALTER TABLE datasets RENAME COLUMN configuration TO server_configuration;
+   ALTER TABLE datasets ADD COLUMN client_configuration JSONB NOT NULL DEFAULT '{}';
+   ```
+
+2. `down.sql`: This file contains the SQL commands to revert the migration. It drops the `client_configuration` column and renames `server_configuration` back to `configuration`.
+
+   ```sql
+   DROP COLUMN IF EXISTS client_configuration;
+   ALTER TABLE datasets RENAME COLUMN IF EXISTS server_configuration TO configuration;
+   ```
+
+Both files use standard SQL ALTER TABLE statements to modify the structure of the `datasets` table.
+
+## Configuration
+The migration scripts introduce a new configuration approach for datasets:
+
+1. `server_configuration`: This column (renamed from `configuration`) likely stores server-side configuration data for datasets.
+
+2. `client_configuration`: This new column is designed to store client-specific configuration data for datasets. It uses the JSONB data type, which allows for flexible, nested JSON structures. The column is set to NOT NULL with a default value of an empty JSON object (`{}`).
+
+The use of JSONB for `client_configuration` allows for storing complex, hierarchical configuration data that can be easily queried and modified using PostgreSQL's JSON operations. This flexibility is particularly useful for client-side configurations that may vary significantly between different datasets or use cases.
+
+The separation of server and client configurations suggests a system design that distinguishes between settings used by the server application and those needed by client applications or interfaces. This separation can provide better organization, security, and flexibility in managing dataset configurations across different parts of the system.

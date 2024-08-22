@@ -1,0 +1,59 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for transitioning the notification system from a user-centric model to a dataset-centric model in a PostgreSQL database. The migration involves modifying existing tables, renaming columns, and creating a trigger function to maintain notification counts per dataset.
+
+## What does it do?
+The migration scripts in this directory perform the following tasks:
+
+1. In the "up" migration:
+   - Remove the `user_uuid` column from the `file_upload_completed_notifications` table.
+   - Rename the `user_notification_counts` table to `dataset_notification_counts`.
+   - Add a `dataset_uuid` column to the `dataset_notification_counts` table.
+   - Remove the `user_uuid` column from the `dataset_notification_counts` table.
+   - Create a trigger function `update_notification_count()` that automatically updates the notification count for datasets when notifications are inserted or deleted.
+
+2. In the "down" migration:
+   - Add a `user_uuid` column back to the `dataset_notification_counts` table.
+   - Remove the `dataset_uuid` column from the `dataset_notification_counts` table.
+   - Rename the `dataset_notification_counts` table back to `user_notification_counts`.
+   - Add a `user_uuid` column back to the `file_upload_completed_notifications` table.
+
+These changes shift the focus of the notification system from users to datasets, allowing for more granular tracking of notifications at the dataset level.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to implement the migration from user-centric to dataset-centric notifications.
+
+2. `down.sql`: This file contains the SQL commands to revert the changes made by the `up.sql` script, effectively rolling back the migration.
+
+## Dependencies
+The migration scripts are designed for PostgreSQL databases. No specific version is mentioned, but it's assumed to be compatible with recent PostgreSQL versions that support the used SQL syntax.
+
+## Configuration
+No explicit configuration files or environment variables are mentioned in the provided summaries. However, the database connection details and migration execution process would typically be managed by the application's database migration tool or ORM.
+
+## TODOs and Potential Issues
+
+1. In the `up.sql` file:
+   - The table on which the `update_notification_count()` trigger function should be applied is not specified in the script. This needs to be defined separately and associated with the relevant table.
+   - There is a bug in the DELETE logic of the trigger function. It should use `OLD.dataset_uuid` instead of `OLD.user_uuid` to identify the dataset for which the notification count needs to be decremented. The correct SQL should be:
+
+   ```sql
+   UPDATE dataset_notification_counts
+   SET notification_count = notification_count - 1
+   WHERE dataset_uuid = OLD.dataset_uuid;
+   ```
+
+2. In the `down.sql` file:
+   - The comment "Your SQL goes here" suggests that this might be a template or placeholder file. Ensure that all necessary SQL commands have been added and reviewed before executing this migration.
+
+3. General considerations:
+   - Ensure that any application code or queries that interact with the modified tables are updated to reflect the new schema.
+   - Consider the impact on existing data and whether any data migration is necessary alongside the schema changes.
+   - Test the migration thoroughly in a non-production environment before applying it to the production database.
+   - Verify that the `update_notification_count()` trigger function is properly associated with the correct table after the migration.
+
+By addressing these TODOs and potential issues, the migration should successfully transition the notification system from a user-centric to a dataset-centric model, providing more granular control and tracking of notifications at the dataset level.

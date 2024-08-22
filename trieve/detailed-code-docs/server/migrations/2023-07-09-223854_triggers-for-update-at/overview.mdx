@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for implementing automatic `updated_at` timestamp updates in a database. It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them. The migration adds `created_at` and `updated_at` columns to the `card_verification` table and creates triggers to automatically update these timestamps across various tables in the database.
+
+## What does it do?
+The migration scripts in this directory implement a system for automatically tracking when database records are created and last updated. This is achieved by:
+
+1. Adding `created_at` and `updated_at` columns to the `card_verification` table.
+2. Creating functions that update these timestamps automatically.
+3. Setting up triggers on various tables to call these functions whenever a record is updated.
+
+This system ensures that the database always has accurate information about when each record was last modified, which can be crucial for tracking changes, auditing, and maintaining data integrity.
+
+When applied, the `up.sql` script sets up this system. If needed, the `down.sql` script can be used to remove all these changes, reverting the database to its previous state without automatic timestamp updates.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to implement the automatic timestamp update system. Its main components are:
+
+1. Altering the `card_verification` table to add `created_at` and `updated_at` columns.
+2. Creating two functions:
+   - `update_updated_at()`: Updates the `updated_at` column of a row to the current timestamp.
+   - `update_main_table_updated_at()`: Updates the `updated_at` column in the `main_table` based on the `collection_id` of the updated row.
+3. Creating triggers on various tables to execute these functions before update operations.
+
+Here's an example of how the `update_updated_at()` function is defined:
+
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = current_timestamp;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+And here's how a trigger is created to use this function:
+
+```sql
+CREATE TRIGGER update_updated_at
+BEFORE UPDATE ON card_verification
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+```
+
+### down.sql
+This file contains SQL commands to revert the changes made by `up.sql`. It performs the following operations:
+
+1. Drops the `created_at` and `updated_at` columns from the `card_verification` table.
+2. Drops the `update_updated_at()` and `update_main_table_updated_at()` functions.
+3. Drops all the triggers created in the `up.sql` script.
+
+For example, here's how it drops a trigger:
+
+```sql
+DROP TRIGGER IF EXISTS update_updated_at ON card_verification;
+```
+
+## Configuration
+This migration doesn't rely on any external configuration files or environment variables. All necessary information is contained within the SQL scripts themselves. However, the database connection details (such as host, port, database name, and credentials) would typically be configured in the application that runs these migrations.
+
+The migration is designed to work with a PostgreSQL database, as evidenced by the use of PostgreSQL-specific syntax and features like the `plpgsql` language for functions.
+
+It's important to note that this migration affects several tables in the database:
+- `card_verification`
+- `main_table`
+- `card_collection`
+- `card_collection_item`
+- `card_collection_item_verification`
+
+Ensure that these tables exist in the database before applying this migration.
+
+In conclusion, this migration implements a robust system for automatic timestamp updates, which can greatly enhance the ability to track and audit changes in the database. The ability to easily revert these changes provides flexibility in database management and development processes.

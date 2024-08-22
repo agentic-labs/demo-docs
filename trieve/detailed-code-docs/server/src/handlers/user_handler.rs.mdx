@@ -1,0 +1,93 @@
+---
+title: "user_handler.rs"
+---
+
+## High-level description
+The `user_handler.rs` file defines API endpoints related to user management within the Trieve application. This includes updating user roles within organizations, managing API keys, and retrieving user information.
+
+## References
+- `super::auth_handler::LoggedUser`: Represents an authenticated user.
+- `crate::data::models::{Pool, RedisPool, UserRole}`: Database and Redis connections, and the UserRole enum.
+- `crate::errors::ServiceError`: Custom error type for handling service-level errors.
+- `crate::operators::user_operator`: Module containing database operations related to users.
+
+## Symbols
+
+### `update_user`
+#### Description
+Updates a user's role within a specific organization. The authenticated user can update their own role or the role of another user within an organization they have admin or owner permissions in.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Json&lt;UpdateUserOrgRoleData&gt; | JSON payload containing organization ID, optional user ID, and new role. |
+| user | LoggedUser | Authenticated user information. |
+| pool | web::Data&lt;Pool&gt; | Database connection pool. |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool. |
+
+#### Outputs
+- `Result&lt;HttpResponse, ServiceError&gt;`: Returns a 204 No Content response on success, or a ServiceError on failure.
+
+#### Internal Logic
+1. Extracts the organization ID, user ID (if provided), and new role from the request payload.
+2. Retrieves the authenticated user's role in the specified organization.
+3. Checks if the authenticated user has sufficient permissions to update the role.
+4. If a user ID is provided, verifies that the user exists and belongs to the organization.
+5. Updates the user's role in the database using `update_user_org_role_query`.
+6. Clears the user's cache in Redis.
+7. Returns a 204 No Content response.
+
+### `set_user_api_key`
+#### Description
+Creates a new API key for the authenticated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | LoggedUser | Authenticated user information. |
+| data | web::Json&lt;SetUserApiKeyRequest&gt; | JSON payload containing API key name, role, optional dataset IDs, optional organization IDs, and optional scopes. |
+| pool | web::Data&lt;Pool&gt; | Database connection pool. |
+
+#### Outputs
+- `Result&lt;HttpResponse, actix_web::Error&gt;`: Returns a 200 OK response with the new API key on success, or an error on failure.
+
+#### Internal Logic
+1. Generates a new random API key.
+2. Hashes the API key using BLAKE3.
+3. Inserts the new API key into the database using `set_user_api_key_query`.
+4. Returns a 200 OK response with the new API key.
+
+### `get_user_api_keys`
+#### Description
+Retrieves a list of API keys belonging to the authenticated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | LoggedUser | Authenticated user information. |
+| pool | web::Data&lt;Pool&gt; | Database connection pool. |
+
+#### Outputs
+- `Result&lt;HttpResponse, actix_web::Error&gt;`: Returns a 200 OK response with a list of API keys on success, or an error on failure.
+
+#### Internal Logic
+1. Retrieves the API keys from the database using `get_user_api_keys_query`.
+2. Returns a 200 OK response with the list of API keys.
+
+### `delete_user_api_key`
+#### Description
+Deletes an API key belonging to the authenticated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | LoggedUser | Authenticated user information. |
+| data | web::Path&lt;uuid::Uuid&gt; | API key ID to delete. |
+| pool | web::Data&lt;Pool&gt; | Database connection pool. |
+
+#### Outputs
+- `Result&lt;HttpResponse, actix_web::Error&gt;`: Returns a 204 No Content response on success, or an error on failure.
+
+#### Internal Logic
+1. Deletes the API key from the database using `delete_user_api_keys_query`.
+2. Returns a 204 No Content response.

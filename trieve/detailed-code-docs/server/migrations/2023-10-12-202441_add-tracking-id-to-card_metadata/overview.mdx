@@ -1,0 +1,82 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for adding a new `tracking_id` column to the `card_metadata` table in the database. The migration is dated 2023-10-12 and includes both an "up" script to apply the change and a "down" script to revert it.
+
+## What does it do?
+The migration adds a new unique identifier called `tracking_id` to each card's metadata. This allows for better tracking and identification of individual cards in the system. If needed, the change can be undone, removing the `tracking_id` from the card metadata.
+
+Here's a simple explanation of what happens:
+
+1. When applying the change (up migration):
+   - A new column called `tracking_id` is added to the `card_metadata` table.
+   - This new column can store text and must have a unique value for each card.
+
+2. When reverting the change (down migration):
+   - The `tracking_id` column is removed from the `card_metadata` table.
+   - Any data stored in this column is permanently deleted.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL command to add the `tracking_id` column to the `card_metadata` table.
+
+   ```sql
+   -- Your SQL goes here
+   ALTER TABLE card_metadata
+   ADD COLUMN tracking_id TEXT UNIQUE;
+   ```
+
+   This script adds a new TEXT column called `tracking_id` with a UNIQUE constraint to the `card_metadata` table.
+
+2. `down.sql`: This file contains the SQL command to remove the `tracking_id` column from the `card_metadata` table.
+
+   ```sql
+   -- This file should undo anything in `up.sql`
+   ALTER TABLE card_metadata
+   DROP COLUMN tracking_id;
+   ```
+
+   This script removes the `tracking_id` column from the `card_metadata` table, effectively undoing the changes made by the `up.sql` script.
+
+## Configuration
+The migration files themselves don't require any additional configuration. However, the database connection and migration execution are likely managed by an external tool or framework, which would need to be configured to run these migrations.
+
+## Performance Considerations
+1. Adding a column with a UNIQUE constraint (`up.sql`):
+   - This operation may take longer on large tables as the database needs to create an index to enforce the UNIQUE constraint.
+   - It's advisable to perform this operation during low-traffic periods for large databases.
+
+2. Dropping a column (`down.sql`):
+   - Generally, this is a fast operation but may briefly lock the table.
+   - The impact depends on the size of the table and the specific database system being used.
+   - For large tables, it's recommended to perform this operation during low-traffic periods.
+
+## Error Handling
+These SQL scripts do not include explicit error handling. Potential issues to be aware of:
+
+1. For `up.sql`:
+   - If the `card_metadata` table doesn't exist, the migration will fail.
+   - If a column named `tracking_id` already exists, the migration will fail.
+
+2. For `down.sql`:
+   - If the `tracking_id` column doesn't exist, the migration will fail.
+
+It's important to ensure that the database is in the expected state before running these migrations. The migration framework or tool used to execute these scripts should provide error handling and logging capabilities.
+
+## TODOs
+The `up.sql` file contains a comment "-- Your SQL goes here" which suggests it might be based on a template. In a production environment, it would be beneficial to replace this with a more descriptive comment explaining the purpose of this specific migration.
+
+## Side Effects
+1. After running `up.sql`:
+   - The `card_metadata` table will have a new `tracking_id` column.
+   - Existing rows will have NULL values for `tracking_id` unless a default value is specified (which is not the case in this migration).
+   - Future inserts or updates to the `card_metadata` table must ensure unique values for `tracking_id`.
+
+2. After running `down.sql`:
+   - The `tracking_id` column will be removed from the `card_metadata` table.
+   - All data stored in the `tracking_id` column will be permanently lost.
+   - Any application code or queries that relied on the `tracking_id` column will need to be updated to avoid errors.
+
+These migration files provide a clear and reversible way to add a new tracking capability to the card metadata system, allowing for better identification and management of individual cards while maintaining the option to revert the change if necessary.

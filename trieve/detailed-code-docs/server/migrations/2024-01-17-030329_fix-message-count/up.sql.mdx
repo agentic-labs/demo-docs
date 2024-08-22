@@ -1,0 +1,39 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script defines a function `update_messages_counts` and a trigger `update_messages_counts_trigger` to maintain the accuracy of message counts in the `organization_usage_counts` table whenever messages are inserted or deleted from the `messages` table. 
+
+## Code Structure
+The `update_messages_counts` function is used by the `update_messages_counts_trigger` trigger. The trigger is executed after each insert or delete operation on the `messages` table, invoking the function to update the corresponding message count in the `organization_usage_counts` table.
+
+## Symbols
+
+### `update_messages_counts`
+#### Description
+This function updates the `message_count` for an organization in the `organization_usage_counts` table based on insert or delete operations on the `messages` table. 
+
+#### Inputs
+This function implicitly takes the inserted or deleted row from the `messages` table as input through the trigger.
+
+#### Outputs
+This function returns the `NEW` row for `INSERT` operations and implicitly returns nothing for `DELETE` operations.
+
+#### Internal Logic
+1. **Determine Operation:** Checks if the triggering event is an `INSERT` or `DELETE` operation.
+2. **INSERT Case:** If it's an `INSERT`:
+    - Attempts to insert a new row into `organization_usage_counts` with `org_id` from the `datasets` table (linked by `dataset_id` from the inserted message) and `message_count` set to 1.
+    - If a row with the same `org_id` already exists, it increments the existing `message_count` by 1.
+3. **DELETE Case:** If it's a `DELETE`:
+    - Updates the `organization_usage_counts` table, decrementing the `message_count` for the corresponding `org_id` (obtained from the `datasets` table using the deleted message's `dataset_id`).
+    - Ensures `message_count` doesn't go below 0 by setting it to 0 if it's already 0.
+4. **Return Value:** Returns the `NEW` row for `INSERT` operations (implicitly returns nothing for `DELETE`).
+
+### `update_messages_counts_trigger`
+#### Description
+This trigger automatically executes the `update_messages_counts` function after each `INSERT` or `DELETE` operation on the `messages` table.
+
+#### Internal Logic
+1. **Trigger Event:** Triggered after `INSERT` or `DELETE` on the `messages` table.
+2. **Execution:** Executes the `update_messages_counts` function for each row affected by the `INSERT` or `DELETE` operation.

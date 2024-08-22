@@ -1,0 +1,128 @@
+---
+title: "errors.rs"
+---
+
+## High-level description
+The `errors.rs` file defines custom error types and their handling for the Trieve server. It implements the `ResponseError` trait for custom errors, allowing them to be converted into HTTP responses with appropriate status codes and error messages. It also defines custom error handlers for JSON payload errors and database errors.
+
+## Code Structure
+The code defines an enum `ServiceError` representing various service-level errors. It implements the `ResponseError` trait for this enum, mapping each error variant to an appropriate HTTP response. Additionally, it defines functions to handle specific error types like JSON payload errors and database errors, converting them into `ServiceError` instances.
+
+## References
+This file references the `ErrorResponseBody` struct, which is likely defined in another file and used to structure the error response body.
+
+## Symbols
+
+### `ErrorResponseBody`
+#### Description
+A struct representing the body of an error response. It contains a single field, `message`, which holds the error message as a string.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+None
+
+### `ServiceError`
+#### Description
+An enum representing various service-level errors that can occur. Each variant of the enum represents a specific error type with a formatted error message.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+None
+
+### `impl ResponseError for ServiceError`
+#### Description
+This implementation of the `ResponseError` trait for `ServiceError` allows converting each error variant into an HTTP response with an appropriate status code and a JSON body containing the error message. It also logs the error to Sentry for monitoring and debugging.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Matches the `ServiceError` variant.
+- Creates an `HttpResponse` with the corresponding status code (e.g., `InternalServerError`, `BadRequest`, `Unauthorized`, etc.).
+- Constructs an `ErrorResponseBody` with the error message.
+- Sets the JSON body of the response to the `ErrorResponseBody`.
+
+### `impl From&lt;ParseError&gt; for ServiceError`
+#### Description
+This implementation allows converting a `ParseError` (likely from UUID parsing) into a `ServiceError::BadRequest` with a message indicating an invalid UUID.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+None
+
+### `impl From&lt;DBError&gt; for ServiceError`
+#### Description
+This implementation allows converting a `DBError` (from Diesel) into a `ServiceError`. It currently handles only `UniqueViolation` errors, mapping them to `ServiceError::BadRequest` with the database error message. Other database errors are mapped to `ServiceError::InternalServerError`.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Matches the `DBError` variant.
+- For `DatabaseError` of kind `UniqueViolation`, extracts the error message and returns `ServiceError::BadRequest`.
+- For other `DBError` variants, returns `ServiceError::InternalServerError`.
+
+### `custom_json_error_handler`
+#### Description
+A custom error handler for JSON payload errors. It provides more detailed error messages and solutions based on the specific type of `JsonPayloadError`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `JsonPayloadError` | The JSON payload error that occurred. |
+| _req | `&actix_web::HttpRequest` | The HTTP request (unused in this handler). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `actix_web::Error` | An `actix_web::Error` representing the converted `ServiceError`. |
+
+#### Internal Logic
+- Matches the `JsonPayloadError` variant.
+- Constructs a detailed error message including the error type, original error message, and a suggested solution.
+- Returns a `ServiceError::JsonDeserializeError` with the detailed message, converted into an `actix_web::Error`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actix-web | Web framework for handling HTTP requests and responses. |
+| derive_more | Derive macros for simplifying code. |
+| diesel | ORM for database interactions. |
+| serde | Serialization and deserialization library. |
+| utoipa | OpenAPI documentation generation library. |
+| uuid | UUID generation and parsing library. |
+| sentry | Error monitoring and reporting library. |
+
+## Error Handling
+The code implements error handling by:
+- Defining a custom error enum `ServiceError` to represent various service-level errors.
+- Implementing the `ResponseError` trait for `ServiceError` to convert errors into HTTP responses.
+- Defining custom error handlers for specific error types like `ParseError`, `DBError`, and `JsonPayloadError`, converting them into `ServiceError` instances.
+- Logging errors to Sentry for monitoring and debugging.
+
+## Logging
+The code uses the `sentry` crate for logging errors and sending them to Sentry for monitoring and debugging.
+
+## TODOs
+None

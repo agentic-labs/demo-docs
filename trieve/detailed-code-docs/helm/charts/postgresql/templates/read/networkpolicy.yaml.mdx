@@ -1,0 +1,66 @@
+---
+title: "networkpolicy.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes NetworkPolicy for PostgreSQL read replicas in a replication setup. It controls ingress and egress traffic to the replicas, allowing connections from specified pods and namespaces while optionally restricting external access.
+
+## Code Structure
+The code uses conditional logic to determine whether to create the NetworkPolicy resource. It first checks for a replication architecture and then if network policies are enabled for read replicas. If both conditions are true, it defines the NetworkPolicy with ingress and egress rules based on provided values.
+
+## References
+This code references several helper templates from the `common` chart, including:
+- `include "common.capabilities.networkPolicy.apiVersion" .`: Gets the appropriate NetworkPolicy API version.
+- `include "postgresql.v1.readReplica.fullname" .`: Generates the full name of the read replica.
+- `include "common.names.namespace" .`: Gets the namespace for the deployment.
+- `include "common.labels.standard" ...`: Generates standard labels for the resource.
+- `include "common.tplvalues.render" ...`: Renders template values.
+- `include "common.labels.matchLabels" ...`: Generates matchLabels for pod selectors.
+
+## Symbols
+### `helm/charts/postgresql/templates/read/networkpolicy.yaml`
+#### Description
+This code defines a Kubernetes NetworkPolicy resource for PostgreSQL read replicas. It controls which pods and namespaces can communicate with the replicas.
+
+#### Inputs
+This code uses values from the Helm chart's `Values` object. Key values include:
+- `Values.architecture`: The PostgreSQL architecture, should be "replication" for this policy to be applied.
+- `Values.readReplicas.networkPolicy.enabled`: Enables or disables the NetworkPolicy.
+- `Values.readReplicas.networkPolicy.allowExternalEgress`: Allows all egress traffic if set to true.
+- `Values.readReplicas.networkPolicy.extraEgress`: Allows defining additional egress rules.
+- `Values.readReplicas.networkPolicy.allowExternal`: Allows all ingress traffic if set to true.
+- `Values.readReplicas.networkPolicy.ingressNSMatchLabels`: Allows defining matchLabels for namespace selector in ingress rules.
+- `Values.readReplicas.networkPolicy.ingressNSPodMatchLabels`: Allows defining matchLabels for pod selector within a namespace in ingress rules.
+- `Values.readReplicas.networkPolicy.extraIngress`: Allows defining additional ingress rules.
+- `Values.containerPorts.postgresql`: The PostgreSQL container port.
+- `Values.metrics.enabled`: Enables or disables metrics.
+- `Values.metrics.containerPorts.metrics`: The metrics container port.
+- `Values.readReplicas.podLabels`: Labels specific to read replica pods.
+- `Values.commonLabels`: Common labels for all resources.
+
+#### Outputs
+This code generates a Kubernetes NetworkPolicy resource if the conditions for replication architecture and enabled network policy are met.
+
+#### Internal Logic
+1. **Conditional Creation:** The NetworkPolicy is created only if `Values.architecture` is "replication" and `Values.readReplicas.networkPolicy.enabled` is true.
+2. **Metadata:** Sets standard metadata for the NetworkPolicy, including name, namespace, and labels.
+3. **Pod Selector:** Defines a pod selector to apply the policy to pods with the label `app.kubernetes.io/component: read`.
+4. **Egress Rules:**
+   - If `Values.readReplicas.networkPolicy.allowExternalEgress` is true, allows all egress traffic.
+   - Otherwise, allows egress traffic to:
+     - DNS resolution on port 53 (UDP and TCP).
+     - Primary PostgreSQL instance on the configured port.
+     - Any additional egress rules defined in `Values.readReplicas.networkPolicy.extraEgress`.
+5. **Ingress Rules:**
+   - Allows ingress traffic on the PostgreSQL port and optionally the metrics port if enabled.
+   - If `Values.readReplicas.networkPolicy.allowExternal` is false, restricts ingress traffic to:
+     - Pods with matching labels from `Values.readReplicas.podLabels` and `Values.commonLabels`.
+     - Pods with the label `{{ template "postgresql.v1.readReplica.fullname" . }}-client: "true"`.
+     - Pods from namespaces matching `Values.readReplicas.networkPolicy.ingressNSMatchLabels` and optionally pods within those namespaces matching `Values.readReplicas.networkPolicy.ingressNSPodMatchLabels`.
+   - Includes any additional ingress rules defined in `Values.readReplicas.networkPolicy.extraIngress`.
+
+## Dependencies
+This code depends on the `common` Helm chart for helper templates and functions.
+
+## Configuration
+This code relies on configuration values provided through the Helm chart's `Values` object. See the "Inputs" section for a description of key configuration options.

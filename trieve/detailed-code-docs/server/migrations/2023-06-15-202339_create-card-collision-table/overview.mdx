@@ -1,0 +1,54 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and managing a `card_collisions` table and modifying the `card_metadata` table in a database schema. The migration is dated 2023-06-15 and is specifically focused on handling card collisions based on Qdrant point IDs.
+
+## What does it do?
+These migration scripts perform the following tasks:
+
+1. Create a new table called `card_collisions` to store information about collisions between cards based on their Qdrant point IDs.
+2. Add a unique constraint to the `qdrant_point_id` column in the existing `card_metadata` table to ensure each Qdrant point ID is unique across all card metadata entries.
+3. Establish foreign key relationships between the `card_collisions` table and the `card_metadata` table to maintain data integrity.
+4. Create an index on the `card_id` column of the `card_collisions` table to improve query performance.
+
+The migration also includes a down script to revert these changes if needed, which drops the `card_collisions` table and removes the unique constraint from the `card_metadata` table.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to create the new table structure and modify the existing one. It performs the following operations:
+   - Adds a unique constraint to the `qdrant_point_id` column in the `card_metadata` table.
+   - Creates the `card_collisions` table with columns for `id`, `card_id`, and `collision_qdrant_id`.
+   - Establishes foreign key relationships for the `card_collisions` table.
+   - Creates an index on the `card_id` column of the `card_collisions` table.
+
+   Example of creating the `card_collisions` table:
+   ```sql
+   CREATE TABLE card_collisions (
+     id UUID PRIMARY KEY,
+     card_id UUID NOT NULL REFERENCES card_metadata(id),
+     collision_qdrant_id UUID NOT NULL REFERENCES card_metadata(qdrant_point_id)
+   );
+   ```
+
+2. `down.sql`: This file contains the SQL commands to revert the changes made by the `up.sql` script. It performs the following operations:
+   - Drops the `card_collisions` table.
+   - Removes the unique constraint on the `qdrant_point_id` column in the `card_metadata` table.
+
+   Example of dropping the `card_collisions` table:
+   ```sql
+   DROP TABLE card_collisions;
+   ```
+
+## Dependencies
+This migration script assumes the existence of a `card_metadata` table with `id` and `qdrant_point_id` columns. The script does not explicitly create or modify this table beyond adding a unique constraint to the `qdrant_point_id` column.
+
+## Performance Considerations
+1. The unique constraint on `qdrant_point_id` in the `card_metadata` table will enforce uniqueness but may slightly impact insert performance.
+2. The index on `card_id` in the `card_collisions` table will improve query performance for lookups by card ID but may slightly impact insert and update operations on this table.
+
+## Error Handling
+The migration scripts do not include explicit error handling. If the tables or constraints do not exist when the down script is run, it may result in SQL errors. It's important to ensure that the database is in the expected state before running these migrations.
+
+In conclusion, this migration introduces a new table and constraint to handle card collisions based on Qdrant point IDs, improving data integrity and query performance for card-related operations in the database.

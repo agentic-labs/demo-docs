@@ -1,0 +1,62 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding a new table called `verification_notifications` to the database. The migration is part of a feature related to card verification notifications in the server application. It includes both the "up" script to create the table and the "down" script to remove it if needed.
+
+## What does it do?
+These migration scripts modify the database structure to support a new feature for tracking and managing notifications related to card verification processes. The new table, `verification_notifications`, allows the system to store detailed information about each notification, including:
+
+1. Which user the notification is for
+2. Which card the notification is about
+3. The specific verification attempt it's related to
+4. A similarity score from the verification process
+5. Whether the user has read the notification
+6. Timestamps for creation and updates
+
+This setup enables the application to keep users informed about the status of their card verifications, potentially allowing them to review results, take necessary actions, or track the progress of their verification attempts.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to create the new `verification_notifications` table. It defines the table structure, including all columns, data types, constraints, and default values.
+
+2. `down.sql`: This file contains the SQL command to drop the `verification_notifications` table. It's used for rolling back the migration if needed, typically during development or in case of deployment issues.
+
+## Configuration
+The migration scripts don't require any external configuration. However, they assume the existence of certain tables in the database:
+
+- `users`: Referenced by the `user_uuid` foreign key
+- `card_metadata`: Referenced by the `card_uuid` foreign key
+- `card_verification`: Referenced by the `verification_uuid` foreign key
+
+These foreign key relationships ensure data integrity and establish connections between the notification records and the relevant user, card, and verification data.
+
+Here's a detailed breakdown of the `verification_notifications` table structure:
+
+```sql
+CREATE TABLE verification_notifications (
+    id UUID PRIMARY KEY,
+    user_uuid UUID NOT NULL REFERENCES users (id),
+    card_uuid UUID NOT NULL REFERENCES card_metadata (id),
+    verification_uuid UUID NOT NULL REFERENCES card_verification (id),
+    similarity_score BigInt,
+    user_read boolean NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+Each column serves a specific purpose:
+
+- `id`: A unique identifier for each notification.
+- `user_uuid`: Links the notification to a specific user.
+- `card_uuid`: Associates the notification with a particular card.
+- `verification_uuid`: Connects the notification to a specific verification attempt.
+- `similarity_score`: Stores a numerical score representing the similarity found during verification.
+- `user_read`: Tracks whether the user has seen or acknowledged the notification.
+- `created_at` and `updated_at`: Automatically managed timestamps for record-keeping.
+
+The use of UUID types for identifiers suggests that the application might be distributed or have high scalability requirements. The boolean `user_read` field with a default of `false` indicates that notifications start as unread, allowing the application to easily filter or highlight new notifications for users.
+
+This table structure allows for efficient querying of notifications, such as finding all unread notifications for a user, or all notifications related to a specific card or verification attempt. The timestamps enable features like sorting notifications by recency or implementing time-based cleanup of old notifications.

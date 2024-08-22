@@ -1,0 +1,68 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the `chunk_metadata` table in a database. The migration is specifically designed to remove the `tag_set` column from the `chunk_metadata` table and provide a way to revert this change if needed.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" direction (forward migration):
+   - It removes the `tag_set` column from the `chunk_metadata` table if it exists.
+   - This is likely done to clean up unused or deprecated data in the database schema.
+
+2. In the "down" direction (rollback migration):
+   - It adds back the `tag_set` column to the `chunk_metadata` table.
+   - The new column is defined as an array of text values (`TEXT[]`) with a default value of an empty array (`'{}'`).
+
+These scripts allow database administrators or developers to easily update the database schema by removing potentially unnecessary data, while also providing a way to revert the changes if needed.
+
+## Key Files
+
+1. `up.sql`:
+   This file contains the SQL script for the forward migration. It uses an `ALTER TABLE` command to drop the `tag_set` column from the `chunk_metadata` table if it exists. The script is designed to be idempotent, meaning it can be run multiple times without causing errors, thanks to the `IF EXISTS` clause.
+
+   ```sql
+   ALTER TABLE chunk_metadata DROP COLUMN IF EXISTS tag_set;
+   ```
+
+2. `down.sql`:
+   This file contains the SQL script for the rollback migration. It adds the `tag_set` column back to the `chunk_metadata` table with the same specifications it had before removal.
+
+   ```sql
+   ALTER TABLE chunk_metadata ADD COLUMN tag_set TEXT[] DEFAULT '{}';
+   ```
+
+## Configuration
+There are no specific configuration files or environment variables used in this directory. The migration scripts are designed to be run as part of a database migration process, likely managed by an external tool or framework.
+
+## Performance Considerations
+Both the `up.sql` and `down.sql` scripts involve modifying the structure of the `chunk_metadata` table, which can have performance implications:
+
+1. Removing a column (`up.sql`):
+   - This operation may lock the `chunk_metadata` table for the duration of the column removal.
+   - The impact on performance will depend on the size of the table and the database management system being used.
+   - For large tables, this operation could potentially cause temporary disruptions to database access.
+
+2. Adding a column (`down.sql`):
+   - Adding a new column can also be an expensive operation, especially for tables with a large number of rows.
+   - The performance impact will again depend on the database system and the size of the `chunk_metadata` table.
+
+It's recommended to schedule these migrations during off-peak hours or maintenance windows to minimize potential disruptions to system operations.
+
+## Error Handling
+The `up.sql` script includes basic error handling through the use of the `IF EXISTS` clause when dropping the column. This ensures that the script will not fail if the `tag_set` column has already been removed.
+
+The `down.sql` script does not include explicit error handling. If the `tag_set` column already exists when trying to add it back, the script may fail. It's assumed that this script will only be run to revert the changes made by the `up.sql` script, in which case the column should not exist.
+
+## Notes
+1. The migration scripts are named with a timestamp (`2024-06-06-042117`), which likely indicates the date and time when the migration was created. This naming convention is common in migration frameworks to ensure proper ordering of migrations.
+
+2. The `up.sql` file contains a comment `-- Your SQL goes here` at the beginning. This suggests that the file might have been generated from a template. In a finalized migration, this comment would typically be removed or replaced with a more descriptive comment about the purpose of the migration.
+
+3. When applying these migrations, it's crucial to ensure that any application code or queries that previously relied on the `tag_set` column are updated accordingly to prevent errors or unexpected behavior.
+
+4. The purpose of removing the `tag_set` column is not explicitly stated in the migration files. It would be beneficial to include a comment explaining the reasoning behind this schema change for future reference.
+
+5. These migrations should be tested in a non-production environment before being applied to a production database to ensure they work as expected and do not cause unintended side effects.

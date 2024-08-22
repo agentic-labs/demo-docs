@@ -1,0 +1,58 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and dropping a `messages` table in a relational database. The migration is dated 2023-04-20 and is identified by the timestamp 165322. The directory includes two files: `up.sql` for creating the table and `down.sql` for dropping it.
+
+## What does it do?
+These migration scripts manage the lifecycle of a `messages` table in the database. The `up.sql` script creates a new table designed to store messages associated with topics. Each message has various attributes such as a unique identifier, content, role (system, user, or assistant), token usage information, and timestamps. The `down.sql` script provides a way to revert this change by dropping the table if it exists.
+
+This setup allows for version control of database schema changes, enabling easy deployment and rollback of database modifications. It's particularly useful in maintaining consistency across different environments and facilitating collaborative development.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL script to create the `messages` table. It defines the table structure with columns for id, topic_id, sort_order, content, role, deletion status, token usage, and timestamps.
+
+2. `down.sql`: This file contains the SQL script to drop the `messages` table, effectively reversing the changes made by `up.sql`.
+
+## Configuration
+The migration scripts use SQL statements and do not require additional configuration. However, they assume the existence of a `topics` table in the database, as the `messages` table has a foreign key relationship with it.
+
+Here's a detailed breakdown of the `messages` table structure as defined in `up.sql`:
+
+```sql
+CREATE TABLE messages (
+    id UUID PRIMARY KEY,
+    topic_id UUID NOT NULL REFERENCES topics(id),
+    sort_order INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    role VARCHAR NOT NULL DEFAULT 'assistant' CHECK (role IN ('system', 'user', 'assistant')),
+    deleted BOOLEAN NOT NULL DEFAULT false,
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+```
+
+Key points about the table structure:
+
+- `id`: A UUID serving as the primary key for each message.
+- `topic_id`: A foreign key linking each message to a topic in the `topics` table.
+- `sort_order`: An integer field to maintain the order of messages within a topic.
+- `content`: The actual text content of the message.
+- `role`: Indicates whether the message is from the system, user, or assistant. It has a default value of 'assistant' and is constrained to only these three values.
+- `deleted`: A boolean flag to mark messages as deleted without physically removing them from the database.
+- `prompt_tokens` and `completion_tokens`: Integer fields to track token usage, likely for API or processing purposes.
+- `created_at` and `updated_at`: Timestamp fields to track when the message was created and last updated.
+
+The `down.sql` script is straightforward:
+
+```sql
+DROP TABLE IF EXISTS messages;
+```
+
+This script will remove the `messages` table if it exists, allowing for a clean rollback of the migration.
+
+These migration scripts provide a robust way to manage the `messages` table, ensuring data integrity through constraints and offering flexibility for future schema changes.

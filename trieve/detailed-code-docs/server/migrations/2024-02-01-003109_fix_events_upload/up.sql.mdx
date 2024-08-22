@@ -1,0 +1,30 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script renames the `dataset_notification_counts` table to `dataset_event_counts` and updates the `update_notification_count` function to reflect this change. The function maintains a count of events (previously notifications) associated with each dataset in the `dataset_event_counts` table.
+
+## Symbols
+
+### `ALTER TABLE dataset_notification_counts RENAME TO dataset_event_counts;`
+#### Description
+This SQL statement renames the existing table `dataset_notification_counts` to `dataset_event_counts`. This suggests a shift from tracking only "notifications" to a broader concept of "events" associated with datasets.
+
+### `CREATE OR REPLACE FUNCTION public.update_notification_count()`
+#### Description
+This statement defines or replaces an existing PostgreSQL function named `update_notification_count`. This function is designed as a trigger to automatically update event counts in the `dataset_event_counts` table whenever a new event is added or removed.
+
+#### Inputs
+This function implicitly takes the inserted or deleted row from the triggering table as input. The exact structure of this input depends on the table where the trigger is defined.
+
+#### Outputs
+This function returns a trigger result using `RETURN NEW;`. This indicates that the function allows the triggering operation (insert or delete) to proceed with the new data.
+
+#### Internal Logic
+1. **Trigger Condition:** The function first checks the type of triggering event using `TG_OP`. It proceeds with the update logic if the event is an `INSERT` or `DELETE` operation.
+2. **Increment on Insert:** If a new row is inserted ( `TG_OP = 'INSERT'` ), the function attempts to insert a new record into `dataset_event_counts` with an initial count of 1. If a record for the dataset already exists, it increments the `notification_count` by 1 using `ON CONFLICT (dataset_uuid) DO UPDATE`.
+3. **Decrement on Delete:** If a row is deleted (`TG_OP = 'DELETE'`), the function decrements the `notification_count` in `dataset_event_counts` for the corresponding `dataset_uuid`.
+
+#### Side Effects
+This function directly modifies the `dataset_event_counts` table by inserting, updating, or deleting rows based on the triggering event.

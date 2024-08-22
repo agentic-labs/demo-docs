@@ -1,0 +1,72 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for fixing and maintaining the total chunk count in the `organization_usage_counts` table. It includes both an "up" script to apply the changes and a "down" script to revert them. The migration primarily focuses on ensuring data consistency, adding constraints, and implementing an automated update mechanism for organization chunk counts.
+
+## What does it do?
+The migration scripts in this directory perform the following tasks:
+
+1. Update the `organization_usage_counts` table to ensure all `chunk_count` values are non-null and properly calculated.
+2. Add a NOT NULL constraint to the `chunk_count` column in the `organization_usage_counts` table.
+3. Create a trigger function that automatically updates the `chunk_count` for an organization whenever there's a change in the related `dataset_usage_counts` table.
+4. Set up a trigger to call this function after INSERT, UPDATE, or DELETE operations on the `dataset_usage_counts` table.
+
+These changes ensure that organization-level chunk counts are always up-to-date and consistent with the underlying dataset usage data. The "down" script provides a way to revert these changes if needed.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+1. Updates NULL `chunk_count` values to 0 in the `organization_usage_counts` table.
+2. Adds a NOT NULL constraint to the `chunk_count` column.
+3. Updates organization chunk counts based on the sum of chunk counts from related datasets.
+4. Creates a function `update_organization_chunk_count` to recalculate and update the `chunk_count` for an organization.
+5. Sets up a trigger `update_organization_chunk_count_trigger` to automatically call this function when `dataset_usage_counts` changes.
+
+Key code snippet for the trigger function:
+
+```sql
+CREATE OR REPLACE FUNCTION update_organization_chunk_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  WITH org_chunk_count AS (
+    SELECT d.organization_id, SUM(duc.chunk_count) as total_chunk_count
+    FROM dataset_usage_counts duc
+    JOIN datasets d ON duc.dataset_id = d.id
+    WHERE d.organization_id = (SELECT organization_id FROM datasets WHERE id = NEW.dataset_id)
+    GROUP BY d.organization_id
+  )
+  UPDATE organization_usage_counts ouc
+  SET chunk_count = occ.total_chunk_count
+  FROM org_chunk_count occ
+  WHERE ouc.organization_id = occ.organization_id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+1. Removes the NOT NULL constraint from the `chunk_count` column in the `organization_usage_counts` table.
+2. Drops the `update_organization_chunk_count` function.
+
+It's worth noting that the "down" migration does not revert data changes, focusing only on structural changes.
+
+## Dependencies
+The migration scripts interact with the following database tables:
+- `organization_usage_counts`
+- `dataset_usage_counts`
+- `datasets`
+
+These tables are assumed to exist in the database schema prior to running the migration.
+
+## Configuration
+No specific configuration files or environment variables are used in these migration scripts. However, the database connection details should be properly configured in the application or migration tool that runs these scripts.
+
+## Performance Considerations
+The initial update of organization chunk counts in the "up" migration may be slow for large datasets. Additionally, the trigger created in the "up" migration ensures real-time updates but may impact performance on frequent changes to the `dataset_usage_counts` table. It's recommended to run this migration during a maintenance window to minimize potential disruptions.

@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for dropping the `card_votes` table from the database schema. It consists of two files: `up.sql` for applying the change (dropping the table) and `down.sql` for reverting the change (recreating the table).
+
+## What does it do?
+The migration scripts in this directory manage the lifecycle of the `card_votes` table in the database:
+
+1. The `up.sql` script removes the `card_votes` table from the database if it exists. This action permanently deletes all data, indexes, and constraints associated with the table.
+
+2. The `down.sql` script recreates the `card_votes` table with its original structure, including primary key, foreign key references, and indexes. This script is used to revert the changes made by the `up.sql` script if needed.
+
+These scripts allow database administrators or developers to manage the database schema changes related to the `card_votes` table in a controlled and reversible manner.
+
+## Key Files
+
+### up.sql
+This file contains a single SQL command to drop the `card_votes` table:
+
+```sql
+DROP TABLE IF EXISTS card_votes;
+```
+
+This command removes the `card_votes` table from the database schema if it exists. The `IF EXISTS` clause ensures that the operation doesn't throw an error if the table is not present.
+
+### down.sql
+This file contains SQL commands to recreate the `card_votes` table with its original structure:
+
+```sql
+CREATE TABLE card_votes (
+    id UUID PRIMARY KEY,
+    voted_user_id UUID NOT NULL REFERENCES users(id),
+    card_metadata_id UUID NOT NULL REFERENCES card_metadata(id),
+    vote BOOLEAN NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_card_votes_voted_user_id ON card_votes (voted_user_id);
+CREATE INDEX idx_card_votes_card_metadata_id ON card_votes (card_metadata_id);
+```
+
+This script recreates the `card_votes` table with the following structure:
+- `id`: A UUID primary key for each vote
+- `voted_user_id`: A UUID referencing the `users` table, representing the user who cast the vote
+- `card_metadata_id`: A UUID referencing the `card_metadata` table, representing the card being voted on
+- `vote`: A boolean value indicating the vote (true/false)
+- `created_at` and `updated_at`: Timestamps for vote creation and last update
+
+Additionally, it creates two indexes to improve query performance:
+1. `idx_card_votes_voted_user_id` on the `voted_user_id` column
+2. `idx_card_votes_card_metadata_id` on the `card_metadata_id` column
+
+## Dependencies
+The migration scripts have dependencies on other database tables:
+1. `users` table: Referenced by the `voted_user_id` foreign key
+2. `card_metadata` table: Referenced by the `card_metadata_id` foreign key
+
+These dependencies are crucial for maintaining data integrity and establishing relationships between votes, users, and card metadata.
+
+## Performance Considerations
+1. The `up.sql` script (dropping the table) is generally a fast operation, but it may take longer for very large tables and could briefly lock the database during execution.
+2. The `down.sql` script (recreating the table) includes the creation of indexes, which may slightly impact the performance of insert and update operations on the `card_votes` table. However, these indexes are designed to improve query performance, especially for lookups based on `voted_user_id` and `card_metadata_id` columns.
+
+## Error Handling
+- The `up.sql` script uses the `IF EXISTS` clause to prevent errors if the `card_votes` table doesn't exist when attempting to drop it.
+- The `down.sql` script doesn't include explicit error handling. If there are any issues during execution (e.g., referenced tables don't exist), the database system will raise an error and roll back the transaction.
+
+In conclusion, these migration scripts provide a mechanism for managing the `card_votes` table in the database schema, allowing for easy application and reversion of changes related to this table structure.

@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the `chunk_metadata` table in a PostgreSQL database. The migration specifically targets the `location` column, changing its properties and default value. The directory includes two files: `up.sql` for applying the changes and `down.sql` for reverting them.
+
+## What does it do?
+These migration scripts modify the structure of the `chunk_metadata` table in the database. The main changes are:
+
+1. In the "up" migration:
+   - The existing `location` column is removed (if it exists).
+   - A new `location` column is added with the JSONB data type and a default value of NULL.
+
+2. In the "down" migration:
+   - The existing `location` column is removed.
+   - A new `location` column is added with the JSONB data type, a default value of an empty JSON object (`'{}'`), and allowing NULL values.
+
+These changes allow for more flexible storage of location data in JSON format, with the ability to have NULL values by default in the new structure.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to apply the new changes to the database structure.
+
+   ```sql
+   ALTER TABLE chunk_metadata DROP COLUMN IF EXISTS location;
+   ALTER TABLE chunk_metadata ADD COLUMN location JSONB DEFAULT NULL;
+   ```
+
+   This script removes the existing `location` column (if it exists) and adds a new one with JSONB type and NULL as the default value.
+
+2. `down.sql`: This file contains the SQL commands to revert the changes made by the `up.sql` script.
+
+   ```sql
+   ALTER TABLE chunk_metadata DROP COLUMN location;
+   ALTER TABLE chunk_metadata ADD COLUMN location JSONB DEFAULT '{}' NULL;
+   ```
+
+   This script removes the modified `location` column and recreates it with its previous properties (JSONB type, default empty object, allowing NULL values).
+
+## Dependencies
+The migration scripts rely on PostgreSQL-specific features:
+
+- PostgreSQL: The scripts use the JSONB data type, which is a PostgreSQL-specific implementation for storing JSON data efficiently.
+
+## Configuration
+These migration scripts don't require any specific configuration. However, they assume:
+
+1. The existence of a `chunk_metadata` table in the database.
+2. Proper database connection and permissions to alter the table structure.
+
+It's important to note that running these migrations will result in data loss for the `location` column. Any existing data in this column will be removed when it's dropped and recreated.
+
+## Side Effects and Performance Considerations
+
+1. Data Loss: Running either the up or down migration will result in the loss of any existing data in the `location` column.
+
+2. Application Updates: Any application code or queries that interact with the `chunk_metadata` table, specifically the `location` column, may need to be updated to handle the new JSONB data type and the possibility of NULL values.
+
+3. Performance Impact:
+   - The JSONB data type allows for efficient storage and querying of JSON data, which can improve performance for JSON-related operations compared to using a plain text column.
+   - However, if the `chunk_metadata` table contains a large number of rows, these migrations might take some time to complete, especially if there's existing data in the `location` column.
+
+4. Database Size: Depending on the amount and structure of the JSON data stored in the `location` column, using JSONB might affect the overall size of the database.
+
+When applying these migrations, it's crucial to:
+
+1. Backup the database before running the migrations.
+2. Test the migrations in a non-production environment first.
+3. Update any application code that interacts with the `chunk_metadata` table to handle the new column structure.
+4. Consider the potential downtime or performance impact if the table is large or frequently accessed.
+
+These migration scripts provide a way to evolve the database schema to better support JSON-based location data with more flexibility in terms of default values and data structure.

@@ -1,0 +1,153 @@
+---
+title: "auth_handler.rs"
+---
+
+## High-level description
+This code defines the `auth_handler.rs` file, which contains functions and structures related to authentication and authorization in the Trieve API. It includes handlers for user login, logout, callback for OpenID Connect, and retrieving user information.
+
+## Code Structure
+The file defines several structs and functions that work together to handle authentication:
+- `LoggedUser`, `AdminOnly`, and `OwnerOnly` structs for different user roles
+- Functions like `login`, `logout`, `callback`, and `get_me` for handling various authentication operations
+- Helper functions like `build_oidc_client` for setting up OpenID Connect
+
+## Symbols
+
+### `LoggedUser`
+#### Description
+A struct representing a logged-in user, used for authentication checks.
+
+#### Internal Logic
+Implements `FromRequest` trait to extract user information from the request.
+
+### `AdminOnly`
+#### Description
+A struct representing a user with admin privileges.
+
+#### Internal Logic
+Implements `FromRequest` trait to check if the user has admin rights.
+
+### `OwnerOnly`
+#### Description
+A struct representing a user with owner privileges.
+
+#### Internal Logic
+Implements `FromRequest` trait to check if the user has owner rights.
+
+### `build_oidc_client`
+#### Description
+Builds an OpenID Connect client using configuration from environment variables.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | CoreClient | The configured OpenID Connect client |
+
+### `login`
+#### Description
+Handles user login by redirecting to the OpenID Connect provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | HttpRequest | The incoming HTTP request |
+| session | Session | The user's session |
+| data | web::Query&lt;AuthQuery&gt; | Query parameters for authentication |
+| oidc_client | web::Data&lt;CoreClient&gt; | The OpenID Connect client |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Result&lt;HttpResponse, Error&gt; | Redirect response or error |
+
+### `callback`
+#### Description
+Handles the callback from the OpenID Connect provider after user authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | HttpRequest | The incoming HTTP request |
+| session | Session | The user's session |
+| oidc_client | web::Data&lt;CoreClient&gt; | The OpenID Connect client |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| query | web::Query&lt;OpCallback&gt; | Callback query parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Result&lt;HttpResponse, Error&gt; | Redirect response or error |
+
+### `logout`
+#### Description
+Handles user logout by invalidating the current auth credential.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | Identity | The user's identity |
+| data | web::Query&lt;LogoutRequest&gt; | Logout request data |
+| req | HttpRequest | The incoming HTTP request |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | HttpResponse | JSON response with logout URL |
+
+### `get_me`
+#### Description
+Retrieves information about the currently authenticated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logged_user | LoggedUser | The authenticated user |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Result&lt;HttpResponse, actix_web::Error&gt; | User information or error |
+
+### `health_check`
+#### Description
+A simple health check endpoint to confirm the service is running.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Result&lt;HttpResponse, actix_web::Error&gt; | OK response or error |
+
+## Dependencies
+- `actix_web`, `actix_identity`, `actix_session`: Web framework and session management
+- `oauth2`, `openidconnect`: OpenID Connect implementation
+- `redis`: Redis client for session storage
+- `serde`: Serialization and deserialization of data structures
+- `utoipa`: API documentation generation
+
+## Configuration
+The code uses several environment variables for configuration, including:
+- `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_AUTH_REDIRECT_URL`, `OIDC_CLIENT_SECRET`: OpenID Connect configuration
+- `BASE_SERVER_URL`: Server hostname for OpenID provider
+- `DATABASE_URL`, `REDIS_URL`: Database and Redis connection strings
+
+## Error Handling
+The code uses custom `ServiceError` types for error handling and propagation.
+
+## Logging
+The code uses the `tracing` crate for instrumentation and logging of function calls.
+
+## API/Interface Reference
+The file defines several API endpoints:
+- `GET /api/auth`: Login
+- `DELETE /api/auth`: Logout
+- `GET /api/auth/callback`: OpenID Connect callback
+- `GET /api/auth/me`: Get current user information
+- `GET /api/health`: Health check
+
+These endpoints are documented using `utoipa` for OpenAPI specification generation.
+
+___
+
+This documentation provides an overview of the `auth_handler.rs` file, its main components, and their functionalities. It covers the key structures, functions, and endpoints related to authentication in the Trieve API.

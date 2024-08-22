@@ -1,0 +1,138 @@
+---
+title: "file_handler.rs"
+---
+
+Here's a detailed documentation of the `file_handler.rs` file:
+
+## High-level description
+This file contains handlers for file-related operations in the Trieve API. It includes functionality for uploading files, retrieving file information, getting files for a dataset, and deleting files.
+
+## Code Structure
+The file defines several handler functions that interact with the database, S3 storage, and Redis. These handlers are used to process various file-related API requests.
+
+## Symbols
+
+### `validate_file_name`
+#### Description
+Validates a file name by checking if it contains ".." and extracting the last part of the path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| s | String | The file name to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;String, actix_web::Error&gt; | Result | The validated file name or an error |
+
+### `UploadFileReqPayload`
+#### Description
+Defines the structure for the file upload request payload.
+
+### `UploadFileResult`
+#### Description
+Defines the structure for the file upload result.
+
+### `upload_file_handler`
+#### Description
+Handles the file upload process, including storing the file in S3 and creating associated metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Json&lt;UploadFileReqPayload&gt; | The upload file request payload |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| user | AdminOnly | The authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | The upload result or an error |
+
+### `get_file_handler`
+#### Description
+Retrieves file information based on the file ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_id | web::Path&lt;uuid::Uuid&gt; | The ID of the file to retrieve |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| _user | LoggedUser | The authenticated user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | The file information or an error |
+
+### `DatasetFileQuery`
+#### Description
+Defines the structure for querying files in a dataset.
+
+### `get_dataset_files_handler`
+#### Description
+Retrieves files for a specific dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Path&lt;DatasetFileQuery&gt; | The dataset file query parameters |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| required_user | LoggedUser | The authenticated user |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | The list of files in the dataset or an error |
+
+### `delete_file_handler`
+#### Description
+Deletes a file based on its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_id | web::Path&lt;uuid::Uuid&gt; | The ID of the file to delete |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| _user | AdminOnly | The authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | Confirmation of deletion or an error |
+
+### `GetImageResponse`
+#### Description
+Defines the structure for the get image response.
+
+### `get_signed_url`
+#### Description
+Generates a signed URL for accessing a file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_name | web::Path&lt;String&gt; | The name of the file |
+| _user | LoggedUser | The authenticated user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, ServiceError&gt; | Result | The signed URL or an error |
+
+## Dependencies
+The file relies on various external crates and internal modules, including `actix_web`, `base64`, `serde`, `utoipa`, and custom modules for database operations and error handling.
+
+## Error Handling
+The handlers use the `ServiceError` enum for error handling, which is then converted to HTTP responses.
+
+## Performance Considerations
+- The file upload process involves base64 decoding and S3 upload, which could be performance-intensive for large files.
+- Redis is used for queueing file ingestion tasks, which helps in managing concurrent uploads.

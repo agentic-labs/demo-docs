@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for a database schema change related to event tracking in datasets. The migration renames a table and updates a function to reflect a shift from tracking "notifications" to a broader concept of "events" associated with datasets.
+
+## What does it do?
+The migration performs two main tasks:
+
+1. It renames the table `dataset_notification_counts` to `dataset_event_counts`. This change suggests that the system is now tracking a wider range of events related to datasets, not just notifications.
+
+2. It updates the `update_notification_count()` function to work with the renamed table. This function is responsible for maintaining an accurate count of events for each dataset. When a new event is added or removed, the function automatically updates the count in the `dataset_event_counts` table.
+
+These changes allow the system to more accurately track and report on various events associated with datasets, providing a more comprehensive view of dataset activity.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+1. It renames the `dataset_notification_counts` table to `dataset_event_counts`:
+
+```sql
+ALTER TABLE dataset_notification_counts RENAME TO dataset_event_counts;
+```
+
+2. It creates or replaces the `update_notification_count()` function:
+
+```sql
+CREATE OR REPLACE FUNCTION public.update_notification_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO dataset_event_counts (dataset_uuid, notification_count)
+        VALUES (NEW.dataset_uuid, 1)
+        ON CONFLICT (dataset_uuid) DO UPDATE
+        SET notification_count = dataset_event_counts.notification_count + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE dataset_event_counts
+        SET notification_count = notification_count - 1
+        WHERE dataset_uuid = OLD.dataset_uuid;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+This function is designed to be used as a trigger. When a new event is inserted, it either creates a new record in `dataset_event_counts` with a count of 1 or increments the existing count. When an event is deleted, it decrements the count.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+1. It drops the `update_notification_count()` function:
+
+```sql
+DROP FUNCTION IF EXISTS public.update_notification_count() CASCADE;
+```
+
+2. It renames the `dataset_event_counts` table back to `dataset_notification_counts`:
+
+```sql
+ALTER TABLE dataset_event_counts RENAME TO dataset_notification_counts;
+```
+
+## Configuration
+This migration doesn't require any specific configuration. It's designed to be run as part of a database migration process, typically managed by an ORM or migration tool.
+
+The migration is identified by its timestamp and description: `2024-02-01-003109_fix_events_upload`. This naming convention likely corresponds to the migration management system in use, allowing for ordered execution of migrations.
+
+## Dependencies
+This migration assumes the existence of a PostgreSQL database. It uses PostgreSQL-specific syntax and features, such as:
+
+- The `CREATE OR REPLACE FUNCTION` syntax
+- PL/pgSQL language for stored procedures
+- PostgreSQL's trigger mechanism
+
+The exact version of PostgreSQL is not specified, but these features are available in PostgreSQL 9.5 and later.
+
+No external libraries or frameworks are directly used in these SQL scripts. However, the migration files are likely to be executed by a database migration tool or ORM that supports running SQL migrations.

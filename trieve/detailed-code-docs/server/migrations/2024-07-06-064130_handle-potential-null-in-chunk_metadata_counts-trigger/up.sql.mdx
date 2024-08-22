@@ -1,0 +1,58 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script defines a function `update_chunk_metadata_counts` and two triggers, `increase_chunk_metadata_counts_trigger` and `delete_chunk_metadata_counts_trigger`, to maintain the accuracy of chunk counts in the `dataset_usage_counts` table when chunk metadata is inserted or deleted. It replaces potentially outdated triggers and functions with the same names.
+
+## Code Structure
+The script first drops existing triggers and a function, then defines a new function `update_chunk_metadata_counts`. This function is used by two triggers that are defined afterwards. The triggers `increase_chunk_metadata_counts_trigger` and `delete_chunk_metadata_counts_trigger` are triggered after insert and delete operations on the `chunk_metadata` table, respectively.
+
+## Symbols
+
+### `update_chunk_metadata_counts`
+#### Description
+This function updates the `chunk_count` in the `dataset_usage_counts` table based on insert or delete operations on the `chunk_metadata` table. It retrieves the `dataset_id` from the `modified` table (which is a special table available within the trigger context) and calculates the new chunk count. Depending on the operation type (`INSERT` or `DELETE`), it either inserts a new record or updates an existing one in the `dataset_usage_counts` table.
+
+#### Inputs
+This function uses implicit inputs from the trigger context:
+
+*   `TG_OP`: A string indicating the trigger operation, either 'INSERT' or 'DELETE'.
+*   `modified`: A special table containing the inserted or deleted row in the `chunk_metadata` table.
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1.  Retrieves the `dataset_id` from the `modified` table.
+2.  If no `dataset_id` is found, exits the function.
+3.  Calculates the new chunk count based on all entries in the `modified` table.
+4.  If the operation is `INSERT`:
+    *   Inserts a new record into `dataset_usage_counts` with the `dataset_id` and the new chunk count.
+    *   If a record with the same `dataset_id` already exists, updates its `chunk_count` by adding the new count.
+5.  If the operation is `DELETE`:
+    *   Updates the `chunk_count` in `dataset_usage_counts` by subtracting the new count for the corresponding `dataset_id`.
+
+### `increase_chunk_metadata_counts_trigger`
+#### Description
+This trigger calls the `update_chunk_metadata_counts` function after each insert operation on the `chunk_metadata` table.
+
+#### Inputs
+This trigger uses implicit inputs from the trigger context:
+
+*   `NEW`: A reference to the newly inserted row in the `chunk_metadata` table.
+
+#### Outputs
+This trigger does not return any values.
+
+### `delete_chunk_metadata_counts_trigger`
+#### Description
+This trigger calls the `update_chunk_metadata_counts` function after each delete operation on the `chunk_metadata` table.
+
+#### Inputs
+This trigger uses implicit inputs from the trigger context:
+
+*   `OLD`: A reference to the deleted row from the `chunk_metadata` table.
+
+#### Outputs
+This trigger does not return any values.

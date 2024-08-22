@@ -1,0 +1,99 @@
+---
+title: "rust-tests.yml"
+---
+
+## High-level description
+This code defines a GitHub Actions workflow named "rust test suite" that runs various checks and tests on the Rust codebase whenever a pull request is created or updated. It includes jobs for code formatting with `cargo fmt`, linting with `clippy`, and OpenAPI spec generation and validation using `redoc` and `vacuum`.
+
+## Code Structure
+The code defines a single workflow with multiple jobs that run sequentially. Each job has a specific purpose, such as code formatting, linting, or documentation generation. The jobs use various actions and tools like `actions/checkout`, `rustup`, `clippy`, `redoc`, and `vacuum` to perform their tasks.
+
+## Symbols
+### `name: rust test suite`
+#### Description
+Defines the name of the workflow as "rust test suite". This name will be displayed in the GitHub Actions interface.
+
+### `concurrency`
+#### Description
+This section configures concurrency for the workflow, ensuring that only one workflow run is active at a time for the same workflow and branch.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group | string | `${{ github.workflow }}-${{ github.head_ref }}` -  Workflow runs are grouped by the workflow name and branch name. |
+| cancel-in-progress | boolean | `true` - If a workflow run is already in progress for the same group, it will be canceled. |
+
+### `on:`
+#### Description
+Specifies the events that trigger the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pull_request | event | The workflow will be triggered on pull request events. |
+| paths | string array | `- 'server/**'` - The workflow will only trigger if the pull request modifies files within the `server` directory. |
+
+### `jobs`
+#### Description
+This section defines the individual jobs that make up the workflow.
+
+#### Internal Logic
+The `jobs` section contains three jobs: `cargo-fmt`, `clippy_check`, and `redoc`. Each job runs on a specific virtual machine environment and performs a specific task.
+
+#### `cargo-fmt`
+##### Description
+This job ensures that all Rust code adheres to the standard code style by running `cargo fmt`.
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| runs-on | string | `blacksmith-2vcpu-ubuntu-2204` - Specifies the runner environment for this job. |
+
+##### Internal Logic
+1. **Checkout code:** Checks out the code from the repository.
+2. **Install Rust:** Installs the stable version of the Rust toolchain.
+3. **Run Cargo fmt:** Executes `cargo fmt` in check mode to ensure code is formatted correctly.
+
+#### `clippy_check`
+##### Description
+This job runs the Clippy linting tool to catch potential code issues and enforce best practices.
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| runs-on | string | `blacksmith-8vcpu-ubuntu-2204` - Specifies the runner environment for this job. |
+
+##### Internal Logic
+1. **Checkout code:** Checks out the code from the repository.
+2. **Cache dependencies:** Caches Rust dependencies to speed up subsequent runs.
+3. **Install Clippy:** Installs the `clippy` component using `rustup`.
+4. **Update Rust:** Updates the Rust toolchain to the latest stable version.
+5. **Run Clippy:** Executes `clippy` with specific arguments to check for code issues.
+6. **Cache dependencies:** Caches Rust dependencies after the run.
+
+#### `redoc`
+##### Description
+This job generates an OpenAPI specification from the code and validates it using `redoc` and `vacuum`.
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| runs-on | string | `blacksmith-8vcpu-ubuntu-2204` - Specifies the runner environment for this job. |
+
+##### Internal Logic
+1. **Checkout code:** Checks out the code from the repository.
+2. **Cache dependencies:** Caches Rust dependencies to speed up subsequent runs.
+3. **Update Rust:** Updates the Rust toolchain to the latest stable version.
+4. **Install Vacuum:** Installs the `@quobix/vacuum` package globally using `npm`.
+5. **Generate OpenAPI spec:** Runs the `redoc_ci` binary to generate an OpenAPI specification file named `openapi.json`.
+6. **Validate OpenAPI spec:** Runs `vacuum lint` to validate the generated `openapi.json` file against the rules defined in `.github/rules.yaml`.
+
+## Dependencies
+This workflow depends on several GitHub Actions and external tools:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checks out the repository's code. |
+| useblacksmith/cache@v5 | Caches dependencies to speed up workflow runs. |
+| clechasseur/rs-clippy-check@v3 | Provides a streamlined way to run Clippy checks. |
+| @quobix/vacuum | Lints and validates OpenAPI specifications. |

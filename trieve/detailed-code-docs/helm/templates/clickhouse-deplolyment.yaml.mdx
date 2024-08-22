@@ -1,0 +1,60 @@
+---
+title: "clickhouse-deplolyment.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes YAML configuration file for deploying a ClickHouse database installation using the ClickHouse Operator from Altinity. It specifies a single-shard, single-replica ClickHouse cluster with custom configuration for users, networking, storage, and environment variables.
+
+## Code Structure
+This code defines a Kubernetes `ClickHouseInstallation` resource with nested specifications for configuration, templates, and volume claims. The `configuration` section sets up users, networking, and cluster layout. The `templates` section defines a pod template with container specifications for the ClickHouse server, including image details, volume mounts, and environment variables. The `volumeClaimTemplates` section defines persistent volume claims for data and log storage.
+
+## Symbols
+### `ClickHouseInstallation`
+#### Description
+This resource defines the desired state of a ClickHouse installation within a Kubernetes cluster.
+
+#### Inputs
+This resource is configured through the provided YAML structure, including:
+- `metadata.name`: Name of the ClickHouse installation.
+- `metadata.namespace`: Kubernetes namespace for the installation.
+- `spec.configuration`: ClickHouse server configuration.
+- `spec.templates`: Templates for pods and volume claims.
+
+#### Outputs
+This resource, when applied to a Kubernetes cluster, creates and manages the ClickHouse deployment based on the provided specifications.
+
+#### Internal Logic
+The ClickHouse Operator uses this resource definition to:
+- Create and manage StatefulSets for ClickHouse pods.
+- Create and manage Services for accessing ClickHouse.
+- Configure ClickHouse server instances based on the provided configuration.
+- Mount persistent volumes for data and log storage.
+
+## Dependencies
+- `clickhouse.altinity.com/v1`: This API version indicates the use of the ClickHouse Operator from Altinity.
+
+## Configuration
+This configuration file defines settings for the ClickHouse installation, including:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `spec.configuration.users.default/password` | string |  | Password for the default ClickHouse user, retrieved from a Helm value `{{ .Values.config.analytics.clickhousePassword }}`. |
+| `spec.configuration.users.default/networks/ip` | list |  | List of allowed IP addresses for the default user, set to allow all IPs (`0.0.0.0/0`). |
+| `spec.configuration.clusters.name` | string |  | Name of the ClickHouse cluster, set to `cluster1`. |
+| `spec.configuration.clusters.templates.podTemplate` | string |  | Name of the pod template to use for this cluster, set to `clickhouse-pod-template`. |
+| `spec.configuration.clusters.layout.shardsCount` | integer |  | Number of shards in the cluster, set to `1`. |
+| `spec.configuration.clusters.layout.replicasCount` | integer |  | Number of replicas per shard, set to `1`. |
+| `spec.templates.podTemplates.name` | string |  | Name of the pod template, set to `clickhouse-pod-template`. |
+| `spec.templates.podTemplates.spec.containers.name` | string |  | Name of the ClickHouse container, set to `clickhouse`. |
+| `spec.templates.podTemplates.spec.containers.image` | string |  | Docker image for the ClickHouse container, set to `trieve/clickhouse:latest`. |
+| `spec.templates.podTemplates.spec.containers.digest` | string |  | Specific image digest to use, ensuring a consistent build. |
+| `spec.templates.podTemplates.spec.containers.volumeMounts` | list |  | List of volumes to mount into the container. |
+| `spec.templates.podTemplates.spec.containers.env` | list |  | List of environment variables for the container. |
+| `spec.templates.volumeClaimTemplates.name` | string |  | Name of the volume claim template. |
+| `spec.templates.volumeClaimTemplates.spec.accessModes` | list |  | Access modes for the volume, set to `ReadWriteOnce`. |
+| `spec.templates.volumeClaimTemplates.spec.resources.requests.storage` | string |  | Requested storage size for the volume. |
+
+## Error Handling
+This configuration file does not implement specific error handling mechanisms. Errors during deployment or operation are handled by Kubernetes and the ClickHouse Operator.
+
+## Logging
+This configuration mounts a persistent volume for ClickHouse logs at `/var/log/clickhouse-server` within the container. The ClickHouse Operator and Kubernetes handle log collection and management.

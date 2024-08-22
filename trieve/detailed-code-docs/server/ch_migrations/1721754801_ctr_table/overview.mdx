@@ -1,0 +1,69 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and removing a table named `ctr_data` in a ClickHouse database. The migration is identified by the timestamp 1721754801, which is likely used to order migrations chronologically. The directory includes two files: an "up" migration for creating the table and a "down" migration for removing it.
+
+## What does it do?
+These migration scripts manage the lifecycle of a `ctr_data` table in a ClickHouse database:
+
+1. The "up" migration creates a new table called `ctr_data`. This table is designed to store data related to Click-Through Rate (CTR) or similar metrics. It includes columns for various identifiers (like id, request_id, chunk_id, dataset_id), a position field, metadata, and a timestamp. The table is optimized for efficient querying and data management using ClickHouse's MergeTree engine.
+
+2. The "down" migration provides a way to revert the changes by dropping the `ctr_data` table if it exists. This allows for easy rollback of the database schema if needed.
+
+These scripts enable database administrators or application developers to easily apply or revert changes to the database schema in a controlled and versioned manner.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to create the `ctr_data` table. It defines the table structure, including column names and data types, and sets up optimization features like partitioning and automatic data deletion (TTL).
+
+   Key features of the `ctr_data` table:
+   - Uses UUID for various ID fields (id, request_id, chunk_id, dataset_id)
+   - Includes a position field (Int32) and a metadata field (String)
+   - Records creation time (created_at)
+   - Uses MergeTree engine for efficient read and write operations
+   - Implements partitioning by year, month, and dataset_id
+   - Sets up automatic data deletion after 30 days
+
+   Example of table creation:
+   ```sql
+   CREATE TABLE ctr_data
+   (
+       id UUID,
+       request_id UUID,
+       chunk_id UUID,
+       dataset_id UUID,
+       position Int32,
+       metadata String,
+       created_at DateTime
+   )
+   ENGINE = MergeTree()
+   PARTITION BY (toYYYYMM(created_at), dataset_id)
+   ORDER BY (dataset_id, created_at, request_id, id)
+   TTL created_at + INTERVAL 30 DAY;
+   ```
+
+2. `down.sql`: This file contains a simple SQL command to drop the `ctr_data` table if it exists. It's used to revert the changes made by the up migration.
+
+   Example of table deletion:
+   ```sql
+   DROP TABLE IF EXISTS ctr_data;
+   ```
+
+## Dependencies
+The migration scripts are designed for ClickHouse, a column-oriented database management system. ClickHouse is particularly well-suited for online analytical processing (OLAP) scenarios, which aligns with the apparent purpose of the `ctr_data` table (storing and analyzing click-through rate data).
+
+Key ClickHouse features utilized:
+- MergeTree engine for efficient data storage and retrieval
+- Partitioning for improved query performance
+- TTL (Time-To-Live) for automatic data management
+
+## Performance Considerations
+1. The `ctr_data` table uses the MergeTree engine, which is optimized for insert and select queries on large datasets.
+2. The table is partitioned by year, month, and dataset_id, which can significantly improve query performance by allowing the database to skip irrelevant partitions.
+3. The ORDER BY clause (dataset_id, created_at, request_id, id) is designed to optimize queries that filter or sort by these columns.
+4. A TTL clause automatically deletes data after 30 days, which helps manage the table size and maintain performance over time.
+5. The "down" migration (dropping the table) is typically a fast operation, but it could potentially cause a brief lock on the database schema in high-concurrency environments.
+
+These performance optimizations suggest that the `ctr_data` table is designed to handle large volumes of data efficiently, with a focus on querying recent data (within the last 30 days) and filtering by dataset_id.

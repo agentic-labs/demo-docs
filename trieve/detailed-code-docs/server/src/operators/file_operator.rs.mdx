@@ -1,0 +1,179 @@
+---
+title: "file_operator.rs"
+---
+
+## High-level description
+The `file_operator.rs` file contains functions for handling file uploads, downloads, and deletions. It interacts with an S3 bucket for file storage and a PostgreSQL database for metadata management. Additionally, it utilizes Redis for queuing chunk ingestion tasks and ClickHouse for analytics events.
+
+## Code Structure
+The code defines several functions related to file operations. `get_aws_bucket` retrieves the S3 bucket for file storage. `create_file_query` inserts a new file record into the database. `create_file_chunks` processes the uploaded file, splits it into chunks, and queues them for ingestion into the search index. `get_file_query` retrieves a file's metadata and generates a pre-signed S3 URL for download. `get_dataset_file_query` fetches files associated with a specific dataset. `delete_file_query` removes a file from S3 and the database.
+
+## References
+- `super::chunk_operator`: Functions for managing chunk metadata.
+- `super::clickhouse_operator`: Functions for sending events to ClickHouse.
+- `super::group_operator`: Functions for managing chunk groups.
+- `super::parse_operator`: Functions for parsing and processing text.
+- `crate::data::models`: Data models for files, chunks, and other entities.
+- `crate::errors::ServiceError`: Custom error type for service errors.
+
+## Symbols
+
+### `get_aws_bucket`
+#### Description
+Retrieves the S3 bucket used for file storage. It reads environment variables for S3 endpoint, bucket name, and credentials.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;Bucket, ServiceError&gt; | The S3 bucket object or a ServiceError if bucket retrieval fails. |
+
+#### Internal Logic
+- Reads environment variables for S3 endpoint, bucket name, and credentials.
+- Attempts to retrieve credentials from instance metadata or uses provided access and secret keys.
+- Creates a new S3 bucket object with the retrieved configuration.
+- Returns the bucket object or a ServiceError if bucket creation fails.
+
+### `create_file_query`
+#### Description
+Inserts a new file record into the database based on the provided file details.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_id | uuid::Uuid | The UUID of the file. |
+| file_size | i64 | The size of the file in bytes. |
+| upload_file_data | UploadFileReqPayload | The payload containing file details. |
+| dataset_id | uuid::Uuid | The UUID of the dataset the file belongs to. |
+| pool | web::Data&lt;Pool&gt; | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;File, ServiceError&gt; | The created File object or a ServiceError if file creation fails. |
+
+#### Internal Logic
+- Creates a new File object from the provided details.
+- Inserts the new file record into the `files` table.
+- Returns the created File object or a ServiceError if insertion fails.
+
+### `create_file_chunks`
+#### Description
+Processes an uploaded file, splits it into chunks, and queues them for ingestion into the search index.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| created_file_id | uuid::Uuid | The UUID of the newly created file. |
+| upload_file_data | UploadFileReqPayload | The payload containing file details. |
+| html_content | String | The HTML content of the uploaded file. |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | The dataset, organization, plan, and subscription details. |
+| pool | web::Data&lt;Pool&gt; | The database connection pool. |
+| event_queue | web::Data&lt;EventQueue&gt; | The ClickHouse event queue. |
+| redis_conn | MultiplexedConnection | The Redis connection. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(), ServiceError&gt; | A Result indicating success or a ServiceError if chunk creation fails. |
+
+#### Internal Logic
+- Converts the HTML content to plain text.
+- Builds a chunking regex based on provided delimiters.
+- Splits the text into chunks using the `coarse_doc_chunker` function.
+- Creates a new chunk group for the file.
+- Iterates through the chunks and creates `ChunkReqPayload` objects for each.
+- Checks if the total chunk count exceeds the organization's plan limit.
+- Splits the chunks into segments for batch processing.
+- Serializes the chunk segments into ingestion messages.
+- Pushes the ingestion messages to the Redis queue for processing.
+- Sends a `FileUploaded` event to ClickHouse.
+
+### `get_file_query`
+#### Description
+Retrieves a file's metadata and generates a pre-signed S3 URL for download.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_uuid | uuid::Uuid | The UUID of the file. |
+| dataset_id | uuid::Uuid | The UUID of the dataset the file belongs to. |
+| pool | web::Data&lt;Pool&gt; | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;FileDTO, actix_web::Error&gt; | The FileDTO object containing file metadata and S3 URL or an actix_web::Error if file retrieval fails. |
+
+#### Internal Logic
+- Retrieves the file record from the `files` table based on file UUID and dataset ID.
+- Generates a pre-signed S3 URL for the file with a custom "Content-Disposition" header for download.
+- Creates a FileDTO object from the file metadata and S3 URL.
+- Returns the FileDTO object or an error if file retrieval or URL generation fails.
+
+### `get_dataset_file_query`
+#### Description
+Fetches files associated with a specific dataset, paginated with a limit of 10 files per page.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The UUID of the dataset. |
+| page | u64 | The page number for pagination. |
+| pool | web::Data&lt;Pool&gt; | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;Vec&lt;(File, i64, Option&lt;uuid::Uuid&gt;)&gt;, actix_web::Error&gt; | A vector of tuples containing File objects, total file count, and optional group ID, or an actix_web::Error if file retrieval fails. |
+
+#### Internal Logic
+- Queries the `files` table, joining with `groups_from_files` to retrieve file metadata and associated group ID.
+- Filters the query by dataset ID.
+- Applies pagination with a limit of 10 files per page.
+- Returns the retrieved file metadata or an error if retrieval fails.
+
+### `delete_file_query`
+#### Description
+Removes a file from S3 and the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_uuid | uuid::Uuid | The UUID of the file. |
+| dataset | Dataset | The Dataset object the file belongs to. |
+| pool | web::Data&lt;Pool&gt; | The database connection pool. |
+| dataset_config | DatasetConfiguration | The dataset configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(), actix_web::Error&gt; | A Result indicating success or an actix_web::Error if file deletion fails. |
+
+#### Internal Logic
+- Retrieves the file metadata from the `files` table.
+- Deletes the file from the S3 bucket.
+- Performs a database transaction to delete the file record from the `files` table.
+- Returns a success result or an error if any of the steps fail.
+
+## Side Effects
+- Modifies the database by inserting, updating, or deleting file records.
+- Uploads and deletes files from the S3 bucket.
+- Pushes messages to the Redis queue for chunk ingestion.
+- Sends events to ClickHouse for analytics.
+
+## Dependencies
+- `diesel`: Database interaction library.
+- `diesel_async`: Asynchronous database connection pool.
+- `redis`: Redis client library.
+- `s3`: S3 client library.
+- `regex`: Regular expression library.
+- `scraper`: HTML parsing library.
+
+## Error Handling
+The code uses the `ServiceError` custom error type to handle various error scenarios, such as database errors, S3 errors, and invalid input.
+
+## Logging
+The code uses the `log` crate for logging errors and other relevant information.
+
+## TODOs
+None.

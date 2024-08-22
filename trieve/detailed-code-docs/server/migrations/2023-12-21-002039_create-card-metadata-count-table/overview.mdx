@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for creating and managing a `card_metadata_counts` table in a database system. The migration is designed to introduce a new table that keeps track of the total number of card metadata rows for each dataset, along with a trigger mechanism to automatically update these counts when card metadata is inserted or deleted.
+
+## What does it do?
+The migration scripts in this directory perform the following tasks:
+
+1. Create a new table called `card_metadata_counts` to store the total count of card metadata rows for each dataset.
+2. Implement a trigger function that automatically updates the count in the `card_metadata_counts` table whenever card metadata is inserted or deleted.
+3. Set up a trigger on the `card_metadata` table to execute the update function after INSERT or DELETE operations.
+4. Provide a way to revert these changes by dropping the created table, trigger, and function.
+
+This setup allows the database to maintain an up-to-date count of card metadata for each dataset without requiring manual updates or separate queries to calculate the counts.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to set up the new table and trigger mechanism:
+
+1. Creates the `card_metadata_counts` table with columns:
+   - `id` (UUID, primary key)
+   - `dataset_id` (UUID, foreign key to datasets table)
+   - `total_rows` (BIGINT, count of card metadata rows)
+
+2. Defines the `update_card_metadata_count()` function:
+   ```sql
+   CREATE OR REPLACE FUNCTION update_card_metadata_count() RETURNS TRIGGER AS $$
+   BEGIN
+     IF (TG_OP = 'INSERT') THEN
+       INSERT INTO card_metadata_counts (id, dataset_id, total_rows)
+       VALUES (gen_random_uuid(), NEW.dataset_id, 1)
+       ON CONFLICT (dataset_id) DO UPDATE SET total_rows = card_metadata_counts.total_rows + 1;
+     ELSIF (TG_OP = 'DELETE') THEN
+       UPDATE card_metadata_counts
+       SET total_rows = total_rows - 1
+       WHERE dataset_id = OLD.dataset_id;
+     END IF;
+     RETURN NULL;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
+3. Creates the `card_metadata_count_trigger` on the `card_metadata` table:
+   ```sql
+   CREATE TRIGGER card_metadata_count_trigger
+   AFTER INSERT OR DELETE ON card_metadata
+   FOR EACH ROW EXECUTE FUNCTION update_card_metadata_count();
+   ```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`:
+
+1. Drops the `card_metadata_count_trigger` from the `card_metadata` table.
+2. Drops the `update_card_metadata_count()` function.
+3. Drops the `card_metadata_counts` table.
+
+## Dependencies
+The migration scripts rely on the following database objects:
+
+1. A `datasets` table (referenced by the foreign key in `card_metadata_counts`)
+2. A `card_metadata` table (on which the trigger is created)
+
+The scripts use PostgreSQL-specific features:
+- `gen_random_uuid()` function for generating UUIDs
+- `plpgsql` language for the trigger function
+
+## Configuration
+The migration scripts do not require any external configuration. However, they assume the existence of certain database objects and use specific PostgreSQL features. Ensure that the database environment meets these requirements before running the migration.
+
+## Notes
+1. The `up.sql` script does not explicitly define a unique constraint on the `dataset_id` column in the `card_metadata_counts` table, although the `ON CONFLICT` clause in the trigger function suggests that `dataset_id` should be unique.
+2. The `down.sql` script does not include any error handling. If any of the objects being dropped do not exist, the database system may raise an error, potentially halting the execution of the script.
+3. When applying these migrations, it's crucial to ensure that the existing data in the `card_metadata` table is accounted for, as the trigger will only update counts for new insertions and deletions after it's created.

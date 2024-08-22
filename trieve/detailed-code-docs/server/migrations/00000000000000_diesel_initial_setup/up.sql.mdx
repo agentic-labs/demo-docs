@@ -1,0 +1,60 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL file is part of the initial setup for the Diesel ORM in a PostgreSQL database. It creates two functions that automate the management of an `updated_at` timestamp column for tables, ensuring it's updated whenever a row is modified.
+
+## Symbols
+
+### `diesel_manage_updated_at`
+#### Description
+This function creates a trigger on a specified table to automatically update the `updated_at` column whenever a row is modified.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| _tbl | regclass | The table on which to create the trigger |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | VOID | This function doesn't return a value |
+
+#### Internal Logic
+1. Uses `EXECUTE format()` to dynamically create a trigger named `set_updated_at` on the specified table.
+2. The trigger is set to fire BEFORE UPDATE on each row.
+3. The trigger calls the `diesel_set_updated_at()` function.
+
+### `diesel_set_updated_at`
+#### Description
+This function is called by the trigger created by `diesel_manage_updated_at`. It updates the `updated_at` column of a row if it has been modified.
+
+#### Inputs
+Implicitly receives the OLD and NEW row data as trigger variables.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | trigger | Returns the NEW row data, potentially modified |
+
+#### Internal Logic
+1. Checks if the NEW row is different from the OLD row.
+2. Checks if the `updated_at` column hasn't been explicitly modified.
+3. If both conditions are true, sets `NEW.updated_at` to the current timestamp.
+4. Returns the NEW row data.
+
+## Performance Considerations
+The `diesel_set_updated_at` function uses `IS DISTINCT FROM` comparisons, which can handle NULL values correctly without additional checks. This approach is generally more efficient than using separate NULL checks.
+
+## Dependencies
+This script is designed to work with PostgreSQL and is part of the Diesel ORM setup. It relies on PostgreSQL-specific features such as:
+- PL/pgSQL language
+- Trigger functions
+- Dynamic SQL execution with `EXECUTE format()`
+
+## Error Handling
+The script doesn't implement explicit error handling. Any errors during execution (e.g., if the specified table doesn't exist) will be handled by the PostgreSQL engine.
+
+## TODOs
+The file includes a comment suggesting that it's safe to edit and that future changes will be added as new migrations. This implies that developers should be cautious when modifying this file and consider creating new migrations for changes instead of directly editing this initial setup.

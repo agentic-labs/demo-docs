@@ -1,0 +1,54 @@
+---
+title: "down.sql"
+---
+
+## High-level description
+This code defines a PostgreSQL function `update_messages_counts` and a trigger `update_messages_counts_trigger` that work together to maintain a count of messages associated with each organization in a table named `organization_usage_counts`. The trigger is set up to fire after an INSERT or DELETE operation on the `messages` table.
+
+## Code Structure
+The `update_messages_counts` function is called by the `update_messages_counts_trigger` trigger. The trigger is defined to execute the function for each row affected by an INSERT or DELETE operation on the `messages` table.
+
+## Symbols
+
+### `update_messages_counts`
+#### Description
+This function updates the `message_count` in the `organization_usage_counts` table based on INSERT or DELETE operations on the `messages` table. It increments the count on INSERT and decrements on DELETE.
+
+#### Inputs
+This function implicitly takes the inserted or deleted row from the `messages` table as input through the `OLD` object within the trigger context.
+
+#### Outputs
+This function doesn't return any explicit output. It modifies the `organization_usage_counts` table as a side effect.
+
+#### Internal Logic
+1. **Identifies the operation:** Determines if the triggering event is an INSERT or DELETE operation using `TG_OP`.
+2. **INSERT Logic:** If it's an INSERT:
+    - It retrieves the `organization_id` associated with the inserted message from the `datasets` table using the `dataset_id` from the inserted row (`OLD.dataset_id`).
+    - It attempts to insert a new row into `organization_usage_counts` with the `org_id` and a `message_count` of 1.
+    - If a row with the same `org_id` already exists (conflict), it increments the existing `message_count` by 1.
+3. **DELETE Logic:** If it's a DELETE:
+    - It retrieves the `organization_id` associated with the deleted message from the `datasets` table using the `dataset_id` from the deleted row (`OLD.dataset_id`).
+    - It updates the `organization_usage_counts` table, decrementing the `message_count` for the corresponding `org_id`. It ensures the `message_count` doesn't go below 0.
+4. **Returns Control:** Returns `NEW` to signify successful trigger execution (though the `NEW` value is discarded in this case).
+
+### `update_messages_counts_trigger`
+#### Description
+This trigger automatically calls the `update_messages_counts` function after each INSERT or DELETE operation on the `messages` table.
+
+#### Inputs
+This trigger implicitly uses the inserted or deleted row from the `messages` table as input to the `update_messages_counts` function.
+
+#### Outputs
+This trigger doesn't have any direct outputs. It indirectly modifies the `organization_usage_counts` table through the execution of the `update_messages_counts` function.
+
+#### Internal Logic
+1. **Trigger Event:** It's defined as an `AFTER INSERT OR DELETE` trigger on the `messages` table, meaning it fires after a row is inserted or deleted.
+2. **Row-Level Trigger:** The `FOR EACH ROW` clause ensures the trigger fires for each affected row, not just once per statement.
+3. **Function Execution:** It calls the `update_messages_counts` function for each affected row.
+
+## Side Effects
+- Modifies the `organization_usage_counts` table by incrementing or decrementing the `message_count` based on INSERT or DELETE operations on the `messages` table.
+
+## Error Handling
+- If any error occurs within the `update_messages_counts` function during an INSERT or DELETE operation on the `messages` table, the entire transaction will likely be rolled back due to the transactional nature of triggers in PostgreSQL.
+- The code includes a basic check to prevent the `message_count` from going below zero in the DELETE logic. 

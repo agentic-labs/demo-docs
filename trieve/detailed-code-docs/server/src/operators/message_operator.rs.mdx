@@ -1,0 +1,115 @@
+---
+title: "message_operator.rs"
+---
+
+Here's a high-level description and documentation of the `message_operator.rs` file:
+
+## High-level description
+This file contains functions and structures for handling messages in a chat-like system. It provides operations for creating, retrieving, updating, and deleting messages, as well as generating responses using a language model (LLM) with retrieval-augmented generation (RAG).
+
+## Code Structure
+The main symbols in this file are functions that interact with the database to perform CRUD operations on messages. These functions often use the `Pool` type for database connections. The `stream_response` function is a key component that handles the generation of responses using an LLM.
+
+## Symbols
+
+### `get_topic_messages`
+#### Description
+Retrieves all messages for a given topic and dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messages_topic_id | uuid::Uuid | The ID of the topic |
+| given_dataset_id | uuid::Uuid | The ID of the dataset |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;Message&gt;, ServiceError&gt; | Result | A vector of Message objects or a ServiceError |
+
+### `create_message_query`
+#### Description
+Creates a new message in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| new_message | Message | The message to be created |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or a ServiceError |
+
+### `create_generic_system_message`
+#### Description
+Creates a generic system message for a topic.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| system_prompt | String | The content of the system message |
+| messages_topic_id | uuid::Uuid | The ID of the topic |
+| dataset_id | uuid::Uuid | The ID of the dataset |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Message, ServiceError&gt; | Result | The created Message or a ServiceError |
+
+### `create_topic_message_query`
+#### Description
+Creates a new message for a topic, including a system message if it's the first message.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | &DatasetConfiguration | Dataset configuration |
+| previous_messages | Vec&lt;Message&gt; | Existing messages in the topic |
+| new_message | Message | The new message to be added |
+| dataset_id | uuid::Uuid | The ID of the dataset |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;Message&gt;, ServiceError&gt; | Result | Updated list of messages or a ServiceError |
+
+### `stream_response`
+#### Description
+Generates a response using an LLM with RAG, streaming the result.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messages | Vec&lt;models::Message&gt; | Previous messages in the conversation |
+| topic_id | uuid::Uuid | The ID of the topic |
+| dataset | Dataset | The dataset object |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| event_queue | web::Data&lt;EventQueue&gt; | Event queue for analytics |
+| dataset_config | DatasetConfiguration | Dataset configuration |
+| create_message_req_payload | CreateMessageReqPayload | Request payload for creating a message |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | Streamed HTTP response or an error |
+
+#### Internal Logic
+1. Prepares the context for the LLM using previous messages and RAG results.
+2. Sends a request to the LLM API.
+3. Streams the response back to the client.
+4. Saves the generated message to the database.
+5. Logs analytics events.
+
+## Dependencies
+- `actix_web`: Web framework
+- `openai_dive`: OpenAI API client
+- `diesel`: ORM and query builder
+- `serde`: Serialization/deserialization
+- `chrono`: Date and time library
+
+This file is crucial for handling message-related operations and integrating with an LLM for response generation in a chat-like system with RAG capabilities.

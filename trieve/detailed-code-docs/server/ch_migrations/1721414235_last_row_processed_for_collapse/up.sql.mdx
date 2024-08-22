@@ -1,0 +1,38 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script creates a new table named `last_collapsed_dataset` in a ClickHouse database. The table is designed to store information about the last time a dataset was collapsed, using a ReplacingMergeTree engine for efficient updates and queries.
+
+## Symbols
+
+### `last_collapsed_dataset` Table
+#### Description
+This table is created to keep track of the last time a dataset was collapsed. It uses the ReplacingMergeTree engine, which allows for efficient updates of rows with the same primary key.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for each record |
+| last_collapsed | DateTime | Timestamp of when the dataset was last collapsed |
+| dataset_id | UUID | Unique identifier for the dataset |
+| created_at | DateTime | Timestamp of when the record was created |
+
+#### Internal Logic
+1. The table uses the ReplacingMergeTree engine, which is optimized for scenarios where you need to keep the latest version of each row.
+2. The `created_at` column is used as the version column for the ReplacingMergeTree engine. This means that when multiple rows with the same `dataset_id` exist, the one with the latest `created_at` will be considered the current version during queries.
+3. The table is ordered by `dataset_id`, which allows for efficient lookups and range queries on this column.
+4. The table is partitioned by month (derived from `created_at`) and `dataset_id`. This partitioning scheme can improve query performance and data management for large datasets.
+
+## Performance Considerations
+1. The ReplacingMergeTree engine is used to efficiently handle updates to existing records. When a new record is inserted with the same `dataset_id` as an existing record, the engine will automatically replace the old record with the new one during the next merge operation.
+2. The partitioning scheme (`toYYYYMM(created_at), dataset_id`) allows for efficient data pruning and faster queries when filtering by date range and dataset_id.
+3. The `ORDER BY (dataset_id)` clause ensures that data is physically sorted by `dataset_id`, which can significantly speed up queries that filter or join on this column.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| ClickHouse | This SQL script is specifically designed for ClickHouse, a column-oriented database management system. |
+
+Note: This script assumes that the ClickHouse server is properly set up and configured to execute this SQL command.

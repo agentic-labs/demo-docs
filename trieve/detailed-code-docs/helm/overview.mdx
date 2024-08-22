@@ -1,0 +1,90 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `helm` directory contains Helm charts and templates for deploying the Trieve application and its dependencies on Kubernetes. It includes configurations for the main Trieve application, as well as charts for essential services like PostgreSQL, Qdrant (a vector database), and Redis. The directory is structured to support deployment across different environments (local, AWS, Google Cloud) with environment-specific configurations.
+
+## What does it do?
+This Helm chart automates the deployment and configuration of the Trieve application ecosystem in a Kubernetes environment. It handles:
+
+1. Deployment of core Trieve services (dashboard, chat, search, server)
+2. Setup of background workers (file worker, group worker, delete worker, sync-qdrant)
+3. Configuration of supporting services (Apache Tika, Keycloak for authentication)
+4. Database deployments (ClickHouse for analytics, PostgreSQL for persistent storage)
+5. Networking setup with environment-specific ingress rules
+6. Integration of external services (Redis, Qdrant, OpenAI)
+7. Configuration of monitoring, scaling, and resource allocation
+
+The chart is designed to be flexible, allowing for customization through a comprehensive `values.yaml` file and supporting different deployment environments.
+
+## Entry points
+The main entry points for this Helm chart are:
+
+1. `Chart.yaml`: Defines the chart metadata, version, and dependencies.
+2. `values.yaml`: Contains the default configuration values for the chart.
+3. `templates/` directory: Contains Kubernetes resource templates for various components.
+
+The deployment process typically starts with customizing the `values.yaml` file (or using `local-values.yaml` for local deployments) and then using the Helm CLI to install or upgrade the chart.
+
+## Key Files
+1. `templates/server-deployment.yaml`: Defines the main Trieve server deployment.
+2. `templates/ingress-*.yaml`: Environment-specific ingress configurations.
+3. `templates/clickhouse-deployment.yaml`: ClickHouse analytics database deployment.
+4. `templates/keycloak.yaml` and `templates/keycloak-realm-configmap.yaml`: Keycloak authentication setup.
+5. `templates/embeddings-deployment.yaml`: Text embedding inference services deployment.
+6. `local-values.yaml`: Configuration values for local development deployments.
+
+## Dependencies
+The chart relies on several external dependencies:
+
+1. Kubernetes (typically v1.24+)
+2. Helm (v3+)
+3. Docker images for various services (PostgreSQL, Redis, Qdrant, etc.)
+4. Keycloak for authentication
+5. ClickHouse for analytics
+6. Apache Tika for content extraction
+7. OpenAI API for language model capabilities
+8. Cloud-specific services (e.g., Google Cloud SQL, AWS ALB) depending on the deployment environment
+
+## Configuration
+The chart is highly configurable through the `values.yaml` file and environment-specific value files. Key configuration areas include:
+
+1. Environment selection (local, AWS, Google Cloud)
+2. Container image versions
+3. Database connection strings and configurations
+4. API keys and credentials for external services
+5. Resource allocation for containers
+6. Networking and ingress settings
+7. Feature flags and application-specific settings
+
+Example configuration options:
+
+```yaml
+environment: local
+domain: localtrieve.com
+useGpu: false
+containers:
+  keycloak:
+    tag: 21.1.1
+postgres:
+  useSubchart: true
+  dbURI: postgres://postgres:postgres@postgres-postgresql:5432/postgres
+config:
+  vite:
+    apiHost: http://api.localtrieve.com/api
+  redis:
+    useSubchart: true
+    uri: redis://redis-master:6379
+  qdrant:
+    useSubchart: true
+    qdrantUrl: http://qdrant:6333
+  trieve:
+    unlimited: true
+  openai:
+    apiKey: sk-...
+```
+
+These configurations allow for fine-tuning the deployment to specific requirements and infrastructure setups.
+
+The Helm chart provides a comprehensive and flexible way to deploy the Trieve application stack, handling complex dependencies and configurations across different environments.

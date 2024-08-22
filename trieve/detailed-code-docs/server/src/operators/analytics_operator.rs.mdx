@@ -1,0 +1,236 @@
+---
+title: "analytics_operator.rs"
+---
+
+## High-level description
+The `analytics_operator.rs` file contains functions that handle analytics-related queries for search, RAG, and recommendation features. These functions interact with a ClickHouse database to retrieve and process analytics data, such as usage metrics, latency graphs, popular filters, and click-through rate (CTR) data.
+
+## Code Structure
+The code consists of a series of functions, each responsible for a specific analytics query. These functions typically take input parameters like dataset ID, filters, and pagination options, and return structured data representing the requested analytics. They utilize the `clickhouse::Client` to interact with the ClickHouse database.
+
+## References
+This file references several data models defined in `crate::data::models`, including `SearchAnalyticsFilter`, `RAGAnalyticsFilter`, `RecommendationAnalyticsFilter`, `Granularity`, `SortOrder`, and various response structures like `SearchUsageGraphResponse`, `LatencyGraphResponse`, etc. It also references the `get_metadata_from_tracking_id_query` function from `super::chunk_operator`.
+
+## Symbols
+
+### `get_clusters_query`
+#### Description
+Retrieves the top 10 search clusters for a given dataset, optionally filtered by a `ClusterAnalyticsFilter`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filters | Option&lt;ClusterAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchClusterResponse, ServiceError&gt; |  | A `SearchClusterResponse` containing the list of clusters, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select cluster data from the `cluster_topics` table.
+2. Applies optional filters to the query string.
+3. Orders the results by density in descending order and limits the result to the top 10 clusters.
+4. Executes the query using the provided ClickHouse client.
+5. Maps the retrieved `ClusterTopicsClickhouse` data to `SearchClusterTopics` and returns them within a `SearchClusterResponse`.
+
+### `get_queries_for_cluster_query`
+#### Description
+Retrieves a list of search queries associated with a specific cluster, paginated by page number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| cluster_id | uuid::Uuid | The ID of the cluster. |
+| page | Option&lt;u32&gt; | The page number for pagination. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchQueryResponse, ServiceError&gt; |  | A `SearchQueryResponse` containing the list of queries, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select distinct search queries from the `search_queries` table, joined with the `search_cluster_memberships` table.
+2. Filters the results by cluster ID and dataset ID.
+3. Orders the results by distance to centroid in descending order.
+4. Applies pagination using the provided page number, limiting the results to 15 queries per page.
+5. Executes the query using the provided ClickHouse client.
+6. Maps the retrieved `SearchQueryEventClickhouse` data to `SearchQueryEvent` and returns them within a `SearchQueryResponse`.
+
+### `get_search_query`
+#### Description
+Retrieves a specific search query by its ID and dataset ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| search_id | uuid::Uuid | The ID of the search query. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchQueryEvent, ServiceError&gt; |  | The `SearchQueryEvent` corresponding to the provided ID, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select a search query from the `search_queries` table by ID and dataset ID.
+2. Executes the query using the provided ClickHouse client.
+3. Maps the retrieved `SearchQueryEventClickhouse` data to `SearchQueryEvent` and returns it.
+
+### `get_search_metrics_query`
+#### Description
+Retrieves search metrics for a given dataset, optionally filtered by a `SearchAnalyticsFilter`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;DatasetAnalytics, ServiceError&gt; |  | A `DatasetAnalytics` object containing the search metrics, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to calculate search metrics like total queries, search requests per second (RPS), average latency, and percentiles (p99, p95, p50) from the `search_queries` table.
+2. Applies optional filters to the query string.
+3. Executes the query using the provided ClickHouse client.
+4. Fetches the result as a `DatasetAnalytics` object and returns it.
+
+### `get_head_queries_query`
+#### Description
+Retrieves the top 10 most frequent search queries for a given dataset, optionally filtered by a `SearchAnalyticsFilter` and paginated by page number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| page | Option&lt;u32&gt; | The page number for pagination. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;HeadQueryResponse, ServiceError&gt; |  | A `HeadQueryResponse` containing the list of head queries, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select distinct search queries and their counts from the `search_queries` table.
+2. Applies optional filters to the query string.
+3. Groups the results by query and orders them by count in descending order.
+4. Applies pagination using the provided page number, limiting the results to 10 queries per page.
+5. Executes the query using the provided ClickHouse client.
+6. Fetches the results as a list of `HeadQueries` and returns them within a `HeadQueryResponse`.
+
+### `get_low_confidence_queries_query`
+#### Description
+Retrieves a list of search queries with low confidence scores (below a given threshold), optionally filtered by a `SearchAnalyticsFilter`, paginated by page number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| threshold | Option&lt;f32&gt; | The threshold for low confidence scores. |
+| page | Option&lt;u32&gt; | The page number for pagination. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchQueryResponse, ServiceError&gt; |  | A `SearchQueryResponse` containing the list of low confidence queries, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select search queries from the `search_queries` table.
+2. Applies optional filters to the query string.
+3. Filters the results by the provided threshold for low confidence scores.
+4. Orders the results by top score in ascending order.
+5. Applies pagination using the provided page number, limiting the results to 10 queries per page.
+6. Executes the query using the provided ClickHouse client.
+7. Maps the retrieved `SearchQueryEventClickhouse` data to `SearchQueryEvent` and returns them within a `SearchQueryResponse`.
+
+### `get_no_result_queries_query`
+#### Description
+Retrieves a list of search queries that returned no results, optionally filtered by a `SearchAnalyticsFilter` and paginated by page number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| page | Option&lt;u32&gt; | The page number for pagination. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchQueryResponse, ServiceError&gt; |  | A `SearchQueryResponse` containing the list of no-result queries, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select search queries from the `search_queries` table where the top score is 0.
+2. Applies optional filters to the query string.
+3. Orders the results by creation timestamp in descending order.
+4. Applies pagination using the provided page number, limiting the results to 10 queries per page.
+5. Executes the query using the provided ClickHouse client.
+6. Maps the retrieved `SearchQueryEventClickhouse` data to `SearchQueryEvent` and returns them within a `SearchQueryResponse`.
+
+### `get_all_queries_query`
+#### Description
+Retrieves all search queries for a given dataset, optionally filtered by a `SearchAnalyticsFilter`, sorted by a specified field and order, and paginated by page number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| sort_by | Option&lt;SearchSortBy&gt; | The field to sort the results by. |
+| sort_order | Option&lt;SortOrder&gt; | The sort order (ascending or descending). |
+| page | Option&lt;u32&gt; | The page number for pagination. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;SearchQueryResponse, ServiceError&gt; |  | A `SearchQueryResponse` containing the list of all queries, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select all search queries from the `search_queries` table.
+2. Applies optional filters to the query string.
+3. Applies sorting based on the provided `sort_by` and `sort_order` parameters, defaulting to sorting by creation timestamp in descending order.
+4. Applies pagination using the provided page number, limiting the results to 10 queries per page.
+5. Executes the query using the provided ClickHouse client.
+6. Maps the retrieved `SearchQueryEventClickhouse` data to `SearchQueryEvent` and returns them within a `SearchQueryResponse`.
+
+### `get_query_counts_query`
+#### Description
+Retrieves counts of search queries grouped by search type and search method, optionally filtered by a `SearchAnalyticsFilter`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The ID of the dataset. |
+| filter | Option&lt;SearchAnalyticsFilter&gt; | Optional filters to apply to the query. |
+| clickhouse_client | &clickhouse::Client | A reference to the ClickHouse client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;QueryCountResponse, ServiceError&gt; |  | A `QueryCountResponse` containing the query counts, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Constructs a ClickHouse query string to select search type, search method, and their counts from the `search_queries` table.
+2. Applies optional filters to the query string.
+3. Groups the results by search type and search method, and orders them by count in descending order.
+4. Executes the query using the provided ClickHouse client.
+5. Fetches the results as a list of `SearchTypeCount` and returns them within a `QueryCountResponse`.
+
+### `get_popular_filter_values_query`
+#### Description
+Retrieves the top 10 most popular filter values used in search queries for a given dataset, optionally filtered by a `Search

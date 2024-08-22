@@ -1,0 +1,54 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the `user_api_key` table in the database. The migration is designed to optimize API key handling by introducing a new hashing method (Blake3) while maintaining backward compatibility with the existing hashing system.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. Add a new column `blake3_hash` to the `user_api_key` table to store API key hashes using the Blake3 algorithm.
+2. Make the existing `api_key_hash` column nullable, likely to allow for a gradual transition to the new hashing method.
+
+These changes are implemented in a way that allows for easy rollback if needed. The purpose of this migration is to improve the performance and security of API key handling in the system.
+
+## Key Files
+1. `up.sql`: This file contains the SQL commands to apply the migration, including adding the new `blake3_hash` column and modifying the `api_key_hash` column.
+
+2. `down.sql`: This file contains the SQL commands to reverse the migration, removing the `blake3_hash` column and restoring the `api_key_hash` column to its original state.
+
+## Configuration
+The migration is identified by its timestamp: `2024-04-11-052101`. This timestamp ensures that migrations are applied in the correct order and helps track the database schema version.
+
+Here's a detailed breakdown of the changes implemented in this migration:
+
+### up.sql
+
+```sql
+ALTER TABLE user_api_key ADD COLUMN blake3_hash TEXT;
+ALTER TABLE user_api_key ALTER COLUMN api_key_hash DROP NOT NULL;
+```
+
+This script does two things:
+1. Adds a new `blake3_hash` column of type TEXT to the `user_api_key` table. This column will store the Blake3 hash of the API key.
+2. Modifies the existing `api_key_hash` column to allow NULL values. This change likely facilitates a gradual transition to the new hashing method.
+
+### down.sql
+
+```sql
+ALTER TABLE user_api_key ALTER COLUMN api_key_hash SET NOT NULL;
+ALTER TABLE user_api_key DROP COLUMN blake3_hash;
+```
+
+This script reverses the changes made by `up.sql`:
+1. Restores the `NOT NULL` constraint on the `api_key_hash` column.
+2. Removes the `blake3_hash` column from the `user_api_key` table.
+
+The migration scripts are designed to be reversible, allowing for easy rollback if needed. This is a common practice in database migrations to ensure that changes can be undone if issues arise after deployment.
+
+The introduction of the Blake3 hash suggests that the system is moving towards a more efficient or secure method of storing API keys. Blake3 is known for its high speed and security, which could improve the performance of API key verification processes while maintaining or enhancing security.
+
+By making the `api_key_hash` column nullable and introducing a new `blake3_hash` column, the migration allows for a phased approach in transitioning to the new hashing method. This approach enables the system to support both old and new hash formats simultaneously, which is crucial for maintaining backward compatibility during the transition period.
+
+In summary, this migration is part of an effort to optimize API key handling in the system, likely aimed at improving performance and security while ensuring a smooth transition for existing users and API keys.

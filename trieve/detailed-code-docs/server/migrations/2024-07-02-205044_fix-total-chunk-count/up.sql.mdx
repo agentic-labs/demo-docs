@@ -1,0 +1,73 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script addresses issues with the `chunk_count` column in the `organization_usage_counts` table and sets up a trigger to automatically update organization chunk counts based on changes in the `dataset_usage_counts` table. It ensures data consistency and automates the process of keeping organization-level chunk counts up-to-date.
+
+## Symbols
+
+### Update NULL chunk_count values
+#### Description
+This SQL statement updates all NULL `chunk_count` values in the `organization_usage_counts` table to 0.
+
+#### Internal Logic
+- Identifies rows where `chunk_count` is NULL
+- Sets `chunk_count` to 0 for those rows
+
+### Alter chunk_count column
+#### Description
+This SQL statement modifies the `chunk_count` column in the `organization_usage_counts` table to enforce a NOT NULL constraint.
+
+#### Internal Logic
+- Alters the `chunk_count` column
+- Sets the NOT NULL constraint
+
+### Update organization chunk counts
+#### Description
+This SQL statement updates the `chunk_count` for each organization based on the sum of chunk counts from related datasets.
+
+#### Internal Logic
+- Joins `dataset_usage_counts` with `datasets` table
+- Calculates the sum of `chunk_count` for each organization
+- Updates the `chunk_count` in `organization_usage_counts`
+
+### Create or replace update_organization_chunk_count function
+#### Description
+This SQL function is created to update the `chunk_count` for an organization whenever there's a change in the `dataset_usage_counts` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| NEW | trigger | The new row data in the `dataset_usage_counts` table |
+
+#### Internal Logic
+- Calculates the sum of `chunk_count` for the affected organization
+- Updates the `chunk_count` in `organization_usage_counts` for the specific organization
+
+### Create update_organization_chunk_count_trigger
+#### Description
+This SQL statement creates a trigger that calls the `update_organization_chunk_count` function after INSERT, UPDATE, or DELETE operations on the `dataset_usage_counts` table.
+
+#### Internal Logic
+- Defines the trigger to fire AFTER INSERT, UPDATE, or DELETE
+- Specifies that the trigger should execute for each affected row
+- Calls the `update_organization_chunk_count` function
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| organization_usage_counts | Table being updated with chunk counts |
+| dataset_usage_counts | Table containing dataset-level chunk counts |
+| datasets | Table linking datasets to organizations |
+
+## Side Effects
+- Modifies existing data in the `organization_usage_counts` table
+- Alters the structure of the `organization_usage_counts` table
+- Creates a new function and trigger in the database
+
+## Performance Considerations
+- The initial update of organization chunk counts may be slow for large datasets
+- The trigger ensures real-time updates but may impact performance on frequent changes to `dataset_usage_counts`
+
+This migration script addresses data consistency issues and automates the process of keeping organization-level chunk counts up-to-date. It's important to run this migration during a maintenance window, as it may take some time to complete for large datasets.

@@ -1,0 +1,227 @@
+---
+title: "group_handler.rs"
+---
+
+## High-level description
+The `group_handler.rs` file defines API endpoints for managing chunk groups within a dataset. These endpoints allow for creating, updating, deleting, and retrieving chunk groups, as well as adding and removing chunks from groups. It also provides functionality for searching within groups and recommending similar groups.
+
+## Code Structure
+The code is structured around a series of functions, each corresponding to a specific API endpoint. These functions handle request parsing, data validation, database interactions, and response generation. They utilize various operators (e.g., `group_operator`, `chunk_operator`, `qdrant_operator`) to perform specific tasks related to chunk groups and their associated data.
+
+## References
+This file references several other modules and data structures within the codebase, including:
+- `auth_handler`: For authentication and authorization checks.
+- `chunk_handler`: For parsing search queries and handling chunk-related operations.
+- `data::models`: For data structures representing chunk groups, chunks, datasets, and other entities.
+- `operators`: For various operators performing database interactions, Qdrant operations, and other tasks.
+
+## Symbols
+
+### `create_chunk_group`
+#### Description
+This function handles the creation of new chunk groups. It accepts a JSON payload containing details for one or multiple groups and inserts them into the database. It supports both single and batch creation, with a limit of 1000 groups per batch. If a group with the same tracking ID already exists, the request will fail unless the `upsert_by_tracking_id` flag is set to true.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `create_group_data` | `web::Json&lt;CreateChunkGroupReqPayloadEnum&gt;` | JSON payload containing details for one or multiple groups. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response indicating success or failure. |
+
+#### Internal Logic
+1. Parse the request payload and extract the group details.
+2. Check if the number of groups exceeds the batch limit.
+3. Partition the groups into upsert and non-upsert groups based on the `upsert_by_tracking_id` flag.
+4. Validate that no duplicate tracking IDs are present in the upsert groups.
+5. Create `ChunkGroup` objects from the payload data.
+6. Insert the groups into the database using `create_groups_query`, handling upserts if necessary.
+7. Return an HTTP response with the created group(s).
+
+### `get_groups_for_dataset`
+#### Description
+This function retrieves the chunk groups belonging to a specific dataset. It accepts the dataset ID and page number as path parameters and returns a paginated list of groups.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `dataset_and_page` | `web::Path&lt;DatasetGroupQuery&gt;` | Path parameters containing the dataset ID and page number. |
+| `_dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+| `_required_user` | `LoggedUser` | Authentication information for the user making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response containing the paginated list of groups. |
+
+#### Internal Logic
+1. Extract the dataset ID and page number from the path parameters.
+2. Retrieve the groups from the database using `get_groups_for_dataset_query`.
+3. Return an HTTP response with the groups and total page count.
+
+### `get_group_by_tracking_id`
+#### Description
+This function retrieves a chunk group by its tracking ID. It accepts the tracking ID as a path parameter and returns the corresponding group.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `data` | `web::Path&lt;GetGroupByTrackingIDData&gt;` | Path parameter containing the tracking ID. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `LoggedUser` | Authentication information for the user making the request. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response containing the retrieved group. |
+
+#### Internal Logic
+1. Extract the tracking ID from the path parameter.
+2. Retrieve the group from the database using `get_group_from_tracking_id_query`.
+3. Return an HTTP response with the group.
+
+### `get_chunk_group`
+#### Description
+This function retrieves a chunk group by its ID. It accepts the group ID as a path parameter and returns the corresponding group.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `group_id` | `web::Path&lt;uuid::Uuid&gt;` | Path parameter containing the group ID. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `LoggedUser` | Authentication information for the user making the request. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response containing the retrieved group. |
+
+#### Internal Logic
+1. Extract the group ID from the path parameter.
+2. Retrieve the group from the database using `get_group_by_id_query`.
+3. Return an HTTP response with the group.
+
+### `update_group_by_tracking_id`
+#### Description
+This function updates a chunk group by its tracking ID. It accepts a JSON payload containing the updated group details and modifies the corresponding group in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `data` | `web::Json&lt;UpdateGroupByTrackingIDReqPayload&gt;` | JSON payload containing the updated group details. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response indicating success or failure. |
+
+#### Internal Logic
+1. Extract the tracking ID and updated group details from the JSON payload.
+2. Retrieve the existing group from the database using `dataset_owns_group`.
+3. Create a new `ChunkGroup` object with the updated details.
+4. Update the group in the database using `update_chunk_group_query`.
+5. Return an HTTP response indicating success.
+
+### `delete_group_by_tracking_id`
+#### Description
+This function deletes a chunk group by its tracking ID. It accepts the tracking ID as a path parameter and optionally deletes the chunks within the group based on the `delete_chunks` query parameter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `tracking_id` | `web::Path&lt;String&gt;` | Path parameter containing the tracking ID. |
+| `data` | `web::Query&lt;DeleteGroupByTrackingIDData&gt;` | Query parameter indicating whether to delete the chunks within the group. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response indicating success or failure. |
+
+#### Internal Logic
+1. Extract the tracking ID and `delete_chunks` flag from the request.
+2. Retrieve the existing group from the database using `dataset_owns_group`.
+3. Delete the group and its associated data (bookmarks, file group mapping) using `delete_group_by_id_query`.
+4. If `delete_chunks` is true, delete the chunks within the group using `delete_chunk_metadata_query`.
+5. Return an HTTP response indicating success.
+
+### `delete_chunk_group`
+#### Description
+This function deletes a chunk group by its ID. It accepts the group ID as a path parameter and optionally deletes the chunks within the group based on the `delete_chunks` query parameter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `group_id` | `web::Path&lt;uuid::Uuid&gt;` | Path parameter containing the group ID. |
+| `data` | `web::Query&lt;DeleteGroupData&gt;` | Query parameter indicating whether to delete the chunks within the group. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response indicating success or failure. |
+
+#### Internal Logic
+1. Extract the group ID and `delete_chunks` flag from the request.
+2. Verify that the group belongs to the specified dataset using `dataset_owns_group`.
+3. Delete the group and its associated data (bookmarks, file group mapping) using `delete_group_by_id_query`.
+4. If `delete_chunks` is true, delete the chunks within the group using `delete_chunk_metadata_query`.
+5. Return an HTTP response indicating success.
+
+### `update_chunk_group`
+#### Description
+This function updates a chunk group. It accepts a JSON payload containing the updated group details and modifies the corresponding group in the database. It requires either the group ID or tracking ID to be provided.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `data` | `web::Json&lt;UpdateChunkGroupReqPayload&gt;` | JSON payload containing the updated group details. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+| `redis_pool` | `web::Data&lt;RedisPool&gt;` | Redis connection pool. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `HttpResponse` | `actix_web::HttpResponse` | HTTP response indicating success or failure. |
+
+#### Internal Logic
+1. Extract the group ID, tracking ID, and updated group details from the JSON payload.
+2. Retrieve the existing group from the database using either `dataset_owns_group` with the group ID or tracking ID.
+3. Create a new `ChunkGroup` object with the updated details.
+4. Update the group in the database using `update_chunk_group_query`.
+5. If the `update_chunks` flag is true, update the tags of the chunks within the group using `soft_update_grouped_chunks_query`.
+6. Return an HTTP response indicating success.
+
+### `add_chunk_to_group`
+#### Description
+This function adds a chunk to a group, effectively bookmarking it. It accepts the group ID as a path parameter and a JSON payload containing either the chunk ID or tracking ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `body` | `web::Json&lt;AddChunkToGroupReqPayload&gt;` | JSON payload containing either the chunk ID or tracking ID. |
+| `group_id` | `web::Path&lt;uuid::Uuid&gt;` | Path parameter containing the group ID. |
+| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Information about the dataset, organization, subscription, and plan. |
+| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
+| `_user` | `AdminOnly` | Authentication information for the user making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:

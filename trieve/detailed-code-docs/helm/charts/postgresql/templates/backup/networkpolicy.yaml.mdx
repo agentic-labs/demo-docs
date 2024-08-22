@@ -1,0 +1,54 @@
+---
+title: "networkpolicy.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes NetworkPolicy resource for a PostgreSQL deployment using Helm. It controls network traffic to the pg_dumpall component, specifically allowing egress traffic on port 5432 for backups. This policy is only applied if backups and the associated NetworkPolicy are enabled in the Helm values.
+
+## References
+This code references other symbols and files within the codebase:
+* **`include` function:** Used to include templates and values from other files.
+* **`.Values` object:**  Provides access to the configuration values passed to the Helm chart.
+* **`postgresql.v1.primary.fullname` template:** Generates the full name of the PostgreSQL primary service.
+* **`common.names.namespace` template:** Retrieves the namespace for the deployment.
+* **`common.labels.standard` template:** Generates standard labels for the deployment.
+* **`common.tplvalues.render` function:** Renders a template with provided values.
+* **`common.labels.matchLabels` template:** Generates labels used for matching pods.
+* **`common.capabilities.networkPolicy.apiVersion` template:** Retrieves the appropriate API version for NetworkPolicy.
+
+## Symbols
+### `helm/charts/postgresql/templates/backup/networkpolicy.yaml`
+#### Description
+This code defines a Kubernetes NetworkPolicy that controls network access to the pg_dumpall component of a PostgreSQL deployment. It allows egress traffic on port 5432 (the standard PostgreSQL port) to facilitate backups.
+
+#### Inputs
+This code snippet doesn't have explicit input parameters. It relies on Helm values provided during deployment. The relevant values are:
+* **`.Values.backup.enabled`**: Boolean indicating whether backups are enabled.
+* **`.Values.backup.cronjob.networkPolicy.enabled`**: Boolean indicating whether the NetworkPolicy for the backup cronjob is enabled.
+* **`.Values.commonLabels`**: A map of labels to be applied to the NetworkPolicy.
+* **`.Values.commonAnnotations`**: A map of annotations to be applied to the NetworkPolicy.
+* **`.Values.backup.cronjob.podLabels`**: A map of labels applied to the backup cronjob pod.
+
+#### Outputs
+This code defines a Kubernetes NetworkPolicy resource in YAML format. When applied to a Kubernetes cluster, it restricts network traffic to the pg_dumpall component based on the defined rules.
+
+#### Internal Logic
+1. **Conditional Rendering:** The NetworkPolicy is only defined if both `.Values.backup.enabled` and `.Values.backup.cronjob.networkPolicy.enabled` are true.
+2. **Metadata:**
+    * The NetworkPolicy is named using the `postgresql.v1.primary.fullname` template, ensuring uniqueness within the namespace.
+    * It's assigned to the namespace specified by `common.names.namespace`.
+    * Labels are applied using `common.labels.standard` and any custom labels from `.Values.commonLabels`.
+    * Annotations are applied from `.Values.commonAnnotations` if provided.
+3. **Pod Selector:**
+    * The policy targets pods with the label `app.kubernetes.io/component: pg_dumpall`.
+    * It also includes labels from `.Values.backup.cronjob.podLabels` and `.Values.commonLabels` for more specific targeting.
+4. **Egress Rules:**
+    * The policy allows egress traffic on port 5432 using the TCP protocol.
+
+## Side Effects
+This code, when applied to a Kubernetes cluster, will:
+* Create a NetworkPolicy resource that restricts network access to the pg_dumpall component of the PostgreSQL deployment.
+* Only allow egress traffic from the pg_dumpall pods on port 5432, effectively securing the backup process.
+
+## Dependencies
+This code snippet doesn't have external library dependencies. However, it relies on the Helm templating engine and Kubernetes APIs for functionality.

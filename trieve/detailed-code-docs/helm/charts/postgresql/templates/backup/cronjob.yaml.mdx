@@ -1,0 +1,66 @@
+---
+title: "cronjob.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes CronJob resource for backing up a PostgreSQL database using the `pg_dumpall` utility. The CronJob runs on a schedule defined by the `schedule` parameter and executes a containerized `pg_dumpall` command to create a database backup. The backup is stored in a persistent volume defined by the `storage` parameters.
+
+## References
+* `postgresql.v1.primary.fullname`: Returns the full name of the primary PostgreSQL instance.
+* `postgresql.v1.username`: Returns the username for the PostgreSQL instance.
+* `postgresql.v1.image`: Returns the Docker image used for the PostgreSQL instance.
+* `postgresql.v1.secretName`: Returns the name of the secret storing PostgreSQL credentials.
+* `postgresql.v1.adminPasswordKey`: Returns the key for the admin password in the PostgreSQL secret.
+* `postgresql.v1.service.port`: Returns the service port for the PostgreSQL instance.
+* `postgresql.v1.tlsSecretName`: Returns the name of the secret storing TLS certificates.
+* `common.tplvalues.merge`: Merges multiple values into a single dictionary.
+* `common.labels.standard`: Generates standard labels for Kubernetes resources.
+* `common.tplvalues.render`: Renders a template value.
+* `postgresql.v1.imagePullSecrets`: Returns the image pull secrets for the PostgreSQL instance.
+* `common.compatibility.renderSecurityContext`: Renders the security context for a container.
+* `common.resources.preset`: Returns a preset resource configuration.
+
+## Symbols
+### CronJob: `{{ include "postgresql.v1.primary.fullname" . }}-pgdumpall`
+#### Description
+This CronJob resource defines a scheduled backup job for the PostgreSQL database. It uses the `pg_dumpall` utility to create a backup of the entire database.
+
+#### Inputs
+This symbol uses values from the `Values` object passed to the template, including:
+* `.Values.backup.enabled`: Enables or disables the backup CronJob.
+* `.Values.backup.cronjob.*`: Configures various aspects of the CronJob, such as schedule, concurrency policy, resource limits, etc.
+* `.Values.auth.*`: Provides authentication details for accessing the PostgreSQL database.
+* `.Values.tls.enabled`: Indicates whether TLS is enabled for the PostgreSQL connection.
+* `.Values.backup.cronjob.storage.*`: Configures the storage for the database backup.
+
+#### Outputs
+This symbol renders a Kubernetes CronJob resource definition in YAML format.
+
+#### Internal Logic
+1. **Conditional Creation:** The CronJob is created only if `.Values.backup.enabled` is set to `true`.
+2. **Metadata:** The CronJob is named using the primary PostgreSQL instance's full name and assigned labels and annotations based on provided values.
+3. **Schedule and Execution Policy:** The CronJob's schedule, concurrency policy, and history limits are configured using values from `.Values.backup.cronjob`.
+4. **Job Template:** The CronJob defines a job template that specifies how the backup job should be executed.
+5. **Container Definition:** The job template includes a container definition for the `pg_dumpall` utility.
+6. **Environment Variables:** The container is provided with environment variables for connecting to the PostgreSQL database, including credentials, host, port, and TLS settings.
+7. **Command Execution:** The container executes the `pg_dumpall` command with parameters defined in `.Values.backup.cronjob.command`.
+8. **Volume Mounts:** The container mounts the necessary volumes for storing the backup, including a persistent volume for persistent storage and a temporary directory.
+9. **Security Context:** The container and pod security contexts are configured based on provided values.
+10. **Resources:** Resource requests and limits for the container are set based on provided values.
+
+## Side Effects
+This code defines a CronJob resource in the Kubernetes cluster, which will schedule and execute database backups according to the defined configuration.
+
+## Dependencies
+This code depends on the following Kubernetes APIs:
+* `batch/v1`: For defining CronJob resources.
+* `v1`: For defining other Kubernetes resources like Pods, Secrets, and PersistentVolumeClaims.
+
+### Configuration
+This code relies on various configuration options provided through the `Values` object. These options control aspects like backup schedule, storage, authentication, and resource allocation. Refer to the `values.schema.json` file for a detailed description of available configuration options.
+
+## Error Handling
+This code does not implement specific error handling mechanisms. Errors during CronJob execution, such as failures in connecting to the database or writing the backup, will be handled by Kubernetes.
+
+## Logging
+This code does not implement specific logging mechanisms. Logs from the `pg_dumpall` command will be available in the container logs, which can be accessed through Kubernetes logging mechanisms.

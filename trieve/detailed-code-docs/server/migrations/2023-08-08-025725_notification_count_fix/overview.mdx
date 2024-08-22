@@ -1,0 +1,59 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for a database update related to fixing notification counts. It includes two files: `up.sql` and `down.sql`, which are part of a database migration system. The primary purpose of these files is to implement and potentially revert changes to the notification count functionality in the database.
+
+## What does it do?
+The migration implements a system to maintain an accurate count of notifications for each user in a database. When a new notification is created for a user, their notification count is incremented. Similarly, when a notification is deleted, the count is decremented. This is achieved through a PostgreSQL function that acts as a trigger on the notifications table.
+
+The `up.sql` file creates this function and sets up the necessary database structure, while the `down.sql` file is intended to revert these changes if needed, although it is currently empty.
+
+## Key Files
+
+1. `up.sql`:
+   This file contains the SQL code to create a PostgreSQL function named `update_notification_count()`. This function is designed to be used as a trigger on the notifications table. It automatically updates a user's notification count when notifications are inserted or deleted.
+
+   The function works as follows:
+   - For INSERT operations: It either inserts a new record into the `user_notification_counts` table with a count of 1 or increments an existing count by 1.
+   - For DELETE operations: It decrements the notification count for the corresponding user by 1.
+
+   Here's a snippet of the core logic:
+
+   ```sql
+   CREATE OR REPLACE FUNCTION update_notification_count() RETURNS TRIGGER AS $$
+   BEGIN
+     IF (TG_OP = 'INSERT') THEN
+       INSERT INTO user_notification_counts (user_uuid, notification_count)
+       VALUES (NEW.user_uuid, 1)
+       ON CONFLICT (user_uuid) DO UPDATE
+       SET notification_count = user_notification_counts.notification_count + 1;
+     ELSIF (TG_OP = 'DELETE') THEN
+       UPDATE user_notification_counts
+       SET notification_count = notification_count - 1
+       WHERE user_uuid = OLD.user_uuid;
+     END IF;
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
+2. `down.sql`:
+   This file is currently empty, containing only a comment indicating its purpose:
+
+   ```sql
+   -- This file should undo anything in `up.sql`
+   ```
+
+   It's intended to contain SQL statements that would revert the changes made by `up.sql`, but these statements have not been implemented yet.
+
+## Configuration
+The migration files don't contain any explicit configuration. However, the naming convention of the directory (`2023-08-08-025725_notification_count_fix`) suggests that this migration system uses timestamps in the directory names to order migrations.
+
+## TODOs
+1. Implement the necessary SQL statements in `down.sql` to properly revert the changes made by `up.sql`. This is crucial for maintaining the ability to roll back database changes if needed.
+2. Consider adding error handling in the `update_notification_count()` function for unexpected operation types.
+3. Evaluate if additional indexes on the `user_notification_counts` table might be beneficial for performance, especially on the `user_uuid` column.
+4. Consider adding a check in the function to ensure the notification count doesn't go below zero on DELETE operations.
+5. For large-scale systems with frequent notifications, evaluate if the current approach of updating counts on every insert/delete is optimal, or if alternative designs like periodic batch updates or eventual consistency models might be more suitable.

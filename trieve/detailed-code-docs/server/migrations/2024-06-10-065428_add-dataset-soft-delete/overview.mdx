@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding soft delete functionality to the `datasets` table in the database. The migration is dated 2024-06-10 and is identified by the timestamp 065428. The purpose of these scripts is to introduce a new `deleted` column to the `datasets` table and create an associated index for improved query performance when dealing with soft-deleted records.
+
+## What does it do?
+The migration scripts in this directory implement a soft delete feature for datasets. Soft delete is a technique where records are marked as deleted instead of being physically removed from the database. This allows for easier recovery of deleted data if needed and maintains referential integrity.
+
+The migration does the following:
+1. Adds a new `deleted` column to the `datasets` table.
+2. Sets up the `deleted` column with a default value of 0 (not deleted) and makes it non-nullable.
+3. Creates an index on the `deleted` column to optimize queries that filter based on the deletion status.
+4. Provides a way to revert these changes if needed.
+
+This implementation allows the application to filter out "deleted" datasets by checking the `deleted` column, rather than permanently removing records from the database.
+
+## Key Files
+The directory contains two important SQL files:
+
+1. `up.sql`: This file contains the SQL commands to apply the migration. It adds the `deleted` column to the `datasets` table and creates an index on this column.
+
+2. `down.sql`: This file contains the SQL commands to revert the migration. It removes the `deleted` column from the `datasets` table and drops the associated index.
+
+These files work together to provide a reversible database migration, allowing for easy application and rollback of the soft delete feature.
+
+## Configuration
+The migration scripts use SQL commands that are typically compatible with PostgreSQL. The specific configuration details are:
+
+- Table name: `datasets`
+- New column name: `deleted`
+- Column type: `INT`
+- Default value: `0`
+- Constraint: `NOT NULL`
+- Index name: `idx_dataset_deleted`
+
+No additional configuration files or environment variables are required for this migration.
+
+## Performance Considerations
+The addition of the `deleted` column and its associated index has some performance implications:
+
+1. Improved query performance: The index on the `deleted` column will speed up queries that filter or sort based on the deletion status of datasets. This is particularly beneficial for applications that frequently need to exclude or specifically target deleted items.
+
+2. Slight overhead on write operations: The presence of the additional column and index may introduce a small overhead on insert and update operations on the `datasets` table. However, this overhead is generally negligible compared to the benefits of soft delete functionality.
+
+3. Migration execution: The `ALTER TABLE` and `CREATE INDEX` operations in the `up.sql` script may briefly lock the `datasets` table during execution. This impact should be minimal unless the table is very large or under heavy concurrent use during the migration.
+
+4. Rollback considerations: The `DROP COLUMN` and `DROP INDEX` operations in the `down.sql` script are generally fast, but they may also briefly lock the table during execution.
+
+It's recommended to run these migrations during off-peak hours to minimize potential disruptions to the application's performance.
+
+Here's a code snippet from the `up.sql` file illustrating the key operations:
+
+```sql
+ALTER TABLE datasets ADD COLUMN deleted INT DEFAULT 0 NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_dataset_deleted ON datasets (deleted);
+```
+
+And the corresponding rollback operations from the `down.sql` file:
+
+```sql
+ALTER TABLE datasets DROP COLUMN IF EXISTS deleted;
+DROP INDEX IF EXISTS idx_dataset_deleted;
+```
+
+These scripts provide a clean and reversible way to implement soft delete functionality for the `datasets` table, enhancing the data management capabilities of the application while maintaining good database performance.

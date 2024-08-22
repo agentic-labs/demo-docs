@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding a new `tracking_id` column to the `datasets` table, along with associated constraints and indexes. The migration is dated 2024-04-15 and is specifically for implementing tracking IDs for datasets.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. Add a new column called `tracking_id` to the `datasets` table. This column allows for better tracking and identification of datasets within the system.
+
+2. Create a unique constraint that ensures the combination of `organization_id` and `tracking_id` is unique across all rows in the `datasets` table. This prevents duplicate tracking IDs within the same organization.
+
+3. Add an index on the `tracking_id` column to improve query performance when searching or filtering datasets by their tracking ID.
+
+4. Provide a way to revert these changes if needed, by removing the added column, constraint, and index.
+
+These changes enhance the system's ability to track and manage datasets more efficiently, while also improving query performance for operations involving the new `tracking_id` column.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to apply the migration, including adding the new column, creating the unique constraint, and adding the index.
+
+2. `down.sql`: This file contains the SQL commands to revert the migration, removing the added column and index.
+
+### up.sql
+The `up.sql` file performs the following operations:
+
+```sql
+ALTER TABLE datasets ADD COLUMN tracking_id TEXT NULL;
+ALTER TABLE datasets ADD CONSTRAINT unique_organization_tracking_id UNIQUE (organization_id, tracking_id);
+CREATE INDEX datasets_tracking_id_idx ON datasets (tracking_id);
+```
+
+These commands add the `tracking_id` column, create a unique constraint, and add an index for improved performance.
+
+### down.sql
+The `down.sql` file contains the following commands to revert the changes:
+
+```sql
+ALTER TABLE datasets DROP COLUMN IF EXISTS tracking_id;
+DROP INDEX IF EXISTS datasets_tracking_id_idx;
+```
+
+These commands remove the `tracking_id` column and its associated index.
+
+## Performance Considerations
+The migration scripts include several performance-related considerations:
+
+1. Adding the `tracking_id` column may slightly increase storage requirements for the `datasets` table.
+
+2. The unique constraint on `(organization_id, tracking_id)` ensures data integrity but may have a small impact on insert and update operations.
+
+3. The index on `tracking_id` will improve query performance for operations involving this column, especially for searching and filtering. However, it may slightly slow down insert and update operations due to the need to maintain the index.
+
+4. When reverting the migration, dropping a column and an index are generally fast operations. However, for large tables, these operations might require a table rewrite, which could be time-consuming and resource-intensive.
+
+It's important to note that the exact performance impact will depend on the size of the `datasets` table and the specific database system being used.
+
+## Error Handling
+The migration scripts do not include explicit error handling. If any operation fails during the migration process, the database management system will typically roll back the entire transaction, leaving the database in its previous state. This ensures data consistency in case of failures.
+
+The `down.sql` script uses `IF EXISTS` clauses when dropping the column and index, making it more robust and allowing it to be run multiple times without failing if the objects no longer exist.
+
+## Side Effects
+When applying the migration:
+- A new `tracking_id` column is added to the `datasets` table, allowing for better dataset identification and tracking.
+- A unique constraint is added, ensuring that the combination of `organization_id` and `tracking_id` is unique within the table.
+- An index is created on the `tracking_id` column, which may impact the performance of insert and update operations but will improve query performance for operations involving this column.
+
+When reverting the migration:
+- The `tracking_id` column is removed from the `datasets` table, potentially causing data loss if the column contained important information.
+- The index `datasets_tracking_id_idx` is dropped, which may impact query performance for operations that previously used this index.
+
+These changes may affect existing queries or application logic that interacts with the `datasets` table, so it's important to update any related code accordingly when applying or reverting this migration.

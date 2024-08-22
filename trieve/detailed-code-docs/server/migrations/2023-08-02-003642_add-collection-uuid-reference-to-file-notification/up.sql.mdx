@@ -1,0 +1,51 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script adds a foreign key constraint to the `collection_uuid` column in the `file_upload_completed_notifications` table, referencing the `id` column of the `card_collection` table. The script uses a temporary table to preserve existing data while restructuring the table.
+
+## Code Structure
+The migration script is structured in six sequential steps, each performing a specific operation to achieve the desired table modification without losing data.
+
+## Symbols
+
+### Step 1: Create a temporary table
+#### Description
+Creates a new temporary table `file_upload_completed_notifications_temp` with the same structure as the original table but without the foreign key constraint.
+
+#### Internal Logic
+- Creates a new table with columns: id, user_uuid, collection_uuid, user_read, created_at, and updated_at
+- Sets default values and constraints for some columns
+
+### Step 2: Copy data to temporary table
+#### Description
+Copies all data from the original `file_upload_completed_notifications` table to the temporary table.
+
+### Step 3: Drop original table
+#### Description
+Drops the original `file_upload_completed_notifications` table.
+
+### Step 4: Recreate original table with foreign key constraint
+#### Description
+Recreates the `file_upload_completed_notifications` table with the same structure as before, but adds a foreign key constraint to the `collection_uuid` column.
+
+#### Internal Logic
+- Creates a new table with the same columns as the temporary table
+- Adds a foreign key constraint on `collection_uuid` referencing `card_collection(id)`
+
+### Step 5: Copy data back to original table
+#### Description
+Copies all data from the temporary table back to the newly created `file_upload_completed_notifications` table.
+
+### Step 6: Drop temporary table
+#### Description
+Drops the temporary `file_upload_completed_notifications_temp` table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| card_collection table | The `id` column is referenced by the new foreign key constraint |
+
+## Performance Considerations
+This migration might take longer to execute on tables with a large amount of data, as it involves copying all data twice (to and from the temporary table). It's recommended to run this migration during low-traffic periods.

@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for a database schema change. The migration is focused on removing the `chunk_collisions` table and modifying the `chunk_metadata` table structure. The directory includes two SQL files: `up.sql` for applying the changes and `down.sql` for reverting them.
+
+## What does it do?
+The migration performs the following actions:
+
+1. Cleans up the `chunk_metadata` table by removing rows with null `qdrant_point_id` values.
+2. Modifies the `chunk_metadata` table to make the `qdrant_point_id` column not nullable.
+3. Removes the `chunk_collisions` table entirely.
+
+These changes are designed to improve data integrity and simplify the database schema. The `down.sql` script provides a way to undo these changes if needed, by making the `qdrant_point_id` column nullable again and recreating the `chunk_collisions` table.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+```sql
+DELETE FROM chunk_metadata WHERE qdrant_point_id IS NULL;
+ALTER TABLE chunk_metadata ALTER COLUMN qdrant_point_id SET NOT NULL;
+DROP TABLE IF EXISTS chunk_collisions;
+```
+
+The script first removes any rows with null `qdrant_point_id` values from the `chunk_metadata` table. It then alters the table to make this column not nullable. Finally, it drops the `chunk_collisions` table if it exists.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+ALTER TABLE chunk_metadata ALTER COLUMN qdrant_point_id DROP NOT NULL;
+
+CREATE TABLE chunk_collisions (
+    id UUID PRIMARY KEY,
+    chunk_id UUID NOT NULL,
+    collision_qdrant_id UUID,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+```
+
+The script first modifies the `chunk_metadata` table to make the `qdrant_point_id` column nullable again. It then recreates the `chunk_collisions` table with its original structure.
+
+## Side Effects
+Applying this migration will have the following side effects:
+
+1. Data loss: Rows in the `chunk_metadata` table with null `qdrant_point_id` values will be permanently deleted.
+2. Schema change: The `chunk_metadata` table will no longer allow null values in the `qdrant_point_id` column.
+3. Table removal: The `chunk_collisions` table will be completely removed from the database.
+
+Reverting the migration will:
+
+1. Allow null values in the `qdrant_point_id` column of the `chunk_metadata` table.
+2. Recreate the `chunk_collisions` table, but it will not restore any data that was in the table before it was dropped.
+
+## Error Handling
+The `up.sql` script includes error handling for the `DROP TABLE` statement by using the `IF EXISTS` clause. This prevents errors if the `chunk_collisions` table doesn't exist when trying to drop it.
+
+## TODOs
+There are no explicit TODOs in either migration script. However, the `down.sql` file includes a comment "This file should undo anything in `up.sql`", which serves as a reminder and guideline for maintaining the reversibility of the migration.

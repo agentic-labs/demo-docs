@@ -1,0 +1,61 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for altering the data type of the `file_storage` column in two tables: `stripe_plans` and `organization_usage_counts`. The migration changes the column type from `INTEGER` to `BIGINT`, likely to accommodate larger numerical values for file storage data.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" migration:
+   - Change the data type of the `file_storage` column in the `stripe_plans` table from `INTEGER` to `BIGINT`.
+   - Change the data type of the `file_storage` column in the `organization_usage_counts` table from `INTEGER` to `BIGINT`.
+
+2. In the "down" migration (reverting the changes):
+   - Change the data type of the `file_storage` column in the `stripe_plans` table back to `INTEGER`.
+   - Change the data type of the `file_storage` column in the `organization_usage_counts` table back to `INTEGER`.
+
+These changes allow the database to store larger numerical values for file storage data, which could be necessary if the application needs to handle larger file sizes or storage capacities.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to perform the migration:
+
+```sql
+ALTER TABLE stripe_plans ALTER COLUMN file_storage TYPE BIGINT;
+ALTER TABLE organization_usage_counts ALTER COLUMN file_storage TYPE BIGINT;
+```
+
+These commands modify the `file_storage` column in both tables to use the `BIGINT` data type, which can store larger integer values compared to the standard `INTEGER` type.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+ALTER TABLE stripe_plans ALTER COLUMN file_storage TYPE INTEGER;
+ALTER TABLE organization_usage_counts ALTER COLUMN file_storage TYPE INTEGER;
+```
+
+These commands change the `file_storage` column back to the `INTEGER` data type in both tables, effectively undoing the changes made by the `up.sql` script.
+
+## Configuration
+This migration does not require any specific configuration files or environment variables. The changes are applied directly to the database schema using SQL commands.
+
+## Dependencies
+The migration scripts do not explicitly depend on any external libraries or frameworks. However, they assume the existence of a PostgreSQL database with the `stripe_plans` and `organization_usage_counts` tables.
+
+## Additional Notes
+
+1. **Data Preservation**: When changing column types, it's important to note that PostgreSQL will attempt to convert existing data to the new type. In this case, converting from `INTEGER` to `BIGINT` should not cause any data loss, as `BIGINT` can accommodate all values that `INTEGER` can store.
+
+2. **Performance Considerations**: Changing a column to `BIGINT` will increase the storage space required for each row. This might have a small impact on database performance, especially for large tables.
+
+3. **Application Impact**: Any application code that interacts with these columns should be reviewed to ensure it can handle `BIGINT` values correctly. This might include updating ORM configurations, data validation logic, or any hard-coded assumptions about the column type.
+
+4. **Reversibility**: The `down.sql` script provides a way to revert the changes. However, if any values larger than the maximum `INTEGER` value (2,147,483,647) were inserted while the column was `BIGINT`, reverting to `INTEGER` could potentially cause data loss or errors.
+
+5. **Naming Convention**: The directory name includes a timestamp (2024-01-26-062245), which is a common practice for ordering migrations. This ensures that migrations are applied in the correct sequence.
+
+By implementing this migration, the database schema is updated to support larger file storage values, which could be crucial for scalability or to meet changing business requirements related to file storage capacity or usage tracking.

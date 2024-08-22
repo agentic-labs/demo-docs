@@ -1,0 +1,42 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script creates a function and a trigger to automatically update a tsvector column in the `card_metadata` table. The purpose is to maintain a full-text search index for the `content` column, enabling efficient text search capabilities.
+
+## Symbols
+
+### `update_tsvector()`
+#### Description
+This is a PostgreSQL function that generates a tsvector representation of the `content` column in the `card_metadata` table.
+
+#### Inputs
+This function doesn't explicitly take any inputs, as it's designed to be used as a trigger function.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| NEW | TRIGGER | The modified row to be inserted |
+
+#### Internal Logic
+1. The function creates a tsvector from the `content` column of the new row being inserted.
+2. It assigns this tsvector to the `card_metadata_tsvector` column of the same row.
+3. The modified row is then returned for insertion.
+
+### `update_tsvector_trigger`
+#### Description
+This is a PostgreSQL trigger that automatically calls the `update_tsvector()` function before each insert operation on the `card_metadata` table.
+
+#### Internal Logic
+1. The trigger is set to fire BEFORE INSERT operations.
+2. It applies to each row being inserted (FOR EACH ROW).
+3. When fired, it executes the `update_tsvector()` function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| PostgreSQL | This script uses PostgreSQL-specific syntax and functions (e.g., `to_tsvector`, `LANGUAGE plpgsql`) |
+
+## Performance Considerations
+The use of a trigger to update the tsvector column ensures that the search index is always up-to-date with the content. However, it may slightly impact the performance of insert operations on the `card_metadata` table. This trade-off is usually acceptable for maintaining real-time search capabilities.

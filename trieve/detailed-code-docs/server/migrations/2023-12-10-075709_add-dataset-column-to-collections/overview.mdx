@@ -1,0 +1,53 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding a `dataset_id` column to the `card_metadata` and `card_collection` tables in a database schema. The migration is designed to establish a relationship between these tables and a `datasets` table, likely to associate card metadata and collections with specific datasets.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" migration:
+   - Add a new `dataset_id` column of type UUID to both the `card_metadata` and `card_collection` tables.
+   - Set up foreign key constraints linking the new `dataset_id` columns to the `id` column in the `datasets` table.
+   - Remove the `dataset_id` column from the `card_collection_bookmarks` table if it exists.
+
+2. In the "down" migration:
+   - Remove the `dataset_id` column from both the `card_metadata` and `card_collection` tables.
+
+These changes allow the system to associate card metadata and collections with specific datasets, enabling better organization and categorization of data within the application.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+```sql
+ALTER TABLE card_collection_bookmarks DROP COLUMN IF EXISTS dataset_id;
+
+ALTER TABLE card_metadata
+ADD COLUMN dataset_id UUID NOT NULL,
+ADD CONSTRAINT card_metadata_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);
+
+ALTER TABLE card_collection
+ADD COLUMN dataset_id UUID NOT NULL,
+ADD CONSTRAINT card_collection_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);
+```
+
+The script first removes any existing `dataset_id` column from the `card_collection_bookmarks` table to avoid conflicts. It then adds the `dataset_id` column to both `card_metadata` and `card_collection` tables, setting up foreign key constraints to link them to the `datasets` table.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+ALTER TABLE card_metadata DROP COLUMN IF EXISTS dataset_id;
+ALTER TABLE card_collection DROP COLUMN IF EXISTS dataset_id;
+```
+
+The script simply removes the `dataset_id` column from both `card_metadata` and `card_collection` tables if they exist.
+
+## Configuration
+The migration is identified by its timestamp: `2023-12-10-075709`. This timestamp is used to order migrations and ensure they are applied in the correct sequence.
+
+No additional configuration is required for these migration scripts. They are designed to be run by a database migration tool that supports up and down migrations.

@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding and removing foreign key constraints that link various tables to the `datasets` table in a database schema. The migration is designed to ensure referential integrity across multiple tables that have relationships with datasets.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" migration (`up.sql`):
+   - Add foreign key constraints to several tables (`dataset_usage_counts`, `events`, `chunk_metadata`, `chunk_group`, `files`, `messages`, and `topics`) linking them to the `datasets` table.
+   - Update the `chunk_files` table to reference both the `files` and `chunk_metadata` tables.
+   - All new constraints are set with `ON UPDATE CASCADE` and `ON DELETE CASCADE` to ensure data consistency when updates or deletions occur in the referenced tables.
+
+2. In the "down" migration (`down.sql`):
+   - Remove the foreign key constraints added by the "up" migration.
+   - Re-add simpler foreign key constraints without the cascade options.
+
+This migration essentially strengthens the relationships between various entities in the database and the central `datasets` table, while also providing a way to revert these changes if needed.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the new foreign key constraints. It performs the following actions for each table:
+
+1. Drops any existing foreign key constraint (if present) using `DROP CONSTRAINT IF EXISTS`.
+2. Adds a new foreign key constraint with `ON UPDATE CASCADE` and `ON DELETE CASCADE` options.
+
+Example for the `dataset_usage_counts` table:
+
+```sql
+ALTER TABLE dataset_usage_counts
+    DROP CONSTRAINT if exists dataset_usage_counts_dataset_id_fkey,
+    ADD CONSTRAINT dataset_usage_counts_dataset_id_fkey 
+    FOREIGN KEY (dataset_id) 
+    REFERENCES datasets(id) 
+    ON UPDATE CASCADE 
+    ON DELETE CASCADE;
+```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`. For each table, it:
+
+1. Drops the foreign key constraint added by the "up" migration.
+2. Adds back a simpler foreign key constraint without cascade options.
+
+Example for the `dataset_usage_counts` table:
+
+```sql
+ALTER TABLE dataset_usage_counts
+    DROP CONSTRAINT IF EXISTS dataset_usage_counts_dataset_id_fkey,
+    ADD CONSTRAINT dataset_usage_counts_dataset_id_fkey 
+    FOREIGN KEY (dataset_id) 
+    REFERENCES datasets(id);
+```
+
+## Configuration
+This migration does not require any specific configuration files or environment variables. However, it's important to note that the migration assumes the existence of certain tables and columns in the database schema:
+
+- `datasets` table with an `id` column
+- `dataset_usage_counts` table with a `dataset_id` column
+- `events` table with a `dataset_id` column
+- `chunk_metadata` table with a `dataset_id` column
+- `chunk_group` table with a `dataset_id` column
+- `files` table with a `dataset_id` column
+- `chunk_files` table with `file_id` and `chunk_id` columns
+- `messages` table with a `dataset_id` column
+- `topics` table with a `dataset_id` column
+
+The database administrator should ensure that these tables and columns exist before applying the migration.
+
+## Performance Considerations
+When applying this migration, especially on large tables, it's important to consider the following:
+
+1. Adding and dropping foreign key constraints can be time-consuming operations, particularly on tables with a large number of rows.
+2. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` options added in the "up" migration can have performance implications for update and delete operations on the `datasets` table, as changes will propagate to all related tables.
+3. The "down" migration removes these cascade options, which could lead to different behavior in terms of data consistency if applied after the system has been operating with the cascade options for some time.
+
+It's recommended to test this migration thoroughly in a staging environment before applying it to a production database, and to schedule the migration during a low-traffic period if possible.

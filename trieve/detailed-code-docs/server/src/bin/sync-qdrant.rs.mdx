@@ -1,0 +1,65 @@
+---
+title: "sync-qdrant.rs"
+---
+
+## High-level description
+The code in `sync-qdrant.rs` is a command-line utility that synchronizes data between a PostgreSQL database and a Qdrant vector database. It identifies and removes points from Qdrant that are not present in the PostgreSQL database, ensuring consistency between the two data sources.
+
+## Code Structure
+The code defines a single asynchronous `main` function that performs the synchronization process. It first establishes connections to both the PostgreSQL database and Qdrant. Then, it iterates through each collection in Qdrant, retrieving point IDs in batches. For each batch, it checks if the corresponding point IDs exist in the PostgreSQL database. If not, the points are deleted from Qdrant.
+
+## References
+- `trieve_server::errors::ServiceError`: Custom error type used for error handling.
+- `trieve_server::establish_connection`: Function to establish a connection to the PostgreSQL database.
+- `trieve_server::get_env`: Macro to retrieve environment variables.
+- `trieve_server::operators::chunk_operator::get_pg_point_ids_from_qdrant_point_ids`: Function to retrieve PostgreSQL point IDs corresponding to Qdrant point IDs.
+- `trieve_server::operators::qdrant_operator::{delete_points_from_qdrant, get_qdrant_collections, scroll_qdrant_collection_ids}`: Functions to interact with the Qdrant database.
+
+## Symbols
+
+### `main`
+#### Description
+This asynchronous function is the entry point of the synchronization process. It establishes connections to the PostgreSQL and Qdrant databases, iterates through Qdrant collections, and removes points not present in PostgreSQL.
+
+#### Inputs
+None
+
+#### Outputs
+- `Result&lt;(), ServiceError&gt;`: Indicates success or failure of the synchronization process.
+
+#### Internal Logic
+1. **Establish connections:**
+    - Retrieves the database URL from the environment variable `DATABASE_URL`.
+    - Creates a connection pool for the PostgreSQL database using `diesel_async`.
+    - Creates a connection to Qdrant using `qdrant_client`.
+2. **Iterate through Qdrant collections:**
+    - Retrieves a list of Qdrant collections using `get_qdrant_collections`.
+    - For each collection:
+        - Initialize an offset for scrolling through point IDs.
+        - While there are more point IDs to retrieve:
+            - Retrieve a batch of Qdrant point IDs using `scroll_qdrant_collection_ids`.
+            - Retrieve corresponding PostgreSQL point IDs using `get_pg_point_ids_from_qdrant_point_ids`.
+            - Identify Qdrant point IDs not present in PostgreSQL.
+            - Delete the identified points from Qdrant using `delete_points_from_qdrant`.
+            - Update the offset for the next batch.
+3. **Return result:**
+    - Returns `Ok(())` if the synchronization process completes successfully.
+    - Returns `Err(ServiceError)` if any error occurs during the process.
+
+## Side Effects
+- Modifies the Qdrant database by deleting points.
+
+## Dependencies
+- `diesel_async`: Asynchronous connection pool for PostgreSQL.
+- `trieve_server`: Library containing database interaction logic and error handling.
+- `qdrant_client`: Client library for interacting with Qdrant.
+- `uuid`: Library for generating and parsing UUIDs.
+- `tokio`: Asynchronous runtime for Rust.
+- `dotenvy`: Library for loading environment variables from a `.env` file.
+- `actix_web`: Web framework for Rust.
+
+## Error Handling
+The code uses the custom error type `ServiceError` to handle errors during the synchronization process. Errors are logged and propagated to the caller.
+
+## Logging
+The code uses the `println!` macro to print messages to the console, providing information about the progress of the synchronization process.

@@ -1,0 +1,62 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script renames several tables and columns, replacing the term "collection" with "group". It also modifies a function to update group counts instead of collection counts. The purpose is to transition the database schema from using "collections" to using "groups" as the primary organizational unit for chunks of data.
+
+## Symbols
+
+### Table Renaming
+#### Description
+Renames multiple tables to replace "collection" with "group" in their names.
+
+#### Internal Logic
+- Renames `chunk_collection` to `chunk_group`
+- Renames `chunk_collection_bookmarks` to `chunk_group_bookmarks`
+- Renames `collections_from_files` to `groups_from_files`
+- Renames `dataset_collection_counts` to `dataset_group_counts`
+
+### Column Renaming
+#### Description
+Renames columns in various tables to replace "collection" with "group" in their names.
+
+#### Internal Logic
+- In `file_upload_completed_notifications`, renames `collection_uuid` to `group_uuid`
+- In `groups_from_files`, renames `collection_id` to `group_id`
+- In `chunk_group_bookmarks`, renames `collection_id` to `group_id`
+- In `dataset_group_counts`, renames `collection_count` to `group_count`
+
+### Constraint Addition
+#### Description
+Adds a unique constraint to the `dataset_group_counts` table.
+
+#### Internal Logic
+Adds a unique constraint named `UQ_dataset_id` on the `dataset_id` column of the `dataset_group_counts` table.
+
+### Function Modification: `update_collection_counts`
+#### Description
+Replaces the existing `update_collection_counts` function with an updated version that works with the new "group" terminology.
+
+#### Inputs
+The function is a trigger function, so it implicitly works with `NEW` and `OLD` record variables.
+
+#### Internal Logic
+1. For INSERT or UPDATE operations:
+   - Inserts a new record into `dataset_group_counts` with the new group's ID, dataset ID, and a count of 1
+   - If a record already exists for the dataset, it increments the `group_count` by 1
+2. For DELETE operations:
+   - Decrements the `group_count` by 1 for the corresponding dataset in `dataset_group_counts`
+
+#### Side Effects
+- Modifies the `dataset_group_counts` table by inserting, updating, or decrementing count values
+
+## Error Handling
+This migration script does not include explicit error handling. Any errors during execution will be managed by the database system running the migration.
+
+## Performance Considerations
+The addition of the unique constraint `UQ_dataset_id` on `dataset_group_counts` may have a small impact on insert and update operations for that table, but it will improve query performance when searching by `dataset_id`.
+
+---
+
+This migration script is part of a larger effort to refactor the database schema, moving from a "collection" based model to a "group" based model. It's important to ensure that all related application code is updated to reflect these changes to maintain consistency between the database and the application layer.

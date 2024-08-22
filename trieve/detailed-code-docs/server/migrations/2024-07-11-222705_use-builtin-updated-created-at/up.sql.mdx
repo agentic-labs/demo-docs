@@ -1,0 +1,43 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script migrates the database to use built-in `updated_at` and `created_at` timestamps by replacing custom triggers and functions with a new mechanism using PostgreSQL's built-in functions. It first drops existing triggers and functions related to updating `updated_at` timestamps and then creates new triggers and functions to automatically update the `updated_at` column on each table before an update operation if the row has changed and the `updated_at` column was not explicitly updated.
+
+## Code Structure
+The code first defines a series of `DROP` statements to remove existing triggers and functions. Then, it defines two new functions: `diesel_manage_updated_at` and `diesel_set_updated_at`. Finally, it calls `diesel_manage_updated_at` for each table to create the new triggers.
+
+## Symbols
+### `diesel_manage_updated_at`
+#### Description
+This function creates a trigger named `set_updated_at` for a given table. The trigger is executed before an `UPDATE` operation on the table. For each row affected by the update, the trigger calls the `diesel_set_updated_at` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| _tbl | regclass | The name of the table to create the trigger on. |
+
+#### Outputs
+This function does not return any values.
+
+#### Side Effects
+- Creates a new trigger named `set_updated_at` on the specified table.
+
+### `diesel_set_updated_at`
+#### Description
+This function is a trigger function that is executed before an `UPDATE` operation on a table. It checks if the row being updated has changed and if the `updated_at` column was not explicitly updated in the update statement. If both conditions are true, it updates the `updated_at` column to the current timestamp.
+
+#### Inputs
+This function does not accept any direct inputs. It accesses data from the `NEW` and `OLD` special trigger variables, representing the new and old row values, respectively.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `NEW` | record | The updated row with the `updated_at` column potentially modified. |
+
+#### Internal Logic
+1. **Compare `NEW` and `OLD` rows:** Checks if there are any changes between the new and old versions of the row.
+2. **Check `updated_at` modification:** Verifies if the `updated_at` column was explicitly modified in the update statement.
+3. **Update `updated_at`:** If the row has changed and `updated_at` was not explicitly updated, it sets the `updated_at` column to the current timestamp.
+4. **Return updated row:** Returns the `NEW` row, which may have a modified `updated_at` value.

@@ -1,0 +1,64 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding an `organizations` table to the database schema. It includes two files: `up.sql` for creating the table and associated index, and `down.sql` for reverting these changes.
+
+## What does it do?
+These migration scripts modify the database structure to introduce a new table for storing organization data. The `up.sql` script creates a table to store information about organizations, including a unique identifier, name, configuration, and timestamps for creation and updates. It also adds an index to improve query performance when searching by organization name. The `down.sql` script provides a way to undo these changes by removing the table and its associated index.
+
+## Key Files
+
+1. `up.sql`:
+   - Creates the `organizations` table with columns for id (UUID), name (text), configuration (JSONB), created_at (timestamp), and updated_at (timestamp).
+   - Adds an index on the `name` column for improved query performance.
+
+2. `down.sql`:
+   - Removes the `organizations` table and its associated index.
+
+## Dependencies
+The migration scripts rely on PostgreSQL-specific features:
+- `gen_random_uuid()` function for generating UUIDs
+- JSONB data type for storing configuration data
+
+## Configuration
+No specific configuration is required for these migration scripts. However, it's important to note that a later migration (`2024-01-11-050932_drop-configuration-col-from-organization/up.sql`) drops the `configuration` column from the `organizations` table, indicating an evolution in the database schema over time.
+
+## Notes
+1. The `up.sql` script creates a table with the following structure:
+   ```sql
+   CREATE TABLE organizations (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     name TEXT UNIQUE NOT NULL,
+     configuration JSONB,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+   It also creates an index:
+   ```sql
+   CREATE INDEX idx_organizations_name ON organizations (name);
+   ```
+
+2. The `down.sql` script removes the table and index:
+   ```sql
+   DROP TABLE IF EXISTS organizations;
+   DROP INDEX IF EXISTS idx_organizations_name;
+   ```
+
+3. When applying these migrations, it's crucial to have a backup of the data before running the `down.sql` script, as it will result in permanent data loss if the `organizations` table contains any records.
+
+4. The use of `IF EXISTS` clauses in the `down.sql` script ensures that the migration can be run multiple times without failing, even if the objects have already been removed.
+
+5. The order of operations in the `down.sql` script is important:
+   - The table is dropped first, which would automatically remove any indexes associated with it.
+   - The index is then explicitly dropped to ensure it's removed even if it was somehow detached from the table.
+
+6. The addition of an index on the `name` column will improve the performance of queries that search or filter organizations by name. However, it may slightly impact the performance of insert and update operations on the table.
+
+7. The use of JSONB for the `configuration` column allows for flexible storage of organization-specific settings. However, as mentioned earlier, this column is later removed in a subsequent migration, suggesting a change in how organization configurations are managed.
+
+8. The automatic timestamp fields (`created_at` and `updated_at`) provide useful metadata for tracking when organizations are added or modified in the system.
+
+These migration scripts demonstrate a well-structured approach to database schema management, allowing for both the addition of new features (the organizations table) and the ability to revert changes if needed.

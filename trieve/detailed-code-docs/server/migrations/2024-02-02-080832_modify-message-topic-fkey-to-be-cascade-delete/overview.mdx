@@ -1,0 +1,51 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the foreign key constraint between the `messages` and `topics` tables in a database. The migration aims to change the behavior of the constraint to include cascade delete functionality.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" direction (applying the migration):
+   - It removes the existing foreign key constraint `messages_topic_id_fkey` from the `messages` table.
+   - It then adds a new foreign key constraint with the same name, but this time including both `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses.
+
+2. In the "down" direction (reverting the migration):
+   - It removes the foreign key constraint `messages_topic_id_fkey` from the `messages` table.
+   - It then recreates the constraint without the cascade delete behavior.
+
+The purpose of this change is to ensure that when a topic is deleted from the `topics` table, all associated messages in the `messages` table are automatically deleted as well. This maintains referential integrity and prevents orphaned records in the `messages` table.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration. It modifies the foreign key constraint to include cascade delete functionality. Here's the content of the file:
+
+```sql
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;
+ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey 
+    FOREIGN KEY (topic_id) REFERENCES topics(id) 
+    ON UPDATE CASCADE ON DELETE CASCADE;
+```
+
+### down.sql
+This file contains the SQL commands to revert the migration, removing the cascade delete functionality. Here's the content of the file:
+
+```sql
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;
+ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey 
+    FOREIGN KEY (topic_id) REFERENCES topics(id);
+```
+
+## Configuration
+This migration does not require any additional configuration. It is designed to be run as part of a database migration process, typically managed by an ORM or migration tool. The filename `2024-02-02-080832_modify-message-topic-fkey-to-be-cascade-delete` suggests that this migration was created on February 2, 2024, at 08:08:32, and its purpose is to modify the message-topic foreign key to include cascade delete functionality.
+
+When applying this migration, ensure that:
+1. You have appropriate database permissions to modify table constraints.
+2. The `messages` and `topics` tables exist in the database.
+3. The `topic_id` column exists in the `messages` table and the `id` column exists in the `topics` table.
+4. There are no existing data integrity issues that might be affected by enabling cascade delete.
+
+It's important to note that enabling cascade delete can have significant implications for data integrity and application behavior. Make sure this change aligns with your application's requirements and that all affected parts of the system are prepared to handle the new behavior.

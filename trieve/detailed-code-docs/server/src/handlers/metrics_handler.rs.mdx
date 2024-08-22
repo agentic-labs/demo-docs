@@ -1,0 +1,64 @@
+---
+title: "metrics_handler.rs"
+---
+
+## High-level description
+The `metrics_handler.rs` file defines a `Metrics` struct and a `get_metrics` function that expose Prometheus metrics for the Trieve server. The `Metrics` struct holds a Prometheus registry and various gauges that track the number of items in different queues and processing states. The `get_metrics` function updates these gauges by querying Redis and returns the metrics in a Prometheus-compatible format.
+
+## Code Structure
+The `Metrics` struct is the central component, holding all the Prometheus gauges and the registry. It provides methods for creating new gauges, updating their values, and generating a response containing all metrics. The `get_metrics` function uses an instance of the `Metrics` struct to retrieve and return the server's current metrics.
+
+## References
+- `crate::data::models::RedisPool`: Used to access the Redis database for queue length information.
+- `crate::errors::ServiceError`: Used for error handling within the metrics update process.
+
+## Symbols
+
+### `Metrics`
+#### Description
+This struct manages Prometheus metrics related to various queues and processing states within the Trieve server. It holds a Prometheus registry and individual gauges for tracking different aspects of the server's operation.
+
+#### Inputs
+- **new()**: No inputs.
+
+#### Outputs
+- **new()**: Returns a `Result&lt;Self, Error&gt;`, where `Self` is a new `Metrics` instance and `Error` represents a potential error during Prometheus registry initialization.
+- **update_queue_gauges()**: Returns a `Result&lt;(), ServiceError&gt;`, indicating success or an error during the update process.
+- **get_response()**: Returns a `String` containing the Prometheus metrics in a formatted text representation.
+
+#### Internal Logic
+- **new()**: Initializes a new Prometheus registry and creates gauges for tracking various queues and processing states. Each gauge is given a name and a brief description.
+- **update_queue_gauges()**: Connects to the Redis database, retrieves the lengths of different queues using Redis commands, and updates the corresponding Prometheus gauges with the retrieved values.
+- **get_response()**: Gathers all registered metrics, encodes them into the Prometheus text format using a `TextEncoder`, and returns the encoded metrics as a string.
+
+### `get_metrics`
+#### Description
+This function handles HTTP requests to the `/metrics` endpoint and returns the server's Prometheus metrics. It requires authentication using an API key provided in the `X-API-KEY` or `Authorization` header.
+
+#### Inputs
+- **req**: An `actix_web::HttpRequest` representing the incoming HTTP request.
+- **metrics**: `web::Data&lt;Metrics&gt;` containing the shared `Metrics` instance.
+- **redis_pool**: `web::Data&lt;RedisPool&gt;` providing access to the Redis database.
+
+#### Outputs
+- Returns a `Result&lt;HttpResponse, actix_web::Error&gt;`, where `HttpResponse` contains the Prometheus metrics if successful, and `actix_web::Error` represents a potential error during processing.
+
+#### Internal Logic
+1. **Authentication Check**: Verifies if the request contains a valid API key in the `X-API-KEY` or `Authorization` header. If authentication fails, returns an `Unauthorized` response.
+2. **Metrics Update**: Calls the `update_queue_gauges` method on the `metrics` instance to update the gauges with the latest queue lengths from Redis.
+3. **Response Generation**: Retrieves the formatted Prometheus metrics string from the `metrics` instance using the `get_response` method.
+4. **Return Response**: Returns an `Ok` response with the Prometheus metrics string as the body and a content type of `text/plain`.
+
+## Dependencies
+- `actix-web`: Used for handling HTTP requests and responses.
+- `prometheus`: Used for creating and managing Prometheus metrics.
+- `redis`: Used for interacting with the Redis database.
+
+## Error Handling
+- The `update_queue_gauges` method returns a `Result&lt;(), ServiceError&gt;` to handle potential errors during Redis interaction.
+- The `get_metrics` function returns a `Result&lt;HttpResponse, actix_web::Error&gt;` to handle potential errors during processing and return appropriate HTTP error responses.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /metrics | GET | `X-API-KEY` or `Authorization` header with valid API key | `text/plain` response containing Prometheus metrics | Returns Prometheus metrics for the server. Requires authentication with a valid API key. |

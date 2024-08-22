@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for renaming various database entities from "card" to "chunk". The migration is part of a terminology change in the application, reflecting a shift from using "card" to "chunk" as the primary term for certain data structures.
+
+## What does it do?
+The migration scripts in this directory perform a database schema update to rename tables and columns. The main actions include:
+
+1. Renaming tables such as `card_collection`, `card_metadata`, `cut_cards`, etc., to their "chunk" equivalents.
+2. Renaming columns within these tables to reflect the new terminology.
+3. Updating related entities like bookmarks, collisions, and files to use the "chunk" naming convention.
+
+These changes are implemented in two scripts:
+
+1. `up.sql`: Applies the changes, moving from "card" to "chunk" terminology.
+2. `down.sql`: Reverts the changes, returning to the original "card" terminology.
+
+This allows for bidirectional migration, enabling developers to apply or roll back the changes as needed.
+
+## Key Files
+
+### up.sql
+This file contains the SQL statements to implement the "card" to "chunk" renaming. It includes ALTER TABLE statements to rename tables and columns. For example:
+
+```sql
+ALTER TABLE card_collection RENAME TO chunk_collection;
+ALTER TABLE card_collection_bookmarks RENAME TO chunk_collection_bookmarks;
+ALTER TABLE card_collection_bookmarks RENAME COLUMN card_metadata_id TO chunk_metadata_id;
+```
+
+The script renames seven tables and six columns across different tables, including a change in the `stripe_plans` table from `card_count` to `chunk_count`.
+
+### down.sql
+This file contains the SQL statements to revert the changes made by `up.sql`. It essentially performs the opposite operations, renaming everything back from "chunk" to "card". For example:
+
+```sql
+ALTER TABLE stripe_plans RENAME COLUMN chunk_count TO card_count;
+ALTER TABLE cut_chunks RENAME TO cut_cards;
+ALTER TABLE cut_cards RENAME COLUMN cut_chunk_content TO cut_card_content;
+```
+
+The script ensures that all changes can be undone, returning the database schema to its original state.
+
+## Dependencies
+The migration scripts rely on the SQL database system supporting the ALTER TABLE RENAME syntax. While the specific database system is not explicitly stated, it's likely to be a system like PostgreSQL or MySQL that supports these operations.
+
+## Configuration
+There are no explicit configuration files or environment variables used in these migration scripts. However, the database connection and migration framework configuration would typically be defined elsewhere in the application.
+
+## Notes
+1. These migration scripts are part of a larger change in the application's terminology and data model. Developers should ensure that all related application code is updated to reflect the new "chunk" terminology after applying the `up.sql` migration.
+
+2. The migration may have performance implications, especially on large databases, as renaming tables and columns can be resource-intensive operations. It's recommended to run these migrations during low-traffic periods.
+
+3. After applying the migration, thorough testing of the application is crucial to catch any missed references to the old "card" terminology.
+
+4. The migration scripts do not include explicit error handling. Care should be taken when applying these migrations, possibly with a database backup in place, to prevent data loss or inconsistencies in case of failure.
+
+5. Any database views, indexes, or constraints referencing the renamed tables or columns will need to be updated separately, as these scripts only handle the direct table and column renaming.
+
+By providing both `up.sql` and `down.sql` scripts, this migration allows for flexible development and deployment processes, enabling easy application and rollback of these schema changes as needed.

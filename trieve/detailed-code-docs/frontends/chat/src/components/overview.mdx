@@ -1,0 +1,121 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontends/chat/src/components` directory contains a collection of React components that form the core of a chat application's user interface. These components range from atomic UI elements to complex layouts and context providers, working together to create a fully functional and interactive chat experience.
+
+## What does it do?
+This directory implements the following key functionalities:
+
+1. User Interface: Provides reusable UI components like messages, modals, and input forms.
+2. Layout Management: Defines the main layout structure for the chat interface, including message display and user input areas.
+3. Navigation: Implements a navbar and sidebar for topic management and application navigation.
+4. Filtering: Offers a modal for creating and managing data filters.
+5. Data Presentation: Displays detailed information about text chunks with metadata and interaction features.
+6. Notifications: Implements a toast notification system for user feedback.
+7. State Management: Provides a user context for managing authentication, organization selection, and dataset management.
+
+## Entry points
+The main entry points for this component directory are:
+
+1. `Layouts/MainLayout.tsx`: This is the primary layout component that orchestrates the chat interface, including message display, user input, and chat controls.
+
+2. `Navbar/Navbar.tsx` and `Navbar/Sidebar.tsx`: These components handle the navigation structure of the application, allowing users to manage topics, select datasets, and access various features.
+
+3. `contexts/UserContext.tsx`: This file provides the UserContext and UserContextWrapper, which manage the global user-related state and functions used throughout the application.
+
+The data flow typically starts from the UserContext, which provides authentication and dataset information. This information is then used by the MainLayout to render the chat interface and handle message interactions. The Navbar and Sidebar components use this context to display relevant information and handle navigation.
+
+## Key Files
+
+### Atoms/AfMessage.tsx
+Renders individual messages within the chat interface, supporting different message roles and allowing for message editing.
+
+### FilterModal.tsx
+Implements a modal for creating and managing data filters, allowing users to refine their queries based on various criteria.
+
+### Layouts/MainLayout.tsx
+The core component that manages the chat interface, handling message display, user input, and chat-related functionalities.
+
+### Navbar/Navbar.tsx and Navbar/Sidebar.tsx
+These components form the navigation system of the application, providing topic management, dataset selection, and access to various features.
+
+### ScoreChunk.tsx
+Displays detailed information about text chunks, including metadata and content, with user interaction features.
+
+### ShowToast.tsx
+Implements a reusable toast notification system for displaying temporary messages to users.
+
+### contexts/UserContext.tsx
+Provides a centralized state management solution for user-related information, including authentication and dataset selection.
+
+## Dependencies
+The components in this directory rely on several external libraries and frameworks:
+
+1. Solid.js: Used for reactive programming and component creation.
+2. solid-icons: Provides various icons used throughout the components.
+3. terracotta: Used for UI components like Popover and Menu.
+4. sanitize-html: Used for sanitizing HTML content in the ScoreChunk component.
+5. @nozbe/microfuzz: Utilized in the Sidebar for implementing fuzzy search functionality.
+
+## Configuration
+The components use environment variables for configuration, primarily:
+
+- VITE_API_HOST: The host URL for API requests.
+- VITE_DASHBOARD_URL: URL for the dashboard (used in the Sidebar component).
+
+These variables are used to construct URLs for various features and API endpoints throughout the components.
+
+## Code Examples
+
+Here's an example of how the MainLayout component handles message submission:
+
+```typescript
+const handleSubmit = async (e: Event) =&gt; {
+  e.preventDefault();
+  if (inputValue().trim() === "") return;
+
+  const newMessage: Message = {
+    id: crypto.randomUUID(),
+    role: "user",
+    content: inputValue(),
+    metadata: {},
+  };
+
+  setMessages((prev) =&gt; [...prev, newMessage]);
+  setInputValue("");
+
+  await fetchCompletion(newMessage.content, selectedTopic()?.id, false);
+};
+```
+
+This function demonstrates how user input is processed, added to the message list, and then sent to the API for generating a response.
+
+In the UserContext, here's an example of how it manages user login:
+
+```typescript
+const login = async (accessToken: string) =&gt; {
+  setAccessToken(accessToken);
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_HOST}/user`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error("Failed to fetch user data");
+    }
+    const userData = await response.json();
+    setUser(userData);
+    await fetchOrganizations(accessToken);
+  } catch (error) {
+    console.error("Error logging in:", error);
+    createToast("Error logging in", { type: "error" });
+  }
+};
+```
+
+This function shows how the UserContext handles user authentication, fetches user data, and updates the global state accordingly.
+
+These components work together to create a comprehensive chat application interface, managing user interactions, data flow, and state across various parts of the application.

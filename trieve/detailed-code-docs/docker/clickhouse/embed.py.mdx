@@ -1,0 +1,85 @@
+---
+title: "embed.py"
+---
+
+## High-level description
+This Python script is designed to generate embeddings for input text using an external embedding server. It reads input from stdin, processes it in batches, and outputs the resulting embeddings or error messages to stdout. The script is likely used as part of a data processing pipeline, possibly in conjunction with ClickHouse database operations.
+
+## Symbols
+
+### `completion_with_backoff`
+#### Description
+This function sends a POST request to an embedding server to generate embeddings for the given input text.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_input | str | The input text to generate embeddings for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| embedding | list | A list of floats representing the embedding for the input text |
+
+#### Internal Logic
+1. Retrieves the embedding server URL from an environment variable.
+2. Prepares the request parameters and headers.
+3. Sends a POST request to the embedding server.
+4. Extracts and returns the embedding from the server's response.
+5. Handles potential errors and raises exceptions if necessary.
+
+### `embed`
+#### Description
+This function wraps the `completion_with_backoff` function, handling empty inputs and errors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| text | str | The input text to generate embeddings for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | str or list | Either "NULL", "ERROR", or the embedding list |
+
+#### Internal Logic
+1. Checks if the input text is empty, returning "NULL" if so.
+2. Calls `completion_with_backoff` with the input text.
+3. Returns the embedding if successful, or "ERROR" if an exception occurs.
+
+### Main loop
+#### Description
+The main loop of the script that reads input from stdin, processes it in batches, and outputs the results.
+
+#### Internal Logic
+1. Reads a batch size from stdin.
+2. Iterates over the specified number of rows in the batch.
+3. For each row, reads a line from stdin, strips whitespace, and calls `embed`.
+4. Prints the result of `embed` for each input.
+5. Flushes stdout after processing each batch.
+6. Catches and prints any exceptions that occur during processing.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| sys | Used for stdin/stdout operations and exception handling |
+| requests | Used to send HTTP requests to the embedding server |
+| os | Used to retrieve environment variables |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| EMBEDDING_SERVER_URL | str | None | The URL of the embedding server, set as an environment variable |
+| request_timeout | int | 3 | The timeout for requests to the embedding server |
+
+## Error Handling
+The script implements error handling at multiple levels:
+1. In `completion_with_backoff`, specific exceptions are caught and re-raised with more context.
+2. In `embed`, any exception is caught and results in returning "ERROR".
+3. In the main loop, exceptions are caught, printed, and the loop continues to the next batch.
+
+## Performance Considerations
+1. The script processes input in batches, which can improve performance when dealing with large amounts of data.
+2. The `sys.stdout.flush()` call ensures that output is written immediately, which may be important for real-time processing or monitoring.
+
+This script is designed to be efficient and robust, handling various error conditions while providing a simple interface for generating embeddings from input text. It's likely used as part of a larger data processing pipeline, possibly in conjunction with ClickHouse database operations.

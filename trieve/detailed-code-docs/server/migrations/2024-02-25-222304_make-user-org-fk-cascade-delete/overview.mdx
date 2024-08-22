@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the foreign key constraint between the `user_organizations` and `organizations` tables in a PostgreSQL database. The migration implements a cascading delete functionality for the `organization_id` column in the `user_organizations` table.
+
+## What does it do?
+The migration scripts in this directory change how the database handles the relationship between organizations and user organizations. Specifically:
+
+1. In the "up" direction (implementing the change):
+   - It modifies the `user_organizations` table to ensure that when an organization is deleted, all related entries in the `user_organizations` table are automatically removed.
+   - This is achieved by replacing the existing foreign key constraint with a new one that includes `ON DELETE CASCADE` behavior.
+
+2. In the "down" direction (reverting the change):
+   - It removes the cascading delete behavior, reverting the foreign key constraint to its previous state.
+   - This means that deleting an organization will no longer automatically delete related entries in the `user_organizations` table.
+
+These changes affect how data is managed when organizations are deleted from the system. With the cascading delete in place, it simplifies the process of removing an organization and all its associated user relationships in one operation.
+
+## Key Files
+
+1. `up.sql`:
+   - This file contains the SQL commands to implement the cascading delete functionality.
+   - It drops the existing foreign key constraint named `fk_organization_id`.
+   - It then adds a new foreign key constraint named `user_organizations_organization_id_fkey` with `ON UPDATE CASCADE` and `ON DELETE CASCADE` behaviors.
+
+   Key code snippet:
+   ```sql
+   ALTER TABLE user_organizations
+   ADD CONSTRAINT user_organizations_organization_id_fkey
+   FOREIGN KEY (organization_id)
+   REFERENCES organizations(id)
+   ON UPDATE CASCADE
+   ON DELETE CASCADE;
+   ```
+
+2. `down.sql`:
+   - This file contains the SQL commands to revert the changes made by `up.sql`.
+   - It drops the cascading foreign key constraint added by the up migration.
+   - It then adds back a foreign key constraint without the cascade delete behavior.
+
+   Key code snippet:
+   ```sql
+   ALTER TABLE user_organizations
+   ADD CONSTRAINT fk_organization_id
+   FOREIGN KEY (organization_id)
+   REFERENCES organizations(id);
+   ```
+
+## Dependencies
+The migration scripts are designed for PostgreSQL database systems. They assume the existence of two tables:
+
+1. `organizations`: The parent table containing organization records.
+2. `user_organizations`: The child table that maintains the relationship between users and organizations.
+
+## Configuration
+These migration scripts do not require any specific configuration. However, they should be run using a database migration tool that supports up and down migrations, such as Diesel for Rust projects or similar tools for other programming languages.
+
+## Performance Considerations
+Implementing cascading deletes can have performance implications, especially for large datasets:
+
+1. Deleting an organization will now trigger automatic deletions in the `user_organizations` table, which could lead to longer execution times for delete operations on organizations with many associated users.
+2. The database will need to perform additional checks and operations to maintain referential integrity during delete operations.
+3. For large-scale deletions of organizations, developers should be aware of the potential for increased load on the database due to the cascading effect.
+
+It's important to monitor the performance impact of this change in production environments, especially if dealing with a high volume of organization deletions or if the `user_organizations` table contains a large number of records.

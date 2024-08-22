@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for creating and dropping a `stripe_customers` table in the database. The migration is dated 2023-05-06 and is specifically designed to manage the relationship between the application's users and their corresponding Stripe customer records.
+
+## What does it do?
+The migration creates a new table called `stripe_customers` in the database. This table is designed to store important information about customers who are associated with Stripe, a popular payment processing platform. The table keeps track of unique identifiers, email addresses, and timestamps for each Stripe customer record.
+
+When applied, this migration will:
+1. Create a new table with columns for ID, Stripe ID, email, and timestamps.
+2. Set up constraints to ensure data integrity, such as unique IDs and a link to the existing users table.
+3. Allow the application to maintain a clear connection between its users and their Stripe customer information.
+
+If the migration needs to be reversed, it will completely remove the `stripe_customers` table from the database, effectively undoing all changes made by the creation process.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to create the `stripe_customers` table. It defines the table structure, including columns for:
+   - `id`: A UUID serving as the primary key
+   - `stripe_id`: A unique text field for Stripe's customer identifier
+   - `email`: A unique, nullable varchar field for the customer's email
+   - `created_at` and `updated_at`: Timestamps for record management
+
+   It also sets up constraints, including:
+   - Primary key on `id`
+   - Unique constraints on `stripe_id` and `email`
+   - A foreign key linking `email` to the `users` table
+
+   Here's a snippet of the table creation:
+
+   ```sql
+   CREATE TABLE stripe_customers (
+     id UUID PRIMARY KEY,
+     stripe_id TEXT NOT NULL UNIQUE,
+     email VARCHAR UNIQUE,
+     created_at TIMESTAMP NOT NULL,
+     updated_at TIMESTAMP NOT NULL,
+     FOREIGN KEY (email) REFERENCES users (email)
+   );
+   ```
+
+2. `down.sql`: This file contains the SQL command to drop the `stripe_customers` table if it exists. It's used to revert the changes made by the `up.sql` file:
+
+   ```sql
+   DROP TABLE IF EXISTS stripe_customers;
+   ```
+
+## Dependencies
+This migration depends on the existence of a `users` table in the database, specifically referencing its `email` column. The foreign key constraint in the `up.sql` file establishes this dependency.
+
+## Configuration
+While there are no explicit configuration files in this directory, the migration files themselves serve as a form of configuration for the database schema. The naming convention of the directory (2023-05-06-205756_create_stripe_customers) suggests that this migration is part of a larger migration system, possibly using tools like Diesel for Rust or other similar ORM/migration tools.
+
+## Notes
+1. The use of UUID as the primary key provides globally unique identifiers but may have slightly lower performance compared to auto-incrementing integer keys for insertions and joins.
+2. The unique constraints on `stripe_id` and `email` columns will create implicit indexes, which can help with query performance when searching by these fields.
+3. The `email` column is allowed to be null, which provides flexibility but should be considered in the application logic.
+4. Proper error handling should be implemented in the application layer to deal with potential constraint violations when inserting or updating records.
+5. Caution should be exercised when running the down migration, as it will result in data loss if the table exists and contains data.
+
+This migration sets up a crucial link between the application's user system and Stripe's customer management, enabling seamless integration of payment processing functionality.

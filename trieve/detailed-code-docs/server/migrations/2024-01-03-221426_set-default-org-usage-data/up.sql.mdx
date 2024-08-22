@@ -1,0 +1,41 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script defines a trigger and a function to automatically create a corresponding record in the `organization_usage_counts` table whenever a new organization is added to the `organizations` table. It also drops a unique constraint on the `name` column of the `organizations` table.
+
+## Code Structure
+The code defines a PostgreSQL function `set_default_org_usage_data` which is used by the trigger `set_default_org_usage_data_trigger`. The trigger is executed after an insert operation on the `organizations` table.
+
+## Symbols
+
+### `set_default_org_usage_data`
+#### Description
+This function inserts a new row into the `organization_usage_counts` table for the newly inserted organization. If a row with the same `org_id` already exists, it does nothing.
+
+#### Inputs
+This function does not take any explicit inputs. It accesses the newly inserted organization's ID using `NEW.id` within the trigger context.
+
+#### Outputs
+This function returns `NEW` which represents the newly inserted row in the `organizations` table. This is a convention in PostgreSQL triggers.
+
+#### Internal Logic
+1. **Insert or Do Nothing:** The function attempts to insert a new row into `organization_usage_counts` with the `org_id` set to the ID of the newly inserted organization (`NEW.id`).
+2. **Conflict Resolution:** If a conflict occurs on the `org_id` (meaning a row with the same `org_id` already exists), the function does nothing. This ensures that only one row exists per organization in the `organization_usage_counts` table.
+3. **Return:** The function returns `NEW`, which represents the newly inserted row in the `organizations` table.
+
+### `set_default_org_usage_data_trigger`
+#### Description
+This trigger automatically calls the `set_default_org_usage_data` function after a new row is inserted into the `organizations` table.
+
+#### Inputs
+This trigger implicitly receives the newly inserted row in the `organizations` table as input.
+
+#### Internal Logic
+1. **Trigger Activation:** The trigger is activated after each row insertion into the `organizations` table.
+2. **Function Execution:** The trigger executes the `set_default_org_usage_data` function.
+
+### `ALTER TABLE organizations DROP CONSTRAINT organizations_name_key;`
+#### Description
+This statement drops the unique constraint named `organizations_name_key` from the `organizations` table. This likely means that the `name` column in the `organizations` table no longer needs to be unique.

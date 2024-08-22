@@ -1,0 +1,232 @@
+---
+title: "dataset_operator.rs"
+---
+
+Here's a high-level description and documentation of the `dataset_operator.rs` file:
+
+## High-level description
+
+The `dataset_operator.rs` file contains functions for managing datasets in the Trieve system. It provides operations for creating, retrieving, updating, and deleting datasets, as well as managing dataset configurations and usage statistics. The file interacts with the database, Redis cache, and Qdrant vector database to perform these operations.
+
+## Code Structure
+
+The file defines several functions that operate on datasets. These functions typically take database connection pools and other necessary parameters, perform database operations, and return results or errors. The functions often use diesel queries for database operations and interact with Redis for caching and Qdrant for vector operations.
+
+## Symbols
+
+### `create_dataset_query`
+#### Description
+Creates a new dataset in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| new_dataset | Dataset | The dataset to be created |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Dataset, ServiceError&gt; | Result | The created dataset or an error |
+
+### `get_dataset_by_id_query`
+#### Description
+Retrieves a dataset by its ID or tracking ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UnifiedId | The dataset ID or tracking ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Dataset, ServiceError&gt; | Result | The retrieved dataset or an error |
+
+### `get_deleted_dataset_by_unifiedid_query`
+#### Description
+Retrieves a deleted dataset by its ID or tracking ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UnifiedId | The dataset ID or tracking ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Dataset, ServiceError&gt; | Result | The retrieved deleted dataset or an error |
+
+### `get_dataset_and_organization_from_dataset_id_query`
+#### Description
+Retrieves a dataset and its associated organization information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UnifiedId | The dataset ID or tracking ID |
+| org_id | Option&lt;uuid::Uuid&gt; | Optional organization ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;DatasetAndOrgWithSubAndPlan, ServiceError&gt; | Result | The dataset and organization information or an error |
+
+### `soft_delete_dataset_by_id_query`
+#### Description
+Marks a dataset as deleted without removing it from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | uuid::Uuid | The dataset ID |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### `clear_dataset_by_dataset_id_query`
+#### Description
+Clears all data from a dataset without deleting the dataset itself.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | uuid::Uuid | The dataset ID |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### `clear_dataset_query`
+#### Description
+Clears all data from a dataset, including chunks, files, and groups.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | uuid::Uuid | The dataset ID |
+| deleted_at | chrono::NaiveDateTime | Timestamp of deletion |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| event_queue | web::Data&lt;EventQueue&gt; | Event queue for logging |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+
+### `delete_dataset_by_id_query`
+#### Description
+Permanently deletes a dataset and all associated data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | uuid::Uuid | The dataset ID |
+| deleted_at | chrono::NaiveDateTime | Timestamp of deletion |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| clickhouse_client | actix_web::web::Data&lt;clickhouse::Client&gt; | ClickHouse client for analytics |
+| event_queue | web::Data&lt;EventQueue&gt; | Event queue for logging |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Dataset, ServiceError&gt; | Result | The deleted dataset or an error |
+
+### `update_dataset_query`
+#### Description
+Updates an existing dataset's information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | uuid::Uuid | The dataset ID |
+| name | String | New name for the dataset |
+| server_configuration | DatasetConfiguration | New configuration for the dataset |
+| new_tracking_id | Option&lt;String&gt; | Optional new tracking ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Dataset, ServiceError&gt; | Result | The updated dataset or an error |
+
+### `get_datasets_by_organization_id`
+#### Description
+Retrieves all datasets for a given organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| org_id | web::Path&lt;uuid::Uuid&gt; | The organization ID |
+| pagination | GetDatasetsPagination | Pagination parameters |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;DatasetAndUsage&gt;, ServiceError&gt; | Result | List of datasets with usage information or an error |
+
+### `get_dataset_usage_query`
+#### Description
+Retrieves usage statistics for a dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The dataset ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;DatasetUsageCount, ServiceError&gt; | Result | Dataset usage statistics or an error |
+
+### `get_tags_in_dataset_query`
+#### Description
+Retrieves all tags used in a dataset with their counts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataset_id | uuid::Uuid | The dataset ID |
+| page | i64 | Page number for pagination |
+| page_size | i64 | Number of items per page |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(Vec&lt;TagsWithCount&gt;, i64), ServiceError&gt; | Result | List of tags with counts and total count, or an error |
+
+## Dependencies
+The file relies on several external crates and internal modules:
+- `actix_web` for web framework functionality
+- `diesel` and `diesel_async` for database operations
+- `redis` for caching
+- `serde` for serialization/deserialization
+- `uuid` for unique identifiers
+- Various internal modules for models, errors, and other operations
+
+## Error Handling
+The file uses the `ServiceError` enum for error handling, which is propagated through the `Result` type. Common errors include database connection issues, not found errors, and bad requests.
+
+## Logging
+The file uses the `log` crate for logging errors and important information throughout the functions.
+
+## TODOs
+There are no explicit TODOs in the code, but there might be room for optimization in some database queries and error handling.
+
+This documentation provides an overview of the main functionalities in the `dataset_operator.rs` file. For more detailed information about specific functions or behaviors, refer to the inline comments and function signatures in the source code.

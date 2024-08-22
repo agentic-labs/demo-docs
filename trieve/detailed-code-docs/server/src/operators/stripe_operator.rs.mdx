@@ -1,0 +1,335 @@
+---
+title: "stripe_operator.rs"
+---
+
+## High-level description
+The `stripe_operator.rs` file contains functions that interact with the Stripe API and the database to manage subscriptions, plans, and invoices. It handles creating, updating, deleting, and retrieving these entities, as well as processing Stripe webhooks to keep the system synchronized with Stripe events.
+
+## Code Structure
+The code defines a series of functions that perform specific operations related to Stripe. These functions are independent of each other but share common dependencies like the Stripe client and the database pool. Some functions are used by the webhook handler to process Stripe events.
+
+## References
+This file references the following symbols:
+- `crate::data::models::{Pool, StripeInvoice, StripePlan, StripeSubscription}`: Data models for database entities.
+- `crate::errors::ServiceError`: Custom error type for service errors.
+- `crate::get_env!`: Macro to retrieve environment variables.
+- `diesel::prelude::*`: Diesel prelude for database operations.
+- `diesel_async::RunQueryDsl`: Trait for running asynchronous Diesel queries.
+- `serde_json::json!`: Macro for creating JSON values.
+- `stripe::*`: Stripe API client and types.
+
+## Symbols
+
+### `get_stripe_client`
+#### Description
+This function retrieves the Stripe API client using the `STRIPE_SECRET` environment variable.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | `stripe::Client` | The Stripe API client. |
+
+#### Internal Logic
+- Retrieves the `STRIPE_SECRET` environment variable.
+- Creates a new Stripe client using the secret key.
+
+### `create_stripe_subscription_query`
+#### Description
+This function creates a new Stripe subscription in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stripe_id | `String` | The Stripe ID of the subscription. |
+| plan_id | `uuid::Uuid` | The ID of the Stripe plan. |
+| organization_id | `uuid::Uuid` | The ID of the organization. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Creates a new `StripeSubscription` instance from the provided details.
+- Inserts the subscription into the `stripe_subscriptions` table.
+- Returns an error if the insertion fails.
+
+### `create_stripe_plan_query`
+#### Description
+This function creates a new Stripe plan in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stripe_id | `String` | The Stripe ID of the plan. |
+| amount | `i64` | The amount of the plan in cents. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;StripePlan, ServiceError&gt;` | A result containing the created `StripePlan` or an error. |
+
+#### Internal Logic
+- Creates a new `StripePlan` instance from the provided details.
+- Inserts the plan into the `stripe_plans` table.
+- Returns the created `StripePlan` or an error if the insertion fails.
+
+### `get_plan_by_id_query`
+#### Description
+This function retrieves a Stripe plan from the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plan_id | `uuid::Uuid` | The ID of the plan. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;StripePlan, ServiceError&gt;` | A result containing the retrieved `StripePlan` or an error. |
+
+#### Internal Logic
+- Queries the `stripe_plans` table for the plan with the given ID.
+- Returns the retrieved `StripePlan` or an error if the query fails.
+
+### `get_all_plans_query`
+#### Description
+This function retrieves all Stripe plans from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;Vec&lt;StripePlan&gt;, ServiceError&gt;` | A result containing a vector of `StripePlan`s or an error. |
+
+#### Internal Logic
+- Queries the `stripe_plans` table for all plans.
+- Returns a vector of `StripePlan`s or an error if the query fails.
+
+### `create_stripe_payment_link`
+#### Description
+This function creates a Stripe payment link for a given plan and organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plan | `StripePlan` | The Stripe plan. |
+| organization_id | `uuid::Uuid` | The ID of the organization. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;String, ServiceError&gt;` | A result containing the payment link URL or an error. |
+
+#### Internal Logic
+- Constructs a payment link creation request to the Stripe API.
+- Sets the plan, quantity, redirect URL, metadata, and other options.
+- Sends the request to Stripe and parses the response.
+- Returns the payment link URL or an error if the request fails.
+
+### `get_subscription_by_id_query`
+#### Description
+This function retrieves a Stripe subscription from the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_id | `uuid::Uuid` | The ID of the subscription. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;StripeSubscription, ServiceError&gt;` | A result containing the retrieved `StripeSubscription` or an error. |
+
+#### Internal Logic
+- Queries the `stripe_subscriptions` table for the subscription with the given ID.
+- Returns the retrieved `StripeSubscription` or an error if the query fails.
+
+### `delete_subscription_by_id_query`
+#### Description
+This function deletes a Stripe subscription from the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_id | `uuid::Uuid` | The ID of the subscription. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Deletes the subscription from the `stripe_subscriptions` table.
+- Returns an error if the deletion fails.
+
+### `get_option_subscription_by_organization_id_query`
+#### Description
+This function retrieves an optional Stripe subscription from the database by its organization ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization_id | `uuid::Uuid` | The ID of the organization. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;Option&lt;StripeSubscription&gt;, ServiceError&gt;` | A result containing an optional `StripeSubscription` or an error. |
+
+#### Internal Logic
+- Queries the `stripe_subscriptions` table for subscriptions associated with the given organization ID.
+- Returns the first subscription found or `None` if no subscriptions are found.
+- Returns an error if the query fails.
+
+### `set_stripe_subscription_current_period_end`
+#### Description
+This function updates the `current_period_end` field of a Stripe subscription in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stripe_subscription_id | `String` | The Stripe ID of the subscription. |
+| current_period_end | `chrono::NaiveDateTime` | The new current period end date. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Updates the `current_period_end` field of the subscription in the `stripe_subscriptions` table.
+- Returns an error if the update fails.
+
+### `cancel_stripe_subscription`
+#### Description
+This function cancels a Stripe subscription using the Stripe API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_stripe_id | `String` | The Stripe ID of the subscription. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Retrieves the Stripe API client.
+- Parses the subscription ID.
+- Cancels the subscription using the Stripe API.
+- Returns an error if the cancellation fails.
+
+### `update_stripe_subscription_plan_query`
+#### Description
+This function updates the plan ID of a Stripe subscription in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_id | `uuid::Uuid` | The ID of the subscription. |
+| plan_id | `uuid::Uuid` | The ID of the new plan. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Updates the `plan_id` field of the subscription in the `stripe_subscriptions` table.
+- Returns an error if the update fails.
+
+### `update_stripe_subscription`
+#### Description
+This function updates a Stripe subscription with a new plan using the Stripe API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_stripe_id | `String` | The Stripe ID of the subscription. |
+| plan_stripe_id | `String` | The Stripe ID of the new plan. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Retrieves the Stripe API client.
+- Parses the subscription ID.
+- Lists the subscription items associated with the subscription.
+- Creates a list of updates to delete existing items and add a new item with the new plan.
+- Updates the subscription using the Stripe API.
+- Returns an error if the update fails.
+
+### `create_invoice_query`
+#### Description
+This function creates a new Stripe invoice in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| org_id | `uuid::Uuid` | The ID of the organization. |
+| invoice_id | `stripe::InvoiceId` | The Stripe ID of the invoice. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;(), ServiceError&gt;` | A result indicating success or failure. |
+
+#### Internal Logic
+- Retrieves the Stripe API client.
+- Retrieves the invoice details from Stripe.
+- Creates a new `StripeInvoice` instance from the invoice details.
+- Checks if the invoice already exists in the database.
+- Inserts the invoice into the `stripe_invoices` table.
+- Returns an error if the insertion fails or if the invoice already exists.
+
+### `invoice_exists_query`
+#### Description
+This function checks if a Stripe invoice exists in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice_id | `String` | The Stripe ID of the invoice. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;bool, ServiceError&gt;` | A result containing a boolean indicating whether the invoice exists or an error. |
+
+#### Internal Logic
+- Queries the `stripe_invoices` table for the invoice with the given ID.
+- Returns `true` if the invoice exists, `false` otherwise.
+- Returns an error if the query fails.
+
+### `get_invoices_for_org_query`
+#### Description
+This function retrieves all Stripe invoices for a given organization from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| org_id | `uuid::Uuid` | The ID of the organization. |
+| pool | `web::Data&lt;Pool&gt;` | The database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Result&lt;Vec&lt;

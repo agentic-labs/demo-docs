@@ -1,0 +1,68 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for adding a new `registerable` column to the `organizations` table in the database. The migration is dated 2023-12-10 and is identified by the timestamp 210244. The purpose of this migration is to introduce a new boolean flag that determines whether an organization can be registered or not.
+
+## What does it do?
+This migration adds a new feature to the database schema that allows the system to control whether new registrations are allowed for specific organizations. Here's a simple explanation of what it does:
+
+1. It adds a new column called `registerable` to the `organizations` table.
+2. This new column is a boolean (true/false) value.
+3. By default, it sets all organizations as "registerable" (the default value is TRUE).
+4. This change allows the system to potentially restrict registrations for certain organizations in the future by setting their `registerable` value to FALSE.
+
+The migration also includes a way to undo this change if needed, by providing a script to remove the column.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the new changes to the database. It adds the `registerable` column to the `organizations` table. Here's the key part of the script:
+
+```sql
+ALTER TABLE organizations
+ADD COLUMN registerable BOOLEAN DEFAULT TRUE;
+```
+
+This command does the following:
+- It modifies the `organizations` table.
+- It adds a new column named `registerable`.
+- The new column is of type BOOLEAN, which means it can only be true or false.
+- It sets a default value of TRUE for this column, meaning all existing and new organizations will be considered registerable unless explicitly set otherwise.
+
+### down.sql
+This file contains the SQL commands to revert the changes made by the `up.sql` script. It removes the `registerable` column from the `organizations` table if it exists. Here's the key part of the script:
+
+```sql
+ALTER TABLE orgs DROP COLUMN IF EXISTS registerable;
+```
+
+This command does the following:
+- It targets the `orgs` table (which seems to be an alias or the actual name of the organizations table).
+- It attempts to drop (remove) the `registerable` column.
+- The `IF EXISTS` clause ensures that the command won't cause an error if the column doesn't exist, making the migration more robust.
+
+## Configuration
+There are no specific configuration files or environment variables associated with this migration. The migration is designed to be run as part of a database migration process, likely managed by an ORM or migration tool used in the project.
+
+## Side Effects
+When applying this migration:
+- All existing organizations in the database will have a new `registerable` column added, with a default value of TRUE.
+- This may briefly lock the `organizations` table during the migration, which could impact database performance momentarily.
+
+When reverting this migration:
+- The `registerable` column will be removed from the `organizations` table, along with all data stored in that column.
+
+## Performance Considerations
+- For large databases with many organizations, adding or removing a column could potentially cause a brief interruption in write access to the table.
+- It's recommended to run this migration during a maintenance window or low-traffic period to minimize potential disruptions, especially if the `organizations` table is large or frequently accessed.
+
+## TODOs
+The comments in both files suggest that these scripts might be based on templates. In a production environment, it would be beneficial to replace these generic comments with more specific documentation about the purpose and impact of this particular migration.
+
+Additionally, there's a discrepancy in table names between the `up.sql` and `down.sql` files:
+- `up.sql` refers to the table as `organizations`
+- `down.sql` refers to the table as `orgs`
+
+This inconsistency should be resolved to ensure the migration works correctly in both directions. It's important to use the correct table name consistently across both files.

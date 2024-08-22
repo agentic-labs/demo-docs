@@ -1,0 +1,70 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for adding a foreign key constraint to the `collection_uuid` column in the `file_upload_completed_notifications` table. The migration references the `id` column of the `card_collection` table. The directory includes both "up" and "down" migration scripts to apply and revert the changes, respectively.
+
+## What does it do?
+The migration scripts in this directory modify the structure of the `file_upload_completed_notifications` table in the database. Here's what they do in simple terms:
+
+1. The "up" migration adds a connection (foreign key constraint) between the `file_upload_completed_notifications` table and the `card_collection` table. This connection ensures that every `collection_uuid` in the `file_upload_completed_notifications` table corresponds to an existing `id` in the `card_collection` table.
+
+2. The "down" migration removes this connection, returning the `file_upload_completed_notifications` table to its original state without the link to the `card_collection` table.
+
+Both scripts carefully preserve all existing data in the `file_upload_completed_notifications` table while making these structural changes.
+
+## Key Files
+1. `up.sql`: This file contains the SQL commands to add the foreign key constraint to the `file_upload_completed_notifications` table.
+
+2. `down.sql`: This file contains the SQL commands to remove the foreign key constraint from the `file_upload_completed_notifications` table, effectively undoing the changes made by `up.sql`.
+
+Both files use a similar approach of creating a temporary table, moving data, recreating the main table with or without the constraint, and then moving the data back. This method ensures that no data is lost during the structural changes.
+
+## Configuration
+These migration scripts don't rely on any external configuration. They are designed to be run as part of a database migration process, likely managed by an ORM or migration tool in the main application.
+
+The scripts assume the existence of two tables:
+1. `file_upload_completed_notifications`
+2. `card_collection`
+
+The `card_collection` table must have an `id` column that the new foreign key will reference.
+
+## Performance Considerations
+Both the "up" and "down" migrations involve copying all data from the `file_upload_completed_notifications` table twice:
+1. From the original table to a temporary table
+2. From the temporary table back to the recreated original table
+
+This process can be resource-intensive and time-consuming if the `file_upload_completed_notifications` table contains a large amount of data. It's recommended to run these migrations during periods of low database activity to minimize potential disruptions to the application's performance.
+
+## Code Snippets
+Here's a key part of the `up.sql` script that adds the foreign key constraint:
+
+```sql
+CREATE TABLE file_upload_completed_notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_uuid UUID NOT NULL,
+    collection_uuid UUID NOT NULL,
+    user_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (collection_uuid) REFERENCES card_collection(id)
+);
+```
+
+And here's the corresponding part of the `down.sql` script that removes the constraint:
+
+```sql
+CREATE TABLE file_upload_completed_notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_uuid UUID NOT NULL,
+    collection_uuid UUID NOT NULL,
+    user_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+```
+
+Note the absence of the `FOREIGN KEY` clause in the `down.sql` version.
+
+These scripts demonstrate a careful approach to database schema changes, ensuring data integrity while modifying table structures. The use of temporary tables to preserve data during structural changes is a common and reliable pattern in database migrations.

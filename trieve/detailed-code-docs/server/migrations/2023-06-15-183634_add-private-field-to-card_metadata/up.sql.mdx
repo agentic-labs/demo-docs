@@ -1,0 +1,50 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL migration script modifies the `card_metadata` table by adding a new `private` column, making the `qdrant_point_id` column nullable, and introducing a constraint to ensure data integrity based on the `private` status of a card.
+
+## Symbols
+
+### ALTER TABLE card_metadata ADD COLUMN private BOOLEAN NOT NULL DEFAULT false;
+#### Description
+This statement adds a new column named `private` to the `card_metadata` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| private | BOOLEAN | Indicates whether a card is private or not |
+
+#### Internal Logic
+- The new column is of type BOOLEAN.
+- It is set as NOT NULL, meaning it must always have a value.
+- The DEFAULT value is set to false, implying that cards are not private by default.
+
+### ALTER TABLE card_metadata ALTER COLUMN qdrant_point_id DROP NOT NULL;
+#### Description
+This statement modifies the `qdrant_point_id` column in the `card_metadata` table to allow NULL values.
+
+#### Internal Logic
+- The NOT NULL constraint is removed from the `qdrant_point_id` column.
+- This allows the column to contain NULL values, which might be necessary for private cards that don't have a corresponding Qdrant point.
+
+### ALTER TABLE card_metadata ADD CONSTRAINT qdrant_point_nullable_constraint CHECK (private = true OR qdrant_point_id IS NOT NULL);
+#### Description
+This statement adds a CHECK constraint to the `card_metadata` table to ensure data integrity based on the `private` status of a card.
+
+#### Internal Logic
+- The constraint is named `qdrant_point_nullable_constraint`.
+- It enforces the following rule: either the card is private (`private = true`) or it must have a non-null `qdrant_point_id`.
+- This ensures that only private cards can have a null `qdrant_point_id`, while public cards must always have a valid `qdrant_point_id`.
+
+## Side Effects
+- Existing rows in the `card_metadata` table will have their `private` column set to false (the default value).
+- The `qdrant_point_id` column becomes nullable, which may affect queries or application logic that assumed it was always non-null.
+- The new constraint may cause INSERT or UPDATE operations to fail if they violate the condition (i.e., trying to set a null `qdrant_point_id` for a non-private card).
+
+## Performance Considerations
+- Adding a new column and modifying an existing column may require a table rewrite, which could be time-consuming for large tables.
+- The new CHECK constraint may have a minor impact on INSERT and UPDATE performance as it needs to be evaluated for each operation.
+
+This migration script introduces changes that allow for private cards in the system while maintaining data integrity. It's important to ensure that any application code interacting with the `card_metadata` table is updated to handle the new `private` column and the nullable `qdrant_point_id` appropriately.

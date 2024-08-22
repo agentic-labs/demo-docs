@@ -1,0 +1,75 @@
+---
+title: "api_version.rs"
+---
+
+## High-level description
+This code defines middleware for API versioning in a Rust web application using the Actix framework. It implements a mechanism to determine and set the API version for incoming requests based on headers, dataset creation dates, and environment variables.
+
+## Code Structure
+The main symbols in this code are:
+1. `APIVersion` enum: Defines the supported API versions.
+2. `ApiVersionCheckFactory`: Implements the `Transform` trait to create the middleware.
+3. `ApiVersionMiddleware`: Implements the `Service` trait to process requests and set the API version.
+
+These symbols work together to intercept incoming requests, determine the appropriate API version, and add this information to the request's extensions for use in request handling.
+
+## Symbols
+
+### `APIVersion`
+#### Description
+An enum representing the supported API versions (V1 and V2).
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Implements `FromRequest` trait to extract API version from request extensions.
+- Implements `from_dataset` method to determine version based on dataset creation date.
+
+### `ApiVersionCheckFactory`
+#### Description
+A struct that implements the `Transform` trait to create the `ApiVersionMiddleware`.
+
+#### Inputs
+None
+
+#### Outputs
+`ApiVersionMiddleware&lt;S&gt;`: The created middleware service.
+
+### `ApiVersionMiddleware`
+#### Description
+The main middleware struct that processes requests to determine and set the API version.
+
+#### Inputs
+- `req`: `ServiceRequest` - The incoming request to process.
+
+#### Outputs
+- `Result&lt;ServiceResponse&lt;B&gt;, Error&gt;`: The processed response or an error.
+
+#### Internal Logic
+1. Extracts dataset information from request extensions.
+2. Determines the API version based on:
+   - `X-API-Version` header (if present)
+   - Dataset creation date (if header is not present)
+3. Inserts the determined API version into request extensions.
+4. Calls the inner service to process the request.
+5. Adds the `x-api-version` header to the response.
+
+## Dependencies
+- `actix_web`: Web framework for Rust
+- `actix_http`: HTTP types for Actix
+- `chrono`: Date and time library
+- `futures_util`: Utility types for futures
+- Other internal modules and types (e.g., `DatasetAndOrgWithSubAndPlan`, `ServiceError`)
+
+## Configuration
+The code uses an environment variable `V2_VERSIONING_DATE` to determine the cutoff date for V2 API version. If not set, it defaults to "2024-07-14".
+
+## Error Handling
+The code handles potential errors when parsing dates or accessing request extensions, returning appropriate `ServiceError` types.
+
+## Performance Considerations
+The middleware adds some overhead to request processing due to version determination and header manipulation. However, it uses efficient data structures (enums, extensions) to minimize this impact.

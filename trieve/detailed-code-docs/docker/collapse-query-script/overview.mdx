@@ -1,0 +1,65 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains a Python script and a README file that together implement a system for optimizing search query analytics by collapsing similar queries in a ClickHouse database. The main purpose is to identify and remove partial queries that are prefixes of longer, more complete queries, but only if they occur within a 10-second window of each other. This process helps to reduce redundant data storage and improve the accuracy of analytics results.
+
+## What does it do?
+The script connects to a ClickHouse database and processes search queries across multiple datasets. For each dataset, it:
+
+1. Retrieves the timestamp of the last collapse operation.
+2. Fetches search queries in batches of 5000, starting from the last collapsed timestamp.
+3. Analyzes these queries to identify partial queries that are prefixes of longer queries and occur within 10 seconds of each other.
+4. Marks the identified partial queries as duplicates in the database.
+5. Updates the last processed timestamp for the dataset.
+
+This process helps to clean up the search query data by removing redundant partial queries that could skew analytics results. For example, if a user types "apple" and the system records "a", "ap", "app", and "apple", the script will identify "a", "ap", and "app" as duplicates if they occurred within 10 seconds of "apple".
+
+## Key Files
+
+1. `collapse_queries.py`: This is the main Python script that implements the query collapse logic. It contains several functions for interacting with the ClickHouse database, processing queries, and managing the collapse operation.
+
+   Key functions include:
+   - `get_search_queries`: Retrieves search queries for a specific dataset.
+   - `get_datasets`: Gets a list of all dataset IDs.
+   - `collapse_queries`: Identifies partial queries that should be marked as duplicates.
+   - `insert_duplicate_rows`: Marks identified duplicate queries in the database.
+   - `main`: Orchestrates the overall process of collapsing queries for all datasets.
+
+2. `README.md`: This file provides an overview of the script's purpose, functionality, and how it works. It explains the main functions and the query collapse logic.
+
+## Dependencies
+The script relies on the following external libraries:
+
+- `clickhouse_connect`: Used to interact with the ClickHouse database.
+- `dotenv`: Used to load environment variables from a .env file.
+- `uuid`: Used to handle UUID data types.
+- `datetime`: Used to work with date and time data.
+
+## Configuration
+The script uses environment variables for configuration, which are likely loaded from a .env file. The main configuration parameter is the ClickHouse database DSN (Data Source Name), which should be set in the environment.
+
+## Code Snippet
+Here's a key part of the script that demonstrates the query collapse logic:
+
+```python
+def collapse_queries(rows, look_range=10, time_window=10):
+    rows_to_be_deleted = []
+    for i, row in enumerate(rows):
+        for j in range(max(0, i - look_range), min(len(rows), i + look_range + 1)):
+            if i != j:
+                row_i = row
+                row_j = rows[j]
+                if abs((row_i[1] - row_j[1]).total_seconds()) &lt;= time_window:
+                    if row_i[2].startswith(row_j[2]) and len(row_i[2]) &gt; len(row_j[2]):
+                        rows_to_be_deleted.append(row_j)
+                    elif row_j[2].startswith(row_i[2]) and len(row_j[2]) &gt; len(row_i[2]):
+                        rows_to_be_deleted.append(row_i)
+                        break
+    return rows_to_be_deleted
+```
+
+This function identifies partial queries by comparing each query with nearby queries within a specified time window. It marks shorter queries as duplicates if they are substrings of longer queries that occur within the time window.
+
+In summary, this directory contains a specialized script for optimizing search query data in a ClickHouse database, which can significantly improve the quality of search analytics by removing redundant partial queries.

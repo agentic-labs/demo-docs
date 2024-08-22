@@ -1,0 +1,81 @@
+---
+title: "networkpolicy.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes NetworkPolicy for a Redis deployment using Helm templating. It controls network traffic flow to and from Redis pods based on configuration values, allowing for customization of ingress and egress rules.
+
+## Code Structure
+The code is structured as a Kubernetes NetworkPolicy resource definition within a Helm template. It uses conditional logic based on values passed to the template to dynamically generate the policy. The main sections define pod selectors, ingress rules, and egress rules.
+
+## References
+This code references other Helm templates and values:
+- `networkPolicy.apiVersion`: Template for the NetworkPolicy API version.
+- `common.names.fullname`: Template for generating the full name of the Redis deployment.
+- `common.names.namespace`: Template for the Kubernetes namespace.
+- `common.labels.standard`: Template for standard labels.
+- `common.tplvalues.render`: Template for rendering values.
+- `common.labels.matchLabels`: Template for matching labels.
+- `master.containerPorts.redis`: Value for the Redis server port.
+- `sentinel.enabled`: Value indicating if Redis Sentinel is enabled.
+- `sentinel.containerPorts.sentinel`: Value for the Redis Sentinel port.
+- `networkPolicy.extraEgress`: Value for additional egress rules.
+- `networkPolicy.allowExternal`: Value controlling external access.
+- `networkPolicy.ingressNSMatchLabels`: Value for namespace labels for ingress.
+- `networkPolicy.ingressNSPodMatchLabels`: Value for pod labels for ingress.
+- `metrics.enabled`: Value indicating if metrics are enabled.
+- `networkPolicy.metrics.allowExternal`: Value controlling external access to metrics.
+- `networkPolicy.metrics.ingressNSMatchLabels`: Value for namespace labels for metrics ingress.
+- `networkPolicy.metrics.ingressNSPodMatchLabels`: Value for pod labels for metrics ingress.
+- `networkPolicy.extraIngress`: Value for additional ingress rules.
+
+## Symbols
+### `networkpolicy.yaml`
+#### Description
+This code defines a Kubernetes NetworkPolicy resource for a Redis deployment. It controls network traffic to and from Redis pods based on configuration values.
+
+#### Inputs
+This code uses values passed to the Helm template, including:
+- `.Values.networkPolicy.enabled`: Enables/disables the NetworkPolicy.
+- `.Values.architecture`: Architecture of the Redis deployment ("replication" or "standalone").
+- `.Values.networkPolicy.extraEgress`: Additional egress rules.
+- `.Values.networkPolicy.allowExternal`: Allows/denies external access to Redis.
+- `.Values.networkPolicy.ingressNSMatchLabels`: Namespace labels for ingress rules.
+- `.Values.networkPolicy.ingressNSPodMatchLabels`: Pod labels for ingress rules.
+- `.Values.metrics.enabled`: Enables/disables metrics.
+- `.Values.networkPolicy.metrics.allowExternal`: Allows/denies external access to metrics.
+- `.Values.networkPolicy.metrics.ingressNSMatchLabels`: Namespace labels for metrics ingress.
+- `.Values.networkPolicy.metrics.ingressNSPodMatchLabels`: Pod labels for metrics ingress.
+- `.Values.networkPolicy.extraIngress`: Additional ingress rules.
+
+#### Outputs
+This code generates a Kubernetes NetworkPolicy resource.
+
+#### Internal Logic
+1. **Conditional Creation:** The NetworkPolicy is created only if `.Values.networkPolicy.enabled` is true.
+2. **Pod Selector:** Selects pods with labels matching the Redis deployment.
+3. **Policy Types:** Defines ingress and egress policies. Egress is included if the architecture is "replication" or `networkPolicy.extraEgress` is defined.
+4. **Egress Rules:**
+    - If the architecture is "replication", allows DNS resolution (port 53/UDP) and communication between Redis pods on the Redis and Sentinel ports.
+    - Includes additional egress rules defined in `networkPolicy.extraEgress`.
+5. **Ingress Rules:**
+    - Allows inbound connections on the Redis and Sentinel ports.
+    - If `networkPolicy.allowExternal` is false, restricts ingress to pods with specific labels:
+        - Pods with the label `{{ template "common.names.fullname" . }}-client: "true"`.
+        - Pods with labels matching the Redis deployment.
+        - Optionally, pods in namespaces and with labels matching `networkPolicy.ingressNSMatchLabels` and `networkPolicy.ingressNSPodMatchLabels`.
+    - If `metrics.enabled` is true, allows Prometheus to scrape metrics on port 9121.
+    - If `networkPolicy.metrics.allowExternal` is false, restricts metrics ingress similarly to Redis ingress.
+    - Includes additional ingress rules defined in `networkPolicy.extraIngress`.
+
+## Side Effects
+This code, when applied to a Kubernetes cluster, creates a NetworkPolicy resource that controls network traffic to and from Redis pods.
+
+## Dependencies
+This code depends on the Kubernetes NetworkPolicy API.
+
+## Configuration
+This code is configured through various values passed to the Helm template, as described in the Inputs section.
+
+## Error Handling
+This code does not implement specific error handling. Errors during template rendering or resource creation are handled by Helm.

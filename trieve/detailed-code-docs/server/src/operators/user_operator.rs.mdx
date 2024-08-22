@@ -1,0 +1,254 @@
+---
+title: "user_operator.rs"
+---
+
+## High-level description
+The `user_operator.rs` file contains functions that handle user-related operations in the Trieve application. These operations include retrieving user information, managing API keys, adding users to organizations, and updating user roles.
+
+## Code Structure
+The file defines several functions that interact with the database and Redis to perform user-related operations. Some functions are used by other functions within the file, such as `generate_api_key` being used by `set_user_api_key_query`.
+
+## References
+This file references the following data models:
+- `User`
+- `SlimUser`
+- `UserOrganization`
+- `Organization`
+- `UserApiKey`
+- `ApiKeyRespBody`
+- `UserRole`
+- `ApiKeyRole`
+- `RedisPool`
+- `Pool`
+
+## Symbols
+
+### `get_user_by_id_query`
+#### Description
+This function retrieves a user by their ID, along with their associated organizations and roles. It performs a database query to join the `users`, `user_organizations`, and `organizations` tables, filtering by the provided user ID and ensuring the organization is not deleted.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | &uuid::Uuid | The ID of the user to retrieve. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(User, Vec&lt;UserOrganization&gt;, Vec&lt;Organization&gt;), ServiceError&gt; | A tuple containing the user, their organizations, and their roles, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Performs a database query to join the `users`, `user_organizations`, and `organizations` tables, filtering by the provided user ID and ensuring the organization is not deleted.
+3. If the query returns results, extracts the user, organizations, and roles from the result.
+4. If the query returns no results, retrieves the user by ID without organizations and roles.
+5. Returns the user, organizations, and roles, or a `ServiceError` if an error occurs.
+
+### `add_existing_user_to_org`
+#### Description
+This function adds an existing user to an organization by their email address. It first retrieves the user from the database by their email, then calls the `add_user_to_organization` function to add the user to the organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | String | The email address of the user to add. |
+| organization_id | uuid::Uuid | The ID of the organization to add the user to. |
+| user_role | UserRole | The role the user will have in the organization. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+| redis_pool | web::Data&lt;RedisPool&gt; | A connection pool for Redis. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;bool, ServiceError&gt; | `true` if the user was added to the organization, `false` if the user does not exist, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Queries the database for a user with the provided email address.
+3. If a user is found, calls the `add_user_to_organization` function to add the user to the organization.
+4. Returns `true` if the user was added, `false` if the user does not exist, or a `ServiceError` if an error occurs.
+
+### `update_user_org_role_query`
+#### Description
+This function updates the role of a user in an organization. It performs a database query to update the `user_organizations` table, setting the new role for the specified user and organization. It also deletes the user's entry in Redis to force a refresh of their cached data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | The ID of the user to update. |
+| organization_id | uuid::Uuid | The ID of the organization to update the user's role in. |
+| role | UserRole | The new role for the user in the organization. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+| redis_pool | web::Data&lt;RedisPool&gt; | A connection pool for Redis. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(), ServiceError&gt; | Returns `Ok(())` if the update was successful, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Performs a database query to update the `user_organizations` table, setting the new role for the specified user and organization.
+3. Retrieves a Redis connection from the pool.
+4. Deletes the user's entry in Redis to force a refresh of their cached data.
+5. Returns `Ok(())` if the update was successful, or a `ServiceError` if an error occurs.
+
+### `generate_api_key`
+#### Description
+This function generates a random 32-character API key prefixed with "tr-".
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | String | The generated API key. |
+
+#### Internal Logic
+1. Creates a random number generator.
+2. Generates a 32-character random string using alphanumeric characters.
+3. Prefixes the random string with "tr-".
+4. Returns the generated API key.
+
+### `SECRET_KEY`
+#### Description
+A static, lazily initialized string containing the secret key used for hashing API keys. It is retrieved from the `SECRET_KEY` environment variable, or defaults to "0123" repeated 16 times.
+
+### `SALT`
+#### Description
+A static, lazily initialized string containing the salt used for hashing API keys. It is retrieved from the `SALT` environment variable, or defaults to "supersecuresalt".
+
+### `hash_argon2_api_key`
+#### Description
+This function hashes a given password using the Argon2 algorithm. It uses the `SECRET_KEY` and `SALT` constants for hashing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | &str | The password to hash. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;String, ServiceError&gt; | The hashed password, or a `ServiceError` if an error occurs during hashing. |
+
+#### Internal Logic
+1. Creates an Argon2 configuration using the `SECRET_KEY` and `SALT` constants.
+2. Hashes the password using the Argon2 algorithm and the created configuration.
+3. Returns the hashed password, or a `ServiceError` if an error occurs during hashing.
+
+### `hash_api_key`
+#### Description
+This function hashes a given password using the Blake3 algorithm.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | &str | The password to hash. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| hash | String | The Blake3 hash of the password. |
+
+#### Internal Logic
+1. Hashes the password using the Blake3 algorithm.
+2. Converts the hash to a string.
+3. Returns the hashed password.
+
+### `set_user_api_key_query`
+#### Description
+This function creates a new API key for a user, stores it in the database, and returns the raw API key. It generates a random API key, hashes it using the Blake3 algorithm, and inserts a new `UserApiKey` entry into the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | The ID of the user to create the API key for. |
+| name | String | The name of the API key. |
+| role | ApiKeyRole | The role of the API key. |
+| dataset_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional list of dataset IDs the API key has access to. |
+| organization_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional list of organization IDs the API key has access to. |
+| scopes | Option&lt;Vec&lt;String&gt;&gt; | Optional list of scopes the API key has access to. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;String, ServiceError&gt; | The raw API key, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Generates a random API key using `generate_api_key`.
+2. Hashes the API key using `hash_api_key`.
+3. Creates a new `UserApiKey` struct with the provided details.
+4. Inserts the new `UserApiKey` entry into the database.
+5. Returns the raw API key, or a `ServiceError` if an error occurs.
+
+### `get_user_from_api_key_query`
+#### Description
+This function retrieves a user and their associated API key information based on a provided API key. It first attempts to retrieve the user using a Blake3 hash of the API key. If no user is found, it then attempts to retrieve the user using an Argon2 hash of the API key. If a user is found using the Argon2 hash, the API key hash in the database is updated to the Blake3 hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | &str | The API key to use for retrieving the user. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(SlimUser, UserApiKey), ServiceError&gt; | A tuple containing the `SlimUser` and `UserApiKey` if the API key is valid, or a `ServiceError` if an error occurs or the API key is invalid. |
+
+#### Internal Logic
+1. Hashes the API key using both Blake3 and Argon2 algorithms.
+2. Attempts to retrieve the user and their associated information from the database using the Blake3 hash.
+3. If no user is found using the Blake3 hash, attempts to retrieve the user using the Argon2 hash.
+4. If a user is found using the Argon2 hash, updates the API key hash in the database to the Blake3 hash.
+5. Returns the `SlimUser` and `UserApiKey` if the API key is valid, or a `ServiceError` if an error occurs or the API key is invalid.
+
+### `get_user_api_keys_query`
+#### Description
+This function retrieves all API keys associated with a specific user ID. It performs a database query to fetch all `UserApiKey` entries for the given user ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | The ID of the user to retrieve API keys for. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;Vec&lt;ApiKeyRespBody&gt;, ServiceError&gt; | A vector of `ApiKeyRespBody` structs representing the user's API keys, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Queries the database for all `UserApiKey` entries associated with the provided user ID.
+3. Maps the retrieved `UserApiKey` entries to `ApiKeyRespBody` structs.
+4. Returns the vector of `ApiKeyRespBody` structs, or a `ServiceError` if an error occurs.
+
+### `delete_user_api_keys_query`
+#### Description
+This function deletes a specific API key associated with a user. It performs a database query to delete the `UserApiKey` entry matching the provided user ID and API key ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_id | uuid::Uuid | The ID of the user who owns the API key. |
+| api_key_id | uuid::Uuid | The ID of the API key to delete. |
+| pool | web::Data&lt;Pool&gt; | A connection pool for the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(), ServiceError&gt; | Returns `Ok(())` if the deletion was successful, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves a database connection from the pool.
+2. Performs a database query to delete the `UserApiKey` entry matching the provided user ID and API key ID.
+3. Returns `Ok(())` if the deletion was successful, or a `ServiceError` if an error occurs.
+
+### `create_user_query`
+#### Description
+This function creates a new user in the database and adds them to a specific organization with a given role. It performs a database transaction to insert the new user into

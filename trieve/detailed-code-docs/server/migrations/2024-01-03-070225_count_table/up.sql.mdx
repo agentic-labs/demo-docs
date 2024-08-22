@@ -1,0 +1,89 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script creates tables and triggers to track usage counts for organizations and datasets. It implements a system to automatically update counts for various entities (chunks, files, messages, datasets, and users) when they are added or removed, maintaining an up-to-date record of resource usage for each organization.
+
+## Code Structure
+The script is structured into several main parts:
+1. Table creation for organization and dataset usage counts
+2. Functions and triggers for updating counts of different entities
+3. Cleanup of obsolete triggers and tables
+
+## Symbols
+
+### `organization_usage_counts` table
+#### Description
+This table stores usage counts for various resources at the organization level.
+
+#### Internal Logic
+- Uses UUID as primary key
+- References the `organizations` table
+- Tracks counts for datasets, users, file storage, and messages
+
+### `dataset_usage_counts` table
+#### Description
+This table stores the chunk count for each dataset.
+
+#### Internal Logic
+- Uses UUID as primary key
+- References the `datasets` table
+- Tracks the count of chunks per dataset
+
+### `update_chunk_metadata_counts()` function
+#### Description
+This function updates the chunk count for a dataset when chunks are added or removed.
+
+#### Internal Logic
+- Triggered after INSERT or DELETE operations on the `chunk_metadata` table
+- Increments or decrements the `chunk_count` in `dataset_usage_counts`
+
+### `update_files_storage_counts()` function
+#### Description
+This function updates the file storage count for an organization when files are added or removed.
+
+#### Internal Logic
+- Triggered after INSERT or DELETE operations on the `files` table
+- Updates the `file_storage` in `organization_usage_counts`
+
+### `update_messages_counts()` function
+#### Description
+This function updates the message count for an organization when messages are added or removed.
+
+#### Internal Logic
+- Triggered after INSERT or DELETE operations on the `messages` table
+- Updates the `message_count` in `organization_usage_counts`
+
+### `update_datasets_counts()` function
+#### Description
+This function updates the dataset count for an organization when datasets are added or removed.
+
+#### Internal Logic
+- Triggered after INSERT or DELETE operations on the `datasets` table
+- Updates the `dataset_count` in `organization_usage_counts`
+
+### `update_users_counts()` function
+#### Description
+This function updates the user count for an organization when users are added or removed.
+
+#### Internal Logic
+- Triggered after INSERT or DELETE operations on the `user_organizations` table
+- Updates the `user_count` in `organization_usage_counts`
+
+## Side Effects
+The triggers created in this script will automatically update the respective counts in the `organization_usage_counts` and `dataset_usage_counts` tables whenever relevant operations occur in the referenced tables.
+
+## Performance Considerations
+The use of triggers for real-time count updates may impact the performance of insert and delete operations on the affected tables. However, this approach ensures that the count data is always up-to-date without requiring separate update processes.
+
+## Error Handling
+The script uses `ON CONFLICT` clauses in the insert operations to handle cases where a record already exists, ensuring that counts are properly updated even if the initial insert fails.
+
+## TODOs
+The script ends with dropping an obsolete trigger and table, which suggests that this migration is part of a schema update process:
+```sql
+DROP TRIGGER IF EXISTS card_metadata_count_trigger ON chunk_metadata;
+DROP TABLE IF EXISTS chunk_metadata_counts;
+```
+These lines indicate that the previous implementation of chunk metadata counting is being replaced by the new system introduced in this script.

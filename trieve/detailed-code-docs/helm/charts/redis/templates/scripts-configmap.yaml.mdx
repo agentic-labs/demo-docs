@@ -1,0 +1,121 @@
+---
+title: "scripts-configmap.yaml"
+---
+
+## High-level description
+This code defines a Kubernetes ConfigMap named `[RELEASE_NAME]-scripts` that stores shell scripts for starting and stopping Redis instances in different configurations (master, replica, sentinel). These scripts are used by the Redis pods to determine their role and configure themselves accordingly.
+
+## Code Structure
+The code consists of a single YAML document defining a Kubernetes ConfigMap. The `data` section of the ConfigMap contains multiple key-value pairs, where the key is the script name and the value is the script content. The scripts are conditionally included based on the `architecture` and `sentinel.enabled` values.
+
+## Symbols
+### `start-node.sh`
+#### Description
+This script is used to start a Redis node in a Sentinel-enabled replication setup. It determines the node's role (master or replica) based on the state of the Sentinel cluster and configures the Redis instance accordingly.
+
+#### Inputs
+This script uses environment variables for configuration. Some key variables include:
+| Name | Description |
+|:-----|:------------|
+| `HOSTNAME` | The hostname of the Redis pod. |
+| `REDIS_EXTERNAL_MASTER_HOST` | The hostname of an external Redis master (if applicable). |
+| `REDIS_PASSWORD_FILE` | Path to the file containing the Redis password. |
+| `REDIS_MASTER_PASSWORD_FILE` | Path to the file containing the Redis master password. |
+| `REDIS_TLS_ENABLED` | Whether TLS is enabled for Redis. |
+| `REDIS_TLS_CERT_FILE` | Path to the Redis TLS certificate file. |
+| `REDIS_TLS_KEY_FILE` | Path to the Redis TLS key file. |
+| `REDIS_TLS_CA_FILE` | Path to the Redis TLS CA certificate file. |
+
+#### Internal Logic
+1. **Determine Redis and Sentinel ports:** The script retrieves the configured ports for Redis and Sentinel services.
+2. **Check for external master:** If `REDIS_EXTERNAL_MASTER_HOST` is set, it uses the external master for replication.
+3. **Validate Sentinel quorum:** The script checks if a Sentinel quorum is available.
+4. **Trigger manual failover (if needed):** If the quorum is unavailable and `automateClusterRecovery` is enabled, the script attempts to trigger a manual failover.
+5. **Determine node role:**
+    - If no active Sentinel is found and the node was previously the master, it configures itself as the master.
+    - If no active Sentinel is found and the node was not previously the master, it configures itself as a replica using the master information from the persisted configuration.
+    - If an active Sentinel is found and this node is the current master, it configures itself as the master.
+    - If an active Sentinel is found and this node is not the current master, it configures itself as a replica of the current master.
+6. **Configure Redis:** The script configures the Redis instance based on its determined role, including replication settings, TLS settings, and authentication.
+7. **Start Redis:** The script starts the Redis server with the configured arguments.
+
+### `start-sentinel.sh`
+#### Description
+This script is used to start a Redis Sentinel instance. It configures the Sentinel to monitor the Redis master and replicas, and handles failover if the master becomes unavailable.
+
+#### Inputs
+This script uses environment variables for configuration. Some key variables include:
+| Name | Description |
+|:-----|:------------|
+| `HOSTNAME` | The hostname of the Sentinel pod. |
+| `REDIS_PASSWORD_FILE` | Path to the file containing the Redis password. |
+| `REDIS_SENTINEL_TLS_ENABLED` | Whether TLS is enabled for Sentinel. |
+| `REDIS_SENTINEL_TLS_CERT_FILE` | Path to the Sentinel TLS certificate file. |
+| `REDIS_SENTINEL_TLS_KEY_FILE` | Path to the Sentinel TLS key file. |
+| `REDIS_SENTINEL_TLS_CA_FILE` | Path to the Sentinel TLS CA certificate file. |
+
+#### Internal Logic
+1. **Determine Redis and Sentinel ports:** The script retrieves the configured ports for Redis and Sentinel services.
+2. **Check for existing master:** The script checks if a Redis master is already configured in the persisted Sentinel configuration.
+3. **Determine master node:**
+    - If no master is found and this node was previously the master, it configures itself as the master.
+    - If no master is found and this node was not previously the master, it retrieves the master information from the Sentinel cluster.
+4. **Configure Sentinel:** The script configures the Sentinel instance, including the monitored master, known replicas, authentication, TLS settings, and other parameters.
+5. **Start Sentinel:** The script starts the Redis server in Sentinel mode with the configured arguments.
+
+### `prestop-sentinel.sh`
+#### Description
+This script is executed before a Sentinel pod is terminated. It checks if the current pod is the master and, if so, triggers a failover to another Sentinel instance.
+
+#### Internal Logic
+1. **Check if master:** The script determines if the current pod is the master Sentinel.
+2. **Trigger failover:** If the pod is the master, it triggers a Sentinel failover and waits for it to complete.
+
+### `prestop-redis.sh`
+#### Description
+This script is executed before a Redis pod is terminated. It checks if the current pod is the master and, if so, pauses client connections and triggers a failover to another Redis instance.
+
+#### Internal Logic
+1. **Check if master:** The script determines if the current pod is the master Redis instance.
+2. **Pause client connections:** If the pod is the master, it pauses client write connections to prevent data loss during failover.
+3. **Trigger failover:** The script triggers a Sentinel failover and optionally waits for it to complete.
+
+### `start-master.sh`
+#### Description
+This script is used to start a Redis master instance in a non-Sentinel setup. It configures and starts the Redis server with the provided settings.
+
+#### Internal Logic
+1. **Configure Redis:** The script configures the Redis instance, including TLS settings, authentication, and other parameters.
+2. **Start Redis:** The script starts the Redis server with the configured arguments.
+
+### `start-replica.sh`
+#### Description
+This script is used to start a Redis replica instance in a non-Sentinel setup. It configures the replica to connect to the specified master and starts the Redis server.
+
+#### Internal Logic
+1. **Configure Redis:** The script configures the Redis instance, including replication settings, TLS settings, authentication, and other parameters.
+2. **Start Redis:** The script starts the Redis server with the configured arguments.
+
+## Dependencies
+This code depends on the following:
+| Dependency | Purpose |
+|:-----------|:--------|
+| `kubectl` | Used to interact with the Kubernetes cluster. |
+| `redis-cli` | Used to interact with the Redis server. |
+| `openssl` | Used for hashing hostnames. |
+
+## Configuration
+This code uses values from the Helm chart's `values.yaml` file for configuration. Some key configuration options include:
+| Option | Description |
+|:-------|:------------|
+| `architecture` | The Redis deployment architecture (e.g., `standalone`, `replication`, `sentinel`). |
+| `sentinel.enabled` | Whether Sentinel is enabled for the deployment. |
+| `replica.replicaCount` | The number of Redis replicas to deploy. |
+| `tls.enabled` | Whether TLS is enabled for Redis and Sentinel. |
+| `auth.enabled` | Whether authentication is enabled for Redis and Sentinel. |
+
+## Error Handling
+The scripts include basic error handling, such as checking for the existence of required files and validating command outputs. If an error occurs, the script will typically log an error message and exit.
+
+## Logging
+The scripts use the `info` and `debug` functions from the `/opt/bitnami/scripts/liblog.sh` library for logging. Log messages are written to standard output.

@@ -1,0 +1,185 @@
+---
+title: "model_operator.rs"
+---
+
+## High-level description
+The `model_operator.rs` file contains functions responsible for generating dense and sparse vector embeddings for text data. It interacts with external embedding servers to obtain these embeddings, handles optional boosting parameters, and processes the results for further use in search and retrieval operations.
+
+## Code Structure
+The code defines several functions related to embedding generation: `get_dense_vector`, `get_sparse_vector`, `get_dense_vectors`, `get_sparse_vectors`, `cross_encoder`, and `get_bm25_embeddings`. These functions interact with external embedding servers and process the results. Additionally, there are helper functions like `tokenize`, `tokenize_batch`, and `term_frequency` used for BM25 embedding generation.
+
+## References
+This code references environment variables for API keys and server URLs, as well as the `DatasetConfiguration` struct for model-specific parameters.
+
+## Symbols
+
+### `get_dense_vector`
+#### Description
+This function retrieves a dense vector embedding for a given text message. It handles optional semantic boosting and interacts with an external embedding server (OpenAI or a custom server) to obtain the embedding.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| message | String | The text message to embed. |
+| distance_phrase | Option&lt;SemanticBoost&gt; | Optional semantic boosting parameters. |
+| embed_type | &str | The type of embedding to generate ("doc" or "query"). |
+| dataset_config | DatasetConfiguration | Configuration parameters for the dataset. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;f32&gt;, ServiceError&gt; |  | A `Result` containing the dense vector embedding as a vector of floats, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves API keys and server URLs from environment variables and dataset configuration.
+2. Clips the message to a maximum length.
+3. Optionally appends the semantic boost phrase to the message.
+4. Constructs the embedding input based on the `embed_type`.
+5. Sends a request to the embedding server with the input and model parameters.
+6. Parses the response and extracts the embedding vector.
+7. If semantic boosting is used, combines the message and boost vectors.
+8. Returns the resulting dense vector embedding.
+
+### `get_sparse_vector`
+#### Description
+This function retrieves a sparse vector embedding for a given text message. It interacts with a custom embedding server to obtain the embedding.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| message | String | The text message to embed. |
+| embed_type | &str | The type of embedding to generate ("doc" or "query"). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;(u32, f32)&gt;, ServiceError&gt; |  | A `Result` containing the sparse vector embedding as a vector of tuples (index, value), or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves the server origin URL from an environment variable based on the `embed_type`.
+2. Clips the message to a maximum length.
+3. Sends a request to the custom embedding server with the message and `embed_type`.
+4. Parses the response and extracts the sparse vector embedding.
+5. Returns the resulting sparse vector embedding.
+
+### `get_dense_vectors`
+#### Description
+This function retrieves dense vector embeddings for a batch of text messages, handling optional semantic boosting. It interacts with an external embedding server (OpenAI or a custom server) to obtain the embeddings in batches of 30.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| content_and_distances | Vec&lt;(String, Option&lt;SemanticBoost&gt;)&gt; | A vector of tuples containing the text messages and optional semantic boosting parameters. |
+| embed_type | &str | The type of embedding to generate ("doc" or "query"). |
+| dataset_config | DatasetConfiguration | Configuration parameters for the dataset. |
+| reqwest_client | reqwest::Client | A `reqwest` client for making HTTP requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;Vec&lt;f32&gt;&gt;, ServiceError&gt; |  | A `Result` containing a vector of dense vector embeddings, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves API keys and server URLs from environment variables and dataset configuration.
+2. Splits the input messages and distance phrases into groups of 30.
+3. Creates asynchronous tasks for embedding generation for each group of messages and distance phrases.
+4. Collects the results from the asynchronous tasks.
+5. Combines the message and boost vectors if semantic boosting is used.
+6. Returns the resulting dense vector embeddings.
+
+### `get_sparse_vectors`
+#### Description
+This function retrieves sparse vector embeddings for a batch of text messages, handling optional full-text boosting. It interacts with a custom embedding server to obtain the embeddings in batches of 30.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| content_and_boosts | Vec&lt;(String, Option&lt;FullTextBoost&gt;)&gt; | A vector of tuples containing the text messages and optional full-text boosting parameters. |
+| embed_type | &str | The type of embedding to generate ("doc" or "query"). |
+| reqwest_client | reqwest::Client | A `reqwest` client for making HTTP requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;Vec&lt;(u32, f32)&gt;&gt;, ServiceError&gt; |  | A `Result` containing a vector of sparse vector embeddings, or a `ServiceError` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves the server origin URL from an environment variable based on the `embed_type`.
+2. Splits the input messages and boost phrases into groups of 30.
+3. Creates asynchronous tasks for embedding generation for each group of messages and boost phrases.
+4. Collects the results from the asynchronous tasks.
+5. Applies full-text boosting to the sparse vectors if specified.
+6. Returns the resulting sparse vector embeddings.
+
+### `cross_encoder`
+#### Description
+This function reranks a list of search results using a cross-encoder model. It interacts with a custom reranking server to obtain the reranked scores.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | String | The search query. |
+| page_size | u64 | The desired number of results after reranking. |
+| results | Vec&lt;ScoreChunkDTO&gt; | The initial search results to rerank. |
+| dataset_config | &DatasetConfiguration | Configuration parameters for the dataset. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;ScoreChunkDTO&gt;, actix_web::Error&gt; |  | A `Result` containing the reranked search results, or an `actix_web::Error` if an error occurs. |
+
+#### Internal Logic
+1. Retrieves the reranking server URL from the dataset configuration.
+2. If the number of results is small, sends a single request to the reranking server with the query and chunk texts.
+3. If the number of results is large, splits the results into batches of 20 and sends multiple requests to the reranking server.
+4. Updates the scores of the results based on the reranking server's response.
+5. Sorts the results by score and truncates to the desired page size.
+6. Returns the reranked search results.
+
+### `get_bm25_embeddings`
+#### Description
+This function generates BM25 embeddings for a batch of text messages, handling optional full-text boosting. It uses the `term_frequency` function to calculate the term frequencies and applies boosting if specified.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chunks_and_boost | Vec&lt;(String, Option&lt;FullTextBoost&gt;)&gt; | A vector of tuples containing the text messages and optional full-text boosting parameters. |
+| avg_len | f32 | The average length of documents in the corpus. |
+| b | f32 | The BM25 b parameter. |
+| k | f32 | The BM25 k parameter. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Vec&lt;Vec&lt;(u32, f32)&gt;&gt; |  | A vector of BM25 embeddings, where each embedding is a vector of tuples (term ID, term frequency). |
+
+#### Internal Logic
+1. Tokenizes the input messages using the `tokenize_batch` function.
+2. Calculates the term frequencies for each message using the `term_frequency` function.
+3. Returns the resulting BM25 embeddings.
+
+## Side Effects
+The functions in this file interact with external embedding servers, potentially modifying their state by adding new embeddings or updating existing ones.
+
+## Dependencies
+This code depends on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| `murmur3` | Hashing function for generating term IDs. |
+| `openai_dive` | OpenAI API client. |
+| `ureq` | HTTP client for making requests to embedding servers. |
+| `serde` | Serialization and deserialization library. |
+| `tantivy` | Text analysis library for tokenization and stemming. |
+| `ndarray` | Array manipulation library for averaging embeddings. |
+| `regex` | Regular expression library for text processing. |
+| `regex_split` | Library for splitting strings based on regular expressions. |
+| `scraper` | HTML parsing library. |
+
+## Error Handling
+The functions in this file return `Result` types, indicating potential errors using the `ServiceError` enum. Errors are logged and propagated to the caller.
+
+## Logging
+The code uses the `log` crate for logging errors and informational messages.
+
+## TODOs
+There are no explicit TODOs in the code.

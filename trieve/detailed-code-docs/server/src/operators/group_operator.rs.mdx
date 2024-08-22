@@ -1,0 +1,313 @@
+---
+title: "group_operator.rs"
+---
+
+Here's a high-level description and documentation of the `group_operator.rs` file:
+
+## High-level description
+
+The `group_operator.rs` file contains functions for managing chunk groups in the Trieve system. It provides operations for creating, updating, deleting, and querying chunk groups, as well as managing the relationships between chunks and groups. The file interacts with both the database (through Diesel ORM) and the Qdrant vector database for various operations.
+
+## Code Structure
+
+The file contains several async functions that perform database operations and interact with Qdrant. These functions are typically called by API handlers to implement the group-related endpoints of the Trieve API. The functions often use the `web::Data&lt;Pool&gt;` to access the database connection pool and perform database operations.
+
+## Symbols
+
+### get_group_from_tracking_id_query
+#### Description
+Retrieves a chunk group and its associated file ID based on the tracking ID and dataset UUID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tracking_id | String | The tracking ID of the group |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;ChunkGroupAndFileId, ServiceError&gt; | Result | The chunk group and file ID if found, or an error |
+
+### get_group_ids_from_tracking_ids_query
+#### Description
+Retrieves group IDs and their tracking IDs based on a list of tracking IDs and a dataset UUID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tracking_ids | Vec&lt;String&gt; | List of tracking IDs |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;(uuid::Uuid, Option&lt;String&gt;)&gt;, ServiceError&gt; | Result | List of tuples containing group IDs and their tracking IDs |
+
+### update_group_by_tracking_id_query
+#### Description
+Updates a chunk group's name and description based on its tracking ID and dataset UUID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tracking_id | String | The tracking ID of the group |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| new_name | Option&lt;String&gt; | The new name for the group (if provided) |
+| new_description | Option&lt;String&gt; | The new description for the group (if provided) |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or error |
+
+### create_groups_query
+#### Description
+Creates new chunk groups in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| new_groups | Vec&lt;ChunkGroup&gt; | List of new chunk groups to create |
+| upsert_by_tracking_id | bool | Whether to upsert based on tracking ID |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;ChunkGroup&gt;, ServiceError&gt; | Result | List of created chunk groups or error |
+
+### get_groups_for_dataset_query
+#### Description
+Retrieves chunk groups for a specific dataset, with pagination.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| page | u64 | The page number for pagination |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(Vec&lt;ChunkGroupAndFileId&gt;, Option&lt;i32&gt;), ServiceError&gt; | Result | List of chunk groups with file IDs and total count |
+
+### get_group_by_id_query
+#### Description
+Retrieves a chunk group by its ID and dataset UUID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_id | uuid::Uuid | The ID of the group |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;ChunkGroupAndFileId, ServiceError&gt; | Result | The chunk group and file ID if found, or an error |
+
+### delete_group_by_id_query
+#### Description
+Deletes a chunk group and optionally its associated chunks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_id | uuid::Uuid | The ID of the group to delete |
+| dataset | Dataset | The dataset object |
+| deleted_at | chrono::NaiveDateTime | The deletion timestamp |
+| delete_chunks | Option&lt;bool&gt; | Whether to delete associated chunks |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or error |
+
+### update_chunk_group_query
+#### Description
+Updates a chunk group's information in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group | ChunkGroup | The updated chunk group information |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;ChunkGroup, ServiceError&gt; | Result | The updated chunk group or error |
+
+### create_chunk_bookmark_query
+#### Description
+Creates a new chunk bookmark (association between a chunk and a group).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+| bookmark | ChunkGroupBookmark | The bookmark to create |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;uuid::Uuid, ServiceError&gt; | Result | The Qdrant point ID of the associated chunk |
+
+### get_bookmarks_for_group_query
+#### Description
+Retrieves bookmarks (chunks) for a specific group, with pagination.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_id | UnifiedId | The ID of the group |
+| page | u64 | The page number for pagination |
+| limit | Option&lt;u64&gt; | The number of items per page |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;GroupsBookmarkQueryResult, ServiceError&gt; | Result | The bookmarks and group information |
+
+### get_groups_for_bookmark_query
+#### Description
+Retrieves groups associated with specific chunks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chunk_ids | Vec&lt;uuid::Uuid&gt; | List of chunk IDs |
+| dataset_uuid | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;GroupsForChunk&gt;, ServiceError&gt; | Result | List of groups for each chunk |
+
+### delete_chunk_from_group_query
+#### Description
+Removes a chunk from a group (deletes the bookmark).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chunk_id | uuid::Uuid | The ID of the chunk |
+| group_id | uuid::Uuid | The ID of the group |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;uuid::Uuid, ServiceError&gt; | Result | The Qdrant point ID of the removed chunk |
+
+### create_group_from_file_query
+#### Description
+Creates an association between a group and a file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_id | uuid::Uuid | The ID of the group |
+| file_id | uuid::Uuid | The ID of the file |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or error |
+
+### get_point_ids_from_unified_group_ids
+#### Description
+Retrieves Qdrant point IDs associated with given group IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_ids | Vec&lt;UnifiedId&gt; | List of group IDs |
+| dataset_id | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;uuid::Uuid&gt;, ServiceError&gt; | Result | List of Qdrant point IDs |
+
+### get_groups_from_group_ids_query
+#### Description
+Retrieves chunk groups based on a list of group IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_ids | Vec&lt;uuid::Uuid&gt; | List of group IDs |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;ChunkGroupAndFileId&gt;, ServiceError&gt; | Result | List of chunk groups with file IDs |
+
+### check_group_ids_exist_query
+#### Description
+Checks if given group IDs exist in the specified dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group_ids | Vec&lt;uuid::Uuid&gt; | List of group IDs to check |
+| dataset_id | uuid::Uuid | The UUID of the dataset |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;uuid::Uuid&gt;, ServiceError&gt; | Result | List of existing group IDs |
+
+### soft_update_grouped_chunks_query
+#### Description
+Queues an update operation for chunks in a group.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| new_group | ChunkGroup | The updated group information |
+| prev_group | ChunkGroup | The previous group information |
+| redis_pool | web::Data&lt;RedisPool&gt; | The Redis connection pool |
+| dataset_id | uuid::Uuid | The UUID of the dataset |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or error |
+
+### update_grouped_chunks_query
+#### Description
+Updates the chunks associated with a group in both the database and Qdrant.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prev_group | ChunkGroup | The previous group information |
+| new_group | ChunkGroup | The updated group information |
+| pool | web::Data&lt;Pool&gt; | The database connection pool |
+| dataset_config | DatasetConfiguration | The dataset configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Success or error |
+
+### get_chunk_point_ids_in_chunk_group_query
+#### Description
+Retri

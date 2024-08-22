@@ -1,0 +1,61 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for updating the foreign key constraint in the `chunk_group_bookmarks` table. The migration modifies the relationship between the `chunk_group_bookmarks` and `chunk_metadata` tables, ensuring referential integrity with cascading delete and update actions.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. In the "up" direction (applying the migration):
+   - Removes an existing foreign key constraint named `card_collection_bookmarks_card_metadata_id_fkey` from the `chunk_group_bookmarks` table.
+   - Adds a new foreign key constraint named `chunk_group_bookmarks_chunk_metadata_id_fkey` to the `chunk_group_bookmarks` table, linking it to the `chunk_metadata` table.
+   - Implements cascading delete and update actions for the new constraint.
+
+2. In the "down" direction (reverting the migration):
+   - Removes the newly added foreign key constraint `chunk_group_bookmarks_chunk_metadata_id_fkey`.
+   - Restores the original foreign key constraint `card_collection_bookmarks_card_metadata_id_fkey`.
+
+These changes ensure that when records in the `chunk_metadata` table are deleted or updated, corresponding records in the `chunk_group_bookmarks` table are automatically affected, maintaining data consistency.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to apply the migration. It drops the existing constraint and adds the new one with cascading actions.
+
+   ```sql
+   ALTER TABLE chunk_group_bookmarks
+     DROP CONSTRAINT card_collection_bookmarks_card_metadata_id_fkey;
+
+   ALTER TABLE chunk_group_bookmarks
+     ADD CONSTRAINT chunk_group_bookmarks_chunk_metadata_id_fkey
+     FOREIGN KEY (chunk_metadata_id) REFERENCES chunk_metadata(id) ON DELETE CASCADE ON UPDATE CASCADE;
+   ```
+
+2. `down.sql`: This file contains the SQL commands to revert the migration. It drops the new constraint and restores the original one.
+
+   ```sql
+   ALTER TABLE chunk_group_bookmarks
+     DROP CONSTRAINT chunk_group_bookmarks_chunk_metadata_id_fkey;
+
+   ALTER TABLE chunk_group_bookmarks
+     ADD CONSTRAINT card_collection_bookmarks_card_metadata_id_fkey
+     FOREIGN KEY (chunk_metadata_id) REFERENCES chunk_metadata(id) ON DELETE CASCADE ON UPDATE CASCADE;
+   ```
+
+## Dependencies
+This migration assumes the existence of the following database objects:
+- `chunk_group_bookmarks` table
+- `chunk_metadata` table
+- `id` column in the `chunk_metadata` table
+- `chunk_metadata_id` column in the `chunk_group_bookmarks` table
+
+## Side Effects
+- The foreign key relationship between `chunk_group_bookmarks` and `chunk_metadata` tables is modified.
+- Cascading delete and update actions are implemented, which means that changes to the `chunk_metadata` table will automatically propagate to the `chunk_group_bookmarks` table.
+- The constraint name is changed from `card_collection_bookmarks_card_metadata_id_fkey` to `chunk_group_bookmarks_chunk_metadata_id_fkey`, suggesting a possible renaming of tables or a conceptual change from "card collections" to "chunk groups" in the database schema.
+
+## Notes
+- The migration scripts do not include explicit error handling. If any of the required tables or columns do not exist, or if there are issues with the constraint names, the database system may raise an error, potentially causing the migration to fail.
+- The change in constraint names (from `card_collection_bookmarks_card_metadata_id_fkey` to `chunk_group_bookmarks_chunk_metadata_id_fkey`) indicates a possible evolution in the database schema or naming conventions.
+- These migration scripts are typically part of a larger database migration system, allowing for version control and management of database schema changes over time.

@@ -1,0 +1,94 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script migrates the notification system from a user-centric model to a dataset-centric model. It modifies existing tables and creates a trigger function to maintain notification counts per dataset.
+
+## Code Structure
+The script consists of a series of SQL `ALTER TABLE` statements followed by the definition of a `CREATE OR REPLACE FUNCTION` statement. The function `update_notification_count` is a trigger that will be automatically invoked on INSERT and DELETE operations on a table (not specified in this script).
+
+## Symbols
+
+### `ALTER TABLE file_upload_completed_notifications`
+#### Description
+This statement removes the `user_uuid` column from the `file_upload_completed_notifications` table.
+
+#### Inputs
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
+
+#### Internal Logic
+Drops the column `user_uuid` from the table `file_upload_completed_notifications`.
+
+### `ALTER TABLE user_notification_counts RENAME TO dataset_notification_counts`
+#### Description
+This statement renames the table `user_notification_counts` to `dataset_notification_counts`.
+
+#### Inputs
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
+
+#### Internal Logic
+Renames the table `user_notification_counts` to `dataset_notification_counts`.
+
+### `ALTER TABLE dataset_notification_counts ADD COLUMN dataset_uuid uuid`
+#### Description
+This statement adds a new column named `dataset_uuid` of type `uuid` to the `dataset_notification_counts` table.
+
+#### Inputs
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
+
+#### Internal Logic
+Adds a new column `dataset_uuid` of type `uuid` to the table `dataset_notification_counts`.
+
+### `ALTER TABLE dataset_notification_counts DROP COLUMN user_uuid`
+#### Description
+This statement removes the `user_uuid` column from the `dataset_notification_counts` table.
+
+#### Inputs
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
+
+#### Internal Logic
+Drops the column `user_uuid` from the table `dataset_notification_counts`.
+
+### `CREATE OR REPLACE FUNCTION update_notification_count()`
+#### Description
+This statement defines a trigger function named `update_notification_count` that automatically updates the notification count in the `dataset_notification_counts` table whenever a new notification is inserted or deleted.
+
+#### Inputs
+This function implicitly takes the inserted or deleted row as input through the `NEW` and `OLD` variables within the trigger context.
+
+#### Outputs
+This function returns `NEW` for INSERT operations, effectively returning the newly inserted row. For DELETE operations, the return value is insignificant as the row is being deleted.
+
+#### Internal Logic
+- It first checks the type of operation (`TG_OP`) that triggered the function:
+    - If it's an `INSERT`, it inserts a new row into `dataset_notification_counts` with a count of 1 or increments the existing count if a row with the same `dataset_uuid` already exists.
+    - If it's a `DELETE`, it decrements the `notification_count` for the corresponding `dataset_uuid`. 
+
+## Side Effects
+- Modifies the database schema by altering existing tables and creating a new trigger function.
+- Automatically updates the `dataset_notification_counts` table whenever a notification is inserted or deleted.
+
+## Error Handling
+This script does not implement specific error handling. Any errors during the execution of the SQL statements will be returned by the database server.
+
+## TODOs
+- The table on which this trigger function should be applied is not specified in the script. You need to define the trigger separately and associate it with the relevant table.
+- There is a bug in the DELETE logic of the trigger function. It should be using `OLD.dataset_uuid` instead of `OLD.user_uuid` to identify the dataset for which the notification count needs to be decremented.
+```sql
+UPDATE dataset_notification_counts
+SET notification_count = notification_count - 1
+WHERE dataset_uuid = OLD.dataset_uuid;
+```

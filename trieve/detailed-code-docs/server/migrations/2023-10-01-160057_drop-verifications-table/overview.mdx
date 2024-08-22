@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for dropping the `verification_notifications` and `card_verification` tables from the database. The migration is reversible, with separate scripts for applying (up) and reverting (down) the changes.
+
+## What does it do?
+The migration removes two tables related to card verification from the database:
+
+1. `verification_notifications`: This table likely stored notifications sent to users about card verifications.
+2. `card_verification`: This table probably contained records of card verification events.
+
+By dropping these tables, the database schema is simplified, potentially indicating that the card verification feature is being removed or significantly changed in the application.
+
+The migration is designed to be reversible, allowing developers to undo these changes if needed. This is particularly useful in development environments or if there's a need to roll back the changes in production.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+```sql
+DROP TABLE IF EXISTS verification_notifications;
+DROP TABLE IF EXISTS card_verification;
+```
+
+These commands remove the specified tables from the database if they exist. The `IF EXISTS` clause ensures that the operation doesn't fail if the tables are already absent.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+CREATE TABLE verification_notifications (
+    -- Table structure
+);
+
+ALTER TABLE card_verification ADD CONSTRAINT uq_card_id UNIQUE (card_id);
+
+CREATE TABLE public.card_verification (
+    -- Table structure
+);
+```
+
+These commands recreate the dropped tables with their original structure and constraints. This allows for a complete reversal of the migration if needed.
+
+## Configuration
+The migration is identified by its timestamp: `2023-10-01-160057`. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
+
+## Dependencies
+This migration doesn't explicitly depend on external libraries, but it does assume the existence of certain database features:
+
+1. UUID data type support
+2. TIMESTAMP data type with time zone support
+3. Support for foreign key constraints
+
+These features are standard in modern relational database systems like PostgreSQL.
+
+## Additional Notes
+
+1. **Data Loss**: It's important to note that dropping tables results in permanent data loss. Any application relying on these tables will need to be updated to handle their absence.
+
+2. **Foreign Key Relationships**: The `verification_notifications` table had foreign key relationships with `users`, `card_metadata`, and `card_verification` tables. Dropping this table will remove these relationships, which might affect data integrity in related tables.
+
+3. **Unique Constraint**: The `card_verification` table had a unique constraint on the `card_id` column. This constraint is recreated in the `down.sql` script, ensuring that if the migration is reverted, the data integrity rules are restored.
+
+4. **Timestamps**: Both tables used `created_at` and `updated_at` columns with default values set to the current timestamp. This pattern is common for tracking record creation and modification times.
+
+5. **Schema Naming**: The `card_verification` table is explicitly created in the `public` schema in the `down.sql` script. This might be to ensure consistency with the original table location if the database uses multiple schemas.
+
+6. **Similarity Score**: Both tables contained a `similarity_score` column of type `BigInt`. This suggests that the verification process involved some form of comparison or matching, possibly between card details or images.
+
+By removing these tables, the application is likely shifting away from a particular approach to card verification or notification. Developers working with this codebase should be aware of these changes and update any related application logic accordingly.

@@ -1,0 +1,62 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for replacing the `user_id` column with an `owner_id` column in the `topics` table of a database. The migration is designed to be reversible, with separate scripts for applying the changes (`up.sql`) and reverting them (`down.sql`).
+
+## What does it do?
+The migration performs the following tasks:
+
+1. In the "up" direction:
+   - Adds a new `owner_id` column to the `topics` table.
+   - Copies data from the existing `user_id` column to the new `owner_id` column.
+   - Removes the old `user_id` column.
+   - Creates an index on the `dataset_id` and `owner_id` columns for improved query performance.
+
+2. In the "down" direction:
+   - Adds back the `user_id` column to the `topics` table.
+   - Copies data from the `owner_id` column to the restored `user_id` column.
+   - Removes the `owner_id` column.
+   - Drops the index created in the "up" migration.
+
+This migration essentially renames the `user_id` column to `owner_id`, potentially reflecting a change in terminology or data model in the application. The process ensures that existing data is preserved during the transition.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to apply the migration:
+
+```sql
+ALTER TABLE topics ADD COLUMN owner_id TEXT NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+UPDATE topics SET owner_id = user_id WHERE user_id IS NOT NULL;
+ALTER TABLE topics DROP COLUMN user_id;
+CREATE INDEX topics_dataset_id_owner_id_idx ON topics (dataset_id, owner_id);
+```
+
+The script adds the `owner_id` column, populates it with data from `user_id`, removes the `user_id` column, and creates an index on `dataset_id` and `owner_id`.
+
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+```sql
+ALTER TABLE topics ADD COLUMN user_id TEXT;
+UPDATE topics SET user_id = owner_id;
+ALTER TABLE topics DROP COLUMN owner_id;
+DROP INDEX IF EXISTS "topics_dataset_id_owner_id_idx";
+```
+
+The script adds back the `user_id` column, populates it with data from `owner_id`, removes the `owner_id` column, and drops the index created in the "up" migration.
+
+## Configuration
+The migration uses a default value for the `owner_id` column in the "up" migration:
+
+```sql
+DEFAULT '00000000-0000-0000-0000-000000000000'
+```
+
+This UUID-like string serves as a placeholder for rows where no `user_id` was previously set. Developers should be aware of this default value and its implications for data integrity and application logic.
+
+The index name `topics_dataset_id_owner_id_idx` is used in both scripts. If this index name needs to be changed, it should be updated in both the `up.sql` and `down.sql` files to ensure consistency.
+
+In summary, this migration directory contains scripts to safely transition from a `user_id` to an `owner_id` column in the `topics` table, preserving existing data and providing a way to revert the changes if necessary. The migration also optimizes query performance by creating an index on the new column structure.

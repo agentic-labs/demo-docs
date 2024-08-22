@@ -1,0 +1,92 @@
+---
+title: "reindex-worker.rs"
+---
+
+## High-level description
+This code defines a worker process that listens for messages on a Redis queue named "collection_migration". Each message contains instructions for migrating points from one Qdrant collection to another, potentially applying transformations to the points during the process.
+
+## Code Structure
+The code consists of a main function and a `migrate_bm25` function. The main function handles the message queue consumption and deserialization, while `migrate_bm25` performs the actual migration of points using a BM25 embedding transformation.
+
+## References
+- `MigratePointMessage`: Defines the structure of messages consumed from the Redis queue.
+- `MigrationMode`: Enum representing different migration modes, currently only `BM25` is implemented.
+- `get_qdrant_connection`: Function to establish a connection to a Qdrant instance.
+- `get_bm25_embeddings`: Function to calculate BM25 embeddings for given text content.
+
+## Symbols
+### `main`
+#### Description
+This function initializes the worker process, connects to Redis and Qdrant, and continuously listens for messages on the "collection_migration" queue. Upon receiving a message, it deserializes it and initiates the appropriate migration process based on the specified mode.
+
+#### Inputs
+This function takes no direct inputs. It relies on environment variables for configuration.
+
+#### Outputs
+This function does not return any values. It logs success or error messages based on the migration outcome.
+
+#### Internal Logic
+1. Initializes tracing and logging.
+2. Connects to Redis using the provided `REDIS_URL` environment variable.
+3. Enters an infinite loop to continuously listen for messages on the "collection_migration" queue.
+4. For each message:
+    - Attempts to deserialize the message into a `MigratePointMessage` struct.
+    - Connects to Qdrant using the `QDRANT_URL` and `QDRANT_API_KEY` environment variables.
+    - Retrieves the points to be migrated from the source collection in Qdrant.
+    - Based on the `mode` field in the message, calls the appropriate migration function (currently only `migrate_bm25` is implemented).
+    - Logs success or error messages based on the migration outcome.
+    - If an error occurs during message processing, pushes the message to a "dead_letters" queue in Redis.
+
+### `migrate_bm25`
+#### Description
+This function migrates points from one Qdrant collection to another, applying a BM25 embedding transformation to the points during the process.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `qdrant_client` | `Qdrant` | A Qdrant client instance. |
+| `points` | `Vec&lt;RetrievedPoint&gt;` | A vector of points retrieved from the source collection. |
+| `to_collection` | `String` | The name of the destination collection. |
+| `average_len` | `f32` | Average document length for BM25 calculation. |
+| `b` | `f32` | BM25 parameter controlling document length normalization. |
+| `k` | `f32` | BM25 parameter controlling term frequency scaling. |
+
+#### Outputs
+- `Result&lt;(), ServiceError&gt;`: Returns `Ok(())` on successful migration, otherwise returns a `ServiceError`.
+
+#### Internal Logic
+1. Iterates through each point in the `points` vector.
+2. Extracts the "content" field from the point's payload.
+3. Calculates BM25 embeddings for the extracted content using the provided parameters.
+4. Creates a new point with the same ID and payload as the original point, but with updated vectors that include the calculated BM25 embeddings.
+5. Collects all the new points into a vector.
+6. Upserts the new points into the destination collection in Qdrant.
+
+## Side Effects
+- Modifies data in Qdrant by migrating points from one collection to another.
+- Logs messages at the INFO and ERROR levels.
+- Pushes messages to a "dead_letters" queue in Redis upon encountering errors during message processing.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `qdrant_client` | Used to interact with a Qdrant instance. |
+| `bb8_redis` | Used to connect to and interact with a Redis instance. |
+| `tracing_subscriber` | Used for logging and tracing. |
+| `trieve_server` | Internal crate containing data models, error types, and utility functions. |
+
+## Configuration
+This code relies on the following environment variables for configuration:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `REDIS_URL` | `String` | Required | The URL of the Redis instance. |
+| `QDRANT_URL` | `String` | Required | The URL of the Qdrant instance. |
+| `QDRANT_API_KEY` | `String` | Required | The API key for the Qdrant instance. |
+
+## Error Handling
+- Errors encountered during Redis and Qdrant operations are logged and result in the current message being skipped.
+- If a Redis connection error occurs, the worker sleeps for an increasing duration before retrying.
+- Messages that fail to be processed are pushed to a "dead_letters" queue in Redis.
+
+## Logging
+The code uses the `tracing` crate for logging. Log messages are output at the INFO and ERROR levels.

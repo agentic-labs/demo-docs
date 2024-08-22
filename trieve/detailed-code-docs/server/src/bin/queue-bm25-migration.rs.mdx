@@ -1,0 +1,76 @@
+---
+title: "queue-bm25-migration.rs"
+---
+
+## High-level description
+The `queue-bm25-migration.rs` file contains a command-line application that queues migration tasks for chunks in Qdrant collections. It iterates through specified Qdrant collections, retrieves chunks in batches, and sends messages to a Redis queue for asynchronous processing by a worker. The migration tasks involve converting existing vector representations to BM25 vectors and storing them in new Qdrant collections.
+
+## Code Structure
+The code consists of a single `main` function that performs the following steps:
+1. **Initialization:** Sets up logging, connects to Redis, and retrieves environment variables.
+2. **Collection Iteration:** Iterates through a list of Qdrant collections based on specified vector sizes.
+3. **Chunk Retrieval:** For each collection, retrieves chunks in batches using the `scroll_qdrant_collection_ids` function.
+4. **Message Creation:** Creates a `MigratePointMessage` for each batch of chunks, specifying the source and destination collections, and the BM25 parameters.
+5. **Queueing:** Sends the message to a Redis queue named "collection_migration".
+6. **Logging:** Logs the number of chunks queued for migration.
+
+## References
+- `scroll_qdrant_collection_ids`: A function from the `qdrant_operator` module that retrieves chunk IDs from a Qdrant collection in batches.
+- `MigratePointMessage`: A data structure defined in the `models` module that represents a migration task.
+- `MigrationMode`: An enum defined in the `models` module that specifies the type of migration to perform.
+
+## Symbols
+### `main`
+#### Description
+The `main` function is the entry point of the command-line application. It orchestrates the process of queuing migration tasks for chunks in Qdrant collections.
+
+#### Inputs
+None
+
+#### Outputs
+- `Result&lt;(), ServiceError&gt;`: Indicates whether the migration tasks were successfully queued.
+
+#### Internal Logic
+1. **Initialization:**
+    - Sets up logging using the `tracing_subscriber` crate.
+    - Retrieves the Redis URL and connection pool size from environment variables.
+    - Creates a Redis connection pool using the `bb8_redis` crate.
+    - Retrieves the list of vector sizes and constructs the corresponding Qdrant collection names.
+2. **Collection Iteration:**
+    - Iterates through the list of Qdrant collection names.
+3. **Chunk Retrieval:**
+    - For each collection, initializes an offset variable to track the current position in the collection.
+    - Enters a loop that continues until all chunks in the collection have been retrieved.
+    - Calls the `scroll_qdrant_collection_ids` function to retrieve a batch of chunk IDs and the new offset.
+4. **Message Creation:**
+    - Creates a `MigratePointMessage` for the batch of chunks, specifying:
+        - `qdrant_point_ids`: The list of chunk IDs.
+        - `from_collection`: The source Qdrant collection name.
+        - `to_collection`: The destination Qdrant collection name (with "_bm25" suffix).
+        - `mode`: The migration mode, set to `MigrationMode::BM25` with specified parameters.
+5. **Queueing:**
+    - Serializes the `MigratePointMessage` to JSON.
+    - Pushes the JSON message to the "collection_migration" Redis queue using the `redis` crate.
+6. **Logging:**
+    - Logs the number of chunks queued for migration, the current offset, and the new offset.
+    - Updates the offset variable for the next iteration.
+
+## Side Effects
+- Pushes messages to the "collection_migration" Redis queue.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `tracing_subscriber` | Logging |
+| `dotenv` | Environment variable loading |
+| `bb8_redis` | Redis connection pooling |
+| `uuid` | UUID generation |
+| `serde_json` | JSON serialization |
+| `redis` | Redis client |
+| `trieve_server` | Internal crate containing data models, error handling, and Qdrant operator |
+
+## Error Handling
+The `main` function returns a `Result&lt;(), ServiceError&gt;` to indicate success or failure. Errors are handled by returning a `ServiceError` with an appropriate message.
+
+## Logging
+The code uses the `tracing_subscriber` crate for logging. Log messages are written to standard output at the INFO level.

@@ -1,0 +1,54 @@
+---
+title: "down.sql"
+---
+
+## High-level description
+This SQL script is designed to undo the changes made by a corresponding `up.sql` migration. It removes triggers, functions, and tables related to dataset and organization usage counts, and recreates a `chunk_metadata_counts` table along with an associated function for updating counts.
+
+## Symbols
+
+### DROP statements
+#### Description
+These statements remove triggers, functions, and tables that were likely created in the `up.sql` migration.
+
+#### Internal Logic
+1. Drops triggers: `update_dataset_counts_trigger` and `update_organization_counts_trigger`
+2. Drops functions: `update_dataset_counts()` and `update_organization_counts()`
+3. Drops tables: `dataset_usage_counts` and `organization_usage_counts`
+
+### CREATE TABLE chunk_metadata_counts
+#### Description
+Creates a new table to store metadata counts for chunks associated with datasets.
+
+#### Internal Logic
+- Creates a table named `chunk_metadata_counts` with columns:
+  - `id`: UUID, primary key with default value generated using `gen_random_uuid()`
+  - `dataset_id`: UUID, not null, foreign key referencing `datasets(id)`
+  - `total_rows`: BIGINT, not null
+
+### CREATE OR REPLACE FUNCTION update_chunk_metadata_count()
+#### Description
+Creates a function to update the `chunk_metadata_counts` table when chunks are inserted or deleted.
+
+#### Inputs
+This function is designed to be used as a trigger, so it doesn't have explicit inputs but operates on the `NEW` and `OLD` pseudo-records provided by the trigger context.
+
+#### Outputs
+Returns NULL (as required for trigger functions in PostgreSQL)
+
+#### Internal Logic
+1. For INSERT operations:
+   - Inserts a new row into `card_metadata_counts` with the new dataset_id and a count of 1
+   - If a row already exists for the dataset_id, it updates the existing row by incrementing the count
+2. For DELETE operations:
+   - Updates the `card_metadata_counts` table by decrementing the count for the corresponding dataset_id
+
+## Side Effects
+- Removes existing triggers, functions, and tables related to usage counts
+- Creates a new table and function for tracking chunk metadata counts
+
+## Error Handling
+The script uses `IF EXISTS` and `IF NOT EXISTS` clauses to prevent errors if the objects being dropped don't exist or if the table being created already exists.
+
+## TODOs
+There appears to be a discrepancy in the table names used in the function. The function refers to `card_metadata_counts`, but the table created is named `chunk_metadata_counts`. This inconsistency should be addressed to ensure proper functionality.

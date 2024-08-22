@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for updating a tsvector column in the `card_metadata` table. The migration adds functionality to automatically update a full-text search index for the `content` column, enabling efficient text search capabilities in the database.
+
+## What does it do?
+The migration scripts in this directory implement a system for maintaining a full-text search index in the `card_metadata` table. Here's a simplified explanation of what it does:
+
+1. It creates a special function that takes the content of a card and converts it into a format that's optimized for text searching.
+2. It sets up an automatic trigger that runs this function every time a new card is added to the database.
+3. This trigger updates a special column in the database that stores the search-optimized version of the card's content.
+4. As a result, whenever someone wants to search for cards, the database can quickly find matching cards without having to scan through all the raw content.
+
+The "up" script sets up this system, while the "down" script removes it, allowing for easy application or reversal of these changes.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to set up the full-text search functionality.
+   - It creates a function called `update_tsvector()` that generates a tsvector (text search vector) from the `content` column of the `card_metadata` table.
+   - It also creates a trigger named `update_tsvector_trigger` that automatically calls this function before each insert operation on the `card_metadata` table.
+
+   Here's a snippet of the key parts of this file:
+
+   ```sql
+   CREATE FUNCTION update_tsvector() RETURNS trigger AS $$
+   BEGIN
+     NEW.card_metadata_tsvector := to_tsvector('english', NEW.content);
+     RETURN NEW;
+   END
+   $$ LANGUAGE plpgsql;
+
+   CREATE TRIGGER update_tsvector_trigger
+   BEFORE INSERT ON card_metadata
+   FOR EACH ROW EXECUTE FUNCTION update_tsvector();
+   ```
+
+2. `down.sql`: This file contains the SQL commands to reverse the changes made by `up.sql`.
+   - It drops the trigger `update_tsvector_trigger` from the `card_metadata` table.
+   - It then drops the `update_tsvector()` function.
+
+   Here's the content of this file:
+
+   ```sql
+   DROP TRIGGER IF EXISTS update_tsvector_trigger ON card_metadata;
+   DROP FUNCTION IF EXISTS update_tsvector();
+   ```
+
+## Dependencies
+The migration scripts rely on PostgreSQL-specific features:
+
+- PostgreSQL: The scripts use PostgreSQL-specific syntax and functions, such as `to_tsvector` and `LANGUAGE plpgsql`. The exact version is not specified, but it should be compatible with recent versions of PostgreSQL that support these features.
+
+## Configuration
+These migration scripts don't require any external configuration. They operate on the existing `card_metadata` table and assume that this table has a `content` column and a `card_metadata_tsvector` column.
+
+## Performance Considerations
+The use of a trigger to update the tsvector column ensures that the search index is always up-to-date with the content. However, it may slightly impact the performance of insert operations on the `card_metadata` table. This trade-off is usually acceptable for maintaining real-time search capabilities.
+
+It's worth noting that this migration only affects insert operations. If there's a need to update the tsvector for existing rows or for update operations, additional triggers or manual updates might be necessary.
+
+## Error Handling
+The `down.sql` script uses `IF EXISTS` clauses when dropping the trigger and function. This prevents errors if these objects don't exist when the script is run, making the migration more robust and idempotent.
+
+## Notes
+1. This migration is focused on improving search functionality for the `card_metadata` table.
+2. The scripts assume that the `card_metadata` table already exists and has the necessary columns (`content` and `card_metadata_tsvector`).
+3. The full-text search is configured to use the English language for text processing. If multi-language support is needed, modifications to the `to_tsvector` function call would be required.
+4. After applying this migration, any inserts into the `card_metadata` table will automatically update the `card_metadata_tsvector` column, keeping the search index current.
+5. If the application needs to perform full-text searches, it should query against the `card_metadata_tsvector` column using PostgreSQL's full-text search functions for optimal performance.

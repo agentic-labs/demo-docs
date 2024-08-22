@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for modifying the chunk metadata counts trigger in a PostgreSQL database. The migration aims to replace a row-level trigger with statement-level triggers for better performance and functionality. The directory includes two main files: `up.sql` for applying the changes and `down.sql` for reverting them.
+
+## What does it do?
+The migration scripts in this directory modify how the database tracks and updates the count of chunks associated with each dataset. Here's a simplified explanation of what these scripts do:
+
+1. The `up.sql` script:
+   - Removes the existing row-level trigger and its associated function.
+   - Creates a new function that can handle both INSERT and DELETE operations in bulk.
+   - Sets up two new statement-level triggers: one for INSERT operations and another for DELETE operations.
+
+2. The `down.sql` script:
+   - Undoes the changes made by `up.sql`.
+   - Removes the new statement-level triggers and function.
+   - Recreates the original row-level trigger and its associated function.
+
+These changes affect how the system keeps track of the number of chunks (pieces of data) associated with each dataset. Instead of updating the count for each individual chunk insertion or deletion, the new system updates the count in bulk for all chunks affected by a single database operation. This can lead to improved performance, especially when dealing with large numbers of chunks.
+
+## Key Files
+
+### up.sql
+This file contains the SQL commands to implement the new chunk counting mechanism. Key components include:
+
+1. `update_chunk_metadata_counts()` function:
+   ```sql
+   CREATE OR REPLACE FUNCTION update_chunk_metadata_counts() RETURNS TRIGGER AS $$
+   DECLARE
+       modified_dataset_id UUID;
+       modified_count INTEGER;
+   BEGIN
+       -- Function body
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+   This function updates the `dataset_usage_counts` table based on INSERT or DELETE operations on the `chunk_metadata` table. It processes all affected rows in a single operation.
+
+2. Statement-level triggers:
+   ```sql
+   CREATE TRIGGER increase_chunk_metadata_counts_trigger
+   AFTER INSERT ON chunk_metadata
+   REFERENCING NEW TABLE AS modified
+   FOR EACH STATEMENT EXECUTE FUNCTION update_chunk_metadata_counts();
+
+   CREATE TRIGGER delete_chunk_metadata_counts_trigger
+   AFTER DELETE ON chunk_metadata
+   REFERENCING OLD TABLE AS modified
+   FOR EACH STATEMENT EXECUTE FUNCTION update_chunk_metadata_counts();
+   ```
+   These triggers call the `update_chunk_metadata_counts()` function after INSERT or DELETE operations on the `chunk_metadata` table.
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`. It includes:
+
+1. Dropping the new triggers and function:
+   ```sql
+   DROP TRIGGER IF EXISTS increase_chunk_metadata_counts_trigger ON chunk_metadata;
+   DROP TRIGGER IF EXISTS delete_chunk_metadata_counts_trigger ON chunk_metadata;
+   DROP FUNCTION IF EXISTS update_chunk_metadata_counts();
+   ```
+
+2. Recreating the original function and row-level trigger:
+   ```sql
+   CREATE OR REPLACE FUNCTION update_chunk_metadata_counts() RETURNS TRIGGER AS $$
+   BEGIN
+       -- Function body
+   END;
+   $$ LANGUAGE plpgsql;
+
+   CREATE TRIGGER update_chunk_metadata_counts_trigger
+   AFTER INSERT OR DELETE ON chunk_metadata
+   FOR EACH ROW EXECUTE FUNCTION update_chunk_metadata_counts();
+   ```
+
+## Dependencies
+This migration relies on PostgreSQL-specific features, including:
+- Trigger functions
+- Statement-level triggers
+- The `plpgsql` language for stored procedures
+
+The exact version of PostgreSQL is not specified in the provided files, but it should be compatible with PostgreSQL 9.5 or later, which introduced statement-level triggers.
+
+## Configuration
+These migration scripts don't require any specific configuration. However, they assume the existence of the following database objects:
+- `chunk_metadata` table
+- `dataset_usage_counts` table
+
+The scripts also assume that the current database user has the necessary permissions to create, modify, and drop triggers and functions.
+
+## Performance Considerations
+The main goal of this migration appears to be improving performance for bulk operations on the `chunk_metadata` table. By switching from row-level to statement-level triggers, the database can process multiple insertions or deletions in a single operation, potentially reducing overhead and improving efficiency.
+
+However, it's important to note that this change might affect the real-time accuracy of the `dataset_usage_counts` table. With statement-level triggers, updates to the counts are performed after all rows have been processed, rather than immediately after each row change. This trade-off between performance and real-time accuracy should be considered when implementing these changes.

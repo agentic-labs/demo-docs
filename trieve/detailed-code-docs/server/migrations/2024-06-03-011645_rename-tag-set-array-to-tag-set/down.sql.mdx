@@ -1,0 +1,50 @@
+---
+title: "down.sql"
+---
+
+## High-level description
+This SQL migration script is designed to revert changes made in a previous migration. It renames the `tag_set` column back to `tag_set_array` and adds a new `tag_set` column with default value NULL for the `chunk_metadata`, `files`, and `chunk_group` tables.
+
+## Symbols
+
+### SQL Migration Script
+#### Description
+This script contains a series of SQL commands to undo changes made to the database schema, specifically related to the `tag_set` and `tag_set_array` columns in three tables: `chunk_metadata`, `files`, and `chunk_group`.
+
+#### Internal Logic
+The script performs the following actions for each of the three tables (`chunk_metadata`, `files`, and `chunk_group`):
+
+1. Renames the `tag_set` column to `tag_set_array`:
+   ```sql
+   ALTER TABLE &lt;table_name&gt; RENAME COLUMN tag_set TO tag_set_array;
+   ```
+
+2. Adds a new `tag_set` column with a default value of NULL:
+   ```sql
+   ALTER TABLE &lt;table_name&gt; ADD COLUMN tag_set TEXT DEFAULT NULL;
+   ```
+
+These steps are repeated for each table, ensuring that the schema is reverted to its previous state.
+
+## Side Effects
+- The `tag_set` column in all three tables will be renamed to `tag_set_array`.
+- A new `tag_set` column will be added to all three tables with a default value of NULL.
+- Any data in the original `tag_set` column will now be in the `tag_set_array` column.
+- The new `tag_set` column will be empty (NULL) for all existing rows.
+
+## Dependencies
+This script relies on the existence of the following database tables:
+- `chunk_metadata`
+- `files`
+- `chunk_group`
+
+It also assumes that these tables currently have a `tag_set` column that needs to be renamed.
+
+## Error Handling
+This script does not include explicit error handling. If any of the ALTER TABLE statements fail (e.g., if a column doesn't exist or if there are permission issues), the database system will likely raise an error and roll back the transaction.
+
+## Notes
+- This is a "down" migration script, meant to revert changes made by a corresponding "up" migration.
+- The script assumes that the previous state of the database had a `tag_set_array` column and a separate `tag_set` column in each of the affected tables.
+- Care should be taken when running this script, as it will result in data loss for any information stored in the current `tag_set` column that isn't also present in `tag_set_array`.
+- It's important to ensure that any application code interacting with these tables is updated to reflect these schema changes to prevent errors or data inconsistencies.

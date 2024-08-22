@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for adding an `invitations` table to the database schema. It consists of two files: `up.sql` for creating the table and `down.sql` for removing it. These migrations are part of a database versioning system, allowing for controlled schema changes and the ability to roll back if necessary.
+
+## What does it do?
+The migration in this directory adds a new feature to the database: an invitation system. This system allows users to invite others to access specific datasets. Here's how it works:
+
+1. When a user wants to invite someone, a new entry is created in the `invitations` table.
+2. The invitation includes details like the invitee's email, the dataset they're being invited to, and when the invitation expires.
+3. The system can track whether an invitation has been used and when it was created or last updated.
+4. If needed, the entire invitation system can be removed by dropping the table.
+
+This setup enables the application to manage access to datasets through a controlled invitation process, potentially improving security and user management.
+
+## Key Files
+
+1. `up.sql`: This file contains the SQL commands to create the `invitations` table. It defines the structure of the table, including columns for tracking invitation details.
+
+2. `down.sql`: This file contains the SQL command to drop the `invitations` table, effectively undoing the changes made by `up.sql`.
+
+These files work together to provide a reversible database migration, allowing developers to apply or revert changes to the database schema as needed.
+
+## Configuration
+The migration files don't contain any configurable fields themselves, but they do define the structure of the `invitations` table, which includes several important fields:
+
+- `id`: A UUID used as the primary key for each invitation.
+- `email`: A VARCHAR field to store the email address of the invited user.
+- `dataset_id`: A UUID linking the invitation to a specific dataset.
+- `used`: A BOOLEAN flag indicating whether the invitation has been used.
+- `expires_at`: A TIMESTAMP field to set an expiration date for the invitation.
+- `created_at` and `updated_at`: TIMESTAMP fields to track when the invitation was created and last updated.
+
+These fields define the core functionality of the invitation system and may need to be considered when implementing related features in the application.
+
+## Dependencies
+The migration files rely on the following SQL data types and features:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| UUID | For unique identifiers (`id` and `dataset_id`) |
+| VARCHAR | For storing email addresses |
+| BOOLEAN | For the 'used' flag |
+| TIMESTAMP | For storing date and time information |
+
+The specific SQL dialect used here appears to be compatible with PostgreSQL, given the use of UUID and TIMESTAMP types.
+
+## Performance Considerations
+The `id` column in the `invitations` table is defined as the primary key, which should automatically create an index for faster lookups. Depending on how the application queries this table, additional indexes might be considered for the `email` and `dataset_id` columns to improve query performance, especially if the table is expected to grow large.
+
+When dropping the table in the `down.sql` file, the `IF EXISTS` clause is used to prevent errors if the table doesn't exist. This makes the migration more robust and idempotent, allowing it to be run multiple times without error.
+
+It's worth noting that dropping a table is typically a fast operation, but it can have significant implications for data integrity and application functionality. Care should be taken when applying the `down` migration in production environments.
+
+## Additional Notes
+The directory name suggests that this invitation table is being "added back," which might indicate that it was previously removed or modified. It may be worth reviewing the history of this table to understand why it was removed and if any additional changes or considerations are needed for its reintroduction.
+
+When implementing features that use this invitation system, developers should consider:
+1. How to generate and manage invitation expiration times.
+2. The process for marking invitations as used.
+3. How to handle expired or already-used invitations.
+4. Any necessary cleanup processes for old or expired invitations.
+5. Security implications of the invitation system and how it integrates with the overall user authentication and authorization framework.
+
+By providing both `up` and `down` migrations, this setup allows for flexible database management, enabling developers to apply or revert changes as needed during development or deployment processes.

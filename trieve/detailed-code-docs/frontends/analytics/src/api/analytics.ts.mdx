@@ -1,0 +1,240 @@
+---
+title: "analytics.ts"
+---
+
+## High-level description
+The `frontends/analytics/src/api/analytics.ts` file defines a set of asynchronous functions that fetch various analytics data from the backend API. These functions retrieve data such as latency, search usage, head queries, RAG queries and usage, low confidence queries, no result queries, and individual search query details.
+
+## References
+This file references types defined in the `shared/types.ts` file and uses the `apiHost` constant from `frontends/analytics/src/utils/apiHost.ts`. It also utilizes the `transformAnalyticsFilter` function from `frontends/analytics/src/utils/formatDate.ts`.
+
+## Symbols
+
+### `getLatency`
+#### Description
+This function fetches latency data points for a given dataset and time range. It sends a POST request to the `/analytics/search` endpoint with the specified filters, granularity, and request type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `AnalyticsFilter` | An object containing filters for the analytics data, such as date range, search method, and search type. |
+| granularity | `AnalyticsParams["granularity"]` | The desired granularity of the data points, such as "minute", "hour", or "day". |
+| datasetId | `string` | The ID of the dataset to fetch latency data for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;LatencyDatapoint[]&gt;` | A promise that resolves to an array of `LatencyDatapoint` objects, each containing the average latency and timestamp. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `granularity`: The specified granularity.
+    - `type`: "latency_graph" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `latency_points` array.
+5. Returns the `latency_points` array.
+
+### `getRpsUsageGraph`
+#### Description
+Fetches search usage data points for a given dataset and time range. It sends a POST request to the `/analytics/search` endpoint with the specified filters, granularity, and request type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `AnalyticsFilter` | An object containing filters for the analytics data, such as date range, search method, and search type. |
+| granularity | `AnalyticsParams["granularity"]` | The desired granularity of the data points, such as "minute", "hour", or "day". |
+| datasetId | `string` | The ID of the dataset to fetch search usage data for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;UsageDatapoint[]&gt;` | A promise that resolves to an array of `UsageDatapoint` objects, each containing the number of requests and timestamp. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `granularity`: The specified granularity.
+    - `type`: "search_usage_graph" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `usage_points` array.
+5. Returns the `usage_points` array.
+
+### `getHeadQueries`
+#### Description
+Fetches a list of the most frequent search queries for a given dataset, time range, and page number. It sends a POST request to the `/analytics/search` endpoint with the specified filters, page number, and request type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `AnalyticsFilter` | An object containing filters for the analytics data, such as date range, search method, and search type. |
+| datasetId | `string` | The ID of the dataset to fetch head queries for. |
+| page | `number` | The page number of the results to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;HeadQuery[]&gt;` | A promise that resolves to an array of `HeadQuery` objects, each containing a query string and its frequency count. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `page`: The specified page number.
+    - `type`: "head_queries" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `queries` array.
+5. Returns the `queries` array.
+
+### `getRAGQueries`
+#### Description
+Fetches a list of RAG queries for a given dataset, page number, and optional filters, sort by, and sort order. It sends a POST request to the `/analytics/rag` endpoint with the specified parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| datasetId | `string` | The ID of the dataset to fetch RAG queries for. |
+| page | `number` | The page number of the results to retrieve. |
+| filter | `RAGAnalyticsFilter` | Optional filters for the RAG queries, such as date range and RAG type. |
+| sort_by | `RAGSortBy` | Optional field to sort the results by, such as "created_at", "latency", or "top_score". |
+| sort_order | `SortOrder` | Optional sort order for the results, either "asc" (ascending) or "desc" (descending). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;RagQueryEvent[]&gt;` | A promise that resolves to an array of `RagQueryEvent` objects, each containing details about a RAG query. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `page`: The specified page number.
+    - `sort_by`: The optional sort by field.
+    - `sort_order`: The optional sort order.
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter` if provided.
+    - `type`: "rag_queries" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `queries` array.
+5. Returns the `queries` array.
+
+### `getRAGUsage`
+#### Description
+Fetches RAG usage data for a given dataset and optional filters. It sends a POST request to the `/analytics/rag` endpoint with the specified parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| datasetId | `string` | The ID of the dataset to fetch RAG usage data for. |
+| filter | `RAGAnalyticsFilter` | Optional filters for the RAG usage data, such as date range and RAG type. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;RAGUsageResponse&gt;` | A promise that resolves to a `RAGUsageResponse` object containing the total number of RAG queries. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `type`: "rag_usage" to indicate the request type.
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter` if provided.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and returns the `RAGUsageResponse` object.
+
+### `getRagUsageGraph`
+#### Description
+Fetches RAG usage data points for a given dataset and time range. It sends a POST request to the `/analytics/rag` endpoint with the specified filters, granularity, and request type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `RAGAnalyticsFilter` | An object containing filters for the RAG usage data, such as date range and RAG type. |
+| granularity | `AnalyticsParams["granularity"]` | The desired granularity of the data points, such as "minute", "hour", or "day". |
+| datasetId | `string` | The ID of the dataset to fetch RAG usage data for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;UsageDatapoint[]&gt;` | A promise that resolves to an array of `UsageDatapoint` objects, each containing the number of requests and timestamp. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `granularity`: The specified granularity.
+    - `type`: "rag_usage_graph" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `usage_points` array.
+5. Returns the `usage_points` array.
+
+### `getLowConfidenceQueries`
+#### Description
+Fetches a list of low confidence search queries for a given dataset, time range, page number, and optional threshold. It sends a POST request to the `/analytics/search` endpoint with the specified parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `AnalyticsFilter` | An object containing filters for the analytics data, such as date range, search method, and search type. |
+| datasetId | `string` | The ID of the dataset to fetch low confidence queries for. |
+| page | `number` | The page number of the results to retrieve. |
+| threshold | `number` | Optional threshold for the top score below which queries are considered low confidence. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;SearchQueryEvent[]&gt;` | A promise that resolves to an array of `SearchQueryEvent` objects, each containing details about a low confidence search query. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `page`: The specified page number.
+    - `threshold`: The optional threshold value.
+    - `type`: "low_confidence_queries" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `queries` array.
+5. Returns the `queries` array.
+
+### `getNoResultQueries`
+#### Description
+Fetches a list of search queries that returned no results for a given dataset, time range, and page number. It sends a POST request to the `/analytics/search` endpoint with the specified parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filters | `AnalyticsFilter` | An object containing filters for the analytics data, such as date range, search method, and search type. |
+| datasetId | `string` | The ID of the dataset to fetch no result queries for. |
+| page | `number` | The page number of the results to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;SearchQueryEvent[]&gt;` | A promise that resolves to an array of `SearchQueryEvent` objects, each containing details about a search query that returned no results. |
+
+#### Internal Logic
+1. Constructs the API endpoint URL using the `apiHost` constant.
+2. Sends a POST request to the endpoint with the following body:
+    - `filter`: Transformed analytics filters using `transformAnalyticsFilter`.
+    - `page`: The specified page number.
+    - `type`: "no_result_queries" to indicate the request type.
+3. Includes the `datasetId` in the headers.
+4. Parses the response JSON and extracts the `queries` array.
+5. Returns the `queries` array.
+
+### `getQueryCounts`
+#### Description
+Fetches the total count of queries for each search type and method for a given dataset and a date range starting from a specified date. It sends a POST request to the `/analytics/search` endpoint with the specified parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| gt_date | `Date` | The start date for the date range. |
+| datasetId | `string` | The ID of the dataset to fetch query counts for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;SearchTypeCount[]&gt;` | A promise that resolves to an array of `SearchTypeCount` objects, each containing the search type, search method, and the corresponding query count. |
+
+#### Internal Logic
+1. Constructs

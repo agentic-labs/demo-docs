@@ -1,0 +1,132 @@
+---
+title: "topic_handler.rs"
+---
+
+## High-level description
+The `topic_handler.rs` file defines a set of API endpoints for managing chat topics within a dataset. These endpoints allow for creating, deleting, updating, and retrieving topics, which are associated with a specific owner ID and dataset.
+
+## Code Structure
+The code defines several functions, each corresponding to a specific API endpoint. These functions handle the request data, interact with the database through various query functions, and return the appropriate response. The `AdminOnly` struct is used to enforce authorization for these endpoints, ensuring that only users with admin or owner roles can access them.
+
+## References
+- `crate::data::models`: This module defines the data models used for topics, datasets, and user roles.
+- `crate::errors::ServiceError`: This module defines the custom error types used for handling API errors.
+- `crate::operators::topic_operator`: This module provides functions for interacting with the database to perform operations on topics.
+- `crate::operators::message_operator`: This module provides functions for interacting with the database to perform operations on messages.
+
+## Symbols
+
+### `create_topic`
+#### Description
+This function handles the creation of a new chat topic. It receives a JSON payload containing the topic details, validates the input, generates a topic name if not provided, and inserts the new topic into the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `web::Json&lt;CreateTopicReqPayload&gt;` | JSON payload containing the topic details, including the first user message, optional name, and owner ID. |
+| user | `AdminOnly` | Authorization data ensuring the user has admin or owner role. |
+| dataset_org_plan_sub | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information associated with the request. |
+| pool | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;HttpResponse, actix_web::Error&gt;` |  | Returns an `HttpResponse::Ok` with the created topic data on success, or an error response on failure. |
+
+#### Internal Logic
+1. Extract the topic details from the JSON payload.
+2. Check if either the first user message or the topic name is provided. If both are empty, return a `BadRequest` error.
+3. If the first user message is provided, generate a topic name using the `get_topic_string` function from the `message_operator` module.
+4. If the first user message is not provided, use the provided topic name or an empty string as the topic name.
+5. Create a new `Topic` instance with the generated name, owner ID, and dataset ID.
+6. Insert the new topic into the database using the `create_topic_query` function from the `topic_operator` module.
+7. Return an `HttpResponse::Ok` with the created topic data.
+
+### `delete_topic`
+#### Description
+This function handles the deletion of an existing chat topic. It receives the topic ID as a path parameter, validates the user's authorization, and deletes the topic from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| topic_id | `web::Path&lt;uuid::Uuid&gt;` | The ID of the topic to delete. |
+| user | `AdminOnly` | Authorization data ensuring the user has admin or owner role. |
+| dataset_org_plan_sub | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information associated with the request. |
+| pool | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;HttpResponse, actix_web::Error&gt;` |  | Returns an `HttpResponse::NoContent` on successful deletion, or an error response on failure. |
+
+#### Internal Logic
+1. Extract the topic ID from the path parameter.
+2. Delete the topic from the database using the `delete_topic_query` function from the `topic_operator` module.
+3. Return an `HttpResponse::NoContent` to indicate successful deletion.
+
+### `update_topic`
+#### Description
+This function handles the updating of an existing chat topic. It receives a JSON payload containing the topic ID and the new name, validates the input, and updates the topic in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `web::Json&lt;UpdateTopicReqPayload&gt;` | JSON payload containing the topic ID and the new name. |
+| user | `AdminOnly` | Authorization data ensuring the user has admin or owner role. |
+| dataset_org_plan_sub | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information associated with the request. |
+| pool | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;HttpResponse, actix_web::Error&gt;` |  | Returns an `HttpResponse::NoContent` on successful update, or an error response on failure. |
+
+#### Internal Logic
+1. Extract the topic ID and new name from the JSON payload.
+2. Check if the new name is empty. If it is, return a `BadRequest` error.
+3. Update the topic in the database using the `update_topic_query` function from the `topic_operator` module.
+4. Return an `HttpResponse::NoContent` to indicate successful update.
+
+### `get_all_topics_for_owner_id`
+#### Description
+This function retrieves all topics associated with a specific owner ID. It receives the owner ID as a path parameter, validates the user's authorization, and retrieves the topics from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | `AdminOnly` | Authorization data ensuring the user has admin or owner role. |
+| owner_id | `web::Path&lt;String&gt;` | The owner ID to retrieve topics for. |
+| dataset_org_plan_sub | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information associated with the request. |
+| pool | `web::Data&lt;Pool&gt;` | Database connection pool. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Result&lt;HttpResponse, ServiceError&gt;` |  | Returns an `HttpResponse::Ok` with a JSON array of topics on success, or a `ServiceError` on failure. |
+
+#### Internal Logic
+1. Extract the owner ID from the path parameter.
+2. Retrieve the topics from the database using the `get_all_topics_for_owner_id_query` function from the `topic_operator` module.
+3. Return an `HttpResponse::Ok` with the retrieved topics as a JSON array.
+
+## Dependencies
+- `actix-web`: Web framework for building the API.
+- `serde`: Serialization and deserialization library for handling JSON data.
+- `utoipa`: Library for generating OpenAPI documentation.
+- `uuid`: Library for generating UUIDs.
+- `diesel`: ORM for interacting with the database.
+- `diesel-async`: Asynchronous runtime for Diesel.
+
+## Error Handling
+The code uses the `ServiceError` enum to represent various error conditions. These errors are converted into HTTP responses with appropriate status codes and error messages using the `ResponseError` implementation for `ServiceError`.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| `/topic` | POST | `CreateTopicReqPayload` | `Topic` | Creates a new chat topic. |
+| `/topic/{topic_id}` | DELETE |  |  | Deletes an existing chat topic. |
+| `/topic` | PUT | `UpdateTopicReqPayload` |  | Updates an existing chat topic. |
+| `/topic/owner/{owner_id}` | GET |  | `Vec&lt;Topic&gt;` | Retrieves all topics associated with a specific owner ID. |
+
+## Authentication
+All endpoints require authentication and authorization. The `AdminOnly` struct is used to enforce that only users with admin or owner roles can access these endpoints.

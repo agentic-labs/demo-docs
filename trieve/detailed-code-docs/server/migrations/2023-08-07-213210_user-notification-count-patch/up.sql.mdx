@@ -1,0 +1,47 @@
+---
+title: "up.sql"
+---
+
+## High-level description
+This SQL script creates a PostgreSQL function named `update_notification_count()`. The function is designed to automatically update a user's notification count when notifications are added or removed, maintaining an accurate count of unread notifications for each user.
+
+## Symbols
+
+### `update_notification_count()`
+#### Description
+This is a PostgreSQL trigger function that manages the notification count for users. It increments the count when a new notification is inserted and decrements it when a notification is deleted.
+
+#### Inputs
+This function doesn't take explicit inputs. As a trigger function, it operates on the `NEW` and `OLD` pseudo-records, which represent the new and old states of the affected row in the triggered operation.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| RETURN | TRIGGER | Returns NEW, which is standard for trigger functions |
+
+#### Internal Logic
+1. When a new notification is inserted (TG_OP = 'INSERT'):
+   - Inserts a new record into the `user_notification_counts` table with the user's ID and a count of 1.
+   - If a record already exists for the user, it increments the existing count by 1.
+2. When a notification is deleted (TG_OP = 'DELETE'):
+   - Updates the `user_notification_counts` table, decrementing the notification count for the affected user by 1.
+
+## Side Effects
+- Modifies the `user_notification_counts` table by inserting new records or updating existing ones.
+
+## Performance Considerations
+- The function uses an `INSERT ... ON CONFLICT DO UPDATE` statement for the INSERT case, which is an efficient way to handle both new and existing records in a single operation.
+- For large-scale systems with frequent notifications, consider the performance impact of updating the count on every insert and delete.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| user_notification_counts table | Stores the notification count for each user |
+
+## Error Handling
+The function doesn't include explicit error handling. It relies on PostgreSQL's default error handling mechanisms.
+
+## TODOs
+- Consider adding error handling for unexpected scenarios.
+- Evaluate if additional operations (like UPDATE) need to be handled.
+- Ensure that appropriate triggers are set up to call this function on the notifications table.

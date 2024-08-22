@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration files for creating and managing a `stripe_invoices` table in the database. The migration is dated 2024-07-08 and is specifically focused on implementing Stripe invoice functionality within the application.
+
+## What does it do?
+These migration files set up and tear down a database table that stores information about Stripe invoices associated with organizations. The `up.sql` file creates the `stripe_invoices` table with fields for storing invoice details such as the total amount, creation date, status, and a URL to view the invoice online. It also establishes a relationship between invoices and organizations. The `down.sql` file provides the ability to remove this table, effectively undoing the changes made by the `up.sql` file.
+
+This functionality allows the application to keep track of Stripe invoices for each organization, which is crucial for billing and financial record-keeping. It enables the system to store and retrieve invoice information, potentially for displaying to users, generating reports, or integrating with other parts of the application's financial management features.
+
+## Key Files
+
+1. `up.sql`:
+   This file contains the SQL commands to create the `stripe_invoices` table. It defines the table structure with the following columns:
+   - `id`: A unique identifier for each invoice, automatically generated as a UUID.
+   - `org_id`: A reference to the associated organization.
+   - `total`: The total amount of the invoice, stored as an integer (likely in cents).
+   - `created_at`: The timestamp when the invoice was created.
+   - `status`: The current status of the invoice.
+   - `hosted_invoice_url`: A URL where the invoice can be viewed online.
+
+   It also establishes a foreign key relationship with the `organizations` table, ensuring data integrity and allowing for easy querying of an organization's invoices.
+
+2. `down.sql`:
+   This file contains the SQL command to drop the `stripe_invoices` table, effectively reversing the changes made by `up.sql`. It's a simple one-line command:
+
+   ```sql
+   DROP TABLE stripe_invoices;
+   ```
+
+   This allows for easy rollback of the migration if needed.
+
+## Dependencies
+The `stripe_invoices` table has a dependency on the `organizations` table, as indicated by the foreign key constraint in the `up.sql` file. This suggests that the application has a separate table for managing organizations, and each Stripe invoice is associated with a specific organization.
+
+## Configuration
+While there are no explicit configuration files in this directory, the structure of the `stripe_invoices` table implies certain design decisions:
+
+1. The use of UUIDs for the `id` field, generated using `gen_random_uuid()`, indicates that the database system supports this function for UUID generation.
+2. The `total` field is an integer, suggesting that invoice amounts are stored in the smallest currency unit (e.g., cents for USD). This is a common practice to avoid floating-point precision issues with monetary values.
+3. The `status` field is of type text, allowing for flexible status representations.
+4. The inclusion of a `hosted_invoice_url` field implies integration with Stripe's invoice hosting service.
+
+These design choices should be considered when working with or modifying this table in the future.
+
+## Performance Considerations
+The `up.sql` file creates a table with a primary key and a foreign key constraint. While these are generally fast operations, the performance impact of the foreign key constraint should be considered, especially if dealing with a large number of records.
+
+The `down.sql` file drops the entire table. This operation is typically quick, but it could take longer if the table contains a large amount of data. It's also worth noting that dropping the table will permanently delete all stored invoice data, so this operation should be used with caution in production environments.
+
+## Error Handling
+The migration files do not include explicit error handling. In a production environment, it would be advisable to wrap these SQL commands in appropriate error handling and logging mechanisms to gracefully handle scenarios such as the table already existing (for `up.sql`) or not existing (for `down.sql`).
+
+## TODOs
+There are no explicit TODOs in the provided files. However, developers working with these migrations should ensure that:
+
+1. The `down.sql` file correctly reverses all changes made in the `up.sql` file to maintain database integrity during migrations.
+2. Any application code that interacts with the `stripe_invoices` table is updated to reflect the table structure defined in these migrations.
+3. Proper data migration strategies are in place if this change is being applied to an existing system with live data.
+
+In conclusion, these migration files set up a robust structure for managing Stripe invoices within the application, tying them to organizations and storing key invoice details. This lays the groundwork for comprehensive invoice tracking and management functionality.

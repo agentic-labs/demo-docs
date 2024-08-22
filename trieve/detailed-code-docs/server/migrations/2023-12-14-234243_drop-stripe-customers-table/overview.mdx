@@ -1,0 +1,55 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for dropping the `stripe_customers` table from the database. It includes both "up" and "down" migration files, allowing for the removal of the table and its potential restoration if needed.
+
+## What does it do?
+The migration scripts in this directory perform the following actions:
+
+1. The "up" migration (up.sql):
+   - Removes the `stripe_customers` table from the database if it exists.
+   - This action effectively deletes all data related to Stripe customers that was previously stored in this table.
+
+2. The "down" migration (down.sql):
+   - Recreates the `stripe_customers` table with its original structure and constraints.
+   - This allows for reverting the changes made by the "up" migration if necessary.
+
+These migrations are typically part of a database schema evolution process, where the development team has decided to remove the `stripe_customers` table, possibly due to changes in the application's architecture or data model.
+
+## Key Files
+
+1. up.sql
+   - Contains the SQL command to drop the `stripe_customers` table.
+   - Uses the `DROP TABLE IF EXISTS` syntax to ensure the operation is idempotent (can be run multiple times without error).
+
+2. down.sql
+   - Contains the SQL commands to recreate the `stripe_customers` table.
+   - Defines the table structure with columns for id, stripe_id, email, created_at, and updated_at.
+   - Establishes constraints including primary key, unique constraints, and a foreign key relationship with the `users` table.
+
+## Configuration
+The migration scripts do not rely on external configuration files or environment variables. However, they assume the existence of a `users` table in the database, as evidenced by the foreign key constraint in the `down.sql` file.
+
+Here's a breakdown of the `stripe_customers` table structure as defined in the `down.sql` file:
+
+```sql
+CREATE TABLE stripe_customers (
+    id UUID PRIMARY KEY NOT NULL,
+    stripe_id TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (email) REFERENCES users(email)
+);
+```
+
+- `id`: A UUID serving as the primary key.
+- `stripe_id`: A unique text field, likely to store Stripe's customer ID.
+- `email`: An optional unique text field, linked to the `users` table.
+- `created_at` and `updated_at`: Timestamp fields for tracking record creation and updates.
+
+The foreign key relationship suggests that each Stripe customer may be associated with a user in the `users` table, using the email address as the linking field.
+
+It's important to note that executing the "up" migration will result in the permanent deletion of all data in the `stripe_customers` table. This action should be performed with caution and only after ensuring that any necessary data has been migrated or is no longer needed.
