@@ -1,0 +1,92 @@
+---
+title: "authn.go"
+---
+
+## High-level description
+This code implements an authentication middleware for an event ingestion system. It verifies API keys, retrieves organization IDs from a cache or database, and sets the organization ID in the request context for downstream handlers.
+
+## Code Structure
+The main function `Middleware` creates an Echo middleware that authenticates requests using API keys. It uses helper functions `getAPIKeyFromHeader`, `getFromDB`, and external packages for caching and database operations.
+
+## Symbols
+
+### `getAPIKeyFromHeader`
+#### Description
+Extracts the API key from the HTTP request headers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| h | http.Header | The HTTP request headers |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The extracted API key |
+
+#### Internal Logic
+1. Checks for the "X-Api-Key" header (case-sensitive).
+2. If not found, searches for a case-insensitive match of "x-api-key".
+3. Returns the first value found or an empty string.
+
+### `getFromDB`
+#### Description
+Retrieves API key information from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | *sql.DB | Database connection |
+| prefix | string | API key prefix |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apiKey | *types.APIKey | API key information |
+| error | error | Error, if any |
+
+#### Internal Logic
+Executes a SQL query to fetch API key details based on the prefix and populates a `types.APIKey` struct.
+
+### `Middleware`
+#### Description
+Creates an Echo middleware function for API key authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cacheClient | cache.Cache | Cache client for storing/retrieving organization IDs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| middleware | echo.MiddlewareFunc | Echo middleware function |
+
+#### Internal Logic
+1. Extracts API key from request headers.
+2. Attempts to retrieve organization ID from cache.
+3. If not in cache, queries the database for API key information.
+4. Validates the API key.
+5. Stores the organization ID in cache for future use.
+6. Sets the organization ID in the request context.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| database/sql | Database operations |
+| github.com/labstack/echo/v4 | Web framework |
+| github.com/uselotus/lotus/go/event-ingestion/cache | Caching operations |
+| github.com/uselotus/lotus/go/pkg/types | Custom types |
+
+## Error Handling
+- Returns HTTP 400 for missing or invalid API keys.
+- Returns HTTP 500 for internal errors (e.g., database issues).
+- Uses `echo.NewHTTPError` to create and return appropriate error responses.
+
+## Logging
+Basic logging is implemented using the standard `log` package to log requests and errors.
+
+## Performance Considerations
+The middleware uses caching to store organization IDs, reducing database queries for subsequent requests with the same API key.
+
+This documentation provides a comprehensive overview of the `authn.go` file, explaining its purpose, main components, and how they interact to authenticate API requests in the event ingestion system.

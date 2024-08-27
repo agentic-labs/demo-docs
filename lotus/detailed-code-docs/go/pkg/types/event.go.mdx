@@ -1,0 +1,100 @@
+---
+title: "event.go"
+---
+
+## High-level description
+This Go package defines two event types, `RawEvent` and `VerifiedEvent`, along with methods for validating, transforming, and unmarshaling events. It provides a structure for handling customer events with properties such as customer ID, idempotency ID, creation time, and custom properties.
+
+## Code Structure
+The code defines two main structs: `RawEvent` and `VerifiedEvent`. The `RawEvent` struct has methods for validation and transformation, while the `VerifiedEvent` struct has a custom JSON unmarshaling method. These structs and their methods work together to process and validate event data.
+
+## Symbols
+
+### `RawEvent`
+#### Description
+Represents an unverified event with customer information and properties.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| CustomerID | string | Unique identifier for the customer |
+| IdempotencyID | string | Unique identifier for the event to ensure idempotency |
+| TimeCreated | time.Time | Timestamp of event creation |
+| Properties | map[string]interface{} | Custom properties associated with the event |
+| EventName | string | Name of the event |
+
+### `VerifiedEvent`
+#### Description
+Represents a verified event with additional organization information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| OrganizationID | int64 | Unique identifier for the organization |
+| CustID | string | Unique identifier for the customer |
+| IdempotencyID | string | Unique identifier for the event to ensure idempotency |
+| TimeCreated | time.Time | Timestamp of event creation |
+| Properties | map[string]interface{} | Custom properties associated with the event |
+| EventName | string | Name of the event |
+
+### `IsValid`
+#### Description
+Validates a `RawEvent` by checking for required fields and time constraints.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| now | time.Time | Current time used for validation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isValid | bool | Indicates whether the event is valid |
+| errorMessage | string | Description of the validation error, if any |
+
+#### Internal Logic
+1. Checks if IdempotencyID and CustomerID are not empty.
+2. Validates TimeCreated is not zero and can be parsed.
+3. Ensures TimeCreated is within 30 days before or 1 day ahead of the current time.
+
+### `Transform`
+#### Description
+Transforms a `RawEvent` into a `VerifiedEvent` by adding the organization ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organizationID | int64 | ID of the organization to be added to the verified event |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| verifiedEvent | VerifiedEvent | The transformed and verified event |
+
+### `UnmarshalJSON`
+#### Description
+Custom JSON unmarshaling method for `VerifiedEvent` to handle different time formats.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | []byte | JSON data to be unmarshaled |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error if unmarshaling fails |
+
+#### Internal Logic
+1. Defines an auxiliary struct with a string field for TimeCreated.
+2. Unmarshals JSON data into the auxiliary struct.
+3. Attempts to parse TimeCreated using different time formats (RFC3339, custom format with timezone, custom format without timezone).
+4. Sets the parsed time to UTC if necessary.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/json | Used for JSON marshaling and unmarshaling |
+| time | Used for time-related operations and parsing |
+
+This code provides a robust structure for handling and validating customer events, with flexibility in time parsing and custom properties. It ensures that events are properly formatted and within acceptable time ranges before being processed further.

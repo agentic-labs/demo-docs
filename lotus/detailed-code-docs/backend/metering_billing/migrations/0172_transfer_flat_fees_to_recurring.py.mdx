@@ -1,0 +1,51 @@
+---
+title: "0172_transfer_flat_fees_to_recurring.py"
+---
+
+## High-level description
+This Django migration file transfers existing flat fees from PlanVersion objects to newly created RecurringCharge objects. It's designed to migrate data from an older pricing model to a new one that uses recurring charges.
+
+## Symbols
+
+### `transfer_flat_fees_to_recurring`
+#### Description
+This function is the core of the migration. It iterates through all PlanVersion objects, checks for existing flat rates, and creates corresponding RecurringCharge objects.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | Django apps registry |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Schema editor instance |
+
+#### Internal Logic
+1. Retrieve PlanVersion and RecurringCharge models using the apps registry.
+2. Iterate through all PlanVersion objects.
+3. For each PlanVersion with a non-null and positive flat_rate:
+   - Determine the charge_timing based on the flat_fee_billing_type.
+   - Create a new RecurringCharge object with the following attributes:
+     - organization: from the PlanVersion
+     - name: "Flat Fee"
+     - plan_version: the current PlanVersion
+     - charge_timing: determined from flat_fee_billing_type
+     - charge_behavior: set to 1 (PRORATE)
+     - amount: the flat_rate value
+     - pricing_unit: from the PlanVersion
+
+### `Migration`
+#### Description
+This class defines the migration operation, specifying its dependencies and the operations to be performed.
+
+#### Internal Logic
+- Specifies a dependency on the previous migration "0171_recurringcharge_and_more".
+- Defines a single operation using `migrations.RunPython` to execute the `transfer_flat_fees_to_recurring` function.
+- Sets the reverse operation to `migrations.RunPython.noop`, indicating that this migration cannot be reversed automatically.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.db.migrations | Provides the Migration class and related utilities for defining database migrations |
+
+## Notes
+- This migration assumes that a new RecurringCharge model has been created in a previous migration (0171_recurringcharge_and_more).
+- The migration uses hard-coded values for charge_timing (1 for "in_advance", 2 for "in_arrears") and charge_behavior (1 for "prorate"). These values correspond to choices defined in the RecurringCharge model.
+- The migration is designed to be one-way only, as indicated by the use of `migrations.RunPython.noop` for the reverse operation.

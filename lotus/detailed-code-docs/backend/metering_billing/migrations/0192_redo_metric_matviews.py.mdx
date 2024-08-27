@@ -1,0 +1,46 @@
+---
+title: "0192_redo_metric_matviews.py"
+---
+
+## High-level description
+This Django migration script aims to refresh materialized views for all metrics in the metering and billing system. It iterates through each metric, archives its data using a handler specific to the metric type, resets a flag indicating the view needs provisioning, and relies on an external process (INITADMIN) to handle the actual view refresh.
+
+## Code Structure
+The code defines a single migration operation, `refresh_mat_views`, which is executed when the migration is applied. This function retrieves all metrics, utilizes a handler mapping to process each metric based on its type, and updates the metric's `mat_views_provisioned` flag.
+
+## References
+- `metering_billing.aggregation.billable_metrics.METRIC_HANDLER_MAP`: A dictionary mapping metric types to their corresponding handler classes.
+
+## Symbols
+
+### `refresh_mat_views`
+#### Description
+This function is a migration operation that refreshes materialized views for all metrics.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps |  Provides access to the current Django application registry and models. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object for managing database schema changes. |
+
+#### Internal Logic
+1. Retrieves the `Metric` model from the application registry.
+2. Imports the `METRIC_HANDLER_MAP` from `metering_billing.aggregation.billable_metrics`.
+3. Iterates through all instances of the `Metric` model.
+4. For each metric:
+    - Obtains the appropriate handler from `METRIC_HANDLER_MAP` based on the metric's type.
+    - Calls the handler's `archive_metric` method to archive the metric data.
+    - Sets the metric's `mat_views_provisioned` flag to `False`, indicating the view needs to be refreshed.
+    - Saves the updated metric instance.
+5. Relies on an external process (INITADMIN) to refresh the materialized views based on the updated `mat_views_provisioned` flag.
+
+## Side Effects
+- Modifies the `mat_views_provisioned` flag for all `Metric` instances in the database.
+- Triggers the archiving of metric data using metric-specific handlers.
+
+## Dependencies
+- `django.db`: For database operations and migrations.
+- `metering_billing.aggregation.billable_metrics`: For accessing the `METRIC_HANDLER_MAP` and metric handler classes.
+
+## TODOs
+- The code relies on an external process (INITADMIN) to refresh the materialized views. This dependency should be documented and potentially addressed to improve the migration's self-contained nature.

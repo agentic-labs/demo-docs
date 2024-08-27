@@ -1,0 +1,54 @@
+---
+title: "0221_trigger_on_br.py"
+---
+
+## High-level description
+This Django migration file creates a PostgreSQL trigger function and a trigger to automatically update the `customer_id` and `billing_plan_id` fields of the `metering_billing_billingrecord` table based on the associated `subscription_id`. This ensures data consistency and reduces the need for manual updates.
+
+## Symbols
+
+### Migration
+#### Description
+This Django migration class defines database operations to create a trigger function and a trigger in PostgreSQL.
+
+#### Internal Logic
+1. Creates a function `update_billing_record()` using PL/pgSQL.
+2. Creates a trigger `billing_record_trigger` that executes the function before INSERT or UPDATE operations on the `metering_billing_billingrecord` table.
+
+### `update_billing_record()`
+#### Description
+A PostgreSQL function that updates the `customer_id` and `billing_plan_id` fields of a billing record based on the associated subscription.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| NEW | record | The new row being inserted or updated in the `metering_billing_billingrecord` table |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| NEW | record | The modified row with updated `customer_id` and `billing_plan_id` |
+
+#### Internal Logic
+1. Selects `customer_id` and `billing_plan_id` from the `metering_billing_subscriptionrecord` table where the `id` matches the `subscription_id` of the new billing record.
+2. Assigns the selected values to the `customer_id` and `billing_plan_id` fields of the new billing record.
+3. Returns the modified record.
+
+### `billing_record_trigger`
+#### Description
+A PostgreSQL trigger that executes the `update_billing_record()` function before INSERT or UPDATE operations on the `metering_billing_billingrecord` table.
+
+#### Internal Logic
+1. Triggers for each row being inserted or updated.
+2. Executes the `update_billing_record()` function to update the `customer_id` and `billing_plan_id` fields.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.db.migrations | Provides the Migration class for defining database schema changes |
+
+## Error Handling
+This migration does not implement specific error handling. If the SQL operations fail, Django's migration system will handle the errors and roll back the changes.
+
+## Performance Considerations
+The trigger function performs a SELECT operation on the `metering_billing_subscriptionrecord` table for each INSERT or UPDATE on the `metering_billing_billingrecord` table. This may impact performance for large-scale operations. Consider indexing the `id` column of the `metering_billing_subscriptionrecord` table if not already done.

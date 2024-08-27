@@ -1,0 +1,54 @@
+---
+title: "0208_copy_addon_specs.py"
+---
+
+## High-level description
+This Django migration file is designed to copy and update addon specifications for plans. It modifies the structure of addon specifications, moving them from the plan template level to individual plan versions, and marks the original plans as addons.
+
+## Symbols
+
+### `copy_addon_spec`
+#### Description
+This function is the core of the migration. It iterates through all plans with addon specifications, marks them as addons, and creates new addon specifications for each plan version.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | Django apps registry |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Schema editor for database operations |
+
+#### Internal Logic
+1. Retrieve the `Plan` and `AddOnSpecification` models from the apps registry.
+2. Iterate through all `Plan` objects that have a non-null `addon_spec`.
+3. For each plan:
+   - Mark it as an addon by setting `is_addon` to `True`.
+   - Save the plan.
+   - For each version of the plan:
+     - Create a new `AddOnSpecification` object, copying relevant fields from the original addon spec.
+     - Assign the new addon spec to the plan version.
+     - Save the plan version.
+   - Delete the original addon spec.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.db.migrations | Provides the migration framework |
+
+## Migration Class
+### Description
+This class defines the migration operation, which runs the `copy_addon_spec` function.
+
+#### Dependencies
+This migration depends on the previous migration "0207_historicalplan_is_addon_plan_is_addon_and_more".
+
+#### Operations
+The migration runs a single operation:
+- `migrations.RunPython(copy_addon_spec)`: Executes the `copy_addon_spec` function to perform the data migration.
+
+## Side Effects
+- Plans with addon specifications will be marked as addons (`is_addon = True`).
+- New `AddOnSpecification` objects will be created for each plan version.
+- Original `AddOnSpecification` objects associated with plan templates will be deleted.
+
+## Performance Considerations
+This migration may be slow if there are many plans with addon specifications, as it involves creating new objects and saving them for each plan version. It's recommended to run this migration during a maintenance window or when database load is low.

@@ -1,0 +1,136 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+The `frontend/src/integrations` directory contains React components and pages that handle the integration of various third-party services with the main application. This includes payment processors like Stripe and Braintree, as well as other business tools such as Netsuite and Salesforce. The code in this directory facilitates the connection, configuration, and data synchronization between these external services and the core application.
+
+## What does it do?
+
+This directory implements the following key functionalities:
+
+1. Payment Processor Integration:
+   - Handles the redirect process after Stripe integration, including processing authorization codes and managing connection states.
+   - Provides interfaces for importing customers and payments from Stripe and Braintree.
+   - Allows users to configure settings for automatic customer creation in payment processors.
+
+2. Business Tool Integration:
+   - Enables users to generate and download invoice CSVs for Netsuite integration within specified date ranges.
+   - Manages Salesforce integration settings, including configuring the source of truth for customer information and initiating data synchronization.
+
+3. User Interface:
+   - Presents user-friendly interfaces for each integration, allowing users to configure settings, initiate data imports or syncs, and manage integration-related tasks.
+   - Displays connection statuses and provides navigation options between integration pages and the main dashboard.
+
+## Entry points
+
+The main entry point for the Stripe integration process is the `StripeRedirect` component in `PaymentProcessorIntegrations.tsx`. This component handles the redirect after Stripe authorization and manages the connection process.
+
+For other integrations, the entry points are the respective view components in the `pages` subdirectory:
+
+- `BraintreeIntegrationView.tsx`
+- `NetsuiteIntegrationView.tsx`
+- `SalesforceIntegrationView.tsx`
+- `StripeIntegrationView.tsx`
+
+These components serve as the main interfaces for users to interact with and manage each integration.
+
+The data flow typically follows this pattern:
+1. User initiates an action (e.g., connecting a service, importing data)
+2. The component makes API calls to the backend to perform the requested action
+3. The component updates its state based on the API response
+4. The updated state is reflected in the UI, showing the result of the action to the user
+
+## Key Files
+
+1. `PaymentProcessorIntegrations.tsx`:
+   - Contains the `StripeRedirect` component
+   - Handles the Stripe integration redirect process
+   - Manages connection state and provides UI for displaying connection status
+
+2. `pages/BraintreeIntegrationView.tsx`:
+   - Provides interface for Braintree integration
+   - Allows importing Braintree customers and configuring automatic customer creation
+
+3. `pages/NetsuiteIntegrationView.tsx`:
+   - Handles Netsuite integration
+   - Provides functionality to generate and download invoice CSVs within a specified date range
+
+4. `pages/SalesforceIntegrationView.tsx`:
+   - Manages Salesforce integration settings
+   - Allows configuration of customer information source and initiates data synchronization
+
+5. `pages/StripeIntegrationView.tsx`:
+   - Provides interface for Stripe integration
+   - Enables importing Stripe customers and payments, and managing Stripe-related settings
+
+## Dependencies
+
+The integrations rely on several external libraries and internal modules:
+
+1. React (v18.2.0 or compatible): Core library for building user interfaces
+2. react-router-dom: Used for routing and navigation within the application
+3. antd (v5.4.6 or compatible): Provides UI components for building the interface
+4. Custom API modules: Used for making API calls to the backend for integration-related actions
+5. Custom type definitions: Ensures type safety for integration-related data structures
+
+## Configuration
+
+While there are no explicit configuration files mentioned, the integration components likely rely on environment variables or other configuration settings to manage API endpoints, authentication tokens, and other integration-specific parameters. These would typically be set up in the broader application context and passed down to the integration components as needed.
+
+Each integration view component may have its own set of configurable fields or options that users can modify to customize the integration behavior. For example:
+
+- In the Braintree integration, users can toggle automatic customer creation.
+- In the Netsuite integration, users can specify date ranges for invoice data export.
+- In the Salesforce integration, users can select the source of truth for customer information.
+- In the Stripe integration, users may have options for data import and synchronization settings.
+
+These configuration options are typically managed through state within each component and may be persisted to the backend through API calls when changed.
+
+Code Example (StripeRedirect component):
+
+```typescript
+const StripeRedirect: React.FC = () =&gt; {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [connected, setConnected] = useState&lt;boolean | string&gt;(false);
+  const navigate = useNavigate();
+
+  const code = searchParams.get('code');
+
+  useEffect(() =&gt; {
+    if (code) {
+      const connectPaymentProcessor = async () =&gt; {
+        try {
+          const data = {
+            code,
+            payment_processor: PaymentProcessorType.STRIPE,
+          };
+          await PaymentProcessorIntegration.connectPaymentProcessor(data);
+          setConnected(true);
+        } catch (error) {
+          setConnected(JSON.stringify(error));
+        }
+      };
+      connectPaymentProcessor();
+      setSearchParams({});
+    }
+  }, [code, setSearchParams]);
+
+  return (
+    &lt;div style={{ padding: '2rem' }}&gt;
+      &lt;h1&gt;Stripe Redirect&lt;/h1&gt;
+      {connected === true && &lt;Alert message="Successfully connected!" type="success" /&gt;}
+      {connected === false && &lt;Alert message="Connecting..." type="info" /&gt;}
+      {typeof connected === 'string' && (
+        &lt;Alert message="Failed to connect" description={connected} type="error" /&gt;
+      )}
+      &lt;Button onClick={() =&gt; navigate('/dashboard')} style={{ marginTop: '1rem' }}&gt;
+        Return to dashboard
+      &lt;/Button&gt;
+    &lt;/div&gt;
+  );
+};
+```
+
+This example demonstrates how the `StripeRedirect` component handles the Stripe integration process, including state management, API calls, and user interface updates based on the connection status.

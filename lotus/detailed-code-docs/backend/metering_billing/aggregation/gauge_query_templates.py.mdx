@@ -1,0 +1,242 @@
+---
+title: "gauge_query_templates.py"
+---
+
+## High-level description
+This file contains SQL query templates used for aggregating usage data for gauge metrics. These templates are used to create materialized views, calculate total usage with proration, drop old materialized views, and get current usage for gauge metrics.
+
+## Code Structure
+The code consists of a series of SQL query templates defined as string variables. Each template is designed for a specific purpose, such as creating a materialized view, calculating total usage, or dropping an old view. The templates use Jinja2 syntax for dynamic variable substitution.
+
+## References
+This file references the following symbols from other parts of the codebase:
+- `METRIC_TYPE`: Enum for metric types.
+- `Organization`: Model representing an organization.
+- `Customer`: Model representing a customer.
+- `BillingRecord`: Model representing a billing record.
+
+## Symbols
+### `GAUGE_DELTA_CUMULATIVE_SUM`
+#### Description
+This SQL query template creates a materialized view for calculating the cumulative sum of daily net state changes for a gauge metric with delta logging. It groups the data by customer ID, specified group-by fields, and time buckets of 1 day.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cagg_name`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `property_name`: Name of the property to aggregate.
+- `uuidv5_event_name`: UUIDv5 of the event name.
+- `organization_id`: ID of the organization.
+- `numeric_filters`: List of numeric filters.
+- `categorical_filters`: List of categorical filters.
+
+#### Outputs
+This symbol does not have explicit outputs. It creates a materialized view in the database.
+
+#### Internal Logic
+The query selects the customer ID, group-by fields, time bucket, and the sum of the specified property as `day_net_state_change`. It filters the data based on the event name, organization ID, and any provided numeric or categorical filters. The data is then grouped by customer ID, group-by fields, and time bucket.
+
+### `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION`
+#### Description
+This SQL query template calculates the total usage for a gauge metric with delta logging, taking into account proration. It uses several CTEs (Common Table Expressions) to perform the calculation:
+- `cumsum_cagg_daily`: Calculates the cumulative sum of daily net state changes from the materialized view.
+- `current_day_sum`: Calculates the sum of changes for the current day.
+- `prev_value`: Combines the previous days' usage with the current day's changes.
+- `cumulative_sum_per_event`: Calculates the cumulative sum for each event in the time range.
+- `proration_level_query`: Calculates the usage at the proration level.
+- `normalized_query`: Normalizes the usage based on the time ratio.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cumsum_cagg`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `property_name`: Name of the property to aggregate.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID.
+- `filter_properties`: Dictionary of filter properties and their values.
+- `start_date`: Start date of the billing period.
+- `uuidv5_event_name`: UUIDv5 of the event name.
+- `organization_id`: ID of the organization.
+- `numeric_filters`: List of numeric filters.
+- `categorical_filters`: List of categorical filters.
+- `proration_units`: Units for proration (e.g., 'hour', 'day').
+- `end_date`: End date of the billing period.
+- `granularity_ratio`: Ratio for granularity conversion.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the calculated total usage as a single value.
+
+#### Internal Logic
+The query first calculates the cumulative sum of daily changes from the materialized view and the sum of changes for the current day. It then combines these values to get the previous usage quantity. Next, it calculates the cumulative sum for each event in the time range, taking into account the previous usage quantity. The usage is then calculated at the proration level, using `time_bucket_gapfill` and `locf` functions to fill in gaps and carry forward values. Finally, the usage is normalized based on the time ratio and summed to get the total usage.
+
+### `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION_PER_DAY`
+#### Description
+This SQL query template is similar to `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION`, but it returns the total usage per day instead of a single value.
+
+#### Inputs
+Same as `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION`.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the calculated total usage per day as a table with two columns: `usage_qty` and `time`.
+
+#### Internal Logic
+The logic is the same as `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION`, but the final SELECT statement returns the normalized usage per day and the corresponding time.
+
+### `GAUGE_DELTA_DROP_OLD`
+#### Description
+This SQL query template drops the materialized view and associated triggers and functions for a gauge metric with delta logging.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variable is expected to be available in the context:
+- `cagg_name`: Name of the materialized view.
+
+#### Outputs
+This symbol does not have explicit outputs. It drops the materialized view and associated objects from the database.
+
+#### Internal Logic
+The query uses `DROP MATERIALIZED VIEW`, `DROP TRIGGER`, and `DROP FUNCTION` statements to remove the specified objects from the database.
+
+### `GAUGE_DELTA_GET_CURRENT_USAGE`
+#### Description
+This SQL query template calculates the current usage for a gauge metric with delta logging. It uses two CTEs:
+- `cumsum_cagg_daily`: Calculates the cumulative sum of daily net state changes from the materialized view.
+- `current_day_sum`: Calculates the sum of changes for the current day.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cumsum_cagg`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `property_name`: Name of the property to aggregate.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID.
+- `filter_properties`: Dictionary of filter properties and their values.
+- `uuidv5_event_name`: UUIDv5 of the event name.
+- `organization_id`: ID of the organization.
+- `numeric_filters`: List of numeric filters.
+- `categorical_filters`: List of categorical filters.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the calculated current usage as a single value.
+
+#### Internal Logic
+The query first calculates the cumulative sum of daily changes from the materialized view and the sum of changes for the current day. It then combines these values using a `FULL OUTER JOIN` to get the current usage quantity.
+
+### `GAUGE_DELTA_TOTAL_PER_DAY`
+#### Description
+This SQL query template calculates the total usage per day for a gauge metric with delta logging, similar to `GAUGE_DELTA_GET_TOTAL_USAGE_WITH_PRORATION_PER_DAY` but without proration. It uses several CTEs:
+- `prev_value`: Calculates the cumulative sum of daily net state changes from the materialized view up to the start date.
+- `cumulative_sum_per_event`: Calculates the cumulative sum for each event in the time range, taking into account the previous usage quantity.
+- `proration_level_query`: Calculates the usage at the day level using `time_bucket_gapfill` and `locf` functions.
+- `per_customer`: Aggregates the usage per customer per day.
+- `top_n`: Selects the top N customers based on total usage.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cagg_name`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `property_name`: Name of the property to aggregate.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID (optional).
+- `start_date`: Start date of the billing period.
+- `end_date`: End date of the billing period.
+- `uuidv5_event_name`: UUIDv5 of the event name.
+- `organization_id`: ID of the organization.
+- `numeric_filters`: List of numeric filters.
+- `categorical_filters`: List of categorical filters.
+- `filter_properties`: Dictionary of filter properties and their values.
+- `top_n`: Number of top customers to select.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the total usage per day for the top N customers as a table with three columns: `uuidv5_customer_id`, `usage_qty`, and `time_bucket`.
+
+#### Internal Logic
+The query first calculates the cumulative sum of daily changes from the materialized view up to the start date. It then calculates the cumulative sum for each event in the time range, taking into account the previous usage quantity. The usage is then calculated at the day level, using `time_bucket_gapfill` and `locf` functions to fill in gaps and carry forward values. The usage is then aggregated per customer per day, and the top N customers are selected based on total usage. The final result includes the customer ID, total usage, and time bucket for each day.
+
+### `GAUGE_TOTAL_CUMULATIVE_SUM`
+#### Description
+This SQL query template creates a materialized view for calculating the cumulative maximum value for a gauge metric with quantity logging. It groups the data by customer ID, specified group-by fields, and time buckets of 1 microsecond.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cagg_name`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `property_name`: Name of the property to aggregate.
+- `uuidv5_event_name`: UUIDv5 of the event name.
+- `organization_id`: ID of the organization.
+- `numeric_filters`: List of numeric filters.
+- `categorical_filters`: List of categorical filters.
+
+#### Outputs
+This symbol does not have explicit outputs. It creates a materialized view in the database.
+
+#### Internal Logic
+The query selects the customer ID, group-by fields, the maximum value of the specified property as `cumulative_usage_qty`, and the time bucket. It filters the data based on the event name, organization ID, and any provided numeric or categorical filters. The data is then grouped by customer ID, group-by fields, and time bucket.
+
+### `GAUGE_TOTAL_GET_CURRENT_USAGE`
+#### Description
+This SQL query template retrieves the current usage for a gauge metric with quantity logging from the materialized view.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cumsum_cagg`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID.
+- `filter_properties`: Dictionary of filter properties and their values.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the current usage as a single value.
+
+#### Internal Logic
+The query selects the customer ID, group-by fields, and the last value of `cumulative_usage_qty` as `usage_qty` from the materialized view. It filters the data based on the customer ID, filter properties, and time bucket. The data is then grouped by customer ID and group-by fields.
+
+### `GAUGE_TOTAL_GET_TOTAL_USAGE_WITH_PRORATION`
+#### Description
+This SQL query template calculates the total usage for a gauge metric with quantity logging, taking into account proration. It uses several CTEs:
+- `prev_state`: Retrieves the last usage quantity before the start date from the materialized view.
+- `prev_value`: Extracts the previous usage quantity from `prev_state`.
+- `proration_level_query`: Calculates the usage at the proration level using `time_bucket_gapfill` and `locf` functions.
+- `normalized_query`: Normalizes the usage based on the time ratio.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cumsum_cagg`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID.#### Outputs
+This symbol does not have explicit outputs. It returns the calculated total usage as a single value.
+
+#### Internal Logic
+The query first retrieves the last usage quantity before the start date from the materialized view. It then extracts the previous usage quantity from `prev_state`. Next, it calculates the usage at the proration level, using `time_bucket_gapfill` and `locf` functions to fill in gaps and carry forward values. Finally, the usage is normalized based on the time ratio and summed to get the total usage.
+
+### `GAUGE_TOTAL_GET_TOTAL_USAGE_WITH_PRORATION_PER_DAY`
+#### Description
+This SQL query template is similar to `GAUGE_TOTAL_GET_TOTAL_USAGE_WITH_PRORATION`, but it returns the total usage per day instead of a single value.
+
+#### Inputs
+Same as `GAUGE_TOTAL_GET_TOTAL_USAGE_WITH_PRORATION`.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the calculated total usage per day as a table with two columns: `usage_qty` and `time`.
+
+#### Internal Logic
+The logic is the same as `GAUGE_TOTAL_GET_TOTAL_USAGE_WITH_PRORATION`, but the final SELECT statement returns the normalized usage per day and the corresponding time.
+
+### `GAUGE_TOTAL_TOTAL_PER_DAY`
+#### Description
+This SQL query template calculates the total usage per day for a gauge metric with quantity logging, similar to `GAUGE_DELTA_TOTAL_PER_DAY` but for quantity logging. It uses several CTEs:
+- `prev_value`: Retrieves the last usage quantity before the start date from the materialized view.
+- `proration_level_query`: Calculates the usage at the day level using `time_bucket_gapfill` and `locf` functions.
+- `per_customer`: Aggregates the usage per customer per day.
+- `top_n`: Selects the top N customers based on total usage.
+
+#### Inputs
+This symbol does not have explicit inputs. It uses Jinja2 templating to substitute variables dynamically. The following variables are expected to be available in the context:
+- `cagg_name`: Name of the materialized view.
+- `group_by`: List of fields to group by.
+- `uuidv5_customer_id`: UUIDv5 of the customer ID (optional).
+- `start_date`: Start date of the billing period.
+- `end_date`: End date of the billing period.
+- `filter_properties`: Dictionary of filter properties and their values.
+- `top_n`: Number of top customers to select.
+
+#### Outputs
+This symbol does not have explicit outputs. It returns the total usage per day for the top N customers as a table with three columns: `uuidv5_customer_id`, `usage_qty`, and `time_bucket`.
+
+#### Internal Logic
+The query first retrieves the last usage quantity before the start date from the materialized view. It then calculates the usage at the day level, using `time_bucket_gapfill` and `locf` functions to fill in gaps and carry forward values. The usage is then aggregated per customer per day, and the top N customers are selected based on total usage. The final result includes the customer ID, total usage, and time bucket for each day.

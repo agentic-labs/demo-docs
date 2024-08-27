@@ -1,0 +1,114 @@
+---
+title: "auth_utils.py"
+---
+
+## High-level description
+This file contains utility functions and classes for authentication and authorization in a Django-based backend application. It provides methods for validating API keys, parsing organization information from requests, and implementing custom permission policies.
+
+## Code Structure
+The main symbols in the code are:
+1. `get_organization_from_key`: Function to retrieve an organization based on an API key.
+2. `parse_organization`: Function to determine the organization from either an API key or user session.
+3. `KnoxTokenScheme`: Class for defining the Knox token authentication scheme for OpenAPI documentation.
+4. `fast_api_key_validation_and_cache`: Function for quick API key validation using caching.
+5. `PermissionPolicyMixin`: Mixin class for implementing custom permission policies.
+
+These symbols are interconnected, with `parse_organization` using `get_organization_from_key`, and `fast_api_key_validation_and_cache` using the Django cache for optimization.
+
+## Symbols
+
+### get_organization_from_key
+#### Description
+Retrieves the organization associated with a given API key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The API key to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | Organization | The organization associated with the API key |
+
+#### Internal Logic
+1. Attempts to get the API key object from the database.
+2. If successful, returns the associated organization.
+3. If unsuccessful, raises a `NoMatchingAPIKey` exception.
+
+### parse_organization
+#### Description
+Determines the organization based on the request's authentication method (API key or user session).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | HttpRequest | The incoming request object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | Organization | The determined organization |
+
+#### Internal Logic
+1. Checks if the request is authenticated and if an API key is present.
+2. If both are present, verifies that they match the same organization.
+3. If only an API key is present, retrieves the organization using `get_organization_from_key`.
+4. If only user authentication is present, retrieves the organization from the user's profile.
+
+### fast_api_key_validation_and_cache
+#### Description
+Quickly validates an API key using caching for improved performance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | HttpRequest | The incoming request object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization_pk | int | The primary key of the validated organization |
+| is_valid | bool | Whether the API key is valid |
+
+#### Internal Logic
+1. Attempts to retrieve the API key from the request headers.
+2. Checks if the organization PK is cached for the given key.
+3. If cached, returns the cached value.
+4. If not cached, validates the key against the database and caches the result.
+
+### PermissionPolicyMixin
+#### Description
+A mixin class that allows for defining custom permission policies for different HTTP methods.
+
+#### Internal Logic
+1. Overrides the `check_permissions` method of the view.
+2. Determines the appropriate permission classes based on the HTTP method and any custom configurations.
+3. Applies the determined permission classes to the request.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.core.cache | Used for caching API key validations |
+| drf_spectacular.extensions | Used for OpenAPI documentation |
+| metering_billing.exceptions | Custom exception classes |
+| metering_billing.models | Database models (e.g., APIToken) |
+| metering_billing.permissions | Custom permission classes |
+| metering_billing.utils | Utility functions |
+
+## Error Handling
+The code implements custom exception classes for various error scenarios:
+- `NoMatchingAPIKey`: Raised when an API key is not found in the database.
+- `OrganizationMismatch`: Raised when the organization from the API key doesn't match the user's organization.
+- `UserNoOrganization`: Raised when an authenticated user doesn't have an associated organization.
+
+## Logging
+The code uses Django's built-in logging system, with a logger named "django.server".
+
+## API/Interface Reference
+The `KnoxTokenScheme` class defines an OpenAPI authentication scheme for Knox tokens:
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| N/A | N/A | Authorization header with "Token" prefix | N/A | Defines the Knox token authentication scheme for API documentation |
+
+This code provides essential authentication and authorization functionality for the backend application, ensuring that requests are properly validated and associated with the correct organization.

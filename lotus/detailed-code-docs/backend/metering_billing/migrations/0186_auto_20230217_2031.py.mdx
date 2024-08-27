@@ -1,0 +1,45 @@
+---
+title: "0186_auto_20230217_2031.py"
+---
+
+## High-level description
+This Django migration script, `0186_auto_20230217_2031.py`, migrates customer and organization addresses from a JSON field called `properties` to dedicated `Address` model instances. It iterates through existing `Customer` and `Organization` objects, extracts address data from the `properties` field, creates or retrieves corresponding `Address` objects, and updates the customer and organization instances with the new address relationships.
+
+## Code Structure
+The code defines a single function `migrate_customer_and_organization_addresses` which performs the address migration. This function is then used within a `RunPython` operation in the `Migration` class.
+
+## Symbols
+
+### `migrate_customer_and_organization_addresses(apps, schema_editor)`
+#### Description
+This function migrates customer and organization addresses from the `properties` JSON field to dedicated `Address` model instances.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps |  Provides access to the current application's models. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor |  Provides methods for manipulating the database schema. |
+
+#### Internal Logic
+1. **Retrieve Models:** Retrieves the `Customer`, `Organization`, and `Address` models using the provided `apps` object.
+2. **Migrate Customer Addresses:**
+    - Iterates through `Customer` objects with an `address` key in their `properties`.
+    - Extracts address data from the `properties` field.
+    - Uses `get_or_create` to either retrieve an existing `Address` object matching the extracted data or create a new one.
+    - Sets the `billing_address` and `shipping_address` fields of the `Customer` object to the retrieved/created `Address` object.
+    - Saves the updated `Customer` object.
+3. **Migrate Organization Addresses:**
+    - Iterates through `Organization` objects with an `address` key in their `properties`.
+    - Extracts address data from the `properties` field.
+    - Uses `get_or_create` to either retrieve an existing `Address` object matching the extracted data or create a new one.
+    - Sets the `address` field of the `Organization` object to the retrieved/created `Address` object.
+    - Removes the `address` key from the `properties` field.
+    - Saves the updated `Organization` object.
+
+### `Migration`
+#### Description
+This class represents a database migration operation.
+
+#### Internal Logic
+- Defines a dependency on the previous migration `0185_remove_customer_integrations_and_more`.
+- Includes a single operation: `RunPython(migrate_customer_and_organization_addresses, migrations.RunPython.noop)`. This operation runs the `migrate_customer_and_organization_addresses` function during the migration process and uses a no-op function for reverse migration.

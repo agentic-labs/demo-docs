@@ -1,0 +1,130 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `SlideOver` directory contains components that implement a slide-over panel for managing account environments in a React application. The main components are `SlideOver.tsx` and `SlideOverCard.tsx`, which work together to provide a user interface for viewing, switching between, and creating new organizations or environments.
+
+## What does it do?
+This directory implements a slide-over panel that allows users to:
+
+1. View a list of their linked organizations or account environments.
+2. Switch between different organizations by clicking on their respective cards.
+3. Create new organizations by filling out a form with details such as name, type (development or production), and currency.
+
+The slide-over panel can be toggled open or closed, and it provides visual feedback on the currently active organization. It also handles error cases and displays notifications for successful or failed actions.
+
+## Key Files
+
+1. `SlideOver.tsx`:
+   This is the main component that renders the entire slide-over panel. It manages the state of the panel, fetches necessary data (like available currencies), and handles the creation of new organizations and switching between them. It uses the `SlideOverCard` component to display individual organization cards.
+
+   Key functionalities:
+   - Toggles the slide-over panel open/closed
+   - Fetches available currencies
+   - Manages the state for creating a new organization
+   - Handles form submission for creating new organizations
+   - Switches between organizations
+
+2. `SlideOverCard.tsx`:
+   This component is responsible for rendering individual cards for each linked organization within the slide-over panel. It displays information about each organization and provides visual cues for the currently active organization.
+
+   Key functionalities:
+   - Renders a card for each linked organization
+   - Displays organization name and environment type
+   - Shows a visual indicator (checkmark) for the currently active organization
+   - Handles click events to switch between organizations
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: The core library for building the user interface.
+2. @ant-design/icons: Provides icons used in the components, such as `CheckCircleOutlined`.
+3. antd: Ant Design UI library, used for some UI components.
+4. @tanstack/react-query: Used for data fetching and state management of server data.
+5. react-toastify: Provides toast notifications for user feedback.
+
+Internal dependencies include:
+- Custom hooks like `useToggleSlideOver` and `useGlobalStore` for state management.
+- Custom components like `Select` and `Badge` for UI elements.
+- API client and type definitions for handling data and requests.
+
+## Configuration
+The components in this directory don't directly use configuration files or environment variables. However, they rely on the global state and API client, which may be configured elsewhere in the application.
+
+Key configurable aspects (likely managed in other parts of the application):
+- Available organization types (development and production)
+- API endpoints for fetching currencies and managing organizations
+- Toast notification settings
+
+## Code Examples
+
+Here's a simplified example of how the `SlideOver` component manages the creation of a new organization:
+
+```typescript
+const SlideOver: React.FC = () =&gt; {
+  const [isCreating, setIsCreating] = useState(false);
+  const [orgName, setOrgName] = useState('');
+  const [orgType, setOrgType] = useState&lt;'development' | 'production'&gt;('development');
+  const [currencyCode, setCurrencyCode] = useState('');
+
+  const createOrgMutation = useMutation(
+    (newOrg: CreateOrgPayload) =&gt; Organization.createOrg(newOrg),
+    {
+      onSuccess: (data) =&gt; {
+        toast.success('Organization created successfully');
+        setIsCreating(false);
+        // Additional logic to update state or refetch data
+      },
+      onError: (error: ErrorResponse) =&gt; {
+        toast.error(`Failed to create organization: ${error.detail}`);
+      },
+    }
+  );
+
+  const submitHandler = (e: React.FormEvent) =&gt; {
+    e.preventDefault();
+    createOrgMutation.mutate({
+      name: orgName,
+      org_type: orgType,
+      currency: currencyCode,
+    });
+  };
+
+  // Render form and handle other component logic
+};
+```
+
+This example demonstrates how the component manages the state for creating a new organization, handles form submission, and uses React Query's `useMutation` hook to perform the API call and manage its side effects.
+
+The `SlideOverCard` component, on the other hand, focuses on rendering the organization cards:
+
+```typescript
+const SlideOverCard: React.FC&lt;SlideOverCardProps&gt; = ({ switchOrg }) =&gt; {
+  const { organization } = useGlobalStore();
+
+  return (
+    &lt;&gt;
+      {organization.linked_organizations.map((org) =&gt; (
+        &lt;div
+          key={org.organization_id}
+          onClick={() =&gt; switchOrg(org.organization_id)}
+          style={{
+            backgroundColor: org.organization_id === organization.organization_id ? '#F5F5F5' : 'white',
+          }}
+        &gt;
+          &lt;div&gt;{org.organization_name}&lt;/div&gt;
+          &lt;Badge color={org.org_type === 'production' ? 'green' : 'blue'} text={org.org_type} /&gt;
+          {org.organization_id === organization.organization_id && (
+            &lt;CheckCircleOutlined style={{ color: '#52c41a' }} /&gt;
+          )}
+        &lt;/div&gt;
+      ))}
+    &lt;/&gt;
+  );
+};
+```
+
+This simplified example shows how the component renders each organization card, handles the switch organization action, and provides visual feedback for the active organization.
+
+In summary, the `SlideOver` directory implements a crucial part of the application's user interface for managing organizations or account environments. It provides a seamless experience for users to view, switch between, and create new organizations, all within a slide-over panel that can be easily accessed and dismissed.

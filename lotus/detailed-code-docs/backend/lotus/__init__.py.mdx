@@ -1,0 +1,38 @@
+---
+title: "__init__.py"
+---
+
+## High-level description
+This code snippet modifies the default behavior of Django's database cursor execution to include automatic retry logic for a specific OperationalError (error code 1213). This is presumably done to handle temporary database connection issues.
+
+## Symbols
+
+### `execute_wrapper(*args, **kwargs)`
+#### Description
+This function wraps the original `execute` method of Django's `CursorWrapper` class. It attempts to execute the database query and handles potential `OperationalError` with error code 1213, which typically indicates a deadlock situation. 
+
+#### Inputs
+* `*args`:  A variable number of positional arguments passed to the original `execute` method.
+* `**kwargs`: A variable number of keyword arguments passed to the original `execute` method.
+
+#### Outputs
+* Returns the result of the original `execute` method if successful.
+* Raises an `OperationalError` if the maximum number of attempts (3) is reached or the error code is not 1213.
+
+#### Internal Logic
+1. **Initialization:** Sets the attempt counter to 0.
+2. **Retry Loop:** Enters a loop that runs a maximum of 3 times.
+3. **Execution Attempt:** Attempts to execute the database query using the original `execute` method.
+4. **Success:** If the execution is successful, the result is returned.
+5. **OperationalError Handling:** If an `OperationalError` occurs, the code checks:
+    * **Error Code:** If the error code is 1213 (deadlock), it increments the attempt counter, pauses for 0.2 seconds, and retries the execution.
+    * **Maximum Attempts:** If the maximum number of attempts (3) is reached or the error code is not 1213, the exception is re-raised.
+
+## Side Effects
+This code modifies the default behavior of Django's database cursor execution by overwriting the `execute` method of the `CursorWrapper` class. This introduces a retry mechanism for specific database errors.
+
+## Error Handling
+The code specifically handles `OperationalError` with error code 1213. Other exceptions are not caught and will propagate up the call stack.
+
+## Performance Considerations
+The retry logic introduces a delay of 0.2 seconds between each attempt. While this is generally acceptable for handling transient errors, it could impact performance if the database experiences frequent deadlocks. 

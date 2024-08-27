@@ -1,0 +1,914 @@
+---
+title: "models.py"
+---
+
+## High-level description
+The `metering_billing/models.py` file defines the data models for the metering and billing system. It includes models for organizations, customers, products, plans, subscriptions, invoices, events, metrics, and various other entities related to billing and usage tracking.
+
+## Code Structure
+The code defines a series of Django models, each representing a different entity in the metering and billing system. These models are interconnected through foreign keys and other relationships, forming a comprehensive data structure for managing billing and usage data.
+
+## References
+This file references various enums from `metering_billing.utils.enums`, constants from `django.conf.settings`, and utility functions from `metering_billing.utils`.
+
+## Symbols
+
+### `Team`
+#### Description
+Represents a team within the system, which can have multiple organizations associated with it. It also tracks whether CRM integration is allowed for the team.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `save` method to provision CRM settings for all associated organizations when CRM integration is enabled.
+
+### `Address`
+#### Description
+Represents an address associated with an organization or customer.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for various address components like city, country, postal code, etc.
+
+### `TaxProviderListField`
+#### Description
+A custom model field representing a list of tax providers used by an organization or customer.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Uses the `TAX_PROVIDER` enum for choices.
+- Implements methods for database interaction, Python representation, and validation.
+
+### `Organization`
+#### Description
+Represents an organization using the metering and billing system. It stores organization details, billing settings, tax settings, timezone information, and other relevant data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for organization details, billing, tax, timezone, and provisioning information.
+- Overrides the `save` method to handle timezone updates for customers, provision currencies, and webhooks.
+- Implements methods for retrieving tax provider values and addresses.
+
+### `WebhookEndpointManager`
+#### Description
+A custom manager for the `WebhookEndpoint` model, providing a method to create webhook endpoints with associated triggers.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines the `create_with_triggers` method, which creates a webhook endpoint and saves associated triggers.
+
+### `WebhookEndpoint`
+#### Description
+Represents a webhook endpoint for an organization, storing the endpoint URL, secret, and associated triggers.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for webhook endpoint details.
+- Overrides the `save` method to provision the endpoint using the `SVIX_CONNECTOR` if available.
+
+### `WebhookTrigger`
+#### Description
+Represents a trigger associated with a webhook endpoint, specifying the event that should trigger the webhook.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the trigger name and its association with an organization and webhook endpoint.
+
+### `User`
+#### Description
+Extends the default Django user model to include an organization and team association.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `save` method to ensure the user is associated with a team.
+
+### `Product`
+#### Description
+Represents a product offered by an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for product details like name, description, and status.
+
+### `BaseCustomerManager`
+#### Description
+A custom manager for the `Customer` model, filtering the queryset to include only non-deleted customers.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `deleted` being null.
+
+### `DeletedCustomerManager`
+#### Description
+A custom manager for the `Customer` model, filtering the queryset to include only deleted customers.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `deleted` not being null.
+
+### `Customer`
+#### Description
+Represents a customer of an organization, storing customer details, billing information, tax settings, and payment processor integrations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for customer details, billing, tax, timezone, and payment processor information.
+- Overrides the `save` method to set the default currency.
+- Implements methods for retrieving active subscriptions, tax provider values, usage and revenue data, and addresses.
+
+### `CustomerBalanceAdjustment`
+#### Description
+Represents an adjustment to a customer's balance, such as a credit or debit.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for adjustment details, including amount, currency, description, and status.
+- Overrides the `save` method to enforce validation rules and prevent updates to certain fields.
+- Implements methods for calculating remaining balance, zeroing out adjustments, and drawing down amounts.
+
+### `IdempotenceCheck`
+#### Description
+Represents a check for idempotency, ensuring that events are not processed multiple times.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the time of creation and the idempotency ID.
+
+### `EventManager`
+#### Description
+A custom manager for the `Event` model, providing a method to create events and insert them into the database using a raw SQL query.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines the `create` method, which executes a raw SQL query to insert event data.
+
+### `Event`
+#### Description
+Represents a usage event generated by a customer, storing event details, properties, and idempotency information.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for event details, properties, and idempotency information.
+- Uses the `EventManager` for database interaction.
+
+### `NumericFilter`
+#### Description
+Represents a numeric filter that can be applied to metrics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the property name, operator, and comparison value.
+
+### `CategoricalFilter`
+#### Description
+Represents a categorical filter that can be applied to metrics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the property name, operator, and comparison value.
+
+### `Metric`
+#### Description
+Represents a billable metric, defining how usage data is aggregated and calculated for billing purposes.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for metric details, including event name, type, aggregation type, property name, granularity, and filters.
+- Implements methods for retrieving aggregation type, calculating billable usage, and managing materialized views.
+
+### `PriceTier`
+#### Description
+Represents a price tier within a plan component, defining the cost and range of usage for a specific metric.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for price tier details, including type, range start and end, cost per batch, and batch rounding type.
+- Implements the `calculate_revenue` method to determine the revenue based on usage.
+
+### `ComponentFixedCharge`
+#### Description
+Represents a fixed charge associated with a plan component, such as a prepaid charge.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the number of units and the charge behavior.
+
+### `PlanComponent`
+#### Description
+Represents a component of a billing plan, associating a billable metric with price tiers and other billing details.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for plan component details, including the billable metric, price tiers, pricing unit, and invoicing intervals.
+- Implements methods for calculating revenue, retrieving invoicing and reset dates, and converting interval labels to values.
+
+### `Feature`
+#### Description
+Represents a feature that can be associated with a plan version.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for feature details like name and description.
+
+### `Invoice`
+#### Description
+Represents an invoice generated for a customer, storing invoice details, line items, payment status, and external payment object information.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for invoice details, line items, payment status, and external payment object information.
+- Overrides the `save` method to generate invoice numbers and handle payment status updates.
+
+### `InvoiceLineItemAdjustment`
+#### Description
+Represents an adjustment to an invoice line item, such as sales tax or a plan adjustment.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for adjustment details, including amount, account, and type.
+
+### `InvoiceLineItem`
+#### Description
+Represents a line item within an invoice, detailing the charges for a specific service or usage period.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for line item details, including name, start and end dates, quantity, amount, billing type, and associated entities.
+- Overrides the `save` method to calculate the total amount.
+
+### `APIToken`
+#### Description
+Extends the `rest_framework_api_key.models.AbstractAPIKey` model to include an organization association.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `__str__` method for string representation.
+
+### `TeamInviteToken`
+#### Description
+Represents a token used to invite a user to a team.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the token, associated user and team, email, and expiry date.
+
+### `RecurringCharge`
+#### Description
+Represents a recurring charge associated with a plan version, such as a flat fee.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for recurring charge details, including name, charge timing, behavior, amount, currency, and reset and invoicing intervals.
+- Implements methods for retrieving invoicing and reset dates and converting interval labels to values.
+
+### `BasePlanManager`
+#### Description
+A custom manager for the `Plan` model, providing methods to filter plans based on their active status.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines methods for filtering active, ended, and not started plans based on their `active_from` and `active_to` fields.
+
+### `PlanVersionManager`
+#### Description
+A custom manager for the `PlanVersion` model, inheriting from `BasePlanManager` and filtering for non-deleted plan versions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `deleted` being null.
+
+### `DeletedPlanVersionManager`
+#### Description
+A custom manager for the `PlanVersion` model, filtering for deleted plan versions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `deleted` not being null.
+
+### `RegularPlanVersionManager`
+#### Description
+A custom manager for the `PlanVersion` model, inheriting from `PlanVersionManager` and filtering for regular plan versions (not add-ons).
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `addon_spec` being null.
+
+### `AddOnPlanVersionManager`
+#### Description
+A custom manager for the `PlanVersion` model, inheriting from `PlanVersionManager` and filtering for add-on plan versions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `addon_spec` not being null.
+
+### `PlanVersion`
+#### Description
+Represents a specific version of a billing plan, storing details about pricing, features, and billing schedule.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for plan version details, including organization, version number, plan, creation details, billing schedule, pricing, and features.
+- Implements methods for checking active status, retrieving status, and determining the number of active subscriptions.
+
+### `PriceAdjustment`
+#### Description
+Represents a price adjustment that can be applied to a plan version, such as a percentage discount or a fixed amount.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for price adjustment details, including name, description, type, and amount.
+- Implements the `apply` method to calculate the adjusted price based on the adjustment type.
+
+### `DeletedPlanManager`
+#### Description
+A custom manager for the `Plan` model, filtering for deleted plans.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `deleted` not being null.
+
+### `RegularPlanManager`
+#### Description
+A custom manager for the `Plan` model, inheriting from `BasePlanManager` and filtering for regular plans (not add-ons).
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `is_addon` being False.
+
+### `AddOnPlanManager`
+#### Description
+A custom manager for the `Plan` model, inheriting from `BasePlanManager` and filtering for add-on plans.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `is_addon` being True.
+
+### `AddOnSpecification`
+#### Description
+Represents the specification for an add-on plan, defining its billing frequency and invoicing behavior.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+-### `AddOnSpecification`
+#### Description
+Represents the specification for an add-on plan, defining its billing frequency and invoicing behavior.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for billing frequency and flat fee invoicing behavior.
+- Implements static methods for converting billing frequency and flat fee invoicing behavior labels to their corresponding values.
+
+### `Plan`
+#### Description
+Represents a billing plan, which can have multiple versions. It stores plan details, billing settings, and other relevant data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for plan details, billing settings, and tags.
+- Implements methods for managing tags and retrieving active subscriptions by version.
+
+### `ExternalPlanLink`
+#### Description
+Represents a link between a plan in Lotus and an external plan in a payment processor.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the plan, source payment processor, and external plan ID.
+
+### `StripeSubscriptionRecordManager`
+#### Description
+A custom manager for the `SubscriptionRecord` model, filtering for subscription records with a Stripe subscription ID.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `stripe_subscription_id` not being null.
+
+### `SubscriptionRecordManager`
+#### Description
+A custom manager for the `SubscriptionRecord` model, filtering for subscription records without a Stripe subscription ID. It also provides methods to filter subscriptions based on their active status.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `stripe_subscription_id` being null.
+- Defines methods for filtering active, ended, and not started subscriptions based on their `start_date` and `end_date` fields.
+
+### `BaseSubscriptionRecordManager`
+#### Description
+A custom manager for the `SubscriptionRecord` model, inheriting from `SubscriptionRecordManager` and filtering for base subscription records (not add-ons).
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `billing_plan__addon_spec` being null.
+
+### `AddOnSubscriptionRecordManager`
+#### Description
+A custom manager for the `SubscriptionRecord` model, inheriting from `SubscriptionRecordManager` and filtering for add-on subscription records.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Overrides the `get_queryset` method to filter for `billing_plan__addon_spec` not being null.
+
+### `SubscriptionRecord`
+#### Description
+Represents a subscription record for a customer, linking them to a specific plan version and storing subscription details.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines various fields for subscription details, including organization, customer, billing plan, start and end dates, auto-renewal status, and subscription filters.
+- Overrides the `save` method to handle overlapping subscriptions and create usage alert results.
+- Implements methods for creating subscription records, calculating usage and revenue, canceling subscriptions, switching plans, and deleting subscriptions.
+
+### `BillingRecord`
+#### Description
+Represents a billing record for a subscription, tracking the billing details for a specific component or recurring charge.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for billing record details, including organization, subscription, component, recurring charge, start and end dates, invoicing dates, and billing status.
+- Overrides the `save` method to handle initial setup and updates.
+- Implements methods for calculating usage and revenue, handling invoicing, and canceling billing records.
+
+### `ComponentChargeRecord`
+#### Description
+Represents a record of a component fixed charge applied to a billing record.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the associated billing record, component charge, component, start and end dates, units, and billing status.
+- Overrides the `save` method to enforce validation rules.
+
+### `Analysis`
+#### Description
+Represents a historical analysis of billing data, storing the analysis name, dates, KPIs, and results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for analysis details, including name, dates, KPIs, results, and status.
+- Overrides the `save` method to ensure KPIs are unique.
+
+### `Backtest`
+#### Description
+Represents a backtest of billing data, storing the backtest name, dates, KPIs, and results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for backtest details, including name, dates, KPIs, results, and status.
+
+### `BacktestSubstitution`
+#### Description
+Represents a substitution of a plan version within a backtest.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the associated backtest, original plan, and new plan.
+
+### `PricingUnit`
+#### Description
+Represents a pricing unit, such as a currency, used for billing purposes.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the pricing unit code, name, symbol, and whether it's custom.
+
+### `CustomPricingUnitConversion`
+#### Description
+Represents a custom conversion between pricing units for a specific plan version.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the plan version, from and to units, and the corresponding quantities.
+
+### `AccountsReceivableDebtor`
+#### Description
+Represents a debtor in the accounts receivable system.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, customer, currency, and creation date.
+
+### `AccountsReceivableTransaction`
+#### Description
+Represents a transaction in the accounts receivable system.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, debtor, timestamp, transaction type, due date, amount, and related transactions.
+
+### `Tag`
+#### Description
+Represents a tag that can be associated with various entities, such as plans.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the tag name, group, hex color, and color name.
+
+### `UsageAlert`
+#### Description
+Represents a usage alert that triggers when a specific metric exceeds a threshold.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, metric, plan version, and threshold.
+- Overrides the `save` method to validate the metric type and create usage alert results for active subscriptions.
+
+### `UsageAlertResult`
+#### Description
+Represents the result of a usage alert for a specific subscription record.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, alert, subscription record, last run value, last run timestamp, and triggered count.
+- Implements the `refresh` method to update the alert result based on current usage.
+
+### `StripeCustomerIntegration`
+#### Description
+Represents a link between a customer in Lotus and a customer in Stripe.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization and Stripe customer ID.
+
+### `BraintreeCustomerIntegration`
+#### Description
+Represents a link between a customer in Lotus and a customer in Braintree.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization and Braintree customer ID.
+
+### `StripeOrganizationIntegration`
+#### Description
+Represents a link between an organization in Lotus and an account in Stripe.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization and Stripe account ID.
+
+### `BraintreeOrganizationIntegration`
+#### Description
+Represents a link between an organization in Lotus and a merchant account in Braintree.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization and Braintree merchant ID.
+
+### `UnifiedCRMOrganizationIntegration`
+#### Description
+Represents an integration between an organization in Lotus and a unified CRM system.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, CRM provider, access token, native organization URL and ID, connection ID, and creation date.
+- Implements methods for performing synchronization with the CRM system.
+
+### `UnifiedCRMCustomerIntegration`
+#### Description
+Represents a link between a customer in Lotus and a customer in a unified CRM system.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, CRM provider, native customer ID, and unified account ID.
+
+### `UnifiedCRMInvoiceIntegration`
+#### Description
+Represents a link between an invoice in Lotus and an invoice in a unified CRM system.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Defines fields for the organization, CRM provider, native invoice ID, and unified note ID.
+
+This comprehensive documentation provides a detailed understanding of the data models and their relationships within the metering and billing system. It clarifies the purpose and functionality of each model, enabling developers and technical PMs to effectively work with the codebase.

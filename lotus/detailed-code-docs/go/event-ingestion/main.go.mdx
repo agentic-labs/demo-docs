@@ -1,0 +1,87 @@
+---
+title: "main.go"
+---
+
+## High-level description
+This code implements an event ingestion service using Go. It sets up an HTTP server that receives event data, validates it, and produces the events to a Kafka topic. The service includes authentication middleware, database connectivity, and caching mechanisms.
+
+## Code Structure
+The main function initializes database and cache connections, sets up a Kafka client, and configures an Echo web server with middleware and a route for event tracking. The core functionality revolves around receiving, validating, and processing event batches.
+
+## References
+- `github.com/uselotus/lotus/go/event-ingestion/authn`
+- `github.com/uselotus/lotus/go/event-ingestion/cache`
+- `github.com/uselotus/lotus/go/event-ingestion/config`
+- `github.com/uselotus/lotus/go/event-ingestion/database`
+- `github.com/uselotus/lotus/go/event-ingestion/kafka`
+- `github.com/uselotus/lotus/go/pkg/types`
+
+## Symbols
+
+### `main`
+#### Description
+The main function sets up the event ingestion service, including database and cache connections, Kafka client configuration, and HTTP server setup.
+
+#### Internal Logic
+1. Initialize database connection
+2. Initialize cache connection
+3. Configure Kafka client
+4. Set up Echo web server with middleware
+5. Define route for event tracking
+6. Start the server
+
+### `TrackEventResponse`
+#### Description
+A struct representing the response format for the event tracking endpoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Success | string | Indicates the success status of the event tracking |
+| FailedEvents | map[string]string | Maps event IDs to failure reasons |
+
+### `RawEventBatch`
+#### Description
+A struct representing a batch of raw events to be processed.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Batch | []types.RawEvent | An array of raw events |
+
+### POST `/api/track/` handler
+#### Description
+Handles the event tracking endpoint, processing incoming event batches.
+
+#### Internal Logic
+1. Parse incoming JSON data into `RawEventBatch` or single `RawEvent`
+2. Validate each event in the batch
+3. Transform valid events and produce them to Kafka
+4. Collect information about failed events
+5. Return appropriate response based on success/failure of event processing
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/labstack/echo/v4 | Web framework for handling HTTP requests |
+| github.com/twmb/franz-go/pkg/kgo | Kafka client for Go |
+| github.com/lib/pq | PostgreSQL driver for database connectivity |
+
+## Configuration
+The service uses configuration options defined in the `config` package. Key options include:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| DatabaseURL | string | URL for connecting to the PostgreSQL database |
+| Port | uint | Port number for the HTTP server |
+| KafkaURL | string | URL for connecting to the Kafka broker |
+| KafkaTopic | string | Kafka topic for producing events |
+| KafkaSASLUsername | string | Username for Kafka SASL authentication |
+| KafkaSASLPassword | string | Password for Kafka SASL authentication |
+| RedisURL | string | URL for connecting to the Redis cache |
+
+## Error Handling
+The code implements error handling for database connections, cache initialization, and Kafka client setup. It also handles validation errors for incoming events and Kafka production errors.
+
+## Logging
+Basic logging is implemented using the standard `log` package for critical errors and the Echo framework's built-in logger for HTTP requests.

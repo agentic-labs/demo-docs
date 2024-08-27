@@ -1,0 +1,956 @@
+---
+title: "utils.py"
+---
+
+## High-level description
+The `utils.py` file in the `metering_billing/utils` directory contains a collection of utility functions used throughout the metering and billing application. These functions handle tasks such as data type conversion, date and time manipulation, UUID generation, and various calculations related to billing and subscriptions.
+
+## Code Structure
+This file primarily defines a set of independent utility functions. There is no complex code structure or interdependencies between the functions.
+
+## Symbols
+
+### `parse_nested_response`
+#### Description
+This function takes an object as input and returns a dictionary representation of the object, handling non-serializable objects by replacing them with the string "&lt;not serializable&gt;".
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | any | The object to be parsed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | dict | A dictionary representation of the input object. |
+
+#### Internal Logic
+1. The function uses `json.dumps` to serialize the input object into a JSON string. A custom encoder is used to handle non-serializable objects by replacing them with the string "&lt;not serializable&gt;".
+2. The resulting JSON string is then parsed using `json.loads` to create a dictionary representation of the object.
+
+### `print_prefetch_counts`
+#### Description
+This function is a debugging tool used to print the number of prefetched objects for a given queryset. It recursively traverses the prefetched objects and prints their counts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| queryset | QuerySet | The queryset to inspect. |
+| prefix | str | An optional prefix to add to the output for indentation. |
+
+#### Outputs
+None. The function prints the prefetch counts to the console.
+
+#### Internal Logic
+1. The function iterates through each object in the queryset.
+2. For each object, it checks if it has a `_prefetched_objects_cache` attribute.
+3. If the cache exists, it iterates through each prefetch key and the corresponding prefetched objects.
+4. The function prints the prefetch key and the count of prefetched objects.
+5. It recursively calls itself with the prefetched objects and an increased indentation prefix.
+
+### `make_hashable`
+#### Description
+This function takes an object as input and returns a hashable version of the object. It handles mutable sequences, sets, and mappings by converting them to their immutable counterparts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | any | The object to be made hashable. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | A hashable version of the input object. |
+
+#### Internal Logic
+1. If the input object is a mutable sequence (list), it converts it to a tuple by recursively calling `make_hashable` on each element.
+2. If the input object is a set, it converts it to a frozenset by recursively calling `make_hashable` on each element.
+3. If the input object is a mutable mapping (dictionary), it converts it to an OrderedDict by recursively calling `make_hashable` on each key and value.
+4. Otherwise, it returns the input object as is.
+
+### `convert_to_decimal`
+#### Description
+This function converts a given value to a Decimal object, rounding up to the nearest 0.0000000001. If the input value is None, it returns Decimal(0).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | any | The value to be converted to a Decimal. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | Decimal | The input value converted to a Decimal object. |
+
+#### Internal Logic
+1. If the input value is None, it returns Decimal(0).
+2. Otherwise, it converts the input value to a Decimal object using `Decimal(value)`.
+3. The resulting Decimal object is then quantized to 0.0000000001 using `quantize(Decimal(".0000000001"), rounding=ROUND_UP)`.
+
+### `convert_to_two_decimal_places`
+#### Description
+This function converts a given value to a Decimal object, rounding to two decimal places using ROUND_HALF_UP. If the input value is None, it returns Decimal(0).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | any | The value to be converted to a Decimal. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | Decimal | The input value converted to a Decimal object rounded to two decimal places. |
+
+#### Internal Logic
+1. If the input value is None, it returns Decimal(0).
+2. Otherwise, it converts the input value to a Decimal object using `Decimal(value)`.
+3. The resulting Decimal object is then quantized to 0.01 using `quantize(Decimal(".01"), rounding=ROUND_HALF_UP)`.
+
+### `convert_to_date`
+#### Description
+This function converts a given value to a `datetime.date` object. It handles datetime objects, strings, and date objects. If the input value is of an unsupported type, it raises a ServerError.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | any | The value to be converted to a date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.date | The input value converted to a date object. |
+
+#### Internal Logic
+1. If the input value is a `datetime.datetime` object, it returns the date part of the object using `value.date()`.
+2. If the input value is a string, it parses the string using `parser.parse(value)` and recursively calls `convert_to_date` with the parsed datetime object.
+3. If the input value is a `datetime.date` object, it returns the input value as is.
+4. Otherwise, it raises a ServerError with a message indicating that the input type cannot be converted to a date.
+
+### `convert_to_datetime`
+#### Description
+This function converts a given value to a `datetime.datetime` object with the specified timezone. It handles datetime objects, strings, and date objects. If the input value is of an unsupported type, it raises a ServerError.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | any | The value to be converted to a datetime. |
+| date_behavior | str | Specifies how to handle date objects. Can be "min" (set time to 00:00:00) or "max" (set time to 23:59:59). Defaults to "min". |
+| tz | pytz.timezone | The timezone to use for the datetime object. Defaults to pytz.UTC. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.datetime | The input value converted to a datetime object with the specified timezone. |
+
+#### Internal Logic
+1. If the input value is a `datetime.datetime` object, it replaces the timezone with the specified timezone using `value.replace(tzinfo=tz)`.
+2. If the input value is a string, it parses the string using `parser.parse(value)` and recursively calls `convert_to_datetime` with the parsed datetime object.
+3. If the input value is a `datetime.date` object, it uses `date_as_min_dt` or `date_as_max_dt` to convert the date to a datetime object with the specified time and timezone, based on the `date_behavior` parameter.
+4. Otherwise, it raises a ServerError with a message indicating that the input type cannot be converted to a datetime.
+
+### `make_all_decimals_floats`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and converts all Decimal objects to floats.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all Decimal objects converted to floats. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `make_all_decimals_floats` on each element and returns a new list with the converted elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `make_all_decimals_floats` on each key and value and returns a new dictionary with the converted keys and values.
+3. If the input data is a Decimal object, it converts it to a float using `float(data)`.
+4. Otherwise, it returns the input data as is.
+
+### `round_all_decimals_to_two_places`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and rounds all Decimal objects to two decimal places using ROUND_HALF_UP.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all Decimal objects rounded to two decimal places. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `round_all_decimals_to_two_places` on each element and returns a new list with the rounded elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `round_all_decimals_to_two_places` on each key and value and returns a new dictionary with the rounded keys and values.
+3. If the input data is a Decimal object, it rounds it to two decimal places using `data.quantize(Decimal(".01"), rounding=ROUND_HALF_UP)`.
+4. Otherwise, it returns the input data as is.
+
+### `make_all_decimals_strings`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and converts all Decimal objects to strings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all Decimal objects converted to strings. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `make_all_decimals_strings` on each element and returns a new list with the converted elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `make_all_decimals_strings` on each key and value and returns a new dictionary with the converted keys and values.
+3. If the input data is a Decimal object, it converts it to a string using `str(data)`.
+4. Otherwise, it returns the input data as is.
+
+### `make_all_dates_times_strings`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and converts all `datetime.date` and `datetime.datetime` objects to strings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all date and datetime objects converted to strings. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `make_all_dates_times_strings` on each element and returns a new list with the converted elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `make_all_dates_times_strings` on each key and value and returns a new dictionary with the converted keys and values.
+3. If the input data is a `datetime.date` or `datetime.datetime` object, it converts it to a string using `str(data)`.
+4. Otherwise, it returns the input data as is.
+
+### `make_all_datetimes_dates`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and converts all `datetime.datetime` objects to `datetime.date` objects.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all datetime objects converted to date objects. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `make_all_datetimes_dates` on each element and returns a new list with the converted elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `make_all_datetimes_dates` on each key and value and returns a new dictionary with the converted keys and values.
+3. If the input data is a `datetime.datetime` object### `make_all_datetimes_dates`
+#### Description
+This function recursively traverses a data structure (list, dictionary, or OrderedDict) and converts all `datetime.datetime` objects to `datetime.date` objects.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | any | The data structure to be processed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | any | The data structure with all datetime objects converted to date objects. |
+
+#### Internal Logic
+1. If the input data is a list, it recursively calls `make_all_datetimes_dates` on each element and returns a new list with the converted elements.
+2. If the input data is a dictionary or OrderedDict, it recursively calls `make_all_datetimes_dates` on each key and value and returns a new dictionary with the converted keys and values.
+3. If the input data is a `datetime.datetime` object, it returns the date part of the object using `data.date()`.
+4. Otherwise, it returns the input data as is.
+
+### `years_bwn_twodates`
+#### Description
+This function takes two dates as input and yields the years between the two dates, inclusive.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| start_date | datetime.date | The starting date. |
+| end_date | datetime.date | The ending date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| year | int | Each year between the starting and ending dates, inclusive. |
+
+#### Internal Logic
+1. It calculates the number of years between the two dates using `relativedelta(end_date, start_date).years`.
+2. It iterates through a range from 0 to the number of years, inclusive.
+3. For each year, it adds the year to the starting date using `start_date + relativedelta(years=n)` and yields the year of the resulting date.
+
+### `months_bwn_two_dates`
+#### Description
+This function takes two dates as input and yields tuples representing the year and month of each month between the two dates, inclusive.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| start_date | datetime.date | The starting date. |
+| end_date | datetime.date | The ending date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (year, month) | tuple[int, int] | A tuple representing the year and month of each month between the starting and ending dates, inclusive. |
+
+#### Internal Logic
+1. It calculates the total number of months between the two dates, including years and months, using `12 * relativedelta(end_date, start_date).years + relativedelta(end_date, start_date).months`.
+2. It iterates through a range from 0 to the total number of months, inclusive.
+3. For each month, it adds the month to the starting date using `start_date + relativedelta(months=n)` and yields a tuple containing the year and month of the resulting date.
+
+### `dates_bwn_two_dts`
+#### Description
+This function takes two dates or datetimes as input and yields each date between the two dates, inclusive.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| start_date | datetime.date or datetime.datetime | The starting date or datetime. |
+| end_date | datetime.date or datetime.datetime | The ending date or datetime. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date | datetime.date | Each date between the starting and ending dates, inclusive. |
+
+#### Internal Logic
+1. If the input dates are datetimes, it converts them to dates using `.date()`.
+2. It initializes a counter `i` to 0.
+3. It iterates while the starting date plus `i` days is less than or equal to the ending date.
+4. For each iteration, it yields the starting date plus `i` days using `start_date + relativedelta(days=i)`.
+5. It increments the counter `i` by 1.
+
+### `hours_bwn_twodates`
+#### Description
+This function takes two dates as input and yields each hour between the two dates, inclusive.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| start_date | datetime.date | The starting date. |
+| end_date | datetime.date | The ending date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| hour | datetime.datetime | Each hour between the starting and ending dates, inclusive. |
+
+#### Internal Logic
+1. It converts the starting and ending dates to datetime objects with the time set to 00:00:00 and 23:59:59, respectively, using `date_as_min_dt` and `date_as_max_dt`.
+2. It calculates the absolute difference in hours between the two datetime objects using `abs(relativedelta(start_time, end_time).hours)`.
+3. It iterates through a range from 0 to the difference in hours, inclusive.
+4. For each hour, it adds the hour to the starting date using `start_date + relativedelta(hours=n)` and yields the resulting datetime object.
+
+### `decimal_to_cents`
+#### Description
+This function converts a Decimal object representing an amount in dollars to an integer representing the amount in cents.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| amount | Decimal | The amount in dollars. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | int | The amount in cents. |
+
+#### Internal Logic
+1. It quantizes the input amount to two decimal places using `amount.quantize(Decimal(".01"), rounding=ROUND_DOWN)`.
+2. It multiplies the quantized amount by 100 to convert it to cents.
+3. It converts the result to an integer using `int()`.
+
+### `periods_bwn_twodates`
+#### Description
+This function takes a granularity, a start time, an end time, and an optional `truncate_to_granularity` flag as input. It yields datetime objects representing the start of each period between the start and end times, based on the specified granularity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| granularity | USAGE_CALC_GRANULARITY or METRIC_GRANULARITY | The granularity of the periods. |
+| start_time | datetime.date or datetime.datetime or str | The starting time. |
+| end_time | datetime.date or datetime.datetime or str | The ending time. |
+| truncate_to_granularity | bool | If True, the start and end times will be truncated to the start of their respective periods. Defaults to False. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| period_start | datetime.datetime | The start of each period between the start and end times. |
+
+#### Internal Logic
+1. It converts the start and end times to datetime objects with the time set to 00:00:00 and 23:59:59, respectively, using `convert_to_datetime`.
+2. If the granularity is TOTAL or None, it yields the start time and returns.
+3. It defines a `relativedelta` object `rd` based on the granularity.
+4. It defines a `relativedelta` object `normalize_rd` to truncate the start and end times to the start of their respective periods if `truncate_to_granularity` is True.
+5. It initializes a counter `k` to 1 and a variable `ret` to the start time.
+6. It iterates while `ret` is less than or equal to the end time.
+7. For each iteration, it yields `ret`.
+8. It updates `ret` to the start time plus `k` times `rd`.
+9. It increments the counter `k` by 1.
+
+### `now_plus_day`
+#### Description
+This function returns the current UTC time plus one day.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.datetime | The current UTC time plus one day. |
+
+#### Internal Logic
+1. It gets the current UTC time using `datetime.datetime.now(datetime.timezone.utc)`.
+2. It adds one day to the current time using `relativedelta(days=+1)`.
+
+### `now_utc`
+#### Description
+This function returns the current UTC time as a timezone-aware datetime object.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.datetime | The current UTC time as a timezone-aware datetime object. |
+
+#### Internal Logic
+1. It gets the current UTC time using `datetime.datetime.utcnow()`.
+2. It sets the timezone to UTC using `replace(tzinfo=pytz.utc)`.
+
+### `now_utc_ts`
+#### Description
+This function returns the current UTC time as a timestamp string.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | The current UTC time as a timestamp string. |
+
+#### Internal Logic
+1. It gets the current UTC time as a timezone-aware datetime object using `now_utc()`.
+2. It converts the datetime object to a timestamp using `.timestamp()`.
+3. It converts the timestamp to a string using `str()`.
+
+### `get_granularity_ratio`
+#### Description
+This function calculates the ratio between two granularities, given a start date.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metric_granularity | METRIC_GRANULARITY | The granularity of the metric. |
+| proration_granularity | METRIC_GRANULARITY | The granularity of the proration. |
+| start_date | datetime.date | The starting date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | int | The ratio between the two granularities. |
+
+#### Internal Logic
+1. If the proration granularity is TOTAL or None, it returns 1.
+2. It defines a dictionary `granularity_dict` mapping metric granularities to dictionaries containing ratios for other granularities.
+3. It calculates the number of days in a month, quarter, and year based on the start date.
+4. It populates the `granularity_dict` with the calculated ratios.
+5. It returns the ratio for the given metric and proration granularities from the `granularity_dict`.
+
+### `calculate_end_date`
+#### Description
+This function calculates the end date of a billing period, given an interval, a start date, a timezone, and optional day and month anchors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| interval | PLAN_DURATION | The billing interval (e.g., monthly, quarterly, yearly). |
+| start_date | datetime.date | The starting date of the billing period. |
+| timezone | pytz.timezone | The timezone to use for the calculations. |
+| day_anchor | int | An optional day of the month to use as an anchor for the end date. |
+| month_anchor | int | An optional month of the year to use as an anchor for the end date. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| end_date | datetime.datetime | The calculated end date of the billing period. |
+
+#### Internal Logic
+1. It calculates the end date based on the interval, start date, timezone, and optional anchors.
+2. For monthly intervals, it adds one month to the start date and subtracts one day. If a day anchor is provided, it adjusts the end date accordingly.
+3. For quarterly intervals, it adds three months to the start date and subtracts one day. If day and/or month anchors are provided, it adjusts the end date accordingly.
+4. For yearly intervals, it adds one year to the start date and subtracts one day. If day and/or month anchors are provided, it adjusts the end date accordingly.
+
+### `event_uuid`
+#### Description
+This function generates a UUID for an event, prefixed with "event_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an event, prefixed with "event_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "event_".
+
+### `product_uuid`
+#### Description
+This function generates a UUID for a product, prefixed with "prod_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|### `product_uuid`
+#### Description
+This function generates a UUID for a product, prefixed with "prod_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a product, prefixed with "prod_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "prod_".
+
+### `customer_uuid`
+#### Description
+This function generates a UUID for a customer, prefixed with "cust_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a customer, prefixed with "cust_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "cust_".
+
+### `metric_uuid`
+#### Description
+This function generates a UUID for a metric, prefixed with "metric_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a metric, prefixed with "metric_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "metric_".
+
+### `plan_version_uuid`
+#### Description
+This function generates a UUID for a plan version, prefixed with "plnvrs_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a plan version, prefixed with "plnvrs_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "plnvrs_".
+
+### `plan_uuid`
+#### Description
+This function generates a UUID for a plan, prefixed with "plan_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a plan, prefixed with "plan_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "plan_".
+
+### `subscription_uuid`
+#### Description
+This function generates a UUID for a subscription, prefixed with "subs_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a subscription, prefixed with "subs_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "subs_".
+
+### `subscription_record_uuid`
+#### Description
+This function generates a UUID for a subscription record, prefixed with "subsrec_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a subscription record, prefixed with "subsrec_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "subsrec_".
+
+### `backtest_uuid`
+#### Description
+This function generates a UUID for a backtest, prefixed with "btst_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a backtest, prefixed with "btst_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "btst_".
+
+### `invoice_uuid`
+#### Description
+This function generates a UUID for an invoice, prefixed with "inv_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an invoice, prefixed with "inv_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "inv_".
+
+### `organization_uuid`
+#### Description
+This function generates a UUID for an organization, prefixed with "org_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an organization, prefixed with "org_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "org_".
+
+### `webhook_secret_uuid`
+#### Description
+This function generates a UUID for a webhook secret, prefixed with "whsec_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a webhook secret, prefixed with "whsec_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "whsec_".
+
+### `webhook_endpoint_uuid`
+#### Description
+This function generates a UUID for a webhook endpoint, prefixed with "whend_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a webhook endpoint, prefixed with "whend_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "whend_".
+
+### `customer_balance_adjustment_uuid`
+#### Description
+This function generates a UUID for a customer balance adjustment, prefixed with "custbaladj_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a customer balance adjustment, prefixed with "custbaladj_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "custbaladj_".
+
+### `addon_uuid`
+#### Description
+This function generates a UUID for an addon, prefixed with "addon_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an addon, prefixed with "addon_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "addon_".
+
+### `addon_version_uuid`
+#### Description
+This function generates a UUID for an addon version, prefixed with "addon_vrs_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an addon version, prefixed with "addon_vrs_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "addon_vrs_".
+
+### `addon_sr_uuid`
+#### Description
+This function generates a UUID for an addon subscription record, prefixed with "addon_subscription_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for an addon subscription record, prefixed with "addon_subscription_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "addon_subscription_".
+
+### `usage_alert_uuid`
+#### Description
+This function generates a UUID for a usage alert, prefixed with "usgalert_".
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A UUID for a usage alert, prefixed with "usgalert_". |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+3. It prefixes the string with "usgalert_".
+
+### `random_uuid`
+#### Description
+This function generates a random UUID and converts it to a hexadecimal string.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | A random UUID as a hexadecimal string. |
+
+#### Internal Logic
+1. It generates a UUID using `uuid.uuid4()`.
+2. It converts the UUID to a hexadecimal string using `.hex`.
+
+### `date_as_min_dt`
+#### Description
+This function takes a date and a timezone as input and returns a datetime object representing the start of the day in the specified timezone.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date | datetime.date | The date. |
+| timezone | pytz.timezone or str | The timezone. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.datetime | A datetime object representing the start of the day in the specified timezone. |
+
+#### Internal Logic
+1. It validates the timezone input and converts it to a `pytz.timezone` object if necessary.
+2. It combines the input date with the minimum time (`datetime.time.min`) using `datetime.datetime.combine`.
+3. It converts the resulting datetime object to the specified timezone using `.astimezone(tz)`.
+
+### `date_as_max_dt`
+#### Description
+This function takes a date and a timezone as input and returns a datetime object representing the end of the day in the specified timezone.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date | datetime.date | The date. |
+| timezone | pytz.timezone or str | The timezone. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | datetime.datetime | A datetime object representing the end of the day in the specified timezone. |
+
+#### Internal Logic
+1. It validates the timezone input and converts it to a `pytz.timezone` object if necessary.
+2. It combines the input date with the maximum time (`datetime.time.max`) using `datetime.datetime.combine`.
+3. It converts the resulting datetime object to the specified timezone using `.astimezone(tz)`.
+
+### `namedtuplefetchall`
+#### Description
+This function takes a database cursor as input and returns a list of namedtuples representing the rows fetched from the cursor.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cursor | database cursor | The database cursor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | list[namedtuple] | A list of namedtuples representing the rows fetched from the cursor. |
+
+#### Internal Logic
+1. It gets the description of the cursor using `cursor.description`.
+2. It creates a namedtuple called "Result" with field names based on the cursor description using `namedtuple("Result", [col[0] for col in desc])`.
+3. It iterates through the rows fetched from the cursor using `cursor.fetchall()`.
+4. For each row, it creates a namedtuple instance using `nt_result(*row)` and appends it to a list.
+5. It returns the list of namedtuples.
+
+### `customer_id_uuidv5`
+#### Description
+This function generates a UUIDv5 based on a customer ID and a namespace defined in the Django settings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| customer_id | str | The customer ID. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | uuid.UUID | A UUIDv5 based on the customer ID and namespace. |
+
+#### Internal Logic
+1. It imports the `CUSTOMER_ID_NAMESPACE` from the Django settings.
+2. It generates a UUIDv5 using `uuid.uuid5(settings.CUSTOMER_ID_NAMESPACE, customer_id)`.
+
+### `event_name_uuidv5`
+#### Description
+This function generates a UUIDv5 based on an event name and a### `event_name_uuidv5`
+#### Description
+This function generates a UUIDv5 based on an event name and a namespace defined in the Django settings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event_name | str | The event name. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | uuid.UUID | A UUIDv5 based on the event name and namespace. |
+
+#### Internal Logic
+1. It imports the `EVENT_NAME_NAMESPACE` from the Django settings.
+2. It generates a UUIDv5 using `uuid.uuid5(settings.EVENT_NAME_NAMESPACE, event_name)`.
+
+### `idempotency_id_uuidv5`
+#### Description
+This function generates a UUIDv5 based on an idempotency ID and a namespace defined in the Django settings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| idempotency_id | str | The idempotency ID. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | uuid.UUID | A UUIDv5 based on the idempotency ID and namespace. |
+
+#### Internal Logic
+1. It imports the `IDEMPOTENCY_ID_NAMESPACE` from the Django settings.
+2. It generates a UUIDv5 using `uuid.uuid5(settings.IDEMPOTENCY_ID_NAMESPACE, idempotency_id)`.
+
+## Dependencies
+This file has no external dependencies.
+
+## Configuration
+This file has no configuration options.
+
+## Error Handling
+This file raises `ServerError` exceptions for unsupported data types in conversion functions.
+
+## Logging
+This file uses the `logging` module to log information and errors.
+
+## API/Interface Reference
+This file does not expose an API or public interface.

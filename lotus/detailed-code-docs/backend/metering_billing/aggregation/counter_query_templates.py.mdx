@@ -1,0 +1,75 @@
+---
+title: "counter_query_templates.py"
+---
+
+## High-level description
+The `counter_query_templates.py` file defines SQL query templates used for aggregating and retrieving usage data for metrics of type "counter". These templates are designed for use with TimescaleDB and leverage its continuous aggregates feature for efficient data aggregation.
+
+## Code Structure
+This file contains multiple SQL query templates, each designed for a specific type of counter metric aggregation or retrieval. The templates use Jinja2 syntax for dynamic variable injection.
+
+## Symbols
+### `COUNTER_CAGG_QUERY`
+#### Description
+This SQL query template defines a continuous aggregate (materialized view) in TimescaleDB to store pre-aggregated counter metric data on a daily basis. The aggregation type (count, sum, average, unique, max) and properties used in the query are dynamically injected.
+
+#### Inputs
+This symbol does not take direct inputs. It is a query template that is rendered with specific values in other parts of the code.
+
+#### Outputs
+This symbol does not produce direct outputs. It defines a materialized view in the database.
+
+#### Internal Logic
+The query groups usage events by customer ID, time bucket (1 day), and any specified group-by fields. It then calculates the desired aggregate (count, sum, average, unique, max) based on the `query_type` and `property_name` injected into the template. Filters based on numeric and categorical properties are also applied dynamically.
+
+### `COUNTER_CAGG_TOTAL`
+#### Description
+This SQL query template retrieves the total aggregated usage for a counter metric over a specified time period from the pre-aggregated data in the continuous aggregate.
+
+#### Inputs
+This symbol does not take direct inputs. It is a query template that is rendered with specific values in other parts of the code.
+
+#### Outputs
+This symbol does not produce direct outputs. It is a query template that, when executed, returns the total aggregated usage for a counter metric.
+
+#### Internal Logic
+The query selects data from the continuous aggregate (`cagg_name`) for a specific customer (`uuidv5_customer_id`) within a given time range (`start_date` and `end_date`). It then calculates the total aggregated value based on the `query_type` (count, sum, average, max). Filters based on properties are applied dynamically.
+
+### `COUNTER_UNIQUE_TOTAL`
+#### Description
+This SQL query template retrieves the total count of distinct values for a specific property within a given time range directly from the `metering_billing_usageevent` table. This template is used for counter metrics with `UNIQUE` aggregation.
+
+#### Inputs
+This symbol does not take direct inputs. It is a query template that is rendered with specific values in other parts of the code.
+
+#### Outputs
+This symbol does not produce direct outputs. It is a query template that, when executed, returns the total count of distinct values for a property.
+
+#### Internal Logic
+The query counts distinct values of a specified property (`property_name`) from usage events associated with a specific event name (`uuidv5_event_name`) and organization (`organization_id`) within a given time range (`start_date` and `end_date`). It can optionally filter by customer ID (`uuidv5_customer_id`). Filters based on numeric and categorical properties are applied dynamically.
+
+### `COUNTER_UNIQUE_PER_DAY`
+#### Description
+This SQL query template retrieves the distinct values of a specific property for each day within a given time range directly from the `metering_billing_usageevent` table. This template is used for counter metrics with `UNIQUE` aggregation.
+
+#### Inputs
+This symbol does not take direct inputs. It is a query template that is rendered with specific values in other parts of the code.
+
+#### Outputs
+This symbol does not produce direct outputs. It is a query template that, when executed, returns the distinct values of a property for each day.
+
+#### Internal Logic
+The query uses `DISTINCT ON` to select the first occurrence of each distinct value of a specified property (`property_name`) for each customer ID, group-by field combination, and day within the specified time range.
+
+### `COUNTER_TOTAL_PER_DAY`
+#### Description
+This SQL query template retrieves the daily total usage for a counter metric, optionally for the top N customers.
+
+#### Inputs
+This symbol does not take direct inputs. It is a query template that is rendered with specific values in other parts of the code.
+
+#### Outputs
+This symbol does not produce direct outputs. It is a query template that, when executed, returns the daily total usage for a counter metric.
+
+#### Internal Logic
+The query first calculates the daily usage for each customer using the `time_bucket_gapfill` function. Then, it optionally identifies the top N customers based on total usage. Finally, it aggregates the daily usage, grouping by customer ID (or "Other" for non-top N customers) and time bucket.

@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the Go implementation of an event processing pipeline. It consists of two main services: `event-ingestion` and `event-guidance`. The `event-ingestion` service receives raw event data, authenticates requests, validates and enriches events, and publishes them to a Kafka topic. The `event-guidance` service consumes events from the Kafka topic, inserts them into a PostgreSQL database, and optionally tracks metrics using PostHog.
+
+## What does it do?
+Imagine you have a system that collects data about user actions on a website or app. These actions are packaged as events and sent to this Go pipeline for processing. 
+
+1. **Event Ingestion:** The `event-ingestion` service acts as the entry point. It receives batches of raw event data, verifies the sender's identity using API keys, checks the data for correctness, adds relevant context (like organization ID), and finally, sends the prepared events to a Kafka topic.
+
+2. **Event Guidance:** The `event-guidance` service listens for new events on the Kafka topic. It picks up these events, potentially in groups for efficiency, and saves them permanently into a PostgreSQL database. This database becomes the central repository for all processed events. Optionally, the service can also send metrics about the processed events to PostHog, a platform for analyzing product usage data.
+
+This separation of concerns allows for independent scaling and development of the ingestion and guidance processes.
+
+## Entry points
+The main entry points for each service are:
+
+- `go/event-ingestion/main.go`: Initializes the event ingestion service, sets up the web server, and defines the event tracking endpoint.
+- `go/event-guidance/main.go`: Contains the core logic for the event guidance system, including Kafka consumption, event processing, database insertion, and metric tracking.
+
+## Key Files
+
+### go/event-ingestion/authn.go
+Handles API key authentication for incoming event requests. It retrieves organization IDs associated with API keys from a cache or the database.
+
+### go/event-ingestion/cache.go
+Defines the caching interface and implements a Redis-backed cache for storing organization IDs, optimizing API key lookups.
+
+### go/event-ingestion/kafka.go
+Implements the Kafka producer responsible for streaming enriched events to the designated Kafka topic.
+
+### go/event-guidance/main.go
+This is the core of the event processing system. It contains the main logic for setting up connections to Kafka and PostgreSQL, consuming events from Kafka, processing events in batches, inserting events into the PostgreSQL database, and tracking metrics with PostHog (if configured).
+
+### go/pkg/types/authn.go
+Defines the `APIKey` type and validation logic, ensuring only valid API keys are used for authentication.
+
+### go/pkg/types/event.go
+Defines the `RawEvent` and `VerifiedEvent` types, along with validation and transformation functions, ensuring data integrity and consistency throughout the pipeline.
+
+## Dependencies
+
+The project uses several external libraries:
+
+- **github.com/labstack/echo/v4:** Web framework for building the event ingestion service's HTTP server.
+- **github.com/twmb/franz-go/pkg/kgo:** Kafka client library for both producing and consuming events.
+- **github.com/lib/pq:** PostgreSQL driver for database operations.
+- **github.com/spf13/viper:** Configuration management library.
+- **github.com/redis/go-redis/v9:** Redis client library for caching.
+- **github.com/posthog/posthog-go:** PostHog client for metrics tracking (used in `event-guidance`).
+
+## Configuration
+
+Both services rely heavily on environment variables for configuration. Key settings include:
+
+- Database connection details for PostgreSQL.
+- Kafka broker address, topic, and optional SASL credentials.
+- Redis connection string for caching.
+- PostHog API key for metrics tracking (used in `event-guidance`).
+
+Refer to the respective `config.go` files within each service directory for detailed configuration options and defaults.

@@ -1,0 +1,41 @@
+---
+title: "0180_transfer_data.py"
+---
+
+## High-level description
+This Django migration script copies data from the `Event` model to the newly introduced `IdempotenceCheck` model. It iterates through existing `Event` instances, retrieves relevant data, and creates corresponding `IdempotenceCheck` instances if they don't already exist.
+
+## References
+This migration references the following models:
+- `metering_billing.Event`
+- `metering_billing.IdempotenceCheck`
+
+## Symbols
+
+### `copy_events_to_idempotencecheck(apps, schema_editor)`
+#### Description
+This function copies data from the `Event` model to the `IdempotenceCheck` model. It iterates through `Event` instances, retrieves the `time_created`, `idempotency_id`, and `organization` fields, and creates a corresponding `IdempotenceCheck` instance if one with the same `idempotency_id` and `organization` doesn't already exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Registry of models and other application state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object for managing database schema changes. |
+
+#### Outputs
+This function doesn't explicitly return any value.
+
+#### Internal Logic
+1. Retrieves the `Event` and `IdempotenceCheck` models using `apps.get_model`.
+2. Iterates through `Event` instances, ordered by `idempotency_id`, `organization`, and `-time_created` (descending).
+3. For each `Event`, attempts to retrieve an existing `IdempotenceCheck` instance with the same `idempotency_id` and `organization`.
+4. If no matching `IdempotenceCheck` instance is found, creates a new one using the `time_created`, `idempotency_id`, and `organization` values from the `Event`.
+
+## Dependencies
+This code depends on the following external library:
+| Dependency | Purpose |
+|:-----------|:--------|
+| Django | Web framework used for building the application. |
+
+## Error Handling
+The code uses a `try-except` block to handle the `IdempotenceCheck.DoesNotExist` exception, which is raised if no matching `IdempotenceCheck` instance is found. This prevents the migration from failing if an `IdempotenceCheck` instance already exists for a given `idempotency_id` and `organization`.

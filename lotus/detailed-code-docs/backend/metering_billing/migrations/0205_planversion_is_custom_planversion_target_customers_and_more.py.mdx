@@ -1,0 +1,60 @@
+---
+title: "0205_planversion_is_custom_planversion_target_customers_and_more.py"
+---
+
+## High-level description
+This migration file adds new fields to the PlanVersion model, including `is_custom` and `target_customers`. It also includes a data migration function `transfer_custom_plans` to move custom plans from the Plan model to the PlanVersion model.
+
+## Code Structure
+The migration consists of two main parts:
+1. Database schema changes (adding/removing fields and constraints)
+2. A data migration function to transfer custom plans
+
+## Symbols
+
+### `transfer_custom_plans`
+#### Description
+This function transfers custom plans from the Plan model to the PlanVersion model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | Django apps registry |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Database schema editor |
+
+#### Internal Logic
+1. Retrieves all Plan objects with a non-null `target_customer`.
+2. For each custom plan:
+   - Gets the parent plan and counts its versions.
+   - Iterates through all versions of the custom plan.
+   - Updates each version:
+     - Sets a new version number.
+     - Associates it with the parent plan.
+     - Adds the target customer to `target_customers`.
+     - Sets `is_custom` to True.
+   - Saves the updated version.
+3. Deletes all custom Plan objects.
+
+### `Migration`
+#### Description
+Defines the database migration operations.
+
+#### Internal Logic
+1. Removes the `both_null_or_both_not_null` constraint from the Plan model.
+2. Adds `is_custom` field to PlanVersion model.
+3. Adds `target_customers` field to PlanVersion model.
+4. Updates `created_on` field for HistoricalPlan and Plan models.
+5. Deletes the HistoricalPlanVersion model.
+6. Runs the `transfer_custom_plans` function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.db.migrations | Provides migration framework |
+| metering_billing.utils.utils | Imports `now_utc` function |
+
+## Error Handling
+The migration does not implement specific error handling. It relies on Django's migration framework to handle errors and rollback changes if necessary.
+
+## Performance Considerations
+The data migration function `transfer_custom_plans` may be slow for large datasets as it iterates through all custom plans and their versions. Consider running this migration during off-peak hours for production environments with a large number of custom plans.

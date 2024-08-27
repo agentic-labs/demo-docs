@@ -1,0 +1,55 @@
+---
+title: "0154_fill_uuids.py"
+---
+
+## High-level description
+This migration file is designed to transfer text-based identifiers to UUID (Universally Unique Identifier) format for various models in the metering_billing application. It updates the database to use UUID fields instead of string-based identifiers for improved uniqueness and consistency across different models.
+
+## Code Structure
+The main function `transfer_text_to_uuid` contains multiple sections, each dealing with a specific model. For each model, it retrieves all objects, converts the old text-based ID to a UUID, and saves the object with the new UUID.
+
+## Symbols
+
+### `transfer_text_to_uuid`
+#### Description
+This function is responsible for migrating text-based identifiers to UUID format for various models in the metering_billing application.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | Django apps registry |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Database schema editor |
+
+#### Internal Logic
+1. For each model (Organization, Backtest, CustomerBalanceAdjustment, etc.):
+   - Retrieve all objects of the model
+   - For each object:
+     - Extract the UUID string from the old text-based ID
+     - Convert the string to a UUID object
+     - Assign the UUID to the new UUID field
+     - Save the object with the updated UUID
+
+2. Special cases:
+   - For Feature and Invoice models, new UUIDs are generated using `uuid.uuid4()`
+   - For Organization, it's updated twice: once at the beginning and once at the end of the function
+   - For WebhookEndpoint, both `webhook_endpoint_id` and `webhook_secret` are updated
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| uuid | For generating and working with UUIDs |
+| django.db.migrations | For defining the migration |
+
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| dependencies | list | `[("metering_billing", "0153_backtest_backtest_id_and_more")]` | Specifies the migration this one depends on |
+
+## Error Handling
+This migration does not implement specific error handling beyond Django's default migration error handling.
+
+## Notes
+1. The `operations` list in the `Migration` class is empty, which means all the migration logic is contained in the `transfer_text_to_uuid` function.
+2. This migration is reversible by default, but reversing it may lead to data loss as the old text-based IDs are not preserved.
+3. The migration updates the `webhooks_provisioned` field to `False` for all Organization objects, which may require attention after the migration.
+4. Some models (like Feature and Invoice) generate new UUIDs instead of converting existing IDs, which may affect data relationships if not handled properly in related code.

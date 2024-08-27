@@ -1,0 +1,84 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This code defines a Locust load testing script for a track event API endpoint. It simulates different types of users (unauthenticated and authenticated) with varying request frequencies to test the performance and behavior of the `/track` endpoint under different load conditions.
+
+## Code Structure
+The code defines four user classes, each inheriting from `HttpUser`, representing different user behaviors:
+1. `UnauthenticatedUser`: Simulates users with invalid authentication.
+2. `AuthenticatedUserLowRequests`: Simulates authenticated users with low request frequency.
+3. `AuthenticatedUserMidRequests`: Simulates authenticated users with medium request frequency.
+4. `AuthenticatedUserHighRequests`: Simulates authenticated users with high request frequency.
+
+Each class defines a `track_event` task that sends a POST request to the `/track` endpoint.
+
+## Symbols
+
+### `ADMIN_API_KEY`
+#### Description
+A constant string representing the API key for authenticated users.
+
+### `UnauthenticatedUser`
+#### Description
+Simulates users with invalid authentication tokens.
+
+#### Internal Logic
+- Sets an invalid API key in the request headers.
+- Sends POST requests to `/track` with a wait time between 0.05 and 2 seconds.
+- Has a weight of 1, indicating lower occurrence in the test scenario.
+
+### `AuthenticatedUserLowRequests`
+#### Description
+Simulates authenticated users with low request frequency.
+
+#### Internal Logic
+- Sets the valid `ADMIN_API_KEY` in the request headers.
+- Sends POST requests to `/track` with a wait time between 1 and 2 seconds.
+- Has a weight of 8, indicating higher occurrence than `UnauthenticatedUser`.
+
+### `AuthenticatedUserMidRequests`
+#### Description
+Simulates authenticated users with medium request frequency.
+
+#### Internal Logic
+- Sets the valid `ADMIN_API_KEY` in the request headers.
+- Sends POST requests to `/track` with a wait time between 0.05 and 0.5 seconds.
+- Has a weight of 10, indicating the highest occurrence among the defined user types.
+
+### `AuthenticatedUserHighRequests`
+#### Description
+Simulates authenticated users with high request frequency.
+
+#### Internal Logic
+- Sets the valid `ADMIN_API_KEY` in the request headers.
+- Sends POST requests to `/track` with no specified wait time, potentially resulting in the highest request frequency.
+- Has no specified weight, defaulting to 1.
+
+### `track_event` method
+#### Description
+Defined in each user class, this method sends a POST request to the `/track` endpoint with event data.
+
+#### Inputs
+The method takes no direct inputs but uses predefined data in the request payload.
+
+#### Outputs
+The method doesn't return any value but sends an HTTP POST request.
+
+#### Internal Logic
+- Constructs a JSON payload with event data, including:
+  - `event_name`: Always set to "test"
+  - `customer_id` (or `customer` for `UnauthenticatedUser`): Set to "baz"
+  - `time_created`: Set to "2020-01-01T00:00:00Z"
+  - `properties`: A dictionary with a single key-value pair
+  - `idempotency_id`: A unique UUID generated for each request
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| uuid | Generating unique identifiers for the `idempotency_id` field |
+| locust | Providing the load testing framework and utilities |
+
+## Performance Considerations
+The different user classes with varying weights and wait times allow for testing the `/track` endpoint under different load scenarios, from low-frequency authenticated requests to high-frequency requests without wait times. This setup helps in identifying potential bottlenecks or issues under various load conditions.

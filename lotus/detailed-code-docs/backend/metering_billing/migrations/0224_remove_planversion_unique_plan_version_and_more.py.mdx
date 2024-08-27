@@ -1,0 +1,39 @@
+---
+title: "0224_remove_planversion_unique_plan_version_and_more.py"
+---
+
+## High-level description
+This migration file modifies the `PlanVersion` model by removing an existing constraint, altering a field, and adding a new constraint. It changes how plan versions are uniquely identified within an organization's pricing structure.
+
+## Symbols
+
+### Migration
+#### Description
+This Django migration performs three operations on the `PlanVersion` model:
+1. Removes the existing `unique_plan_version` constraint.
+2. Alters the `version` field to be a `PositiveSmallIntegerField` with a default value of 1.
+3. Adds a new `UniqueConstraint` named `unique_plan_version_per_currency`.
+
+#### Internal Logic
+1. The existing `unique_plan_version` constraint is removed, likely to allow for the new constraint to be added without conflicts.
+2. The `version` field is changed to a `PositiveSmallIntegerField` with a default value of 1, which suggests that plan versions will now be numbered starting from 1.
+3. A new `UniqueConstraint` is added with the following characteristics:
+   - It applies only when `is_custom` is False.
+   - It ensures uniqueness based on the combination of `plan`, `version`, and `currency`.
+   - This allows for multiple versions of a plan to exist for different currencies, but ensures that within a single currency, plan versions are unique.
+
+## Dependencies
+This migration depends on the previous migration:
+```python
+("metering_billing", "0223_remove_historicalsubscriptionrecord_fully_billed_and_more")
+```
+
+## Side Effects
+- Existing data in the database may need to be updated to comply with the new constraint.
+- Any code that relied on the previous uniqueness constraint for plan versions will need to be updated to account for the new currency-based uniqueness.
+
+## Performance Considerations
+- The new constraint may slightly impact the performance of inserting or updating plan versions, as the database now needs to check for uniqueness across three fields instead of two.
+- However, this constraint may improve query performance when searching for specific plan versions by currency.
+
+This migration reflects a change in how the application handles plan versioning, likely to support multi-currency pricing strategies within the same plan structure.

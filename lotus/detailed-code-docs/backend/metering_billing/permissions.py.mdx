@@ -1,0 +1,65 @@
+---
+title: "permissions.py"
+---
+
+## High-level description
+The `metering_billing/permissions.py` file defines custom permission classes used for authorization in the metering and billing application. It includes two classes: `HasUserAPIKey` for API key authentication and `ValidOrganization` for ensuring requests are associated with a valid organization.
+
+## Code Structure
+The code defines two permission classes: `HasUserAPIKey` and `ValidOrganization`. `HasUserAPIKey` inherits from `BaseHasAPIKey` and overrides the `get_key` method. `ValidOrganization` inherits from `BasePermission` and implements `has_permission` and `has_object_permission` methods.
+
+## References
+- `metering_billing.exceptions.NoAPIKeyProvided`: Custom exception raised when no API key is found in the request.
+- `metering_billing.models.APIToken`: Model representing API tokens.
+- `metering_billing.models.Organization`: Model representing organizations.
+
+## Symbols
+
+### `HasUserAPIKey`
+#### Description
+This class checks if the request contains a valid API key and retrieves the associated organization. It inherits from `rest_framework_api_key.permissions.BaseHasAPIKey` and uses the `APIToken` model to validate the key.
+
+#### Inputs
+- `request`: The incoming HTTP request.
+
+#### Outputs
+- `True` if a valid API key is found and the associated organization exists, `False` otherwise.
+
+#### Internal Logic
+1. Extracts the API key from the `HTTP_X_API_KEY` header of the request.
+2. If the header is not found, it attempts to find the key in a case-insensitive manner.
+3. If no API key is found, it raises a `NoAPIKeyProvided` exception.
+4. Uses the `APIToken.objects.get_from_key` method to retrieve the `APIToken` instance associated with the key.
+5. Returns `True` if the token is found and its organization exists.
+
+### `ValidOrganization`
+#### Description
+This class checks if the request is associated with a valid organization. It can retrieve the organization from the request object or from the authenticated user.
+
+#### Inputs
+- `request`: The incoming HTTP request.
+- `view`: The view being accessed.
+- `obj`: The object being accessed (optional).
+
+#### Outputs
+- `True` if a valid organization is found, `False` otherwise.
+
+#### Internal Logic
+- **`has_permission` method:**
+    1. Checks if the `request.organization` attribute is set.
+    2. If not, and the user is authenticated, it retrieves the organization from the user object and sets it on the request.
+    3. Returns `True` if an organization is found, `False` otherwise.
+- **`has_object_permission` method:**
+    1. If the object is an `Organization` instance, it checks if it matches the organization from the request.
+    2. Otherwise, it checks if the object's `organization` attribute matches the organization from the request.
+
+## Dependencies
+- `rest_framework`: Django REST framework for building APIs.
+- `rest_framework_api_key`: Library for API key authentication.
+- `logging`: Python's built-in logging module.
+
+## Error Handling
+- `NoAPIKeyProvided` exception is raised if no API key is found in the request.
+
+## Logging
+The code uses the `django.server` logger to log debug messages related to organization retrieval.

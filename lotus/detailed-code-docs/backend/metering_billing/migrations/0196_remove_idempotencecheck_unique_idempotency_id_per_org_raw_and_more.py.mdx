@@ -1,0 +1,50 @@
+---
+title: "0196_remove_idempotencecheck_unique_idempotency_id_per_org_raw_and_more.py"
+---
+
+## High-level description
+This migration file modifies the `IdempotenceCheck` model in the `metering_billing` app. It removes the `idempotency_id` field, replaces it with a `uuidv5_idempotency_id` field as the primary key, and updates the unique constraint accordingly.
+
+## Code Structure
+The migration consists of several operations that modify the `IdempotenceCheck` model:
+1. A data migration to fill the `uuidv5_idempotency_id` field.
+2. Removal of the old constraint and field.
+3. Alteration of the `uuidv5_idempotency_id` field to become the primary key.
+4. Addition of a new constraint using the `uuidv5_idempotency_id` field.
+
+## Symbols
+
+### `fill_uuid`
+#### Description
+This function is a data migration that populates the `uuidv5_idempotency_id` field for existing `IdempotenceCheck` instances.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | AppRegistry | The app registry containing the models |
+| schema_editor | SchemaEditor | The schema editor for database operations |
+
+#### Internal Logic
+1. Gets the `IdempotenceCheck` model from the app registry.
+2. Iterates through all existing `IdempotenceCheck` instances.
+3. Generates a UUID5 using the `IDEMPOTENCY_ID_NAMESPACE` and the existing `idempotency_id`.
+4. Saves the generated UUID5 to the `uuidv5_idempotency_id` field.
+
+### `Migration`
+#### Description
+Defines the migration operations to be applied to the database.
+
+#### Internal Logic
+1. Runs the `fill_uuid` function to populate the `uuidv5_idempotency_id` field.
+2. Removes the old `unique_idempotency_id_per_org_raw` constraint.
+3. Removes the `idempotency_id` field.
+4. Alters the `uuidv5_idempotency_id` field to become the primary key.
+5. Adds a new constraint `unique_hashed_idempotency_id_per_org_raw` using the `organization` and `uuidv5_idempotency_id` fields.
+
+## Dependencies
+- Django's migration framework
+- `uuid` module
+- `settings.IDEMPOTENCY_ID_NAMESPACE` from the project settings
+
+## Configuration
+This migration depends on the `IDEMPOTENCY_ID_NAMESPACE` setting, which should be defined in the project's settings file.

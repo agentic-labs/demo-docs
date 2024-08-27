@@ -1,0 +1,281 @@
+---
+title: "tasks.py"
+---
+
+## High-level description
+The `metering_billing/tasks.py` file defines Celery tasks for various background operations related to billing and subscription management in the Lotus application. These tasks include generating invoices, syncing CRM integrations, updating subscription filter settings, and managing customer balance adjustments.
+
+## Code Structure
+The code consists of several functions decorated with the `@shared_task` decorator, indicating they are Celery tasks. Each task function encapsulates a specific background operation. Some tasks have corresponding inner functions that perform the core logic, allowing for both asynchronous execution via Celery and direct invocation within the application.
+
+## References
+The code references various models and utilities from the `metering_billing` application, including:
+- `metering_billing.models`: Models for invoices, subscriptions, customers, billing records, etc.
+- `metering_billing.invoice`: Functions related to invoice generation.
+- `metering_billing.payment_processors`: Payment processor connectors.
+- `metering_billing.webhooks`: Functions for sending webhooks.
+- `metering_billing.utils`: Utility functions for date/time manipulation, decimal handling, etc.
+- `metering_billing.utils.enums`: Enums for various application states and constants.
+
+## Symbols
+
+### `sync_all_crm_integrations`
+#### Description
+This Celery task synchronizes all CRM integrations by iterating through all `UnifiedCRMOrganizationIntegration` objects and calling the `perform_sync` method on each.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers CRM synchronization for all integrations.
+
+### `sync_single_organization_integrations`
+#### Description
+This Celery task synchronizes CRM integrations for a specific organization, optionally filtering by CRM provider values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization_integration_pk | int | The primary key of the organization integration. |
+| crm_provider_values | list | Optional list of CRM provider values to filter by. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers CRM synchronization for the specified organization integration(s).
+
+### `update_subscription_filter_settings_task`
+#### Description
+This Celery task updates the subscription filter settings for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| org_pk | int | The primary key of the organization. |
+| subscription_filter_keys | list | The new list of subscription filter keys. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Updates the `subscription_filter_keys` field of the specified organization.
+
+### `generate_invoice_pdf_async`
+#### Description
+This Celery task generates a PDF version of an invoice and stores the pre-signed URL in the invoice object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice_pk | int | The primary key of the invoice. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Generates a PDF version of the invoice.
+- Updates the `invoice_pdf` field of the invoice object with the pre-signed URL.
+
+### `calculate_invoice`
+#### Description
+This Celery task triggers the invoice calculation process. It calls the `calculate_invoice_inner` function to perform the actual logic.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers the invoice calculation process.
+
+### `calculate_invoice_inner`
+#### Description
+This function performs the core logic for calculating invoices. It identifies ending subscriptions and billing records, generates invoices, and creates new subscription records if necessary.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Generates invoices for ending subscriptions and billing records.
+- Creates new subscription records for renewing subscriptions.
+- Deletes draft invoices.
+
+### `refresh_alerts_inner`
+#### Description
+This function refreshes usage alert results by deleting expired results and calling the `refresh` method on active results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Deletes expired usage alert results.
+- Refreshes active usage alert results.
+
+### `refresh_alerts`
+#### Description
+This Celery task triggers the usage alert refresh process. It calls the `refresh_alerts_inner` function to perform the actual logic.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers the usage alert refresh process.
+
+### `prune_guard_table_inner`
+#### Description
+This function prunes the `IdempotenceCheck` table by deleting entries older than 33 days.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Deletes old entries from the `IdempotenceCheck` table.
+
+### `prune_guard_table`
+#### Description
+This Celery task triggers the idempotence check table pruning process. It calls the `prune_guard_table_inner` function to perform the actual logic.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers the idempotence check table pruning process.
+
+### `zero_out_expired_balance_adjustments`
+#### Description
+This Celery task zeros out expired customer balance adjustments by calling the `zero_out` method on each expired adjustment.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Zeros out expired customer balance adjustments.
+
+### `update_invoice_status`
+#### Description
+This Celery task updates the status of invoices by checking the status of external payment objects.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Updates the `payment_status` field of invoices based on the status of external payment objects.
+
+### `run_backtest`
+#### Description
+This Celery task runs a backtest for a given backtest ID. It retrieves the backtest object, performs the backtest calculations, and updates the backtest results and status.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| backtest_id | str | The ID of the backtest to run. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Performs the backtest calculations.
+- Updates the `backtest_results` and `status` fields of the backtest object.
+
+### `run_generate_invoice`
+#### Description
+This Celery task generates invoices for a set of subscription record primary keys.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record_pk_set | list | A list of subscription record primary keys. |
+| **kwargs | dict | Additional keyword arguments to pass to the `generate_invoice` function. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Generates invoices for the specified subscription records.
+
+### `import_customers_from_payment_processor_inner`
+#### Description
+This function imports customers from a specified payment processor for a given organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payment_processor | str | The name of the payment processor. |
+| organization_pk | int | The primary key of the organization. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| n | int | The number of customers imported. |
+
+#### Side Effects
+- Imports customers from the specified payment processor.
+
+### `import_customers_from_payment_processor`
+#### Description
+This Celery task triggers the customer import process. It calls the `import_customers_from_payment_processor_inner` function to perform the actual logic.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payment_processor | str | The name of the payment processor. |
+| organization_pk | int | The primary key of the organization. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers the customer import process.
+
+### `check_past_due_invoices_inner`
+#### Description
+This function checks for past-due invoices and sends webhooks for those that haven't been notified yet.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Sends webhooks for past-due invoices.
+- Updates the `invoice_past_due_webhook_sent` field of invoices.
+
+### `check_past_due_invoices`
+#### Description
+This Celery task triggers the past-due invoice check process. It calls the `check_past_due_invoices_inner` function to perform the actual logic.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Triggers the past-due invoice check process.

@@ -1,0 +1,98 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains components related to displaying detailed information about add-ons in a software application. The components work together to present a comprehensive view of an add-on, including its basic information, components, and features.
+
+## What does it do?
+The code in this directory creates a user interface for viewing detailed information about add-ons. When a user navigates to an add-on's details page, the application fetches the relevant data and displays it in an organized manner. The interface shows:
+
+1. Basic add-on information (ID, price, type, billing frequency)
+2. A list of components associated with the add-on, including their pricing tiers
+3. A list of features included in the add-on
+
+The components handle various scenarios, such as loading states, error handling, and responsive design for different screen sizes. They also provide user-friendly features like the ability to copy the add-on ID to the clipboard.
+
+## Entry points
+The main entry point for this functionality is the `AddonDetails.tsx` file. This component orchestrates the overall layout and data fetching for the add-on details page. It uses the other components in the directory to render specific sections of the add-on information:
+
+1. `AddOnInfo.tsx`: Displays basic information about the add-on
+2. `AddOnComponents.tsx`: Shows the components and pricing tiers associated with the add-on
+3. `AddOnFeatures.tsx`: Presents a list of features included in the add-on
+
+The data flow starts with the `AddonDetails` component fetching the add-on data based on the ID from the URL. Once the data is retrieved, it's passed down to the child components for rendering specific sections.
+
+## Key Files
+1. `AddonDetails.tsx`: The main component that fetches add-on data and coordinates the rendering of all sections.
+2. `AddOnInfo.tsx`: Renders basic add-on information like ID, price, type, and billing frequency.
+3. `AddOnComponents.tsx`: Displays a list of components associated with the add-on, including their pricing tiers.
+4. `AddOnFeatures.tsx`: Shows a grid of feature cards for the add-on.
+
+Each of these files plays a crucial role in presenting a complete and detailed view of an add-on to the user.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React (v18.2.0 or compatible): Used as the core library for building the user interface.
+2. @tanstack/react-query (version not specified): Utilized for data fetching and state management.
+3. antd (version not specified): Provides UI components and styling.
+4. react-router-dom (version not specified): Used for routing and URL parameter handling.
+
+Internal dependencies include custom hooks, helper functions, and API clients from the parent project structure.
+
+## Configuration
+While there are no explicit configuration files in this directory, the components rely on certain project-wide configurations and type definitions:
+
+1. TypeScript types from `../../../gen-types`: These types are likely generated from an OpenAPI specification and provide type safety for API responses.
+2. Custom hooks like `useMediaQuery` from `../../../hooks/useWindowQuery`: Used for responsive design.
+3. Helper functions from `../../../helpers/`: Used for text formatting and other utilities.
+
+The components are designed to be flexible and can adapt to different screen sizes, but they may require additional configuration at the project level for optimal performance and styling.
+
+Code snippet from `AddonDetails.tsx` demonstrating the main structure:
+
+```typescript
+export default function AddOnDetails() {
+  const { addOnId } = useParams&lt;{ addOnId: string }&gt;();
+  const { data: addon, isLoading, isError } = useQuery({
+    queryKey: ["addon", addOnId],
+    queryFn: () =&gt; AddOn.getAddOn(addOnId!),
+  });
+
+  if (isLoading) {
+    return &lt;LoadingSpinner /&gt;;
+  }
+
+  if (isError) {
+    return &lt;div&gt;Error loading add-on details&lt;/div&gt;;
+  }
+
+  if (!addon) {
+    return null;
+  }
+
+  return (
+    &lt;PageLayout
+      title={addon.name}
+      description={addon.description}
+      breadcrumbs={[
+        { name: "Add-ons", path: "/add-ons" },
+        { name: addon.name, path: `/add-ons/${addOnId}` },
+      ]}
+    &gt;
+      &lt;AddOnInfo addOnInfo={addon} /&gt;
+      &lt;AddOnComponents
+        components={addon.versions[0].components}
+        plan={addon}
+        refetch={() =&gt; {}}
+        alerts={[]}
+        plan_version_id={addon.versions[0].addon_version_id}
+      /&gt;
+      &lt;AddOnFeatures features={addon.features} /&gt;
+    &lt;/PageLayout&gt;
+  );
+}
+```
+
+This structure allows for a modular and maintainable approach to displaying add-on details, with each component responsible for a specific aspect of the information presentation.

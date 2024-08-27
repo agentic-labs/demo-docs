@@ -1,0 +1,102 @@
+---
+title: "0050_historicalplan_historicalplanversion_and_more.py"
+---
+
+## High-level description
+This migration file creates new models for Plan, PlanVersion, and Product, and updates related models like Customer and Organization. It also introduces historical tracking for these models and makes changes to existing fields and relationships.
+
+## Code Structure
+The migration defines several new models (Plan, PlanVersion, Product) and modifies existing ones (Customer, Organization). It also creates historical versions of these models for tracking changes over time. The migration includes field additions, modifications, and deletions across multiple models.
+
+## Symbols
+
+### Migration
+#### Description
+This is a Django migration file that defines changes to the database schema. It creates new models, modifies existing ones, and sets up relationships between them.
+
+#### Internal Logic
+1. Creates new models: HistoricalPlan, HistoricalPlanVersion, Plan, PlanVersion, Product, HistoricalProduct
+2. Modifies existing models: Customer, Organization, Subscription
+3. Removes the BillingPlan model and related fields
+4. Updates field types, choices, and relationships
+5. Sets up historical tracking for new and modified models
+6. Adds constraints and indexes to ensure data integrity and query performance
+
+### HistoricalPlan
+#### Description
+This model represents the historical version of the Plan model, tracking changes over time.
+
+### HistoricalPlanVersion
+#### Description
+This model represents the historical version of the PlanVersion model, tracking changes over time.
+
+### Plan
+#### Description
+This model represents a pricing plan in the system.
+
+#### Fields
+- plan_name: CharField for the name of the plan
+- plan_duration: CharField for the duration of the plan (month or year)
+- status: CharField for the status of the plan (active, inactive, experimental)
+- plan_id: CharField for a unique identifier of the plan
+- created_on: DateTimeField for when the plan was created
+- created_by: ForeignKey to User model for who created the plan
+- organization: ForeignKey to Organization model
+- parent_product: ForeignKey to Product model
+- display_version: ForeignKey to PlanVersion model
+
+### PlanVersion
+#### Description
+This model represents a specific version of a Plan, allowing for changes to plan details over time.
+
+#### Fields
+- description: CharField for plan version description
+- version: PositiveSmallIntegerField for version number
+- flat_fee_billing_type: CharField for billing type (in arrears, in advance)
+- usage_billing_type: CharField for usage billing type
+- proration_granularity: CharField for proration settings
+- status: CharField for version status
+- flat_rate_currency: CurrencyField for flat rate currency
+- flat_rate: MoneyField for flat rate amount
+- created_on: DateTimeField for when the version was created
+- version_id: CharField for a unique identifier of the version
+- components: ManyToManyField to PlanComponent model
+- features: ManyToManyField to Feature model
+- organization: ForeignKey to Organization model
+- plan: ForeignKey to Plan model
+- replace_with: ForeignKey to self (PlanVersion model)
+
+### Product
+#### Description
+This model represents a product in the system, which can have multiple plans associated with it.
+
+#### Fields
+- name: CharField for product name
+- description: TextField for product description
+- organization: ForeignKey to Organization model
+- product_id: SlugField for a unique identifier of the product
+- status: CharField for product status
+
+## Dependencies
+This migration depends on several Django modules and custom utility functions:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| django.db.models | Core Django ORM functionality |
+| django.conf.settings | Access to Django settings |
+| djmoney.models.fields | Money-related fields |
+| simple_history.models | Historical tracking of model changes |
+| metering_billing.utils.utils | Custom utility functions |
+
+## Configuration
+The migration defines several configuration options for the new models, including choices for various fields and default values. These are typically defined as class attributes or within the field definitions.
+
+## Error Handling
+The migration itself doesn't include explicit error handling, as Django's migration system handles most errors. However, it does include database constraints and field validators to ensure data integrity.
+
+## Notes
+- This migration introduces significant changes to the billing and plan structure of the application.
+- It removes the BillingPlan model and replaces it with the new Plan and PlanVersion models.
+- Historical tracking is added to several models, allowing for better auditing and change tracking.
+- The migration includes changes to related models like Customer and Organization to accommodate the new plan structure.
+- Careful consideration should be given to data migration if there's existing data in the BillingPlan model that needs to be transferred to the new structure.

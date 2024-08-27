@@ -1,0 +1,48 @@
+---
+title: "0189_hash_customer_ids.py"
+---
+
+## High-level description
+This Django migration script sets a new `uuidv5_customer_id` field for all existing `Customer` and `HistoricalCustomer` instances in the database. It generates these UUIDs using the `uuid.uuid5` function, based on a predefined namespace (`CUSTOMER_ID_NAMESPACE`) and the existing `customer_id` field.
+
+## References
+- This migration references the `Customer` and `HistoricalCustomer` models from the `metering_billing` app.
+- It also references the `CUSTOMER_ID_NAMESPACE` setting from Django's settings.
+
+## Symbols
+### `set_uuidv5_customer_id(apps, schema_editor)`
+#### Description
+This function retrieves all `Customer` and `HistoricalCustomer` instances and generates a `uuidv5_customer_id` for each, saving the changes back to the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Registry of models and other application state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Object for managing database schema changes. |
+
+#### Internal Logic
+1. **Retrieve Models:** Gets the `Customer` and `HistoricalCustomer` models from the app registry.
+2. **Get Namespace:** Retrieves the `CUSTOMER_ID_NAMESPACE` from Django settings.
+3. **Process Customers:**
+    - Iterates through all `Customer` instances.
+    - For each customer, generates a UUIDv5 using `uuid.uuid5(CUSTOMER_ID_NAMESPACE, customer.customer_id)`.
+    - Assigns the generated UUID to the `uuidv5_customer_id` field of the customer instance.
+    - Saves the updated customer instance.
+4. **Process Historical Customers:**
+    - Performs the same steps as above for all `HistoricalCustomer` instances.
+
+### `Migration`
+#### Description
+This class defines the Django migration that sets the `uuidv5_customer_id` for existing customers.
+
+#### Internal Logic
+- **Dependencies:** Specifies that this migration depends on the previous migration `0188_customer_uuidv5_customer_id_and_more`.
+- **Operations:** Defines a single operation:
+    - `migrations.RunPython(set_uuidv5_customer_id, reverse_code=migrations.RunPython.noop)`: This runs the `set_uuidv5_customer_id` function during the migration. The `reverse_code` argument is set to `migrations.RunPython.noop`, meaning this migration is not reversible.
+
+## Dependencies
+- **Django:** This migration script relies heavily on Django's migration framework (`django.db.migrations`) and settings (`django.conf`).
+- **uuid:** It uses the `uuid` module for generating UUIDs.
+
+## Configuration
+- **CUSTOMER_ID_NAMESPACE:** This setting, defined in Django's settings file, provides the namespace used for generating the UUIDv5 values. It's expected to be a UUID object.

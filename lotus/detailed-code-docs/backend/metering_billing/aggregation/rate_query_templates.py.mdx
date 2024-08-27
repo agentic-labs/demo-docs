@@ -1,0 +1,128 @@
+---
+title: "rate_query_templates.py"
+---
+
+## High-level description
+This file defines SQL query templates used for calculating usage for different aggregation types in a metering and billing system. These templates are used to query usage data from a TimescaleDB database.
+
+## Code Structure
+This code consists of multiple string variables, each containing a SQL query template. These templates are used in other parts of the codebase, specifically in `backend/metering_billing/aggregation/billable_metrics.py`, to generate and execute actual SQL queries.
+
+## References
+- `backend/metering_billing/aggregation/billable_metrics.py`: This file uses the SQL query templates defined in this file to calculate usage for different metric types.
+
+## Symbols
+### `RATE_GET_CURRENT_USAGE`
+#### Description
+This SQL query template retrieves the current usage for a specific customer and event, applying filters and grouping by specified fields. It supports different aggregation types like count, sum, average, unique, and max.
+
+#### Inputs
+This is a template variable, it does not take direct inputs. However, it uses the following placeholders that are replaced with actual values during query generation:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `query_type` | string | The type of aggregation to perform (e.g., "count", "sum", "average", "unique", "max"). |
+| `property_name` | string | The name of the property to aggregate. |
+| `group_by` | list | A list of fields to group the results by. |
+| `uuidv5_event_name` | string | The UUID of the event. |
+| `organization_id` | integer | The ID of the organization. |
+| `numeric_filters` | list | A list of numeric filters to apply. |
+| `categorical_filters` | list | A list of categorical filters to apply. |
+| `uuidv5_customer_id` | string | The UUID of the customer. |
+| `reference_time` | datetime | The reference time for calculating usage. |
+| `lookback_units` | string | The time unit for the lookback period (e.g., "days", "hours"). |
+| `lookback_qty` | integer | The quantity of lookback units. |
+| `filter_properties` | dict | A dictionary of property names and their corresponding values to filter by. |
+
+#### Outputs
+The query returns a single row with the following columns:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `uuidv5_customer_id` | string | The UUID of the customer. |
+| `time_created` | datetime | The timestamp of the latest usage event. |
+| `usage_qty` | decimal | The calculated usage quantity based on the specified aggregation type. |
+| `group_by_field` | string | The value of each field specified in the `group_by` parameter. |
+
+#### Internal Logic
+The query joins the `metering_billing_usageevent` table on itself, applies filters based on the provided parameters, and calculates the usage quantity using the specified aggregation type. It then groups the results by the `uuidv5_customer_id` and any fields specified in the `group_by` parameter.
+
+### `RATE_CAGG_QUERY`
+#### Description
+This SQL query template creates a materialized view named `cagg_name` in TimescaleDB. This view aggregates usage data from the `metering_billing_usageevent` table into one-second buckets.
+
+#### Inputs
+This is a template variable, it does not take direct inputs. However, it uses the following placeholders that are replaced with actual values during query generation:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `cagg_name` | string | The name of the materialized view to create. |
+| `query_type` | string | The type of aggregation to perform (e.g., "count", "sum", "average", "unique", "max"). |
+| `property_name` | string | The name of the property to aggregate. |
+| `group_by` | list | A list of fields to group the results by. |
+| `uuidv5_event_name` | string | The UUID of the event. |
+| `organization_id` | integer | The ID of the organization. |
+| `numeric_filters` | list | A list of numeric filters to apply. |
+| `categorical_filters` | list | A list of categorical filters to apply. |
+
+#### Outputs
+This query does not return any data directly. It creates a materialized view in the database.
+
+#### Internal Logic
+The query uses the `time_bucket` function from TimescaleDB to group usage events into one-second buckets. It then calculates the aggregated usage for each bucket based on the specified `query_type` and groups the results by `uuidv5_customer_id`, `bucket`, and any fields specified in the `group_by` parameter.
+
+### `RATE_CAGG_TOTAL`
+#### Description
+This SQL query template calculates the total usage for a specific customer within a given time range, using the pre-aggregated data from a materialized view named `cagg_name`.
+
+#### Inputs
+This is a template variable, it does not take direct inputs. However, it uses the following placeholders that are replaced with actual values during query generation:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `cagg_name` | string | The name of the materialized view to query. |
+| `query_type` | string | The type of aggregation to perform (e.g., "count", "sum", "average", "max"). |
+| `group_by` | list | A list of fields to group the results by. |
+| `uuidv5_customer_id` | string | The UUID of the customer. |
+| `start_date` | datetime | The start date of the time range. |
+| `end_date` | datetime | The end date of the time range. |
+| `lookback_qty` | integer | The quantity of lookback units. |
+| `lookback_units` | string | The time unit for the lookback period (e.g., "days", "hours"). |
+| `filter_properties` | dict | A dictionary of property names and their corresponding values to filter by. |
+
+#### Outputs
+The query returns a table with the following columns:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `uuidv5_customer_id` | string | The UUID of the customer. |
+| `group_by_field` | string | The value of each field specified in the `group_by` parameter. |
+| `bucket` | datetime | The timestamp of the bucket. |
+| `usage_qty` | decimal | The calculated usage quantity for the bucket. |
+
+#### Internal Logic
+The query first calculates the usage for each bucket within the specified time range using a window function with a sliding window of the specified `lookback_qty` and `lookback_units`. It then filters the results to only include data for the specified customer and time range. Finally, it orders the results by `uuidv5_customer_id`, `group_by_field`, `usage_qty` (descending), and `bucket` (ascending).
+
+### `RATE_TOTAL_PER_DAY`
+#### Description
+This SQL query template calculates the total usage per day for a specific customer or the top N customers within a given time range, using the pre-aggregated data from a materialized view named `cagg_name`.
+
+#### Inputs
+This is a template variable, it does not take direct inputs. However, it uses the following placeholders that are replaced with actual values during query generation:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `cagg_name` | string | The name of the materialized view to query. |
+| `query_type` | string | The type of aggregation to perform (e.g., "count", "sum", "average", "max"). |
+| `group_by` | list | A list of fields to group the results by. |
+| `uuidv5_customer_id` | string | The UUID of the customer (optional). |
+| `start_date` | datetime | The start date of the time range. |
+| `end_date` | datetime | The end date of the time range. |
+| `lookback_qty` | integer | The quantity of lookback units. |
+| `lookback_units` | string | The time unit for the lookback period (e.g., "days", "hours"). |
+| `top_n` | integer | The number of top customers to include (optional). |
+
+#### Outputs
+The query returns a table with the following columns:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `uuidv5_customer_id` | string | The UUID of the customer. |
+| `usage_qty` | decimal | The total usage quantity for the day. |
+| `time_bucket` | datetime | The timestamp representing the day. |
+
+#### Internal Logic
+The query first calculates the usage for each bucket within the specified time range using a window function with a sliding window of the specified `lookback_qty` and `lookback_units`. It then groups the results by day using the `time_bucket_gapfill` function and calculates the total usage for each day. If a `uuidv5_customer_id` is provided, it filters the results to only include data for that customer. If `top_n` is provided, it limits the results to the top N customers with the highest total usage. Finally, it orders the results by `uuidv5_customer_id` and `time_bucket`.

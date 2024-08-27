@@ -1,0 +1,64 @@
+---
+title: "cache_utils.py"
+---
+
+## High-level description
+This code defines a `FallbackCache` class that extends Django's caching mechanism by providing a fallback cache backend. This allows the application to first attempt to use a primary cache (defined as "main_cache") and, in case of errors, seamlessly switch to a secondary, more resilient cache (defined as "fallback_cache").
+
+## Code Structure
+The `get_cache` function retrieves a Django cache instance based on the provided backend name and Django version. The `FallbackCache` class utilizes this function to initialize its primary and fallback caches. It then overrides various cache methods (e.g., `add`, `get`, `set`) to implement the fallback logic.
+
+## Symbols
+
+### `get_cache`
+#### Description
+Retrieves a Django cache instance based on the provided backend name and Django version.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| backend | str | The name of the cache backend to retrieve. |
+| **kwargs | dict | Additional keyword arguments passed to the cache creation function. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cache | django.core.cache.backends.base.BaseCache | An instance of the requested Django cache backend. |
+
+#### Internal Logic
+1. Imports necessary modules based on Django version.
+2. Uses the appropriate Django API to create a cache instance based on the provided backend and keyword arguments.
+3. Connects the `cache.close` method to the `request_finished` signal if available, ensuring proper cleanup at the end of each request.
+4. Returns the created cache instance.
+
+### `FallbackCache`
+#### Description
+A custom cache class that implements a fallback mechanism between a primary ("main_cache") and a secondary ("fallback_cache") cache backend.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| params | dict | Optional parameters for cache initialization. |
+| *args | tuple | Additional positional arguments passed to the base class constructor. |
+| **kwargs | dict | Additional keyword arguments passed to the base class constructor. |
+
+#### Internal Logic
+1. Initializes the primary (`_cache`) and fallback (`_cache_fallback`) caches using the `get_cache` function.
+2. Overrides various cache methods (e.g., `add`, `get`, `set`) to implement the fallback logic.
+3. The `_call_with_fallback` method handles the core fallback logic:
+    - It first attempts to call the specified method on the primary cache.
+    - If an exception occurs, it logs a warning, switches to the fallback cache, and calls the method on the fallback cache.
+    - If the `raise_err` flag is set to `False`, it suppresses exceptions from the fallback cache and returns `None`.
+4. The `_call_main_cache` and `_call_fallback_cache` methods provide abstractions for calling methods on the respective cache instances.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| django | Provides the core caching framework and signals. |
+| logging | Enables logging of cache switching events and errors. |
+
+## Error Handling
+The `FallbackCache` class implements error handling by catching exceptions raised when interacting with the primary cache. In case of errors, it logs a warning message and attempts to use the fallback cache. If the `raise_err` flag is set to `False`, exceptions from the fallback cache are suppressed, and `None` is returned.
+
+## Logging
+The code uses the `logging` module to log warning messages when switching to the fallback cache and when encountering errors during fallback cache operations.

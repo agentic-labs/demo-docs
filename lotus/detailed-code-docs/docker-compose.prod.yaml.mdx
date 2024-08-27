@@ -1,0 +1,128 @@
+---
+title: "docker-compose.prod.yaml"
+---
+
+## High-level description
+This Docker Compose file defines the production environment for a complex application stack. It orchestrates multiple services including a database, message broker, backend services, frontend, caching, and task processing, creating a comprehensive and scalable production-ready application infrastructure.
+
+## Code Structure
+The file defines multiple services, each with its own configuration. These services are interconnected and depend on each other to form a complete application stack. The main components include database (db), message broker (redpanda), backend services (backend, event-guidance, event-ingestion), frontend, caching (redis), and task processing (celery, celery-beat).
+
+## Symbols
+
+### `services`
+#### Description
+Defines all the services that make up the application stack.
+
+#### Internal Logic
+- Each service is defined with its specific configuration, including image or build instructions, environment variables, ports, volumes, and dependencies.
+- Services are interconnected through networks and dependencies.
+
+### `db`
+#### Description
+PostgreSQL database service using TimescaleDB.
+
+#### Internal Logic
+- Uses the latest TimescaleDB image with PostgreSQL 14
+- Exposes port 5432 internally
+- Persists data using a named volume
+- Loads environment variables from a production env file
+
+### `svix-server`
+#### Description
+Svix server service for webhook management.
+
+#### Internal Logic
+- Uses Svix server image v0.74
+- Configures Redis and PostgreSQL connections
+- Exposes port 8071
+- Depends on db and redis services
+
+### `redpanda`
+#### Description
+Redpanda service, a Kafka-compatible event streaming platform.
+
+#### Internal Logic
+- Configures Redpanda with specific startup parameters
+- Exposes multiple ports for various protocols
+
+### `backend`
+#### Description
+Main backend service of the application.
+
+#### Internal Logic
+- Built from a local Dockerfile
+- Exposes port 8000 internally
+- Mounts a volume for static files
+- Runs a startup script for production
+- Depends on db, redis, and redpanda services
+
+### `event-guidance` and `event-ingestion`
+#### Description
+Additional backend services for event processing.
+
+#### Internal Logic
+- Built from local Dockerfiles in Go
+- Expose ports 7999 and 7998 respectively
+- Depend on db, redis, and redpanda services
+
+### `frontend`
+#### Description
+Frontend service of the application.
+
+#### Internal Logic
+- Built from a local Dockerfile
+- Exposes port 80
+- Mounts the same static files volume as the backend
+- Depends on the backend service
+
+### `redis`
+#### Description
+Redis service for caching.
+
+#### Internal Logic
+- Uses Redis 7 Alpine image
+- Runs with default configuration
+
+### `celery` and `celery-beat`
+#### Description
+Celery services for asynchronous task processing.
+
+#### Internal Logic
+- Built from the same Dockerfile as the backend
+- celery runs workers, while celery-beat schedules tasks
+- Both depend on redis and backend services
+
+### `volumes`
+#### Description
+Defines named volumes for persistent data storage.
+
+#### Internal Logic
+- `pgdata_prod`: Stores PostgreSQL data
+- `django_static_volume`: Stores Django static files
+
+## Dependencies
+The application relies on several external services and libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| TimescaleDB | PostgreSQL-based time-series database |
+| Svix | Webhook management |
+| Redpanda | Kafka-compatible event streaming |
+| Redis | Caching and message broker |
+| Celery | Distributed task queue |
+
+## Configuration
+The services are configured using environment variables loaded from `./env/.env.prod` file.
+
+## Error Handling
+The compose file implements basic error handling through restart policies:
+- Most services use `restart: on-failure`
+- The frontend uses `restart: always`
+- Some services like `event-guidance` and `event-ingestion` use `restart: "on-failure:15"`, allowing up to 15 restart attempts
+
+## Performance Considerations
+- The use of Redis suggests caching for performance optimization
+- Celery is employed for handling background tasks, improving responsiveness
+- Redpanda is used as a high-performance message broker
+
+This Docker Compose file sets up a robust, scalable, and production-ready application stack with considerations for data persistence, error handling, and performance optimization.

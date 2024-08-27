@@ -1,0 +1,48 @@
+---
+title: "0074_auto_20221113_2026.py"
+---
+
+## High-level description
+This Django migration script, generated on 2022-11-13, migrates data from the `PlanComponent` model to the `PriceTier` model in the metering_billing app. It specifically handles the transition from a simpler pricing structure to a more flexible one using price tiers. 
+
+## Code Structure
+The code defines a single top-level function `migrate_plancomponetns_to_price_tiers` which is called by the migration framework. This function retrieves existing `PlanComponent` objects and creates corresponding `PriceTier` objects based on the existing data.
+
+## References
+This migration references the following models from the `metering_billing` app:
+- `PlanComponent`
+- `PriceTier`
+- `PlanVersion`
+
+It also uses the following enum members from `metering_billing.utils.enums`:
+- `BATCH_ROUNDING_TYPE.NO_ROUNDING`
+- `PRICE_TIER_TYPE.FREE`
+- `PRICE_TIER_TYPE.PER_UNIT`
+
+## Symbols
+
+### `migrate_plancomponetns_to_price_tiers(apps, schema_editor)`
+#### Description
+This function migrates data from the `PlanComponent` model to the `PriceTier` model. It iterates through existing `PlanVersion` objects and their associated `PlanComponent` objects. For each `PlanComponent`, it creates a new `PlanComponent` object and one or two corresponding `PriceTier` objects based on the original component's pricing attributes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Registry of models and other application state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object allowing for database schema manipulation. |
+
+#### Outputs
+This function does not explicitly return any value.
+
+#### Internal Logic
+1. **Retrieve Data:** Fetches all `PlanVersion` objects with prefetched `components`.
+2. **Iterate through Plan Components:** Loops through each `PlanComponent` associated with each `PlanVersion`.
+3. **Create New Plan Component:** Creates a new `PlanComponent` object linked to the current `PlanVersion`.
+4. **Create Price Tiers:**
+    - If `free_metric_units` is defined and greater than 0, creates a `FREE` `PriceTier` with the corresponding range.
+    - Creates a `PER_UNIT` `PriceTier` with appropriate attributes based on the original component's pricing.
+    - Sets the `range_end` of the `PER_UNIT` tier based on `max_metric_units` if defined.
+5. **Cleanup:** Deletes any orphaned `PlanComponent` objects (those without a `plan_version`).
+
+## Side Effects
+This migration directly modifies the database by creating new `PlanComponent` and `PriceTier` objects and potentially deleting orphaned `PlanComponent` objects. 

@@ -1,0 +1,512 @@
+---
+title: "model_views.py"
+---
+
+## High-level description
+The `model_views.py` file defines a set of Django REST Framework (DRF) viewsets that handle API requests related to various models in the metering and billing system. These viewsets provide CRUD (Create, Read, Update, Delete) operations for models like organizations, customers, metrics, plans, subscriptions, invoices, and more.
+
+## Code Structure
+The code defines multiple viewsets, each inheriting from DRF's `viewsets.ModelViewSet` or `viewsets.GenericViewSet`. Each viewset is responsible for handling API requests for a specific model. The viewsets use serializers to convert model instances to JSON and vice versa, and they define methods for handling different HTTP methods (GET, POST, PATCH, DELETE).
+
+## References
+The code references various models from the `metering_billing.models` module, serializers from the `metering_billing.serializers` and `api.serializers` modules, and utility functions from the `metering_billing.utils` module. It also uses external libraries like `drf_spectacular` for API documentation and `posthog` for analytics.
+
+## Symbols
+
+### `APITokenViewSet`
+#### Description
+This viewset handles API requests related to API tokens. It allows creating, listing, and deleting API tokens for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the API tokens based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `perform_create`: Creates a new API token and caches its prefix and organization ID.
+- `create`: Handles POST requests to create a new API token.
+- `perform_destroy`: Deletes the API token and removes its cache entries.
+- `roll`: Handles POST requests to roll an existing API token, creating a new one with the same name and expiry date and deleting the old one.
+
+### `WebhookViewSet`
+#### Description
+This viewset handles API requests related to webhook endpoints. It allows creating, listing, retrieving, updating, and deleting webhook endpoints for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the webhook endpoint based on its ID.
+- `get_queryset`: Filters the webhook endpoints based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `perform_create`: Creates a new webhook endpoint and provisions it using the SVIX connector if available.
+- `perform_destroy`: Deletes the webhook endpoint and removes it from SVIX if available.
+- `dispatch`: Captures analytics events for webhook actions using Posthog.
+
+### `EventViewSet`
+#### Description
+This viewset handles API requests related to events. It allows listing and searching for events associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the events based on the organization associated with the request and the current time.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `search`: Handles GET requests to search for events based on customer ID and idempotency ID.
+- `event_properties`: Handles GET requests to retrieve a list of event names and their associated properties for the organization.
+
+### `UserViewSet`
+#### Description
+This viewset handles API requests related to users. It allows listing and creating users associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the users based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `perform_create`: Creates a new user and associates it with the organization.
+
+### `CustomerViewSet`
+#### Description
+This viewset handles API requests related to customers. It extends the `api_views.CustomerViewSet` and provides additional actions for retrieving customer summaries and totals.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `update`: Handles PUT requests to update a customer.
+- `summary`: Handles GET requests to retrieve a summary of all customers.
+- `totals`: Handles GET requests to retrieve customer totals, including revenue.
+
+### `MetricViewSet`
+#### Description
+This viewset handles API requests related to metrics. It allows creating, retrieving, listing, and partially updating metrics associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the metric based on its ID.
+- `get_queryset`: Filters the metrics based on the organization associated with the request and their status.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `dispatch`: Captures analytics events for metric actions using Posthog.
+- `create`: Handles POST requests to create a new metric.
+- `perform_create`: Creates a new metric and handles potential duplicate metric errors.
+
+### `FeatureViewSet`
+#### Description
+This viewset handles API requests related to features. It allows listing and creating features associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the features based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `dispatch`: Captures analytics events for feature actions using Posthog.
+- `create`: Handles POST requests to create a new feature.
+- `perform_create`: Creates a new feature and associates it with the organization.
+
+### `PlanVersionViewSet`
+#### Description
+This viewset handles API requests related to plan versions. It allows creating, retrieving, listing, updating, and performing various actions on plan versions associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the plan version based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the plan versions based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization and user to the serializer context.
+- `dispatch`: Captures analytics events for plan version actions using Posthog.
+- `create`: Handles POST requests to create a new plan version.
+- `update`: Handles PUT requests to update a plan version.
+- `perform_create`: Creates a new plan version and associates it with the organization and user.
+- `add_target_customer`: Handles POST requests to add target customers to a plan version.
+- `remove_target_customer`: Handles POST requests to remove target customers from a plan version.
+- `make_public`: Handles POST requests to make a custom plan version public.
+- `delete`: Handles POST requests to delete a plan version.
+- `set_replacement`: Handles POST requests to set a replacement plan version for the current plan version.
+- `make_replacement`: Handles POST requests to set the current plan version as a replacement for other plan versions.
+- `add_feature`: Handles POST requests to add a feature to a plan version.
+- `subscriptions`: Handles GET requests to retrieve subscriptions associated with a plan version.
+
+### `PlanViewSet`
+#### Description
+This viewset handles API requests related to plans. It extends the `api_views.PlanViewSet` and provides additional actions for managing plan features, active dates, replacements, transitions, and tags.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the plan based on its ID.
+- `get_queryset`: Retrieves the plans associated with the organization.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `create`: Handles POST requests to create a new plan.
+- `update`: Handles PUT requests to update a plan.
+- `perform_create`: Creates a new plan and associates it with the organization and user.
+- `delete`: Handles POST requests to delete a plan.
+- `add_tags`: Handles POST requests to add tags to a plan.
+- `remove_tags`: Handles POST requests to remove tags from a plan.
+- `set_tags`: Handles POST requests to set tags for a plan.
+- `add_feature`: Handles POST requests to add a feature to a plan or its versions.
+- `add_feature_to_version_number`: Handles POST requests to add a feature to specific versions of a plan.
+- `change_version_number_active_dates`: Handles POST requests to change the active dates of specific versions of a plan.
+- `set_replacement_for_version_number`: Handles POST requests to set a replacement plan version for specific versions of a plan.
+- `set_transition_for_version_number`: Handles POST requests to set a transition plan for specific versions of a plan.
+- `get_next_plan_version_number`: Handles GET requests to retrieve the next available version number for a plan.
+
+### `SubscriptionViewSet`
+#### Description
+This viewset handles API requests related to subscriptions. It extends the `api_views.SubscriptionViewSet` and disables certain actions that are not allowed through the API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `add`, `cancel_multi`, and `edit` actions are disabled and raise a `MethodNotAllowed` exception.
+
+### `InvoiceViewSet`
+#### Description
+This viewset handles API requests related to invoices. It extends the `api_views.InvoiceViewSet` and provides an additional action for sending invoices.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `send`: Handles POST requests to send an invoice, creating an external payment object if necessary.
+
+###Certainly! I'll continue with the remaining symbols in the file:
+
+### `BacktestViewSet`
+#### Description
+This viewset handles API requests related to backtests. It allows creating, retrieving, and listing backtests associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the backtest based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the backtests based on the organization associated with the request.
+- `perform_create`: Creates a new backtest and initiates the backtest task.
+- `dispatch`: Captures analytics events for backtest actions using Posthog.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+### `AnalysisViewSet`
+#### Description
+This viewset handles API requests related to analyses. It allows creating, retrieving, and listing analyses associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the analysis based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the analyses based on the organization associated with the request.
+- `perform_create`: Creates a new analysis and initiates the analysis task.
+- `dispatch`: Captures analytics events for analysis actions using Posthog.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+### `ProductViewSet`
+#### Description
+This viewset handles API requests related to products. It allows creating, retrieving, and listing products associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the products based on the organization associated with the request.
+- `perform_create`: Creates a new product and associates it with the organization.
+- `dispatch`: Captures analytics events for product actions using Posthog.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+### `ActionViewSet`
+#### Description
+This viewset handles API requests related to actions. It allows listing actions associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the actions based on the organization associated with the request and the users belonging to that organization.
+
+### `ExternalPlanLinkViewSet`
+#### Description
+This viewset handles API requests related to external plan links. It allows creating, listing, and deleting external plan links associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the external plan links based on the organization associated with the request and an optional source parameter.
+- `dispatch`: Captures analytics events for external plan link actions using Posthog.
+- `perform_create`: Creates a new external plan link and associates it with the organization.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+### `PricingUnitViewSet`
+#### Description
+This viewset handles API requests related to pricing units. It allows creating and listing pricing units associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_queryset`: Filters the pricing units based on the organization associated with the request.
+- `perform_create`: Creates a new pricing unit and associates it with the organization.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+### `OrganizationViewSet`
+#### Description
+This viewset handles API requests related to organizations. It allows listing, updating, and creating organizations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the organization based on its ID.
+- `get_queryset`: Filters the organizations based on the user's current organization.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_serializer_context`: Adds the organization and user to the serializer context.
+- `create`: Handles POST requests to create a new organization.
+- `update`: Handles PUT requests to update an organization.
+- `partial_update`: Handles PATCH requests to partially update an organization.
+- `sync_crm`: Handles POST requests to synchronize CRM data for the organization.
+
+### `CustomerBalanceAdjustmentViewSet`
+#### Description
+This viewset handles API requests related to customer balance adjustments. It extends the `api_views.CustomerBalanceAdjustmentViewSet`.
+
+### `AddOnViewSet`
+#### Description
+This viewset handles API requests related to add-ons. It allows creating, retrieving, updating, and listing add-ons associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_serializer_context`: Adds the organization to the serializer context.
+- `get_object`: Retrieves the add-on based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `perform_create`: Creates a new add-on and associates it with the organization and user.
+- `get_queryset`: Filters the add-ons based on the organization associated with the request.
+- `create`: Handles POST requests to create a new add-on.
+- `add_feature`: Handles POST requests to add a feature to an add-on.
+- `delete`: Handles POST requests to delete an add-on.
+- `update`: Handles PUT requests to update an add-on.
+
+### `AddOnVersionViewSet`
+#### Description
+This viewset handles API requests related to add-on versions. It allows creating, updating, and deleting add-on versions associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the add-on version based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the add-on versions based on the organization associated with the request.
+- `get_serializer_context`: Adds the organization and user to the serializer context.
+- `dispatch`: Captures analytics events for add-on version actions using Posthog.
+- `create`: Handles POST requests to create a new add-on version.
+- `update`: Handles PUT requests to update an add-on version.
+- `perform_create`: Creates a new add-on version and associates it with the organization and user.
+- `delete`: Handles POST requests to delete an add-on version.
+
+### `UsageAlertViewSet`
+#### Description
+This viewset handles API requests related to usage alerts. It allows creating, retrieving, listing, and deleting usage alerts associated with an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | `rest_framework.request.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | `rest_framework.response.Response` | The HTTP response containing the requested data or an error message. |
+
+#### Internal Logic
+- `get_object`: Retrieves the usage alert based on its ID.
+- `get_serializer_class`: Returns the appropriate serializer class based on the requested action.
+- `get_queryset`: Filters the usage alerts based on the organization associated with the request.
+- `perform_create`: Creates a new usage alert and associates it with the organization.
+- `get_serializer_context`: Adds the organization to the serializer context.
+
+## Side Effects
+- The viewsets interact with the database to perform CRUD operations on various models.
+- Some viewsets trigger background tasks, such as running backtests or analyses.
+- Analytics events are captured using Posthog for various actions.
+- Cache operations are performed for API tokens.
+- External services like SVIX may be called for webhook-related operations.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Django REST Framework | Provides the base classes and utilities for building API views |
+| drf_spectacular | Generates API documentation |
+| posthog | Captures analytics events |
+| SVIX | Manages webhook endpoints (if configured) |
+
+## Error Handling
+The viewsets use Django REST Framework's built-in error handling mechanisms. Common errors include:
+- ValidationError: Raised when input data fails validation.
+- PermissionDenied: Raised when a user doesn't have the required permissions.
+- NotFound: Raised when a requested object doesn't exist.
+
+Custom exceptions are also used in some cases, such as:
+- DuplicateMetric: Raised when trying to create a metric that already exists.
+- InvalidOperation: Raised when attempting an invalid operation, such as deleting a plan with active subscriptions.
+
+## Logging
+The code uses Django's built-in logging system. A logger named "django.server" is configured to log various events and errors.
+
+This completes the documentation for the `model_views.py` file.

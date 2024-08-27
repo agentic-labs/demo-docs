@@ -1,0 +1,59 @@
+---
+title: "0107_rename_unadjusted_duration_days_historicalsubscriptionrecord_unadjusted_duration_seconds_and_more.py"
+---
+
+## High-level description
+This Django migration script renames fields in the `HistoricalSubscriptionRecord` and `SubscriptionRecord` models, changing "unadjusted_duration_days" to "unadjusted_duration_seconds". It also adds a new field, `usage_start_date`, to both models. Additionally, it includes a data migration function `delete_dups` that removes duplicate `Customer` instances based on the combination of `organization` and `email`.
+
+## References
+This migration references the following models:
+
+* `metering_billing.HistoricalSubscriptionRecord`
+* `metering_billing.SubscriptionRecord`
+* `metering_billing.Customer`
+
+## Symbols
+
+### `delete_dups`
+#### Description
+This function finds and deletes duplicate `Customer` instances within the database. A duplicate is defined as multiple `Customer` entries with the same `organization` and `email`. 
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | The Apps registry, providing access to the application's models. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object for managing database schema alterations. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+1. Retrieves the `Customer` model from the provided `apps` registry.
+2. Iterates through all `Customer` objects, ordered by primary key (`pk`).
+3. For each `Customer`, identifies potential duplicates based on matching `organization` and `email` but different `pk`.
+4. Deletes the identified duplicate `Customer` instances.
+
+### `Migration`
+#### Description
+This class represents a database migration operation, encapsulating the changes to be applied to the database schema.
+
+#### Inputs
+This class does not take any direct inputs.
+
+#### Outputs
+This class does not return any value.
+
+#### Internal Logic
+The `operations` list defines the schema alterations:
+
+1. **RenameField**: Renames the field `unadjusted_duration_days` to `unadjusted_duration_seconds` in both `HistoricalSubscriptionRecord` and `SubscriptionRecord` models.
+2. **AddField**: Adds a new field `usage_start_date` of type `models.DateTimeField` (allowing blank and null values) to both `HistoricalSubscriptionRecord` and `SubscriptionRecord` models. 
+
+## Side Effects
+This migration directly modifies the database schema and data:
+
+* **Schema Changes**: Renames fields and adds a new field to the specified models.
+* **Data Modification**: The `delete_dups` function removes duplicate `Customer` entries from the database.
+
+## Dependencies
+This migration script depends on Django's migration framework (`django.db.migrations`) and the `models` module (`django.db.models`). 

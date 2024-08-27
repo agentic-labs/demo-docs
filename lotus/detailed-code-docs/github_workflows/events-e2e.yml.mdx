@@ -1,0 +1,100 @@
+---
+title: "events-e2e.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file, named "E2E Events", is designed to run end-to-end tests for event tracking and verification in a development environment. It sets up the necessary infrastructure, sends a test event, and verifies that the event was properly received and processed.
+
+## Code Structure
+The workflow is structured as a single job named "e2e-events" with multiple steps that set up the environment, start the application, send a test event, and verify its reception.
+
+## Symbols
+
+### `e2e-events` (job)
+#### Description
+This job runs the end-to-end tests for event tracking and verification.
+
+#### Internal Logic
+1. Sets up the environment with necessary secrets and configurations.
+2. Starts the application using a development script.
+3. Waits for the API to be ready.
+4. Retrieves an API key for authentication.
+5. Sends a test event to the tracking endpoint.
+6. Verifies that the event was received and processed correctly.
+
+### `start-all` (step)
+#### Description
+Starts the application using a development script.
+
+#### Internal Logic
+Runs the `dev.sh` script with specific flags to start the application without webhooks and beat processes.
+
+### `Wait for API to be ready` (step)
+#### Description
+Waits for the API to become available by repeatedly checking the healthcheck endpoint.
+
+#### Internal Logic
+1. Sleeps for an initial 480 seconds.
+2. Attempts to curl the healthcheck endpoint up to 200 times.
+3. Waits 5 seconds between attempts.
+4. Sets a success flag if the endpoint responds successfully.
+
+### `get-api-key` (step)
+#### Description
+Retrieves an API key for authentication in subsequent steps.
+
+#### Internal Logic
+1. Executes a Django management command to get the API key.
+2. Extracts the key from the command output.
+3. Stores the key in an environment variable and a JSON file.
+
+### `track-events` (step)
+#### Description
+Sends a test event to the tracking endpoint.
+
+#### Internal Logic
+1. Constructs a curl command with the API key and event data.
+2. Sends a POST request to the tracking endpoint.
+3. Captures and logs the response body and status code.
+
+### `verify event` (step)
+#### Description
+Verifies that the previously sent event was received and processed correctly.
+
+#### Internal Logic
+1. Waits for 10 seconds to allow for event processing.
+2. Sends a POST request to verify the reception of the event using its idempotency ID.
+3. Checks the response to ensure the event was found.
+4. Exits with an error if the event is not found.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v3 | Checks out the repository code |
+| jq | JSON processing tool, installed in a separate step |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DJANGO_SETTINGS_MODULE | string | "lotus.settings" | Specifies the Django settings module |
+| PYTHONPATH | string | "." | Sets the Python path |
+| DEBUG | boolean | False | Disables debug mode |
+| DOCKERIZED | boolean | True | Indicates the application is running in Docker |
+| POSTGRES_USER | string | lotus | PostgreSQL username |
+| POSTGRES_PASSWORD | string | lotus | PostgreSQL password |
+| POSTGRES_DB | string | lotus | PostgreSQL database name |
+| KAFKA_URL | string | redpanda:29092 | Kafka broker URL |
+
+## Error Handling
+The workflow includes basic error handling:
+- If the API fails to start within the allocated time, the workflow fails.
+- If the test event is not found during verification, the workflow fails with an exit code of 1.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /api/healthcheck/ | GET | N/A | N/A | Checks if the API is ready |
+| /api/track/ | POST | JSON event data | JSON response | Tracks an event |
+| /api/verify_idems_received/ | POST | JSON with idempotency IDs | JSON response | Verifies event reception |
+
+This workflow provides a comprehensive end-to-end test for the event tracking system, ensuring that events can be sent and verified in a development environment.

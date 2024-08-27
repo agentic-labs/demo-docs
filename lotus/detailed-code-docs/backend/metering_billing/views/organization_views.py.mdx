@@ -1,0 +1,123 @@
+---
+title: "organization_views.py"
+---
+
+## High-level description
+The `organization_views.py` file defines API views related to organization-level operations, specifically inviting users to an organization and generating invite links. It handles sending invitation emails and managing invitation tokens.
+
+## Code Structure
+The code defines two API views: `InviteView` and `InviteLinkView`. Both views handle POST requests for inviting users. Additionally, there's a helper function `send_invite_email` responsible for sending the actual invitation email.
+
+## References
+The code references the following models:
+- `User`
+- `TeamInviteToken`
+- `Organization`
+
+## Symbols
+
+### `InviteRequestSerializer`
+#### Description
+This serializer defines the structure of the request data for inviting a user. It expects an email address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | EmailField | The email address of the user to invite. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+N/A
+
+### `InviteView`
+#### Description
+This API view handles POST requests for inviting users to an organization. It generates an invitation token, saves it to the database, and sends an invitation email to the provided email address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | Request | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | Response | A response object containing the invited user's email address. |
+
+#### Internal Logic
+1. Validates the request data using `InviteRequestSerializer`.
+2. Checks if a user with the provided email already exists. If so, raises a `DuplicateCustomer` exception.
+3. Retrieves the user making the request, their organization, and the organization's team.
+4. Creates or updates a `TeamInviteToken` object for the team and email address.
+5. Generates a registration URL with the invitation token.
+6. Calls `send_invite_email` to send the invitation email.
+7. Returns a response with the invited user's email address.
+
+### `InviteLinkView`
+#### Description
+This API view handles POST requests for generating an invite link for a user. It generates an invitation token, saves it to the database, and returns a registration URL with the token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | Request | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | Response | A response object containing the invited user's email address and the generated invite link. |
+
+#### Internal Logic
+1. Validates the request data using `InviteRequestSerializer`.
+2. Retrieves the user making the request, their organization, and the organization's team.
+3. Checks if a user with the provided email already exists. If so, raises a `DuplicateCustomer` exception.
+4. Creates or updates a `TeamInviteToken` object for the team and email address.
+5. Generates a registration URL with the invitation token.
+6. Returns a response with the invited user's email address and the generated invite link.
+
+### `send_invite_email`
+#### Description
+This function sends an invitation email to the provided email address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| reset_url | str | The registration URL with the invitation token. |
+| organization_name | str | The name of the organization. |
+| to | str | The email address of the user to invite. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if the email was sent successfully, False otherwise. |
+
+#### Internal Logic
+1. Constructs the email subject and body.
+2. Creates an `EmailMultiAlternatives` object with the subject, body, sender, and recipient.
+3. Attaches an HTML version of the email body.
+4. Sets email tags and tracking options.
+5. Attempts to send the email.
+6. Returns True if the email was sent successfully, False otherwise.
+
+## Dependencies
+- `django.conf`
+- `django.core.mail`
+- `drf_spectacular.utils`
+- `metering_billing.exceptions`
+- `metering_billing.models`
+- `metering_billing.permissions`
+- `metering_billing.utils`
+- `rest_framework`
+
+## Configuration
+The code uses the following settings:
+- `POSTHOG_PERSON`: The identifier for the person in PostHog.
+- `DEFAULT_FROM_EMAIL`: The default sender email address.
+- `APP_URL`: The base URL of the application.
+
+## Error Handling
+The code raises `DuplicateCustomer` exceptions if a user with the provided email already exists. It also handles `BadHeaderError` exceptions when sending emails.
+
+## Logging
+The code uses the `django.server` logger to log errors and information about the invitation process.

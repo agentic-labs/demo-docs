@@ -1,0 +1,89 @@
+---
+title: "taxes.py"
+---
+
+## High-level description
+The `taxes.py` file in the `metering_billing` module handles tax rate retrieval for invoices. It supports two tax providers: Lotus, which uses a simple customer/organization-level tax rate, and TaxJar, which provides more advanced tax calculations based on location and product. The module includes functions to fetch tax rates from both providers and caches the results for performance optimization.
+
+## Code Structure
+The `taxes.py` file defines two main functions: `get_lotus_tax_rates` and `get_taxjar_tax_rates`. Both functions are responsible for retrieving tax rates based on different providers. The `get_taxjar_tax_rates` function utilizes the `taxjar` library to interact with the TaxJar API and implements caching to optimize performance.
+
+## References
+This file references the following symbols:
+- `metering_billing.models.SubscriptionRecord`
+- `django.conf.settings`
+- `django.core.cache.cache`
+- `taxjar`
+
+## Symbols
+
+### `get_lotus_tax_rates`
+#### Description
+This function retrieves the tax rate associated with a customer or their organization. It first checks if the customer has a specific tax rate set. If not, it falls back to the organization's tax rate. If neither has a tax rate defined, it returns 0 and a failure flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| customer | `metering_billing.models.Customer` | The customer object. |
+| organization | `metering_billing.models.Organization` | The organization object associated with the customer. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tax_rate | `decimal.Decimal` | The retrieved tax rate as a decimal. |
+| success | `bool` | A flag indicating whether a tax rate was successfully retrieved. |
+
+#### Internal Logic
+1. Retrieve the `tax_rate` from the `customer` object.
+2. If the `customer_tax_rate` exists, return the rate and `True` to indicate success.
+3. Otherwise, retrieve the `tax_rate` from the `organization` object.
+4. If the `organization_tax_rate` exists, return the rate and `True`.
+5. If neither rate is found, return 0 and `False` to indicate failure.
+
+### `get_taxjar_tax_rates`
+#### Description
+This function retrieves the tax rate from TaxJar based on the customer's and organization's addresses and the plan's tax code. It utilizes caching to store and retrieve previously fetched tax rates for performance optimization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| customer | `metering_billing.models.Customer` | The customer object. |
+| organization | `metering_billing.models.Organization` | The organization object associated with the customer. |
+| plan | `metering_billing.models.Plan` | The plan object. |
+| draft | `bool` | Flag indicating if it's a draft invoice (default: True). |
+| amount | `int` | The amount to calculate tax for (default: 100). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tax_rate | `decimal.Decimal` | The retrieved tax rate as a decimal. |
+| success | `bool` | A flag indicating whether a tax rate was successfully retrieved. |
+
+#### Internal Logic
+1. Initialize a TaxJar client using the `TAXJAR_API_KEY`.
+2. Retrieve addresses for the organization and customer. If either address is missing, return 0 and `False`.
+3. Construct a cache key based on the addresses and plan's `taxjar_code`.
+4. Check if the tax rate is already cached. If found and it's a draft invoice, return the cached rate and `True`.
+5. If the rate is not cached or it's not a draft invoice, query TaxJar's API for the tax rate using the addresses and `taxjar_code`.
+6. Handle potential TaxJar API errors by logging the error and caching an "ERROR" value. Return 0 and `False` in case of errors.
+7. If the API call is successful, convert the returned rate to a percentage, cache it, and return the rate and `True`.
+
+## Dependencies
+This file depends on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| taxjar | Python library for interacting with the TaxJar API. |
+| django.conf | Used for accessing Django settings. |
+| django.core.cache | Used for caching tax rates. |
+
+## Configuration
+This file uses the following configuration options from Django settings:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| TAXJAR_API_KEY | str | N/A | API key for authenticating with the TaxJar API. |
+
+## Error Handling
+The `get_taxjar_tax_rates` function implements basic error handling for TaxJar API calls. It catches `TaxJarConnectionError` and `TaxJarResponseError` exceptions, logs the error details, and caches an "ERROR" value to prevent repeated failed API calls.
+
+## Logging
+The file uses the `logging` module to log errors encountered during TaxJar API calls. The logger is named "django.server".

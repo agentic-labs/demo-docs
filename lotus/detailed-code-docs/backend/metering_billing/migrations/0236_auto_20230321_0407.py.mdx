@@ -1,0 +1,39 @@
+---
+title: "0236_auto_20230321_0407.py"
+---
+
+## High-level description
+This Django migration script transfers the `subscription_filter_keys` setting from the `OrganizationSetting` model to the `Organization` model. This is done to consolidate organization-level settings directly within the `Organization` model.
+
+## References
+This migration references the following models:
+- `metering_billing.OrganizationSetting`
+- `metering_billing.Organization`
+
+## Symbols
+### `transfer_subscription_keys(apps, schema_editor)`
+#### Description
+This function retrieves all `OrganizationSetting` instances with the name `subscription_filter_keys` and copies the setting values to the corresponding `Organization` model's `subscription_filter_keys` field.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Registry of models and other application state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object allowing for database schema manipulation. |
+
+#### Internal Logic
+1. Retrieves all `OrganizationSetting` objects with `setting_name="subscription_filter_keys"`.
+2. Iterates through each retrieved `OrganizationSetting` object:
+    - Accesses the associated `organization`.
+    - Copies the `setting_values` from the `OrganizationSetting` to the `subscription_filter_keys` field of the `organization`.
+    - Saves the updated `organization` object.
+    - Pauses for 1 second using `time.sleep(1)` to avoid potential race conditions with background workers.
+
+### `Migration`
+#### Description
+This class defines the Django migration to be applied.
+
+#### Internal Logic
+- Specifies a dependency on the previous migration (`0235_historicalorganization_subscription_filter_keys_and_more`).
+- Defines a single operation:
+    - `migrations.RunPython(transfer_subscription_keys)`: Executes the `transfer_subscription_keys` function during the migration process.

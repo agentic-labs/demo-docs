@@ -1,0 +1,120 @@
+---
+title: "producer.py"
+---
+
+Here's a detailed documentation of the `backend/metering_billing/kafka/producer.py` file:
+
+## High-level description
+This file defines a `Producer` class that handles Kafka message production for various events in the system, such as streaming events, invoice updates, and payment updates. It uses the Singleton pattern to ensure only one instance of the Producer is created.
+
+## Code Structure
+The main symbols in this code are:
+1. `InvoiceEncoder`: A custom JSON encoder for handling Decimal and datetime objects.
+2. `Producer`: The main class that handles Kafka message production.
+
+The `Producer` class uses the `Singleton` metaclass to ensure only one instance is created. It interacts with the Kafka server to produce messages for different topics.
+
+## Symbols
+
+### `InvoiceEncoder`
+#### Description
+A custom JSON encoder that extends the `json.JSONEncoder` class to handle Decimal and datetime objects.
+
+#### Internal Logic
+- For Decimal objects, it converts them to strings.
+- For datetime and date objects, it converts them to ISO format strings.
+- For other objects, it uses the default JSON encoder behavior.
+
+### `Producer`
+#### Description
+A Singleton class that handles Kafka message production for various events in the system.
+
+#### Internal Logic
+- Initializes a KafkaProducer instance on creation.
+- Provides methods to produce messages for different types of events:
+  - `produce`: For streaming events
+  - `produce_invoice`: For invoice updates
+  - `produce_invoice_pay_in_full`: For payment updates
+
+#### Methods
+
+##### `__init__`
+Initializes the KafkaProducer instance using the configuration from settings.
+
+##### `produce`
+###### Description
+Produces a record for streaming events.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| customer_id | str | The ID of the customer associated with the event |
+| stream_events | dict | The event data to be sent |
+
+###### Internal Logic
+- Logs the production of the record
+- Sends the message to the Kafka topic specified by `KAFKA_EVENTS_TOPIC`
+- Logs the successful production of the record
+
+##### `produce_invoice`
+###### Description
+Produces a record for invoice updates.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The invoice object to be sent |
+
+###### Internal Logic
+- Asserts that the input is an instance of the Invoice model
+- Serializes the invoice data using InvoiceSerializer
+- Creates a message with "update" messageType, team ID, and invoice data
+- Sends the message to the Kafka topic specified by `KAFKA_INVOICE_TOPIC`
+- Logs the production of the invoice record
+
+##### `produce_invoice_pay_in_full`
+###### Description
+Produces a record for payment updates.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The invoice object associated with the payment |
+| payment_date | datetime | The date of the payment |
+| source | str | The source of the payment |
+
+###### Internal Logic
+- Serializes the payment data using InvoicePaymentSerializer
+- Creates a message with "update" messageType, team ID, and payment data
+- Sends the message to the Kafka topic specified by `KAFKA_PAYMENT_TOPIC`
+- Logs the production of the payment record
+
+##### `test`
+###### Description
+A test method that logs a "test" message.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| json | For JSON encoding and decoding |
+| logging | For logging messages |
+| datetime | For handling date and time objects |
+| decimal | For handling Decimal objects |
+| django.conf | For accessing Django settings |
+| kafka | For Kafka producer functionality |
+| metering_billing.models | For accessing the Invoice model |
+| .singleton | For the Singleton metaclass |
+
+## Configuration
+The following configuration options are used from Django settings:
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| KAFKA_EVENTS_TOPIC | str | The Kafka topic for streaming events |
+| KAFKA_INVOICE_TOPIC | str | The Kafka topic for invoice updates |
+| KAFKA_PAYMENT_TOPIC | str | The Kafka topic for payment updates |
+| PRODUCER_CONFIG | dict | Configuration for the KafkaProducer |
+
+## Logging
+The code uses the Django server logger to log information about record production and any errors that occur during the process.
+
+This code is responsible for sending various types of messages to Kafka topics, which can be consumed by other parts of the system for further processing or analysis. It ensures that only one Producer instance is created and used throughout the application lifecycle.

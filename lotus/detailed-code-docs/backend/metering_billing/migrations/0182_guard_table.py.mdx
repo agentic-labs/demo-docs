@@ -1,0 +1,41 @@
+---
+title: "0182_guard_table.py"
+---
+
+## High-level description
+This Django migration script defines a database migration that introduces a trigger function `insert_event_with_idempotency_check` to the `metering_billing_usageevent` table. This function aims to prevent duplicate events from being inserted by checking for the existence of an event with the same `idempotency_id` in the `metering_billing_idempotencecheck` table.
+
+## Symbols
+
+### `Migration`
+#### Description
+This class defines a new Django migration that adds a trigger to the `metering_billing_usageevent` table. The trigger function `insert_event_with_idempotency_check` is executed before each insert operation on the table.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The migration performs the following operations:
+
+1. **Forward Migration (`operations`)**:
+   - Defines a `RunSQL` operation that executes a SQL statement to:
+     - Create or replace the function `insert_event_with_idempotency_check`. This function attempts to insert a new record into the `metering_billing_idempotencecheck` table using the `idempotency_id`, `time_created`, and `organization_id` from the new `metering_billing_usageevent` record.
+     - Create a trigger `event_insert_trigger` on the `metering_billing_usageevent` table that executes the `insert_event_with_idempotency_check` function before each insert operation.
+
+2. **Reverse Migration (`reverse_sql`)**:
+   - Defines a `RunSQL` operation that executes SQL statements to:
+     - Drop the `event_insert_trigger` trigger from the `metering_billing_usageevent` table.
+     - Drop the `insert_event_with_idempotency_check` function.
+
+#### Side Effects
+- **Database Schema**: This migration modifies the database schema by adding a trigger function and a trigger to the `metering_billing_usageevent` table.
+- **Data Integrity**: The trigger function enforces idempotency for event insertion, preventing duplicate events based on the `idempotency_id`.
+
+## Dependencies
+- **Django**: This code depends on the Django framework for database migrations.
+
+## Error Handling
+This migration does not implement specific error handling. Any errors during the execution of the SQL statements will be raised as exceptions by the database.

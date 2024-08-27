@@ -1,0 +1,330 @@
+---
+title: "invoice.py"
+---
+
+## High-level description
+The `invoice.py` file contains the logic for generating invoices in the metering and billing system. It handles calculations for various charges like flat fees, usage fees, taxes, and customer balance adjustments. The file also manages the creation of external payment objects through integrated payment processors and triggers webhooks for invoice-related events.
+
+## Code Structure
+The code in `invoice.py` is primarily organized around functions that handle different aspects of invoice generation. The main function, `generate_invoice`, orchestrates the entire process. It calls other functions to calculate different types of charges, apply discounts and taxes, and finalize the invoice amount. The code also includes utility functions for tasks like calculating due dates, applying customer balance adjustments, and generating external payment objects.
+
+## References
+The code references several models from the `metering_billing` app, including `Invoice`, `SubscriptionRecord`, `BillingRecord`, `InvoiceLineItem`, `RecurringCharge`, `PlanVersion`, `CustomerBalanceAdjustment`, and `PricingUnit`. It also interacts with payment processors defined in the `PAYMENT_PROCESSOR_MAP` and utilizes tax calculation functions from `metering_billing.taxes`.
+
+## Symbols
+
+### `generate_invoice`
+#### Description
+This function is the main entry point for generating invoices. It takes a set of subscription records, determines the customer and organization, calculates various charges, applies discounts and taxes, and finalizes the invoice. It also handles the creation of external payment objects and triggers webhooks for invoice creation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_records | QuerySet or Iterable | A set of `SubscriptionRecord` objects for which the invoice is generated. |
+| draft | bool | Indicates whether the invoice is a draft (default: False). |
+| charge_next_plan | bool | Indicates whether to charge for the next billing period (default: False). |
+| generate_next_subscription_record | bool | Indicates whether to generate a new `SubscriptionRecord` for the next billing period (default: False). |
+| issue_date | datetime | The issue date of the invoice (default: current UTC time). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| list | list | A list of `Invoice` objects generated. |
+
+#### Internal Logic
+1. **Validation:** Ensures all subscription records belong to the same customer and organization.
+2. **Invoice Creation:** Creates `Invoice` objects for each distinct currency in the subscription records.
+3. **Charge Calculation:**
+    - Calculates flat fees for the current billing period based on `RecurringCharge` objects associated with the `BillingRecord`.
+    - Calculates usage fees for the current billing period based on the `ComponentChargeRecord` objects.
+    - If `charge_next_plan` is True, calculates flat fees for the next billing period.
+4. **Discount and Tax Application:**
+    - Applies plan discounts based on `PriceAdjustment` objects associated with the `PlanVersion`.
+    - Applies taxes based on the customer and organization's tax settings.
+5. **Customer Balance Adjustment:** Applies any available customer balance adjustments.
+6. **Finalization:** Calculates the final invoice amount and updates the payment status.
+7. **External Payment Object:** If not a draft, generates an external payment object using the customer's payment provider.
+8. **Webhook Trigger:** If not a draft, triggers the `invoice_created_webhook`.
+
+### `calculate_subscription_record_flat_fees`
+#### Description
+Calculates the flat fees for a given subscription record and adds them as line items to the invoice.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The `SubscriptionRecord` object for which to calculate flat fees. |
+| invoice | Invoice | The `Invoice` object to which the line items will be added. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Iterate Billing Records:** Iterates through `BillingRecord` objects associated with the `subscription_record` that have a `RecurringCharge`.
+2. **Check Invoicing Date:** Skips billing records if the next invoicing date is in the future or if the record is fully billed.
+3. **Calculate Flat Fee:** Calculates the flat fee due based on the charge timing (in advance or arrears).
+4. **Check Already Invoiced Amount:** Skips if the amount already invoiced matches the calculated fee.
+5. **Create Line Items:** Creates `InvoiceLineItem` objects for the flat fee due and any amount already invoiced.
+6. **Handle Billing Record:** If not a draft, updates the `BillingRecord`'s next invoicing date or marks it as fully billed.
+
+### `calculate_subscription_record_usage_fees`
+#### Description
+Calculates the usage fees for a given subscription record and adds them as line items to the invoice.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The `SubscriptionRecord` object for which to calculate usage fees. |
+| invoice | Invoice | The `Invoice` object to which the line items will be added. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Check Invoice Usage Charges:** Only calculates usage fees if the `invoice_usage_charges` flag is True on the `subscription_record`.
+2. **Iterate Billing Records:** Iterates through `BillingRecord` objects associated with the `subscription_record` that have a `Component`.
+3. **Create Line Items:** Calls `make_billing_record_single_line_item` to create line items for each billing record.
+
+### `make_billing_record_single_line_item`
+#### Description
+Creates a single line item for a given billing record based on its usage and revenue.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| billing_record | BillingRecord | The `BillingRecord` object for which to create a line item. |
+| subscription_record | SubscriptionRecord | The associated `SubscriptionRecord` object. |
+| invoice | Invoice | The `Invoice` object to which the line item will be added. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Check Invoicing Date:** Returns if the next invoicing date is in the future and the invoice is not a draft, or if the billing record is fully billed.
+2. **Iterate Component Charge Records:** Iterates through `ComponentChargeRecord` objects associated with the `billing_record`.
+3. **Calculate Amount to Bill:** Calculates the amount to bill for each component charge record.
+4. **Create Line Item:** Creates an `InvoiceLineItem` object for the calculated amount.
+5. **Mark as Fully Billed:** If not a draft, marks the component charge record as fully billed.
+6. **Calculate Net Usage and Revenue:** Calculates the net usage and revenue for the billing record, subtracting any already invoiced amounts.
+7. **Create Line Item:** Creates an `InvoiceLineItem` object for the net usage and revenue.
+8. **Handle Billing Record:** If not a draft, updates the `BillingRecord`'s next invoicing date or marks it as fully billed.
+
+### `find_next_billing_plan`
+#### Description
+Determines the next billing plan for a given subscription record based on plan transitions and replacements.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The `SubscriptionRecord` object for which to find the next billing plan. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| next_bp | PlanVersion | The `PlanVersion` object representing the next billing plan. |
+
+#### Internal Logic
+1. **Check Transition To:** If the current billing plan has a `transition_to` plan, returns the appropriate version for the customer.
+2. **Check Replace With:** If the current billing plan has a `replace_with` plan, returns the appropriate version based on customer targeting and plan type.
+3. **Default to Current Plan:** If no transitions or replacements are found, returns the current billing plan.
+
+### `check_subscription_record_renews`
+#### Description
+Checks if a subscription record is set to auto-renew and if its parent subscription (if applicable) is also set to auto-renew.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The `SubscriptionRecord` object to check. |
+| issue_date | datetime | The issue date of the invoice. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if the subscription record renews, False otherwise. |
+
+#### Internal Logic
+1. **Check End Date:** Returns False if the subscription end date is before the issue date.
+2. **Check Auto Renew:** If the subscription is a parent (no parent subscription), returns the value of `auto_renew`.
+3. **Check Parent Auto Renew:** If the subscription has a parent, returns True only if both the subscription and its parent have `auto_renew` set to True.
+
+### `create_next_subscription_record`
+#### Description
+Creates a new `SubscriptionRecord` object for the next billing period based on the current subscription record and the next billing plan.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The current `SubscriptionRecord` object. |
+| next_bp | PlanVersion | The `PlanVersion` object representing the next billing plan. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| next_sr | SubscriptionRecord | The newly created `SubscriptionRecord` object. |
+
+#### Internal Logic
+1. **Calculate Start Date:** Calculates the start date of the new subscription record as one day after the end date of the current record.
+2. **Get Initial Component Units:** Retrieves the latest `ComponentChargeRecord` objects for each component in the current subscription.
+3. **Create Subscription Record:** Creates a new `SubscriptionRecord` object with the calculated start date, next billing plan, customer, organization, subscription filters, quantity, and initial component units.
+
+### `charge_next_plan_flat_fee`
+#### Description
+Charges the flat fee for the next billing period if the invoice is not a draft or if the next subscription record is being generated.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| subscription_record | SubscriptionRecord | The current `SubscriptionRecord` object. |
+| next_subscription_record | SubscriptionRecord | The `SubscriptionRecord` object for the next billing period. |
+| next_bp | PlanVersion | The `PlanVersion` object representing the next billing plan. |
+| invoice | Invoice | The `Invoice` object to which the line item will be added. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Check Draft or Same Record:** If the invoice is a draft or the current and next subscription records are the same, calculates the flat fee for the next period and creates a line item.
+2. **Calculate Flat Fees:** If not a draft and the next subscription record is different, calls `calculate_subscription_record_flat_fees` to calculate the flat fees for the next period.
+
+### `apply_plan_discounts`
+#### Description
+Applies plan discounts to the invoice line items based on the `PriceAdjustment` objects associated with the plan versions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The `Invoice` object to which discounts will be applied. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Get Distinct Plan Versions:** Retrieves distinct `PlanVersion` objects associated with the invoice line items.
+2. **Iterate Plan Versions:** Iterates through the plan versions and checks for associated `PriceAdjustment` objects.
+3. **Apply Discounts:** Applies the discount to each line item associated with the plan version based on the adjustment type (percentage, fixed, or price override).
+4. **Create Adjustments:** Creates `InvoiceLineItemAdjustment` objects to track the applied discounts.
+
+### `apply_taxes`
+#### Description
+Applies taxes to the invoice line items based on the customer and organization's tax settings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The `Invoice` object to which taxes will be applied. |
+| customer | Customer | The `Customer` object associated with the invoice. |
+| organization | Organization | The `Organization` object associated with the invoice. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Check Payment Status:** Returns if the invoice is already paid.
+2. **Determine Tax Providers:** Combines the tax provider settings from the customer and organization.
+3. **Get Subscription Records:** Retrieves distinct `SubscriptionRecord` objects associated with the invoice line items.
+4. **Iterate Subscription Records:** Iterates through the subscription records and calculates the tax rate based on the selected tax provider.
+5. **Apply Taxes:** Applies the calculated tax rate to each line item associated with the subscription record.
+6. **Create Adjustments:** Creates `InvoiceLineItemAdjustment` objects to track the applied taxes.
+
+### `apply_customer_balance_adjustments`
+#### Description
+Applies customer balance adjustments to the invoice.
+
+#### Inputs
+| Name | Type | Description ||:-----|:-----|:------------|
+| invoice | Invoice | The `Invoice` object to which adjustments will be applied. |
+| customer | Customer | The `Customer` object associated with the invoice. |
+| organization | Organization | The `Organization` object associated with the invoice. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Check Payment Status and Draft:** Returns if the invoice is already paid or if it's a draft.
+2. **Calculate Invoice Amount:** Calculates the total amount of the invoice.
+3. **Handle Negative Amount (Credit):** If the amount is negative, creates a line item for "Granted Credit" and, if not a draft, creates a `CustomerBalanceAdjustment` object for the credit amount.
+4. **Handle Positive Amount (Debit):** If the amount is positive, retrieves the customer's balance for the invoice currency and applies the available balance as a credit to the invoice. If not a draft, updates the `CustomerBalanceAdjustment` objects to reflect the drawdown.
+
+### `generate_balance_adjustment_invoice`
+#### Description
+Generates an invoice for a given customer balance adjustment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| balance_adjustment | CustomerBalanceAdjustment | The `CustomerBalanceAdjustment` object for which to generate the invoice. |
+| draft | bool | Indicates whether the invoice is a draft (default: False). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The generated `Invoice` object. |
+
+#### Internal Logic
+1. **Invoice Creation:** Creates an `Invoice` object with the balance adjustment's creation date, customer, organization, currency, and due date.
+2. **Line Item Creation:** Creates an `InvoiceLineItem` object for the balance adjustment amount.
+3. **Finalization:** Calls `finalize_invoice_amount` to calculate the final invoice amount and update the payment status.
+4. **External Payment Object:** If not a draft, generates an external payment object using the customer's payment provider.
+5. **Webhook Trigger:** If not a draft, triggers the `invoice_created_webhook`.
+
+### `generate_external_payment_obj`
+#### Description
+Generates an external payment object for a given invoice using the customer's payment provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The `Invoice` object for which to generate the payment object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The updated `Invoice` object with the external payment object ID and status, or None if payment object creation fails. |
+
+#### Internal Logic
+1. **Check Payment Provider:** Retrieves the customer's payment provider and checks if it's supported and connected.
+2. **Create Payment Object:** If the payment provider is connected, calls the `create_payment_object` method of the corresponding payment processor connector to generate the payment object.
+3. **Update Invoice:** If the payment object is created successfully, updates the invoice with the external payment object ID, type, and status.
+
+### `calculate_due_date`
+#### Description
+Calculates the due date for an invoice based on the issue date and the organization's payment grace period.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| issue_date | datetime | The issue date of the invoice. |
+| organization | Organization | The `Organization` object associated with the invoice. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| due_date | datetime | The calculated due date. |
+
+#### Internal Logic
+1. **Add Grace Period:** Adds the organization's `payment_grace_period` (in days) to the issue date to calculate the due date.
+
+### `finalize_invoice_amount`
+#### Description
+Calculates the final amount of the invoice and updates its payment status.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | Invoice | The `Invoice` object to finalize. |
+| draft | bool | Indicates whether the invoice is a draft. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Calculate Amount:** Calculates the total amount of the invoice by summing the amounts of all line items.
+2. **Update Payment Status:** If the amount is close to zero and the invoice is not a draft, sets the payment status to `PAID`.
+3. **Save Invoice:** Saves the updated invoice object.

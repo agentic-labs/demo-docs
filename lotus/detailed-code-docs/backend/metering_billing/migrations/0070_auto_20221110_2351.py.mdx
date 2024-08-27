@@ -1,0 +1,55 @@
+---
+title: "0070_auto_20221110_2351.py"
+---
+
+## High-level description
+This Django migration script updates the `Invoice` model by migrating data from JSON fields (`old_organization`, `old_customer`, `old_subscription`) to foreign key relationships (`organization`, `customer`, `subscription`). It iterates through existing invoices, fetches data from the JSON fields, finds or creates corresponding objects in related tables (`Organization`, `Customer`, `Subscription`), and updates the invoice with the new foreign key references.
+
+## References
+This migration references the following models:
+- `metering_billing.Invoice`
+- `metering_billing.Organization`
+- `metering_billing.Subscription`
+- `metering_billing.Customer`
+
+## Symbols
+
+### `migrate_jsonfields_to_fk(apps, schema_editor)`
+#### Description
+This function migrates data from JSON fields in the `Invoice` model to foreign key relationships. It iterates through existing invoices, extracts data from JSON fields, retrieves or creates corresponding objects in related models, and updates the invoice with the new foreign key references.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Registry of models and other application state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object for managing database schema. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | None | This function does not return any value. |
+
+#### Internal Logic
+1. **Get Models:** Retrieves the `Invoice`, `Organization`, `Subscription`, and `Customer` models using the provided `apps` object.
+2. **Initialize Dictionaries:** Creates dictionaries to store retrieved objects for performance optimization (avoids redundant database queries).
+3. **Iterate through Invoices:** Loops through all existing `Invoice` objects.
+4. **Extract Data from JSON Fields:** For each invoice, attempts to extract data from `old_organization`, `old_customer`, and `old_subscription` JSON fields. Handles potential exceptions if data is missing.
+5. **Retrieve or Create Related Objects:**
+    - For `organization`:
+        - If the organization name exists in `invoice_org_dict`, retrieves the object from the dictionary.
+        - Otherwise, tries to fetch the organization from the database using `company_name`. If not found, sets `invoice_org_object` to `None`.
+        - Stores the retrieved/created object in `invoice_org_dict`.
+    - For `customer`:
+        - Follows a similar logic as `organization`, using `customer_id` and the previously retrieved `invoice_org_object` for querying.
+    - For `subscription`:
+        - Follows a similar logic as `organization`, using `subscription_id` and `invoice_org_object` for querying.
+6. **Update Invoice:** Sets the `organization`, `customer`, and `subscription` foreign key fields of the invoice object with the retrieved/created objects.
+7. **Save Invoice:** Saves the updated invoice object.
+
+### `Migration`
+#### Description
+This class represents a Django migration that applies the `migrate_jsonfields_to_fk` function.
+
+#### Internal Logic
+- **dependencies:** Specifies that this migration depends on the previous migration "0069_historicalinvoice_customer_and_more".
+- **operations:** Defines a list of operations to perform during the migration. In this case, it includes a single operation: `migrations.RunPython(migrate_jsonfields_to_fk)`, which executes the `migrate_jsonfields_to_fk` function.

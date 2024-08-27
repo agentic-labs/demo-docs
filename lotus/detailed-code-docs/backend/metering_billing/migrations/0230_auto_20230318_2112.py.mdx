@@ -1,0 +1,40 @@
+---
+title: "0230_auto_20230318_2112.py"
+---
+
+## High-level description
+This Django migration script aims to transfer data from the `filters` field to the `subscription_filters` field in the `SubscriptionRecord` model. It iterates through all existing `SubscriptionRecord` instances, copies relevant data from the old `filters` field, and updates the `subscription_filters` field with the new format. 
+
+## References
+This migration references the `SubscriptionRecord` model defined in the `metering_billing` app. It also depends on the previous migration ("0229_historicalsubscriptionrecord_subscription_filters_and_more") to ensure the required fields are present.
+
+## Symbols
+
+### `transfer_filters_to_subscription_filters`
+#### Description
+This function encapsulates the data transfer logic for the migration. It retrieves all `SubscriptionRecord` instances, iterates through them, extracts data from the `filters` field, reformats it, and updates the `subscription_filters` field.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.apps.registry.Apps | The Apps registry for accessing models. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | An object for managing database schema alterations. |
+
+#### Outputs
+This function doesn't return any value. It directly modifies the `SubscriptionRecord` instances in the database.
+
+#### Internal Logic
+1. **Retrieves all `SubscriptionRecord` instances:** `SubscriptionRecord.objects.all()` fetches all instances of the `SubscriptionRecord` model.
+2. **Iterates through each subscription:** The code iterates through each `subscription` retrieved in the previous step.
+3. **Extracts data from the `filters` field:** For each `subscription`, it iterates through its related `filters` (assuming it's a related model) and extracts the `property_name` and the first element of the `comparison_value` (assuming it's a list).
+4. **Reformats the data:** The extracted `property_name` and `value` are appended as a list to the `new_filters` list.
+5. **Updates the `subscription_filters` field:** After processing all filters, the `subscription_filters` field of the current `subscription` is updated with the `new_filters` list.
+6. **Saves the changes:** `subscription.save()` persists the changes made to the `subscription` instance in the database.
+
+### `Migration`
+#### Description
+This class represents the Django migration itself. It defines the migration's dependencies and the operations to be performed.
+
+#### Internal Logic
+1. **Dependencies:** The `dependencies` list specifies that this migration depends on the previous migration "0229_historicalsubscriptionrecord_subscription_filters_and_more".
+2. **Operations:** The `operations` list defines the actions to be executed during the migration. In this case, it includes a single operation: `migrations.RunPython(transfer_filters_to_subscription_filters)`. This operation executes the `transfer_filters_to_subscription_filters` function when the migration is applied.

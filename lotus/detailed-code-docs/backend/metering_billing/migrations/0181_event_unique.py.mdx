@@ -1,0 +1,45 @@
+---
+title: "0181_event_unique.py"
+---
+
+## High-level description
+This Django migration script removes duplicate `Event` objects from the database based on the uniqueness constraint of `organization_id` and `idempotency_id`. It keeps the most recent event (based on `time_created`) and deletes the rest.
+
+## Code Structure
+The code defines a single database migration operation, `remove_duplicates`, which is executed when the migration is applied. This function retrieves duplicate `Event` objects and removes them from the database.
+
+## Symbols
+
+### `remove_duplicates`
+#### Description
+This function identifies and removes duplicate `Event` entries from the database, ensuring that only one event exists for each unique combination of `organization_id` and `idempotency_id`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apps | django.db.migrations.state.StateApps | Represents the available models and applications in the current migration state. |
+| schema_editor | django.db.backends.base.schema.BaseDatabaseSchemaEditor | Provides methods for manipulating the database schema during migrations. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+1. **Retrieve the `Event` model:** Obtains the `Event` model from the Django application registry using `apps.get_model("metering_billing", "Event")`.
+2. **Define unique fields:** Sets `unique_fields` to `["organization_id", "idempotency_id"]`, which are the fields used to identify duplicate events.
+3. **Identify duplicates:** Executes a database query to find duplicate `Event` objects based on the `unique_fields`. The query groups events by `organization_id` and `idempotency_id`, annotates each group with the maximum `time_created` value (`max_time_created`), counts the number of events in each group (`cnt`), and filters for groups with more than one event (`cnt__gt=1`).
+4. **Remove duplicates:** Iterates through the identified duplicates and for each duplicate:
+    - Filters the `Event` model for objects matching the duplicate's `organization_id` and `idempotency_id`.
+    - Excludes the event with the `max_time_created` (the most recent one).
+    - Deletes the remaining duplicate events from the database.
+
+## Side Effects
+This migration directly modifies the database by deleting duplicate `Event` objects.
+
+## References
+- `metering_billing.Event`: Refers to the `Event` model defined in the `metering_billing` application.
+
+## Dependencies
+- **Django**: This code relies on the Django framework for database migrations and model management.
+
+## Error Handling
+This migration script does not implement specific error handling beyond the default exception handling provided by Django. Any exceptions raised during the migration process will be propagated and handled by Django's migration framework.

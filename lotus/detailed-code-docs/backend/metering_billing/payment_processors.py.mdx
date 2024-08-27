@@ -1,0 +1,129 @@
+---
+title: "payment_processors.py"
+---
+
+## High-level description
+This file defines classes for connecting to and interacting with different payment processors. Currently, it supports Stripe and Braintree. Each connector class implements the `PaymentProcesor` abstract base class, which defines the methods for managing connections, importing and exporting data, and handling frontend requests.
+
+## Code Structure
+The code defines an abstract base class `PaymentProcesor` and two concrete classes `BraintreeConnector` and `StripeConnector` that inherit from it. Each connector class implements the abstract methods of `PaymentProcesor` to provide specific functionality for its respective payment processor. The `PAYMENT_PROCESSOR_MAP` dictionary at the end of the file maps payment processor names to their corresponding connector instances.
+
+## Symbols
+
+### `base64_encode`
+#### Description
+Encodes a string using base64 encoding.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | str | The string to encode. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| base64_string | str | The base64 encoded string. |
+
+#### Internal Logic
+1. Encodes the input string to ASCII bytes.
+2. Encodes the ASCII bytes using base64.
+3. Decodes the base64 bytes to an ASCII string.
+
+### `PaymentProcesor`
+#### Description
+An abstract base class that defines the interface for payment processor connectors.
+
+#### Internal Logic
+This class defines several abstract methods that must be implemented by concrete connector classes. These methods cover various aspects of payment processor integration, including:
+
+- **Management Methods:**
+    - `__init__`: Initializes the connector with necessary credentials.
+    - `working`: Checks if the connector is properly configured and connected.
+    - `customer_connected`: Checks if a customer is connected to the payment processor.
+    - `organization_connected`: Checks if an organization is connected to the payment processor.
+    - `get_connection_id`: Returns a unique identifier for the connection.
+    - `get_account_id`: Returns the ID of the connected account.
+- **Import Methods:**
+    - `import_customers`: Imports customer data from the payment processor.
+    - `import_payment_objects`: Imports payment object data (e.g., invoices) from the payment processor.
+    - `transfer_subscriptions`: Transfers active subscriptions from the payment processor to Lotus.
+    - `update_payment_object_status`: Updates the status of a payment object.
+    - `retrieve_customer_by_external_id`: Retrieves a customer from the payment processor using their external ID.
+    - `has_payment_method`: Checks if a customer has a payment method attached to their account.
+    - `connect_customer`: Connects a Lotus customer to an existing customer in the payment processor.
+    - `get_customer_address`: Retrieves the address of a customer.
+    - `get_organization_address`: Retrieves the address of an organization.
+- **Export Methods:**
+    - `create_customer_flow`: Creates a customer in the payment processor when a customer is created in Lotus.
+    - `create_payment_object`: Creates a payment object (e.g., invoice) in the payment processor.
+- **Frontend Request Methods:**
+    - `handle_post`: Handles POST requests to the payment processor endpoint.
+    - `get_post_data_serializer`: Returns a serializer for validating POST request data.
+    - `get_redirect_url`: Returns the redirect URL for connecting to the payment processor.
+
+### `BraintreeConnector`
+#### Description
+A concrete class that implements the `PaymentProcesor` interface for Braintree.
+
+#### Internal Logic
+This class implements all the abstract methods of `PaymentProcesor` to provide Braintree-specific functionality. It uses the Braintree Python SDK to interact with the Braintree API.
+
+### `StripeConnector`
+#### Description
+A concrete class that implements the `PaymentProcesor` interface for Stripe.
+
+#### Internal Logic
+This class implements all the abstract methods of `PaymentProcesor` to provide Stripe-specific functionality. It uses the Stripe Python SDK to interact with the Stripe API.
+
+### `PAYMENT_PROCESSOR_MAP`
+#### Description
+A dictionary that maps payment processor names to their corresponding connector instances.
+
+#### Internal Logic
+This dictionary is used to access the appropriate connector instance based on the payment processor name. It is populated with instances of `StripeConnector` and `BraintreeConnector`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| abc | Provides the abstract base class functionality. |
+| base64 | Used for base64 encoding. |
+| datetime | Used for date and time operations. |
+| logging | Used for logging. |
+| decimal | Used for decimal arithmetic. |
+| typing | Used for type hinting. |
+| urllib.parse | Used for URL encoding. |
+| braintree | The Braintree Python SDK. |
+| pytz | Used for timezone handling. |
+| requests | Used for making HTTP requests. |
+| sentry_sdk | Used for error tracking. |
+| stripe | The Stripe Python SDK. |
+| django.conf | Used for accessing Django settings. |
+| django.core.cache | Used for caching. |
+| django.db.models | Used for database operations. |
+| rest_framework | Used for building REST APIs. |
+
+## Configuration
+The code uses several Django settings to configure the payment processors:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| SELF_HOSTED | bool | False | Indicates whether Lotus is self-hosted. |
+| NANGO_SECRET | str | None | The Nango secret key. |
+| STRIPE_LIVE_SECRET_KEY | str | None | The Stripe live secret key. |
+| STRIPE_TEST_SECRET_KEY | str | None | The Stripe test secret key. |
+| STRIPE_TEST_CLIENT | str | None | The Stripe test client ID. |
+| STRIPE_LIVE_CLIENT | str | None | The Stripe live client ID. |
+| BRAINTREE_LIVE_MERCHANT_ID | str | None | The Braintree live merchant ID. |
+| BRAINTREE_LIVE_PUBLIC_KEY | str | None | The Braintree live public key. |
+| BRAINTREE_LIVE_SECRET_KEY | str | None | The Braintree live secret key. |
+| BRAINTREE_TEST_MERCHANT_ID | str | None | The Braintree test merchant ID. |
+| BRAINTREE_TEST_PUBLIC_KEY | str | None | The Braintree test public key. |
+| BRAINTREE_TEST_SECRET_KEY | str | None | The Braintree test secret key. |
+| VITE_API_URL | str | None | The URL of the Vite frontend API. |
+
+## Error Handling
+The code uses basic exception handling to catch errors during payment processor operations. Errors are logged using the `logging` module and, if configured, reported to Sentry using the `sentry_sdk` module.
+
+## TODOs
+- Implement the `transfer_subscriptions`, `import_subscriptions`, `import_payment_objects` methods for `BraintreeConnector`.
+

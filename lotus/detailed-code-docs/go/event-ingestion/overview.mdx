@@ -1,0 +1,57 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `go/event-ingestion` directory houses the core components of an event ingestion service. This service is responsible for receiving raw event data, authenticating requests, validating and enriching events, and ultimately streaming them to a Kafka topic for further processing. The service leverages a PostgreSQL database for storing API keys and a Redis cache for optimizing organization ID lookups.
+
+## What does it do?
+The event ingestion service acts as a gatekeeper for incoming event data. Here's a simplified workflow:
+
+1. **Event Reception:** Clients send batches of raw event data to the service's `/api/track` endpoint.
+2. **Authentication:** Each request is authenticated using API keys passed in the headers. The service retrieves organization IDs associated with the API keys from a cache or the database.
+3. **Validation:** Received events undergo validation to ensure data integrity and adherence to predefined rules.
+4. **Enrichment:** Validated events are enriched with additional information, such as the organization ID.
+5. **Kafka Streaming:** Enriched events are serialized and streamed to a designated Kafka topic.
+
+## Entry points
+The main entry point for the service is the `go/event-ingestion/main.go` file. This file initializes the application, sets up dependencies, configures the web server, and defines the event tracking endpoint.
+
+Data flow typically starts from the `/api/track` endpoint handler in `main.go`, proceeds through authentication and validation, and culminates in the `kafka.Produce` function, which sends the enriched events to Kafka.
+
+## Key Files
+
+### go/event-ingestion/authn.go
+This file implements the authentication middleware responsible for verifying API keys and retrieving associated organization IDs. It uses a caching mechanism to optimize lookups and reduce database load.
+
+### go/event-ingestion/cache.go
+This file defines the caching interface and implements a Redis-backed cache used for storing organization IDs. The cache helps improve performance by reducing the need for frequent database queries.
+
+### go/event-ingestion/config.go
+This file handles the configuration management for the service. It uses the Viper library to load configuration settings from various sources, including environment variables and configuration files.
+
+### go/event-ingestion/database.go
+This file provides functionality for connecting to the PostgreSQL database. It defines a middleware that injects the database connection into the request context, making it accessible to other parts of the application.
+
+### go/event-ingestion/kafka.go
+This file implements the Kafka producer responsible for streaming enriched events to the designated Kafka topic. It uses the `franz-go` library to interact with the Kafka broker.
+
+## Dependencies
+The event ingestion service relies on several external libraries and frameworks:
+
+- **github.com/labstack/echo/v4:** A high-performance web framework for building HTTP servers.
+- **github.com/twmb/franz-go/pkg/kgo:** A Kafka client library for Go, used for producing messages to Kafka topics.
+- **github.com/lib/pq:** The standard PostgreSQL driver for Go's `database/sql` package.
+- **github.com/spf13/viper:** A library for managing configuration from various sources, including environment variables and files.
+- **github.com/redis/go-redis/v9:** A Redis client library for Go, used for interacting with the Redis cache.
+
+## Configuration
+The service's configuration is managed through environment variables and defaults defined in the `go/event-ingestion/config.go` file. Key configuration options include:
+
+- **DatabaseURL:** The connection string for the PostgreSQL database.
+- **Port:** The port number the HTTP server will listen on.
+- **KafkaURL:** The address of the Kafka broker.
+- **KafkaTopic:** The Kafka topic to which events will be produced.
+- **KafkaSASLUsername:** (Optional) Username for Kafka SASL authentication.
+- **KafkaSASLPassword:** (Optional) Password for Kafka SASL authentication.
+- **RedisURL:** The connection string for the Redis cache.

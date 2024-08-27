@@ -1,0 +1,66 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This code defines a Kafka producer for streaming events in a Go application. It provides functionality to serialize and send events to a Kafka topic, using the `franz-go` Kafka client library. The producer is designed to work with verified events and includes organization-specific information.
+
+## Code Structure
+The main function `Produce` is responsible for serializing and sending events to Kafka. It uses the `StreamEvent` struct to combine organization ID with the event data before sending.
+
+## Symbols
+
+### `StreamEvent`
+#### Description
+A struct that represents the data structure of events to be sent to Kafka. It combines the organization ID with the verified event data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| OrganizationID | int64 | The ID of the organization associated with the event |
+| Event | types.VerifiedEvent | The verified event data |
+
+### `Produce`
+#### Description
+A function that serializes a `VerifiedEvent` into a `StreamEvent`, converts it to JSON, and sends it to a Kafka topic.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| cl | *kgo.Client | The Kafka client used to produce the message |
+| event | types.VerifiedEvent | The verified event to be sent to Kafka |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the operation fails, or nil if successful |
+
+#### Internal Logic
+1. Create a `StreamEvent` combining the organization ID and the event.
+2. Marshal the `StreamEvent` to JSON.
+3. Create a byte slice for the Kafka message key, containing the organization ID.
+4. Create a Kafka record with the topic, value (JSON), and key.
+5. Produce the record to Kafka synchronously.
+6. Return any error that occurred during the process.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/binary | Used for converting the organization ID to bytes |
+| encoding/json | Used for JSON marshaling of the StreamEvent |
+| github.com/twmb/franz-go/pkg/kgo | Kafka client library for Go |
+| github.com/uselotus/lotus/go/event-ingestion/config | Application configuration |
+| github.com/uselotus/lotus/go/pkg/types | Custom types used in the application |
+
+## Configuration
+The Kafka topic used for producing messages is obtained from the application's configuration:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| KafkaTopic | string | N/A | The Kafka topic to which events are produced |
+
+## Error Handling
+The function returns an error if JSON marshaling fails or if there's an error producing the message to Kafka. Errors are not handled internally but are propagated to the caller.
+
+## Performance Considerations
+The `ProduceSync` method is used, which waits for the message to be acknowledged by the Kafka broker before returning. This ensures delivery but may impact performance for high-throughput scenarios. For better performance in such cases, consider using an asynchronous production method.

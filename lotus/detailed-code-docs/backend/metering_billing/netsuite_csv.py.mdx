@@ -1,0 +1,160 @@
+---
+title: "netsuite_csv.py"
+---
+
+## High-level description
+The `netsuite_csv.py` file defines functions for generating, uploading, and retrieving pre-signed URLs for CSV files containing invoice data for integration with Netsuite. It handles formatting invoice data, uploading it to S3, and generating temporary URLs for accessing these files.
+
+## Code Structure
+The code defines several functions that interact with each other to achieve the goal of generating and providing access to Netsuite CSV files:
+
+- `generate_invoices_csv`: This function is responsible for querying invoice data, formatting it according to Netsuite's CSV specifications, and then calling `upload_csv` to store the generated CSV on S3.
+- `upload_csv`: This function handles the actual upload of the CSV data to the designated S3 bucket.
+- `get_invoices_csv_presigned_url`: This function generates a pre-signed URL for a given CSV file on S3, allowing temporary access to the file.
+- `get_csv_filename`: This helper function generates a filename for the CSV file based on provided start and end dates.
+- `get_key`: This helper function generates the S3 key (path) for storing the CSV file.
+
+## References
+This file references several other symbols within the codebase:
+
+- `metering_billing.invoice_pdf.s3_bucket_exists`: Checks if an S3 bucket exists.
+- `metering_billing.invoice_pdf.s3_file_exists`: Checks if a file exists in an S3 bucket.
+- `metering_billing.models.Organization`: Represents an organization and provides access to its invoices.
+- `metering_billing.s3_utils.get_bucket_name`: Retrieves the appropriate S3 bucket name for an organization.
+- `metering_billing.utils.convert_to_datetime`: Converts a date string to a datetime object.
+- `metering_billing.utils.now_utc`: Returns the current UTC datetime.
+
+## Symbols
+
+### `generate_invoices_csv`
+#### Description
+This function generates a CSV file containing invoice data formatted for Netsuite, uploads it to S3, and returns the S3 key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | metering_billing.models.Organization | The organization for which to generate the CSV. |
+| start_date | datetime.date, optional | The start date for filtering invoices. |
+| end_date | datetime.date, optional | The end date for filtering invoices. |
+
+#### Outputs
+This function doesn't return any value explicitly. It uploads the generated CSV file to S3 as a side effect.
+
+#### Internal Logic
+1. **Filename Generation:** Generates a filename for the CSV based on the provided start and end dates using `get_csv_filename`.
+2. **Data Retrieval and Formatting:**
+    - Queries invoices for the given organization, optionally filtering by start and end dates.
+    - Writes the header row of the CSV.
+    - Iterates through the invoices and their line items, formatting the data according to Netsuite's CSV specifications.
+3. **CSV Upload:** Calls `upload_csv` to upload the generated CSV data to S3.
+
+### `upload_csv`
+#### Description
+Uploads the provided CSV data to the designated S3 bucket for the given organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | metering_billing.models.Organization | The organization for which to upload the CSV. |
+| csv_buffer | io.StringIO | An in-memory buffer containing the CSV data. |
+| csv_folder | str | The folder within the S3 bucket where the CSV should be stored. |
+| csv_filename | str | The filename for the CSV file. |
+
+#### Outputs
+This function doesn't return any value explicitly. It uploads the CSV file to S3 as a side effect.
+
+#### Internal Logic
+1. **Environment Check:** Skips the upload if running in debug mode or if the organization is an external demo organization.
+2. **Bucket Check and Creation:** Checks if the S3 bucket exists using `s3_bucket_exists`. If not, it creates the bucket.
+3. **Key Generation:** Generates the S3 key (path) for the CSV file using `get_key`.
+4. **File Upload:** Uploads the CSV data from the buffer to S3 using the generated key.
+
+### `get_invoices_csv_presigned_url`
+#### Description
+Generates and returns a pre-signed URL for accessing the specified Netsuite CSV file on S3.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | metering_billing.models.Organization | The organization for which to generate the URL. |
+| start_date | datetime.date, optional | The start date used in the CSV filename. |
+| end_date | datetime.date, optional | The end date used in the CSV filename. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | dict | A dictionary containing: &lt;br&gt; - `exists`: Boolean indicating if the file exists. &lt;br&gt; - `url`: The pre-signed URL for the CSV file. |
+
+#### Internal Logic
+1. **Filename and Key Generation:** Generates the filename and S3 key for the CSV file using `get_csv_filename` and `get_key`.
+2. **Environment and File Existence Check:**
+    - If running in debug mode or for an external demo organization, returns a dictionary indicating the file doesn't exist.
+    - Checks if the CSV file exists on S3 using `s3_file_exists`. If not, it calls `generate_invoices_csv` to generate and upload the file.
+3. **Pre-signed URL Generation:** Generates a pre-signed URL for the CSV file on S3 with a 1-hour expiration time.
+4. **Return Value:** Returns a dictionary containing a flag indicating if the file exists and the generated pre-signed URL.
+
+### `get_csv_filename`
+#### Description
+Generates a filename for the Netsuite CSV file based on the provided start and end dates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | metering_billing.models.Organization | The organization for which to generate the filename. |
+| start_date | datetime.date, optional | The start date for filtering invoices. |
+| end_date | datetime.date, optional | The end date for filtering invoices. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| csv_filename | str | The generated filename for the CSV file. |
+
+#### Internal Logic
+The function constructs the filename in the format `YYMMDD-YYMMDD` based on the provided start and end dates. If either date is missing, it uses "start" or the current date in the filename.
+
+### `get_key`
+#### Description
+Generates the S3 key (path) for storing the Netsuite CSV file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| organization | metering_billing.models.Organization | The organization for which to generate the key. |
+| csv_folder | str | The folder within the S3 bucket where the CSV should be stored. |
+| csv_filename | str | The filename for the CSV file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | str | The generated S3 key for the CSV file. |
+
+#### Internal Logic
+The function constructs the S3 key in the format `organization_id/csv_folder/csv_filename.csv`.
+
+## Dependencies
+This code depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| boto3 | For interacting with AWS S3. |
+| csv | For working with CSV files. |
+| datetime | For handling dates and times. |
+| io | For working with in-memory streams. |
+| logging | For logging events. |
+| django.conf | For accessing Django settings. |
+| django.utils.text | For slugifying strings. |
+
+## Configuration
+The code relies on the following Django settings:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `AWS_ACCESS_KEY_ID` | str | N/A | AWS access key ID for S3 access. |
+| `AWS_SECRET_ACCESS_KEY` | str | N/A | AWS secret access key for S3 access. |
+| `DEBUG` | bool | N/A | Indicates if the application is running in debug mode. |
+
+## Error Handling
+The `upload_csv` function includes a try-except block to catch any exceptions during the S3 upload process. However, it only prints the exception without specific error handling or logging.
+
+## Logging
+The code uses the `logging` module to log events related to S3 bucket creation. It logs messages at the `ERROR` level, which might not be appropriate for all situations.

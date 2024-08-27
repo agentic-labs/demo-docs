@@ -1,0 +1,197 @@
+---
+title: "invoice_pdf.py"
+---
+
+## High-level description
+The `invoice_pdf.py` file contains the `InvoicePDF` class, which is responsible for generating PDF invoices based on invoice data. It utilizes the `reportlab` library to create the PDF document and includes methods for adding various sections like title, organization details, customer details, due date, and subscription information.
+
+## Code Structure
+The `InvoicePDF` class is the main component of the code. It contains methods for building the PDF structure, adding different sections to the invoice, and formatting the data. Helper functions like `transform_date`, `fontSize`, `shortenStrings`, and `floor_string` are used to format and manipulate data for display in the PDF.
+
+## References
+The code references the following models:
+- `metering_billing.models.Invoice`
+- `metering_billing.models.Organization`
+- `metering_billing.models.InvoiceLineItemAdjustment`
+
+It also references the following serializers:
+- `metering_billing.serializers.serializer_utils.PlanUUIDField`
+
+## Symbols
+
+### `transform_date`
+#### Description
+Transforms a datetime date into the format "dd/mm/yyyy".
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date | datetime or str | The date to be transformed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| formatted_string | str | The transformed date string in the format "dd/mm/yyyy". |
+
+#### Internal Logic
+- If the input date is already a string, it is returned as is.
+- If the input date is a datetime object, it is formatted using `strftime("%d/%m/%Y")`.
+
+### `InvoicePDF`
+#### Description
+A class that generates PDF invoices based on invoice data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | `metering_billing.models.Invoice` | The invoice object containing the data for the PDF. |
+| buffer | BytesIO | A buffer to write the PDF data to. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| PDF | `reportlab.pdfgen.canvas.Canvas` | The generated PDF document. |
+
+#### Internal Logic
+The class contains methods for:
+- Initializing the PDF canvas.
+- Setting font size and style.
+- Shortening strings to a specified length.
+- Drawing the logo image.
+- Building the PDF structure by calling methods to add different sections.
+- Adding the title, organization details, customer details, due date, and subscription information.
+- Writing line item groups, line items, and line item headers.
+- Drawing lines at specific coordinates.
+- Writing the total amount, including tax, credits, and discounts.
+- Saving the PDF document.
+
+### `get_invoice_pdf_key`
+#### Description
+Generates a unique key for storing the invoice PDF in S3.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | `metering_billing.models.Invoice` | The invoice object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | str | The S3 key for the invoice PDF. |
+
+#### Internal Logic
+The key is generated using the organization ID, customer ID, and invoice number in the format: `"{organization_id}/{customer_id}/invoice_pdf_{invoice_number}.pdf"`.
+
+### `s3_file_exists`
+#### Description
+Checks if a file exists in an S3 bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bucket_name | str | The name of the S3 bucket. |
+| key | str | The key of the file to check. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| exists | bool | True if the file exists, False otherwise. |
+
+#### Internal Logic
+- Uses the `boto3` library to check if the object exists in the specified bucket.
+- Returns False if the object is not found (HTTP 404 error).
+- Raises any other ClientError.
+
+### `s3_bucket_exists`
+#### Description
+Checks if an S3 bucket exists.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bucket_name | str | The name of the S3 bucket. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| exists | bool | True if the bucket exists, False otherwise. |
+
+#### Internal Logic
+- Uses the `boto3` library to check if the bucket exists.
+- Returns True if the bucket exists.
+- Returns False if a ClientError is raised, indicating the bucket does not exist.
+
+### `generate_invoice_pdf`
+#### Description
+Generates the invoice PDF and returns it as a BytesIO buffer.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | `metering_billing.models.Invoice` | The invoice object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| buffer | BytesIO | A buffer containing the PDF data. |
+
+#### Internal Logic
+- Creates a BytesIO buffer.
+- Initializes the `InvoicePDF` class with the invoice and buffer.
+- Builds the PDF using the `build` method of the `InvoicePDF` class.
+- Returns the buffer.
+
+### `upload_invoice_pdf_to_s3`
+#### Description
+Uploads the generated invoice PDF to S3.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | `metering_billing.models.Invoice` | The invoice object. |
+| bucket_name | str | The name of the S3 bucket. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | str | The S3 key of the uploaded PDF. |
+
+#### Internal Logic
+- Generates the S3 key using `get_invoice_pdf_key`.
+- Generates the PDF data using `generate_invoice_pdf`.
+- Creates the S3 bucket if it doesn't exist.
+- Uploads the PDF data to S3 using the generated key.
+- Returns the S3 key.
+
+### `get_invoice_presigned_url`
+#### Description
+Generates a presigned URL for accessing the invoice PDF in S3.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| invoice | `metering_billing.models.Invoice` | The invoice object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url_dict | dict | A dictionary containing the existence status and presigned URL. |
+
+#### Internal Logic
+- Gets the S3 bucket name and production status using `get_bucket_name`.
+- Generates the S3 key using `get_invoice_pdf_key`.
+- If the organization is an external demo or in debug mode, returns a dictionary with `exists` as False and `url` as None.
+- If the PDF file doesn't exist in S3, uploads it using `upload_invoice_pdf_to_s3`.
+- Generates a presigned URL using the `boto3` library, which expires in 1 hour.
+- Returns a dictionary with `exists` as True and the presigned URL.
+
+## Dependencies
+- `boto3`: For interacting with AWS S3.
+- `reportlab`: For generating PDF documents.
+- `django.conf`: For accessing Django settings.
+
+## Error Handling
+The code uses basic exception handling with `try-except` blocks to catch `ClientError` exceptions from `boto3` and `Exception` for other errors.
+
+## Logging
+The code uses the `logging` module to log debug messages related to S3 bucket operations.

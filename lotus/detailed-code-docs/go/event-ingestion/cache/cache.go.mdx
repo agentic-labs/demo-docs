@@ -1,0 +1,103 @@
+---
+title: "cache.go"
+---
+
+## High-level description
+This code implements a Redis-based caching system for the Lotus event ingestion service. It defines a `Cache` interface and a `RedisCache` struct that implements this interface, providing methods to get and set key-value pairs in Redis with optional expiration times.
+
+## Code Structure
+The code defines two main structures: the `Cache` interface and the `RedisCache` struct. The `RedisCache` struct implements the `Cache` interface, providing concrete implementations for the `Get` and `Set` methods. The `New` function is used to create and initialize a new `RedisCache` instance.
+
+## Symbols
+
+### `Cache` interface
+#### Description
+Defines the interface for cache operations, including Get and Set methods.
+
+#### Methods
+1. `Get(key string) (string, error)`
+2. `Set(key string, value interface{}, expiration *time.Duration) error`
+
+### `RedisCache` struct
+#### Description
+Implements the `Cache` interface using Redis as the backend storage.
+
+#### Fields
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rdb | *redis.Client | Redis client instance |
+| defaultExpiration | time.Duration | Default expiration time for cache entries |
+
+### `RedisCache.Get` method
+#### Description
+Retrieves a value from the Redis cache for a given key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The key to retrieve from the cache |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | string | The retrieved value |
+| error | error | Error, if any |
+
+#### Internal Logic
+1. Attempts to get the value from Redis using the provided key
+2. If the key doesn't exist (redis.Nil error), returns an empty string with no error
+3. If there's any other error, returns it
+4. Otherwise, returns the retrieved value
+
+### `RedisCache.Set` method
+#### Description
+Sets a key-value pair in the Redis cache with an optional expiration time.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The key to set in the cache |
+| value | interface{} | The value to set |
+| expiration | *time.Duration | Optional expiration time |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error, if any |
+
+#### Internal Logic
+1. Determines the expiration time (uses default if not provided)
+2. Sets the key-value pair in Redis with the determined expiration time
+
+### `New` function
+#### Description
+Creates and initializes a new `RedisCache` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | config.Config | Configuration containing Redis URL |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cache | Cache | Initialized Cache interface |
+| error | error | Error, if any |
+
+#### Internal Logic
+1. Extracts Redis URL from the provided configuration
+2. Parses the Redis URL
+3. Creates a new Redis client
+4. Initializes and returns a new `RedisCache` instance with a default expiration of 10 seconds
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a way to carry deadlines, cancellations, and other request-scoped values across API boundaries and between processes |
+| errors | Provides functions to manipulate errors |
+| time | Provides functionality for measuring and displaying time |
+| github.com/redis/go-redis/v9 | Redis client for Go |
+| github.com/uselotus/lotus/go/event-ingestion/config | Custom configuration package for the application |
+
+## Error Handling
+The code implements basic error handling, primarily returning errors from Redis operations. It also includes a specific check for the `redis.Nil` error, which indicates that a key was not found in the cache.

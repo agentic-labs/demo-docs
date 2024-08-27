@@ -1,0 +1,86 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration management code for an event ingestion system. It provides functionality to handle various configuration settings, including database, Kafka, Redis, and general application settings. The code utilizes the Viper library for flexible configuration management, allowing for default values and environment variable bindings.
+
+## What does it do?
+The configuration package serves as a central point for managing application settings, ensuring consistency across different components of the event ingestion system. It performs the following key functions:
+
+1. Defines a `Config` struct that holds all configuration settings for the system.
+2. Provides a `GetConfig()` function that initializes and populates the `Config` struct using Viper, considering both default values and environment variables.
+3. Offers utility functions to generate database and Redis connection URLs based on the configuration settings and the application's environment (dockerized or not).
+4. Initializes a global `Conf` variable that can be accessed throughout the application to retrieve configuration values.
+
+This setup allows other parts of the application, such as database connections, Kafka producers, and Redis cache clients, to easily access the necessary configuration settings in a centralized and consistent manner.
+
+## Key Files
+
+### config.go
+This file contains the core configuration management logic. It defines the `Config` struct and the `GetConfig()` function, which is responsible for initializing and populating the configuration using Viper. The file also includes an `init()` function that sets up the global `Conf` variable.
+
+Key aspects of `config.go`:
+- Defines default values for various configuration options
+- Binds environment variables to configuration keys
+- Prints the configuration for debugging purposes
+
+### database.go
+This file provides the `GetDatabaseURL` function, which constructs and returns a PostgreSQL database connection URL. It uses configuration values from the Viper object and includes fallback logic for determining the database host based on whether the application is running in a dockerized environment.
+
+### redis.go
+This file contains the `GetRedisURL` function, which determines the appropriate Redis URL based on configuration settings. It checks for a specific Redis URL configuration and falls back to a default URL based on whether the application is running in a dockerized environment or not.
+
+## Dependencies
+The configuration package relies on the following external libraries:
+
+1. github.com/spf13/viper (version not specified)
+   - Purpose: Provides powerful configuration management capabilities, including support for default values, environment variables, and multiple configuration formats.
+
+2. fmt (Go standard library)
+   - Purpose: Used for printing configuration details and formatting strings.
+
+3. strings (Go standard library)
+   - Purpose: Used for string manipulation, particularly for case-insensitive comparisons in environment checks.
+
+## Configuration
+The configuration package manages the following key configuration options:
+
+1. General settings:
+   - `port`: Server port (default: 7998)
+   - `dockerized`: Indicates if the application is running in a Docker container (default: "true")
+
+2. Kafka settings:
+   - `kafka_url`: Kafka broker URL (default: "localhost:9092")
+   - `kafka_topic`: Kafka topic for events (default: "test-topic")
+   - `kafka_sasl_username`: Kafka SASL username (default: "")
+   - `kafka_sasl_password`: Kafka SASL password (default: "")
+
+3. PostgreSQL settings:
+   - `postgres_user`: PostgreSQL username (default: "lotus")
+   - `postgres_password`: PostgreSQL password (default: "lotus")
+   - `postgres_db`: PostgreSQL database name (default: "lotus")
+   - `database_url`: Pre-configured database URL (optional)
+
+4. Redis settings:
+   - `redis_url`: Explicitly set Redis URL (optional)
+
+The configuration can be customized through environment variables or by directly modifying the default values in the code. The `dockerized` flag is treated as a boolean-like string, with values such as "false", "0", "no", "f", or an empty string (case-insensitive) interpreted as false.
+
+Example of how the configuration is used in other parts of the application:
+
+```go
+// In database/database.go
+dbURL := config.Conf.DatabaseURL
+
+// In kafka/producer.go
+kafkaTopic := config.Conf.KafkaTopic
+
+// In cache/cache.go
+redisClient := cache.New(config.Conf)
+
+// In main.go
+serverPort := config.Conf.Port
+```
+
+This centralized configuration management ensures that all components of the event ingestion system have consistent access to the necessary settings, making it easier to maintain and update the application's configuration as needed.

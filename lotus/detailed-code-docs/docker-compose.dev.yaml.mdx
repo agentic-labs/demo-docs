@@ -1,0 +1,112 @@
+---
+title: "docker-compose.dev.yaml"
+---
+
+## High-level description
+This Docker Compose file defines a development environment for a complex application stack. It sets up multiple services including databases, message brokers, backend servers, frontend applications, and task queues, all configured to work together in a containerized environment.
+
+## Code Structure
+The file defines multiple services, each with its own configuration. The services are interconnected and depend on each other, forming a cohesive application stack. The file also defines a volume for persistent data storage.
+
+## Symbols
+
+### `services`
+#### Description
+This is the main section of the Docker Compose file, defining all the services that make up the application stack.
+
+#### Internal Logic
+Each service is defined with its own configuration, including image or build instructions, environment variables, ports, volumes, and dependencies.
+
+### `db`
+#### Description
+This service sets up a TimescaleDB database for the application.
+
+#### Internal Logic
+- Uses the `timescale/timescaledb-ha:pg14-latest` image
+- Exposes port 5432
+- Mounts a volume for data persistence
+- Uses environment variables from a .env file
+
+### `redis`
+#### Description
+Sets up a Redis server for caching or message brokering.
+
+#### Internal Logic
+- Uses the `redis:7-alpine` image
+- Runs the `redis-server` command
+- Uses environment variables from a .env file
+
+### `redpanda`
+#### Description
+Configures a Redpanda server, which is a Kafka-compatible event streaming platform.
+
+#### Internal Logic
+- Uses the `docker.redpanda.com/vectorized/redpanda:v22.2.2` image
+- Configures various Redpanda-specific settings
+- Exposes multiple ports for different protocols
+
+### `svix-server`
+#### Description
+Sets up a Svix server, which appears to be a webhook delivery service.
+
+#### Internal Logic
+- Uses the `svix/svix-server:v0.74` image
+- Configures Redis and PostgreSQL connections
+- Depends on the `db` and `redis` services
+
+### `backend`
+#### Description
+Configures the main backend service for the application.
+
+#### Internal Logic
+- Builds from a local Dockerfile
+- Mounts local directories as volumes for development
+- Runs a custom start script
+- Depends on `db` and `redis` services
+
+### `event-guidance` and `event-ingestion`
+#### Description
+These services appear to handle event processing and ingestion for the application.
+
+#### Internal Logic
+- Built from local Dockerfiles
+- Depend on multiple other services
+- Configured to restart on failure
+
+### `frontend`
+#### Description
+Sets up the frontend application server.
+
+#### Internal Logic
+- Builds from a local Dockerfile
+- Runs a development server using Yarn
+- Mounts local directories for live code updates
+- Depends on the `backend` service
+
+### `celery` and `celery-beat`
+#### Description
+These services set up Celery for asynchronous task processing.
+
+#### Internal Logic
+- Built from the same Dockerfile as the backend
+- `celery` runs a Celery worker
+- `celery-beat` runs a Celery beat scheduler
+- Both depend on other services and mount local directories
+
+### `volumes`
+#### Description
+Defines a named volume for persistent data storage.
+
+#### Internal Logic
+- Creates a volume named `pgdata_dev` for the database service
+
+## Dependencies
+The file implicitly depends on Docker and Docker Compose to run the defined services.
+
+## Configuration
+Environment variables are extensively used, with most services referencing a `.env.dev` file located in the `./env/` directory.
+
+## Error Handling
+Several services are configured with `restart: on-failure` to automatically restart in case of crashes.
+
+This Docker Compose file sets up a comprehensive development environment for a complex application stack, with services for databases, caching, event streaming, backend processing, frontend serving, and asynchronous task handling. It's designed to allow for easy local development with live code reloading for both frontend and backend services.

@@ -1,0 +1,83 @@
+---
+title: "webhook_views.py"
+---
+
+Here's a high-level description and documentation of the `webhook_views.py` file:
+
+## High-level description
+This file contains the implementation of a webhook endpoint for Stripe integration. It handles incoming webhook events from Stripe, specifically for invoice-related events such as payment and updates.
+
+## Code Structure
+The main function in this file is `stripe_webhook_endpoint`, which is decorated with Django REST Framework decorators for API view, CSRF exemption, and authentication. Two helper functions, `_invoice_paid_handler` and `_invoice_updated_handler`, are used to process specific event types.
+
+## Symbols
+
+### `stripe_webhook_endpoint`
+#### Description
+This function is the main webhook endpoint for handling Stripe events. It validates the incoming webhook, constructs the event, and routes it to the appropriate handler based on the event type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| request | HttpRequest | The incoming HTTP request containing the webhook payload |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | DRF Response | HTTP response indicating the result of webhook processing |
+
+#### Internal Logic
+1. Extracts the payload and Stripe signature from the request
+2. Validates the webhook signature
+3. Constructs the Stripe event
+4. Routes the event to the appropriate handler based on the event type
+5. Returns a success response if processing is successful
+
+### `_invoice_paid_handler`
+#### Description
+Handles the 'invoice.paid' event from Stripe. It updates the corresponding Invoice in the database and produces a Kafka message if configured.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event | dict | The Stripe event object |
+
+### `_invoice_updated_handler`
+#### Description
+Handles the 'invoice.updated' event from Stripe. It updates the status of the corresponding Invoice in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event | dict | The Stripe event object |
+
+## Dependencies
+- Django REST Framework
+- Stripe Python library
+- Kafka Producer (optional, based on configuration)
+
+## Configuration
+The following configuration options are used:
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| STRIPE_WEBHOOK_SECRET | string | Secret key for validating Stripe webhooks |
+| STRIPE_TEST_SECRET_KEY | string | Stripe test environment secret key |
+| STRIPE_LIVE_SECRET_KEY | string | Stripe live environment secret key |
+| USE_KAFKA | boolean | Flag to enable/disable Kafka integration |
+
+## Error Handling
+The webhook endpoint handles two main types of errors:
+1. Invalid payload: Returns a 400 Bad Request response
+2. Invalid signature: Returns a 400 Bad Request response
+
+Other exceptions are not explicitly handled and will result in a 500 Internal Server Error.
+
+## Logging
+No explicit logging is implemented in this file. However, it's recommended to add logging for better traceability and debugging of webhook events.
+
+## API/Interface Reference
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| /stripe/webhook/ | POST | Stripe webhook endpoint for handling invoice events |
+
+This endpoint is typically configured in the Stripe dashboard to receive webhook events.

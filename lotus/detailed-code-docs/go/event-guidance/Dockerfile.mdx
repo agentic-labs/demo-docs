@@ -1,0 +1,60 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile creates a minimal and secure Docker image for a Go application using a multi-stage build process. It compiles the application in a builder stage and then creates a final lightweight image containing only the necessary components to run the application.
+
+## Code Structure
+The Dockerfile is structured in two main stages: a builder stage and a final stage. The builder stage compiles the Go application, while the final stage creates a minimal runtime environment.
+
+## Symbols
+
+### Builder Stage
+#### Description
+This stage sets up the build environment, compiles the Go application, and prepares necessary files for the final image.
+
+#### Internal Logic
+1. Uses the `golang:1.20-alpine` base image
+2. Installs necessary tools and certificates
+3. Creates a non-root user for security
+4. Copies the application source code
+5. Downloads and verifies Go dependencies
+6. Builds the Go binary with specific flags for optimization and security
+
+### Final Stage
+#### Description
+This stage creates a minimal runtime environment for the compiled Go application.
+
+#### Internal Logic
+1. Starts from a `scratch` (empty) image
+2. Copies the compiled binary from the builder stage
+3. Copies SSL certificates for HTTPS support
+4. Copies user and group information for the non-root user
+5. Sets the user to the non-root user created in the builder stage
+6. Defines the entrypoint to run the compiled binary
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| golang:1.20-alpine | Base image for the builder stage, providing Go 1.20 in a minimal Alpine Linux environment |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| USER | string | appuser | Name of the non-root user created for running the application |
+| UID | integer | 10001 | User ID for the non-root user |
+
+## Performance Considerations
+1. The multi-stage build process reduces the final image size by excluding build tools and intermediate files.
+2. Using the `scratch` base image for the final stage minimizes the image size and potential attack surface.
+3. The Go binary is compiled with `CGO_ENABLED=0` for static linking, improving portability and startup time.
+4. The `-ldflags="-w -s"` option is used to reduce binary size by removing debugging information and the symbol table.
+
+## Security Considerations
+1. A non-root user (appuser) is created and used to run the application, following the principle of least privilege.
+2. The `scratch` base image minimizes the attack surface by excluding unnecessary components.
+3. SSL certificates are included to support secure HTTPS connections.
+4. The Go binary is statically linked, reducing dependencies on external libraries that could potentially introduce vulnerabilities.
+
+This Dockerfile demonstrates best practices for creating a secure, efficient, and minimal Docker image for a Go application, suitable for production deployment.

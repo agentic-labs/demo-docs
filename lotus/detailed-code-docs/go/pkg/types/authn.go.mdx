@@ -1,0 +1,60 @@
+---
+title: "authn.go"
+---
+
+## High-level description
+This code defines an `APIKey` struct and its validation method in the `types` package. It represents an API key with various attributes and provides a method to validate the key's status and expiration.
+
+## Symbols
+
+### `APIKey` struct
+#### Description
+The `APIKey` struct represents an API key with various attributes such as organization ID, creation date, name, revocation status, expiry date, hashed key, and prefix.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| OrganizationID | int64 | The ID of the organization associated with the API key |
+| Created | time.Time | The creation date of the API key |
+| Name | string | The name of the API key |
+| Revoked | bool | The revocation status of the API key |
+| ExpiryDate | sql.NullTime | The expiration date of the API key (nullable) |
+| HashedKey | string | The hashed value of the API key |
+| Prefix | string | The prefix of the API key |
+
+### `Validate` method
+#### Description
+The `Validate` method checks the validity of an API key by verifying its revocation status and expiration date.
+
+#### Inputs
+This method doesn't take any inputs as it operates on the `APIKey` struct it's attached to.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the API key is invalid, nil otherwise |
+
+#### Internal Logic
+1. Check if the API key is revoked. If so, return an error.
+2. If the expiry date is set (valid), check if it's before the current time. If so, return an error indicating the key has expired.
+3. If both checks pass, return nil (no error).
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| database/sql | Used for the `sql.NullTime` type to represent nullable time values |
+| errors | Used to create and return error messages |
+| time | Used for time-related operations and the `Time` type |
+
+## Error Handling
+The `Validate` method handles two error cases:
+1. If the API key is revoked, it returns an error with the message "the API key has been revoked, which cannot be undone".
+2. If the API key has expired, it returns an error with the message "the API key has expired".
+
+## References
+The `APIKey` struct and its `Validate` method are used in the `authn` package (from the related code snippets) for authentication purposes. Specifically:
+
+1. In the `getFromDB` function, an `APIKey` struct is populated from the database.
+2. In the `Middleware` function, the `Validate` method is called on the retrieved API key to check its validity before proceeding with the request.
+
+This code plays a crucial role in the authentication process of the application, ensuring that only valid API keys are accepted for requests.

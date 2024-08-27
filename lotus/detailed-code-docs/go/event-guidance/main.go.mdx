@@ -1,0 +1,116 @@
+---
+title: "main.go"
+---
+
+## High-level description
+This Go program is an event processing system that consumes events from a Kafka topic, inserts them into a PostgreSQL database, and optionally tracks event processing metrics using PostHog. It's designed to handle events in batches for efficiency and uses transaction-based inserts to ensure data consistency.
+
+## Code Structure
+The main function sets up the Kafka consumer, PostgreSQL connection, and PostHog client (if configured). It then enters a loop to continuously fetch and process events. The `insertBatch` struct and its `addRecord` method handle the batched database inserts. The `posthogTrack` function is used to send metrics to PostHog.
+
+## Symbols
+
+### `main`
+#### Description
+The main function sets up the environment, initializes connections to Kafka and PostgreSQL, and runs the main event processing loop.
+
+#### Internal Logic
+1. Set up logging and environment variables
+2. Configure and create Kafka consumer
+3. Set up PostgreSQL connection and prepare insert statement
+4. Initialize PostHog client (if configured)
+5. Enter main processing loop:
+   - Poll for Kafka messages
+   - Process messages in batches
+   - Insert events into the database
+   - Commit Kafka offsets
+   - Track metrics with PostHog (if configured)
+
+### `StreamEvents`
+#### Description
+A struct representing the structure of events received from Kafka.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| OrganizationID | int64 | The ID of the organization associated with the event |
+| Event | *types.VerifiedEvent | Pointer to the actual event data |
+
+### `insertBatch`
+#### Description
+A struct that manages batched inserts into the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tx | *sql.Tx | The current database transaction |
+| insertStatement | *sql.Stmt | The prepared SQL statement for inserting events |
+| count | int | The number of events in the current batch |
+
+### `addRecord`
+#### Description
+A method of `insertBatch` that adds a single event to the batch and commits if the batch size is reached.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event | *types.VerifiedEvent | The event to be inserted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| committed | bool | Whether the batch was committed |
+| err | error | Any error that occurred during the operation |
+
+#### Internal Logic
+1. Marshal event properties to JSON
+2. Execute the insert statement with event data
+3. Increment the batch count
+4. If batch size is reached, commit the transaction and reset the count
+
+### `posthogTrack`
+#### Description
+A function that sends event processing metrics to PostHog.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| phClient | posthog.Client | The PostHog client |
+| processedEvents | map[int64]int | A map of organization IDs to the number of events processed |
+
+#### Internal Logic
+Iterates through the `processedEvents` map and sends a "track_event" event to PostHog for each organization, including the number of events processed.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/lib/pq | PostgreSQL driver |
+| github.com/posthog/posthog-go | PostHog client for metrics |
+| github.com/twmb/franz-go/pkg/kgo | Kafka client |
+| github.com/twmb/franz-go/pkg/sasl/scram | SASL authentication for Kafka |
+| github.com/uselotus/lotus/go/pkg/types | Custom types for events |
+
+## Configuration
+The program uses environment variables for configuration:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| KAFKA_URL | string | "localhost:9092" | Kafka broker URL |
+| EVENTS_TOPIC | string | "test-topic" | Kafka topic for events |
+| KAFKA_SASL_USERNAME | string | - | SASL username for Kafka |
+| KAFKA_SASL_PASSWORD | string | - | SASL password for Kafka |
+| KAFKA_CONSUMER_GROUP | string | "default" | Kafka consumer group |
+| DATABASE_URL | string | Constructed from individual params | PostgreSQL connection URL |
+| POSTHOG_API_KEY | string | - | PostHog API key |
+
+## Error Handling
+The program uses panic for critical errors that should stop execution. Less critical errors are logged but don't stop the program. Kafka fetch errors are logged and may cause a panic if they are non-retriable.
+
+## Logging
+The program uses the standard `log` package to output information and error messages to stdout.
+
+## TODOs
+- Consider implementing a more robust error handling strategy instead of using panic for some error cases.
+- Implement a graceful shutdown mechanism to properly close connections and commit offsets.
+- Consider adding metrics for monitoring the performance and health of the event processing system.
+- Implement retries for database operations that may fail due to temporary issues.

@@ -1,0 +1,67 @@
+---
+title: "consumer.py"
+---
+
+## High-level description
+This code defines a Kafka consumer for processing events in a Django application. It sets up a Consumer class that connects to a Kafka topic and consumes messages, writing the event data to the database.
+
+## Code Structure
+The main components are:
+1. `ConsumerConfig`: A dataclass for storing Kafka consumer configuration.
+2. `Consumer`: A singleton class that manages the Kafka consumer connection and message consumption.
+3. `write_batch_events_to_db`: A function to write batches of events to the database.
+
+## Symbols
+
+### `ConsumerConfig`
+#### Description
+A dataclass that holds configuration settings for the Kafka consumer.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bootstrap_servers | list | List of Kafka broker addresses |
+| topic | str | Kafka topic to consume from |
+| auto_offset_reset | str | Consumer offset reset behavior |
+
+### `Consumer`
+#### Description
+A singleton class that manages the Kafka consumer connection and message consumption.
+
+#### Internal Logic
+1. Initializes the connection using the `ConsumerConfig`.
+2. Implements a `consume` method to continuously read messages from the Kafka topic.
+3. Processes each message, extracting event data and organization ID.
+4. Calls `write_batch_events_to_db` to store the event data.
+
+### `write_batch_events_to_db`
+#### Description
+A function that writes batches of events to the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| buffer | dict | Dictionary containing organization IDs and their corresponding event lists |
+
+#### Internal Logic
+1. Iterates through the buffer of events for each organization.
+2. Prepares event data for insertion, including timestamp.
+3. Uses Django's `bulk_create` to efficiently insert multiple events into the database.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| logging | For logging messages and errors |
+| dataclasses | For creating the ConsumerConfig dataclass |
+| sentry_sdk | For error tracking and reporting |
+| django.conf | For accessing Django settings |
+| metering_billing.models | For accessing the Event model |
+| metering_billing.utils | For utility functions like now_utc |
+
+## Error Handling
+The code uses try-except blocks to handle exceptions during message consumption and processing. Errors are logged and reported to Sentry for monitoring.
+
+## Logging
+The code uses Django's logging system to log information about consumed records and any errors that occur during processing.
+
+This consumer is designed to run continuously, processing events from a Kafka topic and storing them in the database. It's likely part of a larger event-driven architecture for metering and billing purposes.
