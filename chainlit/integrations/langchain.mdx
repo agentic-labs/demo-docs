@@ -1,0 +1,224 @@
+---
+title: LangChain
+---
+
+In this tutorial, we'll walk through the steps to create a Chainlit application integrated with [LangChain](https://github.com/hwchase17/langchain).
+
+<Frame caption="Preview of what you will build">
+  <img src="/images/langchain-example.gif" />
+</Frame>
+
+## Prerequisites
+
+Before getting started, make sure you have the following:
+
+- A working installation of Chainlit
+- The LangChain package installed
+- An OpenAI API key
+- Basic understanding of Python programming
+
+## Step 1: Create a Python file
+
+Create a new Python file named `app.py` in your project directory. This file will contain the main logic for your LLM application.
+
+## Step 2: Write the Application Logic
+
+In `app.py`, import the necessary packages and define one function to handle a new chat session and another function to handle messages incoming from the UI.
+
+### With Langchain Expression language (LCEL)
+
+Let's go through a small example.
+
+<Note>
+  If your agent/chain does not have an async implementation, fallback to the
+  sync implementation.
+</Note>
+
+<CodeGroup>
+
+```python Async LCEL
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.schema.runnable import Runnable
+from langchain.schema.runnable.config import RunnableConfig
+
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def on_chat_start():
+    model = ChatOpenAI(streaming=True)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You're a very knowledgeable historian who provides accurate and eloquent answers to historical questions.",
+            ),
+            ("human", "{question}"),
+        ]
+    )
+    runnable = prompt | model | StrOutputParser()
+    cl.user_session.set("runnable", runnable)
+
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    runnable = cl.user_session.get("runnable")  # type: Runnable
+
+    msg = cl.Message(content="")
+
+    async for chunk in runnable.astream(
+        {"question": message.content},
+        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
+    ):
+        await msg.stream_token(chunk)
+
+    await msg.send()
+```
+
+```python Sync LCEL
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.schema.runnable import Runnable
+from langchain.schema.runnable.config import RunnableConfig
+
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def on_chat_start():
+    model = ChatOpenAI(streaming=True)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You're a very knowledgeable historian who provides accurate and eloquent answers to historical questions.",
+            ),
+            ("human", "{question}"),
+        ]
+    )
+    runnable = prompt | model | StrOutputParser()
+    cl.user_session.set("runnable", runnable)
+
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    runnable = cl.user_session.get("runnable")  # type: Runnable
+
+    msg = cl.Message(content="")
+
+    for chunk in await cl.make_async(runnable.stream)(
+        {"question": message.content},
+        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
+    ):
+        await msg.stream_token(chunk)
+
+    await msg.send()
+```
+
+</CodeGroup>
+
+This code sets up an instance of `Runnable` with a custom `ChatPromptTemplate` for each chat session. The `Runnable` is invoked everytime a user sends a message to generate the response.
+
+The callback handler is responsible for listening to the chain's intermediate steps and sending them to the UI.
+
+### [Deprecated] With Legacy Chain Interface
+
+<CodeGroup>
+
+```python Async Chain
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.chains import LLMChain
+
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def on_chat_start():
+    model = ChatOpenAI(streaming=True)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You're a very knowledgeable historian who provides accurate and eloquent answers to historical questions.",
+            ),
+            ("human", "{question}"),
+        ]
+    )
+    chain = LLMChain(llm=model, prompt=prompt, output_parser=StrOutputParser())
+
+    cl.user_session.set("chain", chain)
+
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    chain = cl.user_session.get("chain")  # type: LLMChain
+
+    res = await chain.arun(
+        question=message.content, callbacks=[cl.LangchainCallbackHandler()]
+    )
+
+    await cl.Message(content=res).send()
+```
+
+```python Sync Chain
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.chains import LLMChain
+
+import chainlit as cl
+
+
+@cl.on_chat_start
+async def on_chat_start():
+    model = ChatOpenAI(streaming=True)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You're a very knowledgeable historian who provides accurate and eloquent answers to historical questions.",
+            ),
+            ("human", "{question}"),
+        ]
+    )
+    chain = LLMChain(llm=model, prompt=prompt, output_parser=StrOutputParser())
+
+    cl.user_session.set("chain", chain)
+
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    chain = cl.user_session.get("chain")  # type: LLMChain
+
+    res = await cl.make_async(chain.run)(
+        question=message.content, callbacks=[cl.LangchainCallbackHandler()]
+    )
+
+    await cl.Message(content=res).send()
+```
+
+</CodeGroup>
+
+This code sets up an instance of `LLMChain` with a custom `ChatPromptTemplate` for each chat session. The `LLMChain` is invoked everytime a user sends a message to generate the response.
+
+The callback handler is responsible for listening to the chain's intermediate steps and sending them to the UI.
+
+## Step 3: Run the Application
+
+To start your app, open a terminal and navigate to the directory containing `app.py`. Then run the following command:
+
+```bash
+chainlit run app.py -w
+```
+
+The `-w` flag tells Chainlit to enable auto-reloading, so you don't need to restart the server every time you make changes to your application. Your chatbot UI should now be accessible at http://localhost:8000.
+
+<Warning>
+  When using LangChain, prompts and completions are not cached by default. To
+  enable the cache, set the `cache=true` in your chainlit config file.
+</Warning>

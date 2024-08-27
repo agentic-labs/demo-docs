@@ -1,0 +1,108 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains a set of files for testing and implementing a "Stop task" functionality in a Chainlit-based chatbot application. It includes configuration files, Python scripts for both synchronous and asynchronous message handling, and a Cypress test specification.
+
+## What does it do?
+The code in this directory implements and tests a feature that allows users to stop an ongoing task in a chatbot interface. The chatbot is built using the Chainlit framework, which provides tools for creating conversational AI applications. 
+
+The main functionality is demonstrated in two Python scripts:
+1. An asynchronous version (`main_async.py`) that sends two messages with a delay between them.
+2. A synchronous version (`main_sync.py`) that does the same but uses a synchronous function for the delay, wrapped to be executed asynchronously.
+
+The Cypress test file (`spec.cy.ts`) verifies that a user can initiate a task, stop it while it's in progress, and see the UI update accordingly. This test ensures that the stop functionality works as expected in both synchronous and asynchronous execution modes.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `main_async.py` and `main_sync.py`: These Python scripts define the core functionality of the chatbot, handling incoming messages and demonstrating the task that can be stopped.
+
+2. `spec.cy.ts`: This is the Cypress test specification file, which serves as the entry point for running automated tests on the "Stop task" feature.
+
+The flow of data and control in this directory starts with the Python scripts implementing the chatbot's behavior. The Cypress test then interacts with this implementation, simulating user actions and verifying the expected outcomes.
+
+## Configuration
+The `.chainlit` file in this directory is a TOML configuration file for the Chainlit project. It defines various settings for the chatbot application, including:
+
+- Telemetry: Enabled by default
+- Session timeout: Set to 3600 seconds (1 hour)
+- Caching: Disabled
+- UI customization: Sets the app and chatbot name to "Chatbot"
+- Feature toggles: Enables the prompt playground feature
+
+Key configuration options include:
+
+```toml
+[project]
+enable_telemetry = true
+session_timeout = 3600
+cache = false
+
+[features]
+prompt_playground = true
+
+[UI]
+name = "Chatbot"
+default_collapse_content = true
+default_expand_messages = false
+hide_cot = false
+```
+
+## Dependencies
+The main dependencies used in this directory are:
+
+1. Chainlit: This is the primary framework used for building the chatbot application. It provides tools for handling messages, managing the UI, and creating conversational flows.
+
+2. Cypress: Used for end-to-end testing of the "Stop task" functionality. Cypress allows for simulating user interactions and verifying the application's behavior.
+
+3. Python's `time` module: Used in the synchronous version of the code to introduce delays.
+
+These dependencies were likely chosen for their specific strengths:
+- Chainlit for its ease of use in building conversational AI interfaces
+- Cypress for its powerful and developer-friendly approach to end-to-end testing
+- Python's built-in `time` module for simple time-based operations
+
+## Key Files
+
+1. `main_async.py`:
+   This file implements an asynchronous message handler using Chainlit. It defines a function that sends two sequential messages with a 1-second delay between them when a new message is received. Here's a key code snippet:
+
+   ```python
+   @cl.on_message
+   async def message(message: cl.Message):
+       await cl.Message(content="Message 1").send()
+       await cl.sleep(1)
+       await cl.Message(content="Message 2").send()
+   ```
+
+2. `main_sync.py`:
+   This file demonstrates a mix of synchronous and asynchronous programming in a Chainlit application. It defines a synchronous function for introducing a delay and uses it within an asynchronous message handler. Here's a key part of the code:
+
+   ```python
+   def sync_function():
+       time.sleep(1)
+
+   @cl.on_message
+   async def message(message: cl.Message):
+       await cl.Message(content="Message 1").send()
+       await cl.make_async(sync_function)()
+       await cl.Message(content="Message 2").send()
+   ```
+
+3. `spec.cy.ts`:
+   This Cypress test specification file defines a test suite for the "Stop task" functionality. It verifies that a user can stop a task in progress and that the UI updates accordingly. Here's a snippet of the test case:
+
+   ```typescript
+   it('should be able to stop a task', () =&gt; {
+     cy.submitMessage('hello');
+     cy.get('.stop-button').click();
+     cy.get('.stop-button').should('not.exist');
+     cy.wait(1000);
+     cy.get('.task-step').should('have.length', 3);
+     cy.get('.task-step').last().should('contain', 'Task stopped manually');
+   });
+   ```
+
+These files work together to implement and test the "Stop task" feature, with the Python scripts defining the chatbot's behavior and the Cypress test verifying its functionality.

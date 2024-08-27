@@ -1,0 +1,114 @@
+---
+title: "session.py"
+---
+
+Here's a comprehensive documentation of the `backend/chainlit/session.py` file:
+
+## High-level description
+This file defines the core session management classes for Chainlit, including `BaseSession`, `HTTPSession`, and `WebsocketSession`. These classes handle user sessions, file management, and provide methods for persisting and managing session data.
+
+## Code Structure
+The main symbols in this file are:
+
+1. `BaseSession`: The base class for all session types.
+2. `HTTPSession`: A session class for HTTP-based interactions.
+3. `WebsocketSession`: A session class for WebSocket-based interactions.
+
+`HTTPSession` and `WebsocketSession` inherit from `BaseSession`. `WebsocketSession` has additional functionality for managing WebSocket connections and thread queues.
+
+## Symbols
+
+### `JSONEncoderIgnoreNonSerializable`
+#### Description
+A custom JSON encoder that ignores non-serializable objects.
+
+#### Internal Logic
+Overrides the `default` method to return `None` for non-serializable objects instead of raising a `TypeError`.
+
+### `clean_metadata`
+#### Description
+Cleans and potentially redacts metadata if it exceeds a specified size limit.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metadata | Dict | The metadata to clean |
+| max_size | int | Maximum allowed size in bytes (default: 1048576) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cleaned_metadata | Dict | The cleaned metadata |
+
+#### Internal Logic
+1. Serializes the metadata to JSON using the custom encoder.
+2. Checks if the serialized size exceeds the max_size.
+3. If it does, replaces the metadata with a redaction message.
+
+### `BaseSession`
+#### Description
+The base class for all session types in Chainlit.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | str | Session ID |
+| client_type | ClientType | Type of client (e.g., "webapp", "copilot", "teams", "slack", "discord") |
+| thread_id | Optional[str] | Thread ID |
+| user | Optional[Union["User", "PersistedUser"]] | User information |
+| token | Optional[str] | User token |
+| user_env | Optional[Dict[str, str]] | User-specific environment variables |
+| chat_profile | Optional[str] | Selected chat profile |
+| http_referer | Optional[str] | HTTP referer |
+
+#### Properties
+- `files_dir`: Returns the directory path for storing files for this session.
+
+#### Methods
+- `persist_file`: Persists a file to the session's file directory.
+- `to_persistable`: Returns a dictionary of persistable session data.
+
+### `HTTPSession`
+#### Description
+A session class for HTTP-based interactions, inheriting from `BaseSession`.
+
+#### Methods
+- `delete`: Deletes the session and its associated files.
+
+### `WebsocketSession`
+#### Description
+A session class for WebSocket-based interactions, inheriting from `BaseSession`.
+
+#### Inputs
+(All inputs from `BaseSession`, plus:)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| socket_id | str | WebSocket connection ID |
+| emit | Callable | Function to emit events to the client |
+| emit_call | Callable | Function to emit events and wait for a response |
+| languages | Optional[str] | User's browser languages |
+
+#### Methods
+- `restore`: Associates a new socket ID with the session.
+- `delete`: Deletes the session, its files, and removes it from the session dictionaries.
+- `flush_method_queue`: Flushes queued methods for the session.
+- `get`: Class method to get a session by socket ID.
+- `get_by_id`: Class method to get a session by session ID.
+- `require`: Class method to get a session by socket ID or raise an exception if not found.
+
+## Dependencies
+- `asyncio`: For asynchronous operations
+- `aiofiles`: For asynchronous file operations
+- `chainlit.logger`: For logging
+- `chainlit.config`: For accessing configuration settings
+- `chainlit.types`: For type definitions
+- Various Python standard libraries (json, uuid, shutil, etc.)
+
+## Side Effects
+- Creates and manages files in the file system
+- Modifies global session dictionaries (`ws_sessions_sid` and `ws_sessions_id`)
+
+## Error Handling
+The code uses try-except blocks in file operations and includes some error checks (e.g., in `persist_file`). However, most methods don't have explicit error handling, relying on the caller to handle exceptions.
+
+This file is crucial for managing user sessions in Chainlit, handling both HTTP and WebSocket connections, and providing methods for file persistence and session data management.

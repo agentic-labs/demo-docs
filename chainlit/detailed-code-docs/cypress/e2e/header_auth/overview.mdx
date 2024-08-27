@@ -1,0 +1,106 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation and testing of a header-based authentication mechanism for a Chainlit application. It includes configuration files, the main application logic, and Cypress end-to-end tests to verify the authentication functionality.
+
+## What does it do?
+The code in this directory sets up a chatbot application that uses header-based authentication. When a user tries to access the chatbot, the system checks for a specific header in the request. If the header is present, the user is authenticated and greeted by name. If the header is missing, authentication fails. The Cypress tests ensure that this authentication process works correctly, both when the header is present and when it's absent.
+
+## Key Files
+1. `.chainlit`: This TOML configuration file defines various settings for the Chainlit project, including telemetry, session management, and UI customization options.
+
+2. `main.py`: This Python file implements the core functionality of the header-based authentication mechanism and the chat start event handler.
+
+3. `spec.cy.ts`: This TypeScript file contains Cypress tests that verify the header authentication functionality.
+
+## Dependencies
+The project relies on the following main dependencies:
+
+1. Chainlit: Used for building the conversational AI application. The exact version is not specified in the provided files.
+
+2. Cypress: Used for end-to-end testing. The version is not explicitly mentioned in the provided files.
+
+## Configuration
+The `.chainlit` file contains various configuration options for the project:
+
+```toml
+[project]
+enable_telemetry = true
+user_env = []
+session_timeout = 3600
+cache = false
+
+[features]
+prompt_playground = true
+
+[UI]
+name = "Chatbot"
+default_collapse_content = true
+default_expand_messages = false
+hide_cot = false
+```
+
+Key configuration options include:
+- Telemetry is enabled
+- Session timeout is set to 1 hour
+- Caching is disabled
+- The prompt playground feature is enabled
+- The chatbot's name is set to "Chatbot"
+
+## Implementation Details
+
+### Authentication Mechanism
+The header-based authentication is implemented in `main.py`:
+
+```python
+@cl.header_auth_callback
+def header_auth_callback(headers):
+    if "test-header" in headers:
+        return cl.User(identifier="admin")
+    return None
+```
+
+This function checks for the presence of a "test-header" in the request headers. If present, it authenticates the user as "admin".
+
+### Chat Start Event
+Upon successful authentication, the application greets the user:
+
+```python
+@cl.on_chat_start
+async def on_chat_start():
+    user = cl.user_session.get("user")
+    await cl.Message(f"Hello {user.identifier}").send()
+```
+
+### Testing
+The `spec.cy.ts` file contains two Cypress tests:
+
+1. A test that verifies authentication fails without the custom header:
+
+```typescript
+it('should fail to auth without custom header', () =&gt; {
+  cy.visit('/');
+  cy.get('.MuiAlert-message').should('exist');
+});
+```
+
+2. A test that verifies authentication succeeds with the custom header:
+
+```typescript
+it('should be able to auth with custom header', () =&gt; {
+  cy.intercept('*', (req) =&gt; {
+    req.headers['test-header'] = 'test header value';
+  });
+  cy.visit('/');
+  cy.get('.MuiAlert-message').should('not.exist');
+  cy.get('.step').first().should('contain', 'Hello admin');
+  cy.reload();
+  cy.get('.step').first().should('contain', 'Hello admin');
+});
+```
+
+These tests ensure that the authentication mechanism works as expected, both with and without the required header.
+
+In summary, this directory implements a simple yet effective header-based authentication system for a Chainlit chatbot application, complete with configuration, core logic, and comprehensive end-to-end tests to verify its functionality.

@@ -1,0 +1,71 @@
+---
+title: "ci.yaml"
+---
+
+## High-level description
+This YAML file defines a GitHub Actions workflow named "CI" (Continuous Integration). It is designed to run various checks and tests on pull requests and pushes to the main and dev branches, as well as manually through workflow dispatch.
+
+## Code Structure
+The workflow consists of four jobs: pytest, mypy, e2e-tests, and ci. The first three jobs are reusable workflows, while the last one (ci) depends on the completion of the others and serves as a final step.
+
+## Symbols
+
+### CI (Workflow)
+#### Description
+This is the main workflow that orchestrates the execution of various checks and tests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| on | object | Defines the triggers for the workflow |
+
+#### Internal Logic
+1. Triggers on workflow_dispatch (manual trigger), pull requests to main and dev branches, and pushes to main and dev branches.
+2. Executes three reusable workflows: pytest, mypy, and e2e-tests.
+3. Runs a final job named "ci" that depends on the completion of the other jobs.
+
+### pytest (Job)
+#### Description
+This job runs the pytest workflow.
+
+#### Internal Logic
+Uses a reusable workflow defined in `./.github/workflows/pytest.yaml` and inherits secrets from the calling workflow.
+
+### mypy (Job)
+#### Description
+This job runs the mypy workflow for type checking.
+
+#### Internal Logic
+Uses a reusable workflow defined in `./.github/workflows/mypy.yaml` and inherits secrets from the calling workflow.
+
+### e2e-tests (Job)
+#### Description
+This job runs end-to-end tests.
+
+#### Internal Logic
+Uses a reusable workflow defined in `./.github/workflows/e2e-tests.yaml` and inherits secrets from the calling workflow.
+
+### ci (Job)
+#### Description
+This is the final job that runs after all other jobs have completed successfully.
+
+#### Internal Logic
+1. Runs on an Ubuntu latest runner.
+2. Depends on the completion of mypy, pytest, and e2e-tests jobs.
+3. Contains a single step that echoes "Done" to indicate the successful completion of the CI workflow.
+
+## Dependencies
+This workflow depends on three other workflow files:
+| Dependency | Purpose |
+|:-----------|:--------|
+| ./.github/workflows/pytest.yaml | Runs pytest tests |
+| ./.github/workflows/mypy.yaml | Runs mypy type checking |
+| ./.github/workflows/e2e-tests.yaml | Runs end-to-end tests |
+
+## Configuration
+The workflow is configured to run on specific events:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| workflow_dispatch | event | N/A | Allows manual triggering of the workflow |
+| pull_request | event | branches: [main, dev] | Triggers on pull requests to main and dev branches |
+| push | event | branches: [main, dev] | Triggers on pushes to main and dev branches |

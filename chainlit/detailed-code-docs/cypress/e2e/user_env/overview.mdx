@@ -1,0 +1,102 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains files for a Cypress end-to-end test suite focused on testing user environment functionality in a Chainlit application. It includes a configuration file, a Python script defining the main application logic, and a Cypress test specification.
+
+## What does it do?
+The code in this directory sets up and tests a simple Chainlit application that interacts with user-specific environment variables. The main functionality allows users to input a required key-value pair, which is then stored in their session environment. When a user sends a message, the application retrieves the stored value and sends it back as a response. The Cypress test suite verifies this workflow by simulating user input, sending a message, and checking the response.
+
+## Key Files
+
+1. `.chainlit` (Configuration file):
+   - Defines project settings, feature toggles, and UI customization for the Chainlit application.
+   - Specifies a required user environment variable "TEST_KEY".
+   - Configures session timeout and disables caching.
+   - Enables the prompt playground feature.
+   - Customizes the chatbot name and UI behavior.
+
+2. `main.py` (Application logic):
+   - Implements the core functionality of the Chainlit application.
+   - Defines a message handler that retrieves the "TEST_KEY" value from the user's environment.
+   - Sends a response message containing the key and its value.
+
+3. `spec.cy.ts` (Cypress test specification):
+   - Contains a test suite for verifying the user environment functionality.
+   - Simulates user input of a required key-value pair.
+   - Sends a test message and checks if the response contains the submitted value.
+
+## Dependencies
+The project relies on the following main dependencies:
+
+1. Chainlit: A framework for building conversational AI applications. Used in `main.py` to handle user interactions and manage sessions.
+
+2. Cypress: An end-to-end testing framework used in `spec.cy.ts` for writing and running automated tests.
+
+## Configuration
+The `.chainlit` file contains various configuration options:
+
+```toml
+[project]
+enable_telemetry = true
+user_env = ["TEST_KEY"]
+session_timeout = 3600
+cache = false
+
+[features]
+prompt_playground = true
+
+[UI]
+name = "Chatbot"
+default_collapse_content = true
+default_expand_messages = false
+hide_cot = false
+```
+
+Key configuration points:
+- Telemetry is enabled.
+- "TEST_KEY" is set as a required user environment variable.
+- Session timeout is set to 1 hour (3600 seconds).
+- Caching for third-party services is disabled.
+- The prompt playground feature is enabled.
+- UI customizations include setting the chatbot name and default content behavior.
+
+## Code Examples
+
+1. Main application logic (`main.py`):
+
+```python
+import chainlit as cl
+
+@cl.on_message
+async def main():
+    key = "TEST_KEY"
+    env = cl.user_session.get("env")
+    value = env.get(key)
+    await cl.Message(content=f"The value for {key} is {value}").send()
+```
+
+This code defines a message handler that retrieves the "TEST_KEY" value from the user's environment and sends it back as a response.
+
+2. Cypress test case (`spec.cy.ts`):
+
+```typescript
+it('should be able to ask a user for required keys', () =&gt; {
+    const key = 'TEST_KEY';
+    const value = 'test_value';
+
+    cy.get('#env').should('exist');
+    cy.get(`input[name="${key}"]`).type(value);
+    cy.get('button').contains('Submit').click();
+
+    submitMessage('Hello');
+
+    cy.get('.steps').children().should('have.length', 2);
+    cy.get('.steps').children().eq(1).should('contain', value);
+});
+```
+
+This test case simulates user input of the required key-value pair, sends a test message, and verifies that the response contains the submitted value.
+
+The code in this directory demonstrates a simple yet effective way to handle user-specific environment variables in a Chainlit application and provides a comprehensive test suite to ensure its functionality.
