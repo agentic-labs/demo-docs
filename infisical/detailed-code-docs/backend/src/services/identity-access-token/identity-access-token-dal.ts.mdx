@@ -1,0 +1,81 @@
+---
+title: "identity-access-token-dal.ts"
+---
+
+## High-level description
+This code defines a factory function `identityAccessTokenDALFactory` that creates a data access layer (DAL) for managing identity access tokens. It provides methods to interact with the database for operations related to identity access tokens, including finding, creating, and removing tokens.
+
+## Code Structure
+The main function `identityAccessTokenDALFactory` takes a database client as input and returns an object with methods for database operations. It uses the `ormify` function to create basic CRUD operations and extends them with custom methods like `findOne` and `removeExpiredTokens`.
+
+## Symbols
+
+### `identityAccessTokenDALFactory`
+#### Description
+This function creates and returns an object with methods for interacting with the identity access token table in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client used for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TIdentityAccessTokenDALFactory | An object containing methods for identity access token database operations |
+
+#### Internal Logic
+1. Creates an ORM for the IdentityAccessToken table using `ormify`.
+2. Defines custom methods `findOne` and `removeExpiredTokens`.
+3. Returns an object combining the ORM methods and custom methods.
+
+### `findOne`
+#### Description
+Finds a single identity access token record based on the provided filter, joining related tables for additional information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | Partial&lt;TIdentityAccessTokens&gt; | Filter criteria for finding the token |
+| tx | Knex (optional) | Transaction object for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Promise&lt;TIdentityAccessTokens & { accessTokenTrustedIps: any }&gt; | The found token record with additional information |
+
+#### Internal Logic
+1. Constructs a complex database query joining multiple tables.
+2. Applies the provided filter.
+3. Selects specific columns and aliases them.
+4. Executes the query and returns the first result.
+5. Processes the result to combine accessTokenTrustedIps from different auth methods.
+
+### `removeExpiredTokens`
+#### Description
+Removes expired or revoked identity access tokens from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tx | Knex (optional) | Transaction object for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Number | Promise&lt;number&gt; | The number of deleted tokens |
+
+#### Internal Logic
+1. Constructs a delete query with complex conditions for expired or revoked tokens.
+2. Executes the delete operation and returns the result.
+
+## Error Handling
+Both `findOne` and `removeExpiredTokens` methods wrap their database operations in try-catch blocks. If an error occurs, they throw a `DatabaseError` with specific error names ("IdAccessTokenFindOne" and "IdentityAccessTokenPrune" respectively).
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Knex | Used for database query building and execution |
+| @app/db | Imports database-related types and schemas |
+| @app/lib/errors | Imports the DatabaseError class for error handling |
+| @app/lib/knex | Imports utility functions for database operations |

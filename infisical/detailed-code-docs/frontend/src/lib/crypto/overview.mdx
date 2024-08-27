@@ -1,0 +1,79 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This code provides cryptographic functions for user authentication and key generation. It implements two main functions: `generateUserBackupKey` and `generateUserPassKey`, which handle the creation of backup keys and user password keys respectively, using various cryptographic techniques including SRP (Secure Remote Password), AES-GCM encryption, and public-key cryptography.
+
+## Symbols
+
+### `generateUserBackupKey`
+#### Description
+This function generates a backup key for a user, encrypts the user's private key with this backup key, and sends the encrypted data to the server for storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | string | User's email address |
+| password | string | User's password |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| generatedKey | string | The generated backup key |
+
+#### Internal Logic
+1. Initializes two JSRP clients: one for the user's password and another for the generated key.
+2. Performs SRP authentication steps with the server.
+3. Generates a random backup key.
+4. Creates a verifier for the backup key.
+5. Encrypts the user's private key (stored in localStorage) with the backup key using AES-256-GCM.
+6. Sends the encrypted data and authentication proofs to the server.
+
+### `generateUserPassKey`
+#### Description
+This function generates a new key pair for the user, derives a key from the user's password, and creates encrypted versions of the private key for secure storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | string | User's email address |
+| password | string | User's password |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | Object | Contains various keys and encrypted data |
+
+#### Internal Logic
+1. Initializes a JSRP client for the user's credentials.
+2. Generates a new key pair using NaCl (TweetNaCl).
+3. Creates a verifier for the user's password.
+4. Derives a key from the user's password using Argon2.
+5. Generates a random symmetric key.
+6. Encrypts the private key with the symmetric key using AES-256-GCM.
+7. Encrypts the symmetric key with the derived key using AES-256-GCM.
+8. Returns an object containing all the generated keys and encrypted data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto | For generating random bytes |
+| jsrp | Implementation of the Secure Remote Password (SRP) protocol |
+| tweetnacl | For generating public-key pairs |
+| tweetnacl-util | For encoding keys to base64 |
+| @app/components/utilities/cryptography/aes-256-gcm | Custom AES-256-GCM encryption implementation |
+| @app/components/utilities/cryptography/crypto | For deriving keys using Argon2 |
+| @app/hooks/api/auth/queries | For server communication in the authentication process |
+
+## Error Handling
+The code includes basic error handling, primarily through Promise rejection in asynchronous operations. There's also a specific error thrown if key derivation fails in `generateUserPassKey`.
+
+## Performance Considerations
+The use of cryptographic operations, especially key derivation with Argon2, can be computationally intensive. The Argon2 parameters (memory: 65536, time: 3, parallelism: 1) should be chosen carefully to balance security and performance.
+
+## Security Notes
+1. The code uses strong cryptographic primitives (AES-256-GCM, Argon2, NaCl) for various operations.
+2. SRP is used for secure password-based authentication.
+3. The private key is never sent to the server in plaintext; it's always encrypted before transmission.
+4. Care should be taken to securely manage the keys and encrypted data returned by these functions.

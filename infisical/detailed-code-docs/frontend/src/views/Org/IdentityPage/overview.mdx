@@ -1,0 +1,122 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/views/Org/IdentityPage` directory contains React components that collectively form the Identity Page within an organization context. This page provides a comprehensive interface for managing identity details, authentication methods, associated projects, and access tokens.
+
+## What does it do?
+The Identity Page allows users to:
+1. View and edit identity details such as ID, name, and organization role.
+2. Manage authentication methods, including Universal Auth (with client secrets) and Token Auth.
+3. View and manage projects associated with the identity.
+4. Create, view, and revoke access tokens.
+5. Manage client secrets for Universal Auth.
+
+The interface adapts based on the user's permissions and the chosen authentication method for the identity, providing a tailored experience for each user and identity type.
+
+## Entry points
+The main entry point for this directory is the `IdentityPage` component, defined in `IdentityPage.tsx`. This component orchestrates the overall layout and functionality of the Identity Page, utilizing various sub-components to handle specific sections and actions.
+
+The `index.tsx` file serves as a re-export module, simplifying the import process for other parts of the application that need to use the `IdentityPage` component.
+
+## Key Files
+1. `IdentityPage.tsx`: The main component that renders the identity page, handling the display of identity information and providing functionality for various identity-related actions.
+
+2. `components/IdentityAuthenticationSection.tsx`: Manages the display of authentication information and related components for different authentication methods.
+
+3. `components/IdentityDetailsSection.tsx`: Displays and allows editing of the identity's basic information.
+
+4. `components/IdentityProjectsSection/`: Contains components for displaying and managing projects associated with the identity.
+
+5. `components/IdentityClientSecretModal.tsx`: Handles the creation and display of client secrets for Universal Auth.
+
+6. `components/IdentityTokenListModal.tsx`: Manages the display and creation of access tokens for Token Auth.
+
+7. `components/IdentityTokenModal.tsx`: Provides functionality for creating and updating individual access tokens.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: Core library for building the user interface.
+2. React Hook Form and Zod: For form management and validation.
+3. @fortawesome/react-fontawesome: For rendering icons in the UI.
+4. date-fns: For date formatting in various displays.
+5. @app/components/v2: A collection of custom UI components used throughout the sections.
+6. @app/components/permissions: Provides components for permission-based rendering.
+7. @app/context: Supplies permission-related constants and context providers.
+8. @app/hooks/api: Custom hooks for API interactions and data fetching.
+9. @app/hooks/usePopUp: A hook for managing modal and popup states.
+10. next/router: For routing functionality.
+11. tailwind-merge: For merging Tailwind CSS classes.
+
+## Configuration
+While there are no explicit configuration files in this directory, the components are designed to work within a larger application context. They rely on:
+
+1. User permissions: The components use permission checks to conditionally render certain elements based on the user's permissions within the organization.
+2. API endpoints: The custom hooks from `@app/hooks/api` are used to fetch and mutate data, implying that the API endpoints for identity, token, project, and client secret management are configured elsewhere in the application.
+
+The components are designed to be flexible and can adapt their display and functionality based on the authentication method of the identity, the permissions of the current user, and the specific context of use. This modular approach allows for easy extension or modification of identity-related features in the future.
+
+For example, the `IdentityAuthenticationSection` component determines which sub-components to display based on the identity's authentication method:
+
+```typescript
+const IdentityAuthenticationSection: React.FC&lt;Props&gt; = ({ identityId }) =&gt; {
+  const { data: identity } = useGetIdentityById(identityId);
+
+  if (!identity) {
+    return null;
+  }
+
+  return (
+    &lt;Container&gt;
+      &lt;Header&gt;
+        &lt;Title&gt;Authentication&lt;/Title&gt;
+      &lt;/Header&gt;
+      {identity.authMethod === "UNIVERSAL_AUTH" && (
+        &lt;IdentityClientSecrets identityId={identityId} /&gt;
+      )}
+      {identity.authMethod === "TOKEN_AUTH" && (
+        &lt;IdentityTokens identityId={identityId} /&gt;
+      )}
+    &lt;/Container&gt;
+  );
+};
+```
+
+This structure allows the application to easily support different authentication methods and adapt the UI accordingly, providing a seamless experience for managing various aspects of identity within an organization.
+
+The main `IdentityPage` component in `IdentityPage.tsx` orchestrates the overall layout and functionality, including error handling and API interactions:
+
+```typescript
+const IdentityPage: React.FC = () =&gt; {
+  const router = useRouter();
+  const { identityId } = router.query;
+  const { data: identity, error } = useGetIdentityById(identityId as string);
+
+  // ... (state management and other hooks)
+
+  const handleDeleteIdentity = async () =&gt; {
+    try {
+      await deleteIdentity(identityId as string);
+      router.push('/org/identities');
+      createNotification({ type: 'success', text: 'Identity deleted successfully' });
+    } catch (error) {
+      createNotification({ type: 'error', text: 'Failed to delete identity' });
+    }
+  };
+
+  // ... (other handler functions)
+
+  return (
+    &lt;div&gt;
+      {/* Render identity details, authentication section, and projects section */}
+      {/* Include modal components for various actions */}
+    &lt;/div&gt;
+  );
+};
+
+export default withPermission(IdentityPage, [PERMISSION_MANAGE_IDENTITIES]);
+```
+
+This component structure ensures that the Identity Page provides a comprehensive and user-friendly interface for managing all aspects of an identity within an organization, while also handling permissions, error states, and user notifications.

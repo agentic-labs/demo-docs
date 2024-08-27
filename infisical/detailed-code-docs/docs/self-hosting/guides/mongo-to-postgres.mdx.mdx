@@ -1,0 +1,205 @@
+---
+title: "mongo-to-postgres.mdx"
+---
+
+---
+title: "Migrate Mongo to Postgres"
+description: "Learn how to migrate Infisical from MongoDB to PostgreSQL."
+---
+
+This guide will provide step by step instructions on migrating your Infisical instance running on MongoDB to the newly released PostgreSQL version of Infisical.
+The newly released Postgres version of Infisical is the only version of Infisical that will receive feature updates and patches going forward. 
+
+&lt;Tip&gt;
+  If you have a small set of secrets, we recommend you to download the secrets and upload them to your new instance of Infisical instead of running the migration script.
+&lt;/Tip&gt;
+
+## Prerequisites
+
+Before starting the migration, ensure you have the following command line tools installed:
+
+- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- [pg_dump](https://www.postgresql.org/docs/current/app-pgrestore.html) 
+- [pg_restore](https://www.postgresql.org/docs/current/app-pgdump.html)
+- [mongodump](https://www.mongodb.com/docs/database-tools/mongodump/)
+- [mongorestore](https://www.mongodb.com/docs/database-tools/mongorestore/)
+- [Docker](https://docs.docker.com/engine/install/) 
+
+## Prepare for migration
+
+&lt;Steps&gt;
+  &lt;Step title="Backup Production MongoDB Data"&gt;
+     While the migration script will not mutate any MongoDB production data, we recommend you to take a backup of your MongoDB instance if possible.
+  &lt;/Step&gt;
+  &lt;Step title="Set Migration Mode"&gt;
+    To prevent new data entries during the migration, set your Infisical instance to migration mode by setting the environment variable `MIGRATION_MODE=true` and redeploying your instance. 
+    This mode will block all write operations, only allowing GET requests. It also disables user logins and sets up a migration page to prevent UI interactions.
+    ![migration mode](/images/self-hosting/guides/mongo-postgres/mongo-migration.png)
+  &lt;/Step&gt;
+  &lt;Step title="Start local instances of Mongo and Postgres databases"&gt;
+    Start local instances of MongoDB and Postgres. This will be used in later steps to process and transform the data locally.
+
+    To start local instances of the two databases, create a file called `docker-compose.yaml` as shown below.
+
+    ```yaml docker-compose.yaml
+      version: '3.1'
+
+      services:
+        mongodb:
+          image: mongo
+          restart: always
+          environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: example
+          ports:
+            - "27017:27017"
+          volumes:
+            - mongodb_data:/data/db
+
+        postgres:
+          image: postgres
+          restart: always
+          environment:
+            POSTGRES_PASSWORD: example
+          ports:
+            - "5432:5432"
+          volumes:
+            - postgres_data:/var/lib/postgresql/data
+
+      volumes:
+        mongodb_data:
+        postgres_data:
+    ```
+
+    Next, run the command below in the same working directory where the `docker-compose.yaml` file resides to start both services.
+
+    ```
+    docker-compose up
+    ```
+
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## Dump MongoDB
+To speed up the data transformation process, the first step involves transferring the production data from Infisical's MongoDB to a local machine. 
+This is achieved by creating a dump of the production database and then uploading this dumped data into a local Mongo instance. 
+By having a running local instance of the production database, we will significantly reduce the time it takes to run the migration script.
+
+&lt;Steps&gt;
+  &lt;Step title="Dump MongoDB data to your local machine using"&gt;
+  
+   ```
+   mongodump --uri=&lt;your_mongo_prod_uri&gt; --archive="mongodump-db" --db=&lt;db name&gt; --excludeCollection=auditlogs
+   ```
+
+  &lt;/Step&gt;
+  &lt;Step title="Restore this data to the local MongoDB instance"&gt;
+   ```
+   mongorestore --uri=mongodb://root:example@localhost:27017/ --archive="mongodump-db"
+   ```
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## Start the migration
+
+Once started, the migration script will transform MongoDB data into an equivalent PostgreSQL format.
+
+&lt;Steps&gt;
+  &lt;Step title="Clone Infisical Repository"&gt;
+    Clone the Infisical MongoDB repository.
+    ```
+    git clone -b infisical/v0.46.11-postgres https://github.com/Infisical/infisical.git
+    ```
+  &lt;/Step&gt;
+  &lt;Step title="Install dependencies for backend"&gt;
+    ```
+    cd backend
+    ```
+
+    ```
+    npm install
+    ```
+  &lt;/Step&gt;
+  &lt;Step title="Install dependencies for script"&gt;
+    ```
+    cd pg-migrator
+    ```
+
+    ```
+      npm install
+    ```
+  &lt;/Step&gt;
+  &lt;Step title="Execute Migration Script"&gt;
+    ```
+      npm run migration
+    ```
+
+    When executing the above command, you'll be asked to provide the MongoDB connection string for the database containing your production Infisical data. Since our production Mongo data is transferred to a local Mongo instance, you should input the connection string for this local instance.
+    
+    ```
+    mongodb://root:example@localhost:27017/&lt;db-name&gt;?authSource=admin
+    ```
+
+    &lt;Tip&gt;
+      Remember to replace `&lt;db-name&gt;` with the name of the MongoDB database. If you are not sure the name, you can use [Compass](https://www.mongodb.com/products/tools/compass) to view the available databases.
+    &lt;/Tip&gt;
+
+    
+    Next, you will be asked to enter the Postgres connection string for the database where the transformed data should be stored. 
+    Input the connection string of the local Postgres instance that was set up earlier in the guide.
+    
+    ```
+    postgres://infisical:infisical@localhost/infisical?sslmode=disable
+    ```
+  &lt;/Step&gt;
+
+  &lt;Step title="Store migration metadata"&gt;
+    Once the script has completed, you will notice a new folder has been created called `db` in the `pg-migrator` folder. 
+    This folder contains meta data for schema mapping and can be helpful when debugging migration related issues. 
+    We highly recommend you to make a copy of this folder in case you need assistance from the Infisical team during your migration process.  
+
+    &lt;Info&gt;
+      The `db` folder does not contain any sensitive data
+    &lt;/Info&gt;
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## Finalizing Migration
+At this stage, the data from the Mongo instance of Infisical should have been successfully converted into its Postgres equivalent. 
+The remaining step involves transferring the local Postgres database, which now contains all the migrated data, to your chosen production Postgres environment. 
+Rather than transferring the data row-by-row from your local machine to the production Postgres database, we will first create a dump file from the local Postgres and then upload this file to your production Postgres instance.
+
+&lt;Steps&gt;
+  &lt;Step title="Dump from local PostgreSQL"&gt;
+   ```
+   pg_dump -h localhost -U infisical -Fc -b -v -f dumpfilelocation.sql -d infisical
+   ```
+  &lt;/Step&gt;
+  &lt;Step title="Upload to production PostgreSQL"&gt;
+   ```
+   pg_restore --clean -v -h &lt;host&gt; -U &lt;db-user-name&gt; -d &lt;database-name&gt; -j 2 dumpfilelocation.sql 
+   ```
+
+   &lt;Tip&gt;
+    Remember to replace `&lt;host&gt;`, `&lt;db-user-name&gt;`, `&lt;database-name&gt;` with the corresponding details of your production Postgres database.
+   &lt;/Tip&gt;
+  &lt;/Step&gt;
+  &lt;Step title="Verify Data Upload"&gt;
+    Use a tool like Beekeeper Studio to confirm that the data has been successfully transferred to your production Postgres DB.
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## Post-Migration Steps
+
+Once the data migration to PostgreSQL is complete, you're ready to deploy Infisical using the deployment method of your choice.
+For guidance on deployment options, please visit the [self-hosting documentation](/self-hosting/overview). 
+Remember to transfer the necessary [environment variables](/self-hosting/configuration/envars) from the MongoDB version of Infisical to the new Postgres based Infisical; rest assured, they are fully compatible.
+
+&lt;Warning&gt;
+The first deployment of Postgres based Infisical must be deployed with Docker image tag `v0.46.11-postgres`. 
+After deploying this version, you can proceed to update to any subsequent versions.
+&lt;/Warning&gt;
+
+## Additional discussion 
+- When you visit Infisical's [docker hub](https://hub.docker.com/r/infisical/infisical) page, you will notice that image tags end with `-postgres`. 
+This is to indicate that this version of Infisical runs on the new Postgres backend. Any image tag that does not end in `postgres` runs on MongoDB.

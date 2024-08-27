@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for integrating CircleCI with the Infisical application. It provides functionality for authorizing the integration by inputting a CircleCI API token and creating a new integration by configuring various settings such as project environment, secrets path, and CircleCI project selection.
+
+## What does it do?
+The code in this directory implements two main workflows:
+
+1. CircleCI Authorization:
+   - Presents a user interface for inputting a CircleCI API token.
+   - Validates the token input and handles error cases.
+   - Saves the integration access token to the server.
+   - Redirects the user to the next step of the integration process upon successful authorization.
+
+2. CircleCI Integration Creation:
+   - Fetches necessary data such as workspace information and available CircleCI projects.
+   - Allows users to select a project environment, specify a secrets path, and choose a CircleCI project to integrate with.
+   - Handles the creation of the integration by submitting the configured settings to the server.
+   - Provides feedback to the user throughout the process, including loading states and error messages.
+
+These workflows enable users to seamlessly connect their CircleCI projects with the Infisical application, allowing for secure management and synchronization of secrets between the two platforms.
+
+## Key Files
+
+### authorize.tsx
+This file contains the `CircleCICreateIntegrationPage` component, which handles the authorization process for the CircleCI integration. Key features include:
+- Rendering a form for inputting the CircleCI API token.
+- Validating the input and handling error cases.
+- Saving the integration access token using a custom hook.
+- Redirecting to the next step upon successful authorization.
+
+Example code snippet:
+```jsx
+const handleButtonClick = async () =&gt; {
+  if (apiKey.trim() === "") {
+    setError("API Key cannot be blank");
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const { id } = await mutateAsync({
+      workspaceId,
+      integration: "circleci",
+      accessToken: apiKey
+    });
+    router.push(`/integrations/circleci/create?integrationAuthId=${id}`);
+  } catch (err) {
+    console.error(err);
+  }
+  setIsLoading(false);
+};
+```
+
+### create.tsx
+This file contains the `CircleCICreateIntegrationPage` component, which handles the creation of the CircleCI integration. Key features include:
+- Fetching workspace data, integration auth data, and available CircleCI projects.
+- Rendering a form for configuring integration settings.
+- Handling the creation of the integration using a custom hook.
+- Providing feedback to the user throughout the process.
+
+Example code snippet:
+```jsx
+const { mutateAsync } = useCreateIntegration();
+
+const handleCreateIntegration = async () =&gt; {
+  try {
+    await mutateAsync({
+      integrationAuthId,
+      workspaceId,
+      environment: sourceEnvironment,
+      secretPath,
+      targetAppId: targetApp
+    });
+    router.push(`/integrations/${workspace.id}`);
+  } catch (err) {
+    console.error(err);
+  }
+};
+```
+
+## Dependencies
+The code in this directory relies on several external libraries and internal components:
+
+1. React: Core library for building the user interface.
+2. Next.js: For routing, head management, and image optimization.
+3. @fortawesome/react-fontawesome: For rendering icons in the UI.
+4. query-string: Used for parsing URL query parameters.
+5. Custom hooks from `@app/hooks/api`: For API interactions and data fetching.
+6. Custom UI components from `../../../components/v2`: For consistent UI elements across the application.
+
+## Configuration
+The components in this directory use some configuration options:
+
+1. Authentication requirement:
+   ```javascript
+   CircleCICreateIntegrationPage.requireAuth = true;
+   ```
+   This indicates that authentication is required to access the integration pages.
+
+2. Environment variables: While not explicitly shown in the provided code, the integration likely relies on environment variables for API endpoints and other configuration settings.
+
+3. Local storage: The code uses localStorage to store and retrieve the project ID:
+   ```javascript
+   const projectId = localStorage.getItem("projectId");
+   ```
+
+The components are designed to be flexible and can adapt to different workspace and project configurations based on the data fetched from the server.

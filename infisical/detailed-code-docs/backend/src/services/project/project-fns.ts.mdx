@@ -1,0 +1,122 @@
+---
+title: "project-fns.ts"
+---
+
+## High-level description
+The `project-fns.ts` file contains functions related to project management, including key management, version verification, and workspace member assignment. These functions handle tasks like creating and encrypting project keys, verifying project versions, and assigning encrypted workspace keys to project members.
+
+## Code Structure
+The code defines several functions related to project management:
+- `assignWorkspaceKeysToMembers`: Encrypts and assigns workspace keys to individual members.
+- `createProjectKey`: Generates and encrypts a project key.
+- `verifyProjectVersions`: Checks if all provided projects have the same version.
+- `getProjectKmsCertificateKeyId`: Retrieves or creates a KMS key ID for a project's certificate service.
+
+## References
+This file references types and functions from other modules:
+- `@app/db/schemas`: Database schemas for projects and project versions.
+- `@app/lib/crypto`: Cryptographic functions for encryption and decryption.
+- `@app/lib/errors`: Error classes for handling bad requests.
+- `@app/services/kms/kms-service`: Key Management Service for generating and managing keys.
+- `@app/services/project/project-dal`: Data Access Layer for interacting with project data.
+
+## Symbols
+
+### `assignWorkspaceKeysToMembers`
+#### Description
+This function encrypts the provided plaintext project key for each member in the `members` array using their respective public keys and the provided user's private key. It returns a new array containing the encrypted keys and nonces for each member.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| members | `AddUserToWsDTO["members"]` | An array of member objects, each containing the member's organization membership ID, public key, and project membership role. |
+| decryptKey | `AddUserToWsDTO["decryptKey"]` | An object containing the encrypted project key, nonce, and sender's public key. |
+| userPrivateKey | `string` | The private key of the user performing the action. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| newWsMembers | `{ orgMembershipId: string, projectRole: string, workspaceEncryptedKey: string, workspaceEncryptedNonce: string }[]` | An array of objects containing the encrypted workspace key and nonce for each member. |
+
+#### Internal Logic
+1. Decrypts the provided `decryptKey` using the provided `userPrivateKey`.
+2. Iterates through the `members` array.
+3. For each member, encrypts the plaintext project key using the member's public key and the user's private key.
+4. Constructs a new object containing the encrypted key, nonce, and other member information.
+5. Returns the array of newly constructed member objects.
+
+### `createProjectKey`
+#### Description
+This function generates a new project key, encrypts it using the provided public and private keys, and returns the encrypted key and its initialization vector (IV).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| publicKey | `string` | The public key to encrypt the project key with. |
+| privateKey | `string` | The private key to encrypt the project key with. |
+| plainProjectKey | `string` (optional) | An optional plaintext project key to use. If not provided, a random key will be generated. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | `string` | The encrypted project key. |
+| iv | `string` | The initialization vector used to encrypt the project key. |
+
+#### Internal Logic
+1. Generates a random 16-byte string if `plainProjectKey` is not provided.
+2. Encrypts the project key using the provided public and private keys.
+3. Returns the encrypted key and its IV.
+
+### `verifyProjectVersions`
+#### Description
+This function checks if all projects in the provided array have the same version.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projects | `Pick&lt;TProjects, "version"&gt;[]` | An array of project objects, each containing a `version` property. |
+| version | `ProjectVersion` | The version to compare against. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `boolean` | `true` if all projects have the same version, `false` otherwise. |
+
+#### Internal Logic
+1. Iterates through the `projects` array.
+2. For each project, compares its `version` property to the provided `version`.
+3. Returns `false` immediately if a mismatch is found.
+4. Returns `true` if all projects have the same version.
+
+### `getProjectKmsCertificateKeyId`
+#### Description
+This asynchronous function retrieves the KMS key ID associated with a project's certificate service. If the key ID doesn't exist, it generates a new one, associates it with the project, and returns the newly generated ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findOne" | "updateById" | "transaction"&gt;` | An object providing data access methods for projects. |
+| kmsService | `Pick&lt;TKmsServiceFactory, "generateKmsKey"&gt;` | An object providing methods for interacting with the Key Management Service. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| keyId | `Promise&lt;string&gt;` | A promise that resolves with the KMS key ID. |
+
+#### Internal Logic
+1. Starts a database transaction.
+2. Fetches the project with the given `projectId`.
+3. If the project doesn't exist, throws a `BadRequestError`.
+4. If the project doesn't have a `kmsCertificateKeyId`:
+    - Generates a new KMS key using `kmsService.generateKmsKey`.
+    - Updates the project with the new `kmsCertificateKeyId`.
+    - Returns the newly generated key ID.
+5. If the project already has a `kmsCertificateKeyId`, returns it.
+6. Commits the transaction.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto | Used for generating random bytes for project keys. |
+

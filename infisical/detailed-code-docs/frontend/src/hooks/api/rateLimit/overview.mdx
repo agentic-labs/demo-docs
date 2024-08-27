@@ -1,0 +1,119 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and TypeScript types for managing rate limit functionality in a frontend application. It provides a centralized way to fetch, update, and type rate limit data, leveraging React Query for efficient state management and API communication.
+
+## What does it do?
+The code in this directory enables the frontend application to:
+1. Fetch current rate limit settings from the server.
+2. Update rate limit settings on the server.
+3. Manage the state of rate limit data using React Query, ensuring efficient caching and synchronization with the server.
+4. Provide type safety for rate limit data structures.
+
+These functionalities allow the application to implement and manage rate limiting features, which are crucial for controlling API usage, preventing abuse, and ensuring fair resource allocation among users or clients.
+
+## Key Files
+
+### index.ts
+This file serves as the main entry point for the rate limit hooks. It re-exports the `useUpdateRateLimit` and `useGetRateLimit` hooks, making them easily accessible to other parts of the application.
+
+### mutation.ts
+This file defines the `useUpdateRateLimit` hook, which provides functionality to update rate limit settings. It uses React Query's `useMutation` hook to handle the API request and update the local cache.
+
+Key features:
+- Sends a PUT request to `/api/v1/rate-limit` to update settings.
+- Automatically invalidates related queries upon successful update.
+- Provides a mutation object for triggering updates and accessing mutation state.
+
+### queries.ts
+This file contains the `useGetRateLimit` hook and related utilities for fetching rate limit data. It uses React Query's `useQuery` hook to manage the query state.
+
+Key features:
+- Defines `rateLimitQueryKeys` for consistent query key management.
+- Implements `fetchRateLimit` function to make the API request.
+- Provides the `useGetRateLimit` hook with customizable options.
+
+### types.ts
+This file defines the `TRateLimit` type, which represents the structure of rate limit data used throughout the application.
+
+The `TRateLimit` type includes properties for various rate limit categories:
+- `readRateLimit`
+- `writeRateLimit`
+- `secretsRateLimit`
+- `authRateLimit`
+- `inviteUserRateLimit`
+- `mfaRateLimit`
+- `publicEndpointLimit`
+
+## Dependencies
+The code in this directory primarily relies on the following external libraries:
+
+1. @tanstack/react-query (version not specified)
+   - Used for managing server state, caching, and synchronization.
+   - Provides hooks like `useQuery` and `useMutation` for efficient data fetching and updates.
+
+2. @app/config/request (internal dependency)
+   - Provides the `apiRequest` utility for making API calls.
+
+## Configuration
+While there are no explicit configuration files in this directory, the rate limit functionality can be configured through the API endpoints and the `TRateLimit` type structure. The API endpoints used are:
+
+- GET `/api/v1/rate-limit`: Fetches current rate limit settings.
+- PUT `/api/v1/rate-limit`: Updates rate limit settings.
+
+Developers can customize the behavior of the hooks by passing options to `useGetRateLimit` and `useUpdateRateLimit`. For example, the query can be disabled by passing `{ enabled: false }` to `useGetRateLimit`.
+
+## Code Examples
+
+1. Fetching rate limit data:
+
+```typescript
+import { useGetRateLimit } from './path/to/hooks/api/rateLimit';
+
+function RateLimitDisplay() {
+  const { data, isLoading, error } = useGetRateLimit();
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Error: {error.message}&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;Rate Limits&lt;/h2&gt;
+      &lt;p&gt;Read Rate Limit: {data.readRateLimit}&lt;/p&gt;
+      &lt;p&gt;Write Rate Limit: {data.writeRateLimit}&lt;/p&gt;
+      {/* Display other rate limits */}
+    &lt;/div&gt;
+  );
+}
+```
+
+2. Updating rate limit settings:
+
+```typescript
+import { useUpdateRateLimit } from './path/to/hooks/api/rateLimit';
+
+function RateLimitUpdateForm() {
+  const updateRateLimit = useUpdateRateLimit();
+
+  const handleSubmit = (newLimits) =&gt; {
+    updateRateLimit.mutate(newLimits, {
+      onSuccess: () =&gt; {
+        console.log('Rate limits updated successfully');
+      },
+      onError: (error) =&gt; {
+        console.error('Failed to update rate limits:', error);
+      },
+    });
+  };
+
+  return (
+    &lt;form onSubmit={handleSubmit}&gt;
+      {/* Form fields for updating rate limits */}
+    &lt;/form&gt;
+  );
+}
+```
+
+These hooks provide a clean and efficient way to manage rate limit data in the frontend application, ensuring type safety and optimal performance through React Query's caching and synchronization features.

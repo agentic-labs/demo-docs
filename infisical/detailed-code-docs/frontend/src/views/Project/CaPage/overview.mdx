@@ -1,0 +1,95 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/views/Project/CaPage` directory contains React components and logic for managing and displaying information related to Certificate Authorities (CAs) within a project. It provides a comprehensive interface for CA management, including viewing CA details, managing certificates and Certificate Revocation Lists (CRLs), and performing actions such as renewal and deletion.
+
+## What does it do?
+This directory implements a user interface for CA management with the following functionalities:
+
+1. Displays detailed information about a specific CA, including its type, ID, status, key algorithm, and validity dates.
+2. Shows a list of CA certificates in a table format, allowing users to view and download certificates.
+3. Presents Certificate Revocation Lists (CRLs) associated with a CA, enabling users to view and download CRL content.
+4. Provides a modal interface for renewing a CA, allowing users to select a renewal type and specify a new expiration date.
+5. Implements permission-based access control for certain actions, such as renewing or installing CA certificates.
+6. Offers copy-to-clipboard functionality for CA IDs and other relevant information.
+7. Handles CA deletion with appropriate error handling and user notifications.
+
+## Entry points
+The main entry point for this directory is the `CaPage` component defined in `CaPage.tsx`. This component serves as the container for all CA-related functionality and renders various sub-components to display CA details, certificates, and CRLs.
+
+The `index.tsx` file in the root of the directory acts as a re-export module, simplifying imports for other parts of the application that need to use the `CaPage` component.
+
+## Key Files
+1. `CaPage.tsx`: The main container component that orchestrates the display of CA information and management options.
+
+2. `components/CaDetailsSection.tsx`: Displays detailed information about a specific CA and provides functionality for copying IDs and initiating CA renewal or certificate installation.
+
+3. `components/CaCertificatesSection/CaCertificatesSection.tsx`: Renders a section for displaying CA certificates in a table format with download options.
+
+4. `components/CaCrlsSection/CaCrlsSection.tsx`: Displays a section for Certificate Revocation Lists (CRLs) with a table component for listing CRLs and download functionality.
+
+5. `components/CaRenewalModal.tsx`: Implements a modal dialog for renewing a Certificate Authority, using React Hook Form and Zod for form management and validation.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: Core library for building the user interface.
+2. Next.js: For routing and navigation.
+3. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: For rendering icons in the UI.
+4. date-fns: Used for date formatting and manipulation.
+5. file-saver: Handles file downloads for certificates and CRLs.
+6. react-hook-form and @hookform/resolvers/zod: For form management and validation in the CA renewal modal.
+7. zod: Schema validation library used in conjunction with react-hook-form.
+8. tailwind-merge: For merging Tailwind CSS classes.
+9. Various internal @app components and hooks: For UI elements, API interactions, and permission checks.
+
+## Configuration
+While there are no explicit configuration files in this directory, the components are designed to work with specific API structures and data formats. Key configuration points include:
+
+1. API endpoints: The components use custom hooks like `useGetCaById`, `useGetCaCerts`, and `useGetCaCrls` to interact with backend services.
+2. Permissions: The components use a `ProjectPermissionCan` component to check user permissions for certain actions.
+3. Form validation: The CA renewal modal uses a Zod schema to define validation rules for the renewal form.
+
+Here's an example of how the `CaPage` component is structured:
+
+```jsx
+const CaPage: React.FC = () =&gt; {
+  const router = useRouter();
+  const { projectSlug, caId } = router.query;
+  const { data: ca, isLoading } = useGetCaById(caId as string);
+  const { popUp, handlePopUpOpen, handlePopUpClose, handlePopUpToggle } = usePopUp();
+
+  const onRemoveCaSubmit = async (caIdToDelete: string) =&gt; {
+    try {
+      await deleteCa({ caId: caIdToDelete, projectSlug: projectSlug as string });
+      createNotification({ type: 'success', text: 'CA successfully deleted' });
+      handlePopUpClose();
+      router.push(`/${projectSlug}/certificates`);
+    } catch (error) {
+      console.error(error);
+      createNotification({ type: 'error', text: 'Failed to delete CA' });
+    }
+  };
+
+  return (
+    &lt;ProjectPermissionCan permission={PERMISSIONS.VIEW_CA}&gt;
+      &lt;div className="space-y-6"&gt;
+        {isLoading ? (
+          &lt;LoadingSpinner /&gt;
+        ) : (
+          &lt;&gt;
+            &lt;CaDetailsSection caId={caId as string} /&gt;
+            &lt;CaCertificatesSection caId={caId as string} /&gt;
+            &lt;CaCrlsSection caId={caId as string} /&gt;
+            {/* Modals and other components */}
+          &lt;/&gt;
+        )}
+      &lt;/div&gt;
+    &lt;/ProjectPermissionCan&gt;
+  );
+};
+```
+
+This structure demonstrates how the `CaPage` component integrates various sub-components and handles user interactions, data fetching, and permission checks to provide a comprehensive interface for managing Certificate Authorities within a project.

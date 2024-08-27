@@ -1,0 +1,90 @@
+---
+title: "integration-auth-router.ts"
+---
+
+## High-level description
+This code defines an Express.js router that handles API routes related to integration authorization. It provides endpoints for managing integration options, retrieving and deleting integration authorizations, exchanging OAuth tokens, and fetching integration-specific resources like apps, teams, branches, etc.
+
+## Code Structure
+The `registerIntegrationAuthRouter` function takes a Fastify server instance as input and defines multiple routes using `server.route`. Each route is associated with a specific HTTP method, URL, and handler function. The routes leverage various middleware functions like `verifyAuth` for authentication and `rateLimit` for rate limiting. The handler functions interact with the `server.services.integrationAuth` service to perform operations related to integration authorization.
+
+## References
+- `EventType` from "@app/ee/services/audit-log/audit-log-types"
+- `INTEGRATION_AUTH` from "@app/lib/api-docs"
+- `readLimit`, `writeLimit` from "@app/server/config/rateLimiter"
+- `verifyAuth` from "@app/server/plugins/auth/verify-auth"
+- `AuthMode` from "@app/services/auth/auth-type"
+- `integrationAuthPubSchema` from "../sanitizedSchemas"
+
+## Symbols
+### `registerIntegrationAuthRouter`
+#### Description
+This function registers all the API routes related to integration authorization on the provided Fastify server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of a Fastify server with Zod validation. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+The function defines multiple routes using `server.route` for various operations related to integration authorization. Each route is configured with:
+- HTTP method (GET, POST, DELETE)
+- URL path
+- Optional configuration like rate limiting
+- Authentication middleware (`verifyAuth`)
+- Request schema validation
+- Response schema validation
+- Handler function to process the request
+
+The handler functions typically interact with the `server.services.integrationAuth` service to perform the requested action and return the result. Some handlers also create audit logs using `server.services.auditLog`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| z | Zod validation library for defining and validating schemas. |
+| @app/ee/services/audit-log/audit-log-types | Provides the `EventType` enum for audit log events. |
+| @app/lib/api-docs | Provides API documentation constants, likely for request/response schema descriptions. |
+| @app/server/config/rateLimiter | Provides rate limiting configurations for read and write operations. |
+| @app/server/plugins/auth/verify-auth | Provides the `verifyAuth` middleware for authentication. |
+| @app/services/auth/auth-type | Provides the `AuthMode` enum for authentication modes. |
+| ../sanitizedSchemas | Imports the `integrationAuthPubSchema` for validating and sanitizing integration authorization objects. |
+
+## Error Handling
+The code does not implement specific error handling beyond basic exception raising. Errors are likely handled by a global error handler in the Fastify server.
+
+## Logging
+The code utilizes the `server.services.auditLog` service to create audit logs for specific actions, such as authorizing or unauthorizing integrations.
+
+## API/Interface Reference
+This code defines an API for managing integration authorizations. The following table summarizes the available endpoints:
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /integration-options | GET |  | `{ integrationOptions: IntegrationOption[] }` | Lists available integration options. |
+| /:integrationAuthId | GET |  | `{ integrationAuth: IntegrationAuth }` | Retrieves details of an integration authorization by ID. |
+| / | DELETE | `integration` (query), `projectId` (query) | `{ integrationAuth: IntegrationAuth[] }` | Removes all integration authorizations for a given integration and project. |
+| /:integrationAuthId | DELETE |  | `{ integrationAuth: IntegrationAuth }` | Removes an integration authorization by ID. |
+| /oauth-token | POST | `{ workspaceId, code, integration, url? }` | `{ integrationAuth: IntegrationAuth }` | Exchanges an OAuth code for an access token and creates an integration authorization. |
+| /access-token | POST | `{ workspaceId, integration, accessId?, accessToken?, awsAssumeIamRoleArn?, url?, namespace?, refreshToken? }` | `{ integrationAuth: IntegrationAuth }` | Creates an integration authorization with provided access token or credentials. |
+| /:integrationAuthId/apps | GET | `teamId?` (query), `azureDevOpsOrgName?` (query), `workspaceSlug?` (query) | `{ apps: App[] }` | Retrieves a list of apps associated with an integration authorization. |
+| /:integrationAuthId/teams | GET |  | `{ teams: Team[] }` | Retrieves a list of teams associated with an integration authorization. |
+| /:integrationAuthId/vercel/branches | GET | `appId` (query) | `{ branches: string[] }` | Retrieves a list of Vercel branches for a given app and integration authorization. |
+| /:integrationAuthId/checkly/groups | GET | `accountId` (query) | `{ groups: Group[] }` | Retrieves a list of Checkly groups for a given account and integration authorization. |
+| /:integrationAuthId/github/orgs | GET |  | `{ orgs: Org[] }` | Retrieves a list of GitHub organizations associated with an integration authorization. |
+| /:integrationAuthId/github/envs | GET | `repoOwner` (query), `repoName` (query) | `{ envs: Env[] }` | Retrieves a list of GitHub environments for a given repository and integration authorization. |
+| /:integrationAuthId/qovery/orgs | GET |  | `{ orgs: Org[] }` | Retrieves a list of Qovery organizations associated with an integration authorization. |
+| /:integrationAuthId/aws-secrets-manager/kms-keys | GET | `region` (query) | `{ kmsKeys: KmsKey[] }` | Retrieves a list of AWS KMS keys for a given region and integration authorization. |
+| /:integrationAuthId/qovery/projects | GET | `orgId` (query) | `{ projects: Project[] }` | Retrieves a list of Qovery projects for a given organization and integration authorization. |
+| /:integrationAuthId/qovery/environments | GET | `projectId` (query) | `{ environments: Environment[] }` | Retrieves a list of Qovery environments for a given project and integration authorization. |
+| /:integrationAuthId/qovery/apps | GET | `environmentId` (query) | `{ apps: App[] }` | Retrieves a list of Qovery apps for a given environment and integration authorization. |
+| /:integrationAuthId/qovery/containers | GET | `environmentId` (query) | `{ containers: Container[] }` | Retrieves a list of Qovery containers for a given environment and integration authorization. |
+| /:integrationAuthId/qovery/jobs | GET | `environmentId` (query) | `{ jobs: Job[] }` | Retrieves a list of Qovery jobs for a given environment and integration authorization. |
+| /:integrationAuthId/heroku/pipelines | GET |  | `{ pipelines: Pipeline[] }` | Retrieves a list of Heroku pipelines associated with an integration authorization. |
+| /:integrationAuthId/railway/environments | GET | `appId` (query) | `{ environments: Environment[] }` | Retrieves a list of Railway environments for a given app and integration authorization. |
+| /:integrationAuthId/railway/services | GET | `appId` (query) | `{ services: Service[] }` | Retrieves a list of Railway services for a given app and integration authorization. |
+| /:integrationAuthId/bitbucket/workspaces | GET |  | `{ workspaces: Workspace[] }` | Retrieves a list of Bitbucket workspaces associated with an integration authorization. |
+| /:integrationAuthId/northflank/secret-groups | GET | `appId` (query) | `{ secretGroups: SecretGroup[] }` | Retrieves a list of Northflank secret groups for a given app and integration authorization. |
+| /:integrationAuthId/teamcity/build-configs | GET | `appId` (query) | `{ buildConfigs: BuildConfig[] }` | Retrieves a list of TeamCity build configurations for a given app and integration authorization. |

@@ -1,0 +1,89 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of an Identity Access Token service, which is responsible for managing, validating, and handling operations related to access tokens for identity authentication. The service provides functionality for renewing, revoking, and validating access tokens, with various checks for token expiration, usage limits, and IP address restrictions.
+
+## What does it do?
+The Identity Access Token service performs several key functions:
+
+1. Token Management:
+   - Renews existing access tokens, extending their validity period.
+   - Revokes access tokens, preventing their further use.
+   - Validates access tokens for use, checking various conditions such as expiration, usage limits, and IP restrictions.
+
+2. Database Interactions:
+   - Provides a data access layer (DAL) for interacting with the database to perform CRUD operations on identity access tokens.
+   - Implements custom database queries for finding specific tokens and removing expired ones.
+
+3. Security Checks:
+   - Validates token expiration based on usage and time-to-live (TTL) settings.
+   - Checks IP addresses against trusted IPs for additional security.
+   - Manages token usage counts to enforce usage limits.
+
+4. Error Handling:
+   - Uses custom error types to handle various scenarios such as token expiration, exceeded usage limits, and unauthorized access attempts.
+
+5. Performance Optimization:
+   - Utilizes caching through an access token queue to optimize token status retrieval and updates, potentially reducing database load for frequently accessed tokens.
+
+## Entry points
+The main entry points for this service are:
+
+1. `identity-access-token-service.ts`: This file contains the `identityAccessTokenServiceFactory`, which creates the core service object with methods for renewing, revoking, and validating access tokens.
+
+2. `identity-access-token-dal.ts`: This file defines the `identityAccessTokenDALFactory`, which creates the data access layer for interacting with the database for token-related operations.
+
+The service is designed with a factory pattern, allowing for dependency injection and easier testing. The main workflow typically involves:
+
+1. Creating an instance of the DAL using `identityAccessTokenDALFactory`.
+2. Creating an instance of the service using `identityAccessTokenServiceFactory`, passing in the DAL and other required dependencies.
+3. Using the methods provided by the service (`renewAccessToken`, `revokeAccessToken`, `fnValidateIdentityAccessToken`) to manage and validate access tokens.
+
+## Key Files
+1. `identity-access-token-service.ts`:
+   - Contains the core logic for token management and validation.
+   - Implements methods for renewing, revoking, and validating tokens.
+   - Handles security checks and token expiration logic.
+
+2. `identity-access-token-dal.ts`:
+   - Provides the data access layer for database operations related to identity access tokens.
+   - Implements custom queries for finding and removing tokens.
+
+3. `identity-access-token-types.ts`:
+   - Defines TypeScript types used throughout the service.
+   - Includes types for token renewal DTOs and JWT payloads.
+
+## Dependencies
+The service relies on several external libraries and internal modules:
+
+1. Knex: Used for database query building and execution.
+2. jsonwebtoken (jwt): For decoding and verifying JWT tokens.
+3. @app/db: Provides database-related types and schemas.
+4. @app/lib/errors: Supplies custom error classes for error handling.
+5. @app/lib/knex: Offers utility functions for database operations.
+6. @app/lib/config/env: Used for accessing application configuration.
+7. @app/lib/ip: Provides IP address validation functionality.
+
+## Configuration
+The service uses configuration settings from the application environment, particularly for token-related parameters such as maximum TTL and usage limits. These configurations are accessed through the `@app/lib/config/env` module.
+
+Key configurable aspects include:
+- Token expiration times
+- Usage limits
+- IP address restrictions
+- Database connection settings (through the provided database client)
+
+Example of how configuration is used in the code:
+
+```typescript
+const { MAX_ACCESS_TOKEN_TTL_SECONDS } = getConfig();
+
+// ... later in the code ...
+if (tokenTTL &gt; MAX_ACCESS_TOKEN_TTL_SECONDS) {
+  throw new BadRequestError('Token has exceeded maximum TTL');
+}
+```
+
+This service plays a crucial role in managing and securing access to the application's resources by providing robust token management and validation mechanisms. It ensures that only valid, non-expired tokens are used for authentication and authorization purposes, enhancing the overall security of the system.

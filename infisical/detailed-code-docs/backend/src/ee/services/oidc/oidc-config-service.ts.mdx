@@ -1,0 +1,151 @@
+---
+title: "oidc-config-service.ts"
+---
+
+## High-level description
+This code defines the `oidcConfigServiceFactory`, which creates a service for managing OIDC (OpenID Connect) configurations for organizations. It provides functionality for OIDC login, retrieving and updating OIDC configurations, and creating authentication strategies for organizations.
+
+## Code Structure
+The `oidcConfigServiceFactory` function takes various dependencies as input and returns an object with methods for OIDC-related operations. These methods interact with the database, handle encryption/decryption of sensitive data, and manage OIDC authentication flows.
+
+## Symbols
+
+### `oidcConfigServiceFactory`
+#### Description
+This factory function creates an OIDC configuration service with methods for managing OIDC-related operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dependencies | Object | An object containing various data access layers (DALs) and services required for OIDC operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| oidcConfigService | Object | An object containing methods for OIDC-related operations |
+
+#### Internal Logic
+1. Defines several methods: `getOidc`, `oidcLogin`, `updateOidcCfg`, `createOidcCfg`, and `getOrgAuthStrategy`.
+2. These methods handle various OIDC-related tasks such as retrieving, updating, and creating OIDC configurations, as well as managing OIDC login processes.
+
+### `getOidc`
+#### Description
+Retrieves the OIDC configuration for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dto | TGetOidcCfgDTO | Object containing organization slug and request type |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| oidcConfig | Object | Decrypted OIDC configuration for the organization |
+
+#### Internal Logic
+1. Finds the organization by slug.
+2. Checks permissions if the request type is external.
+3. Retrieves the OIDC configuration from the database.
+4. Decrypts sensitive information using the organization's bot key.
+
+### `oidcLogin`
+#### Description
+Handles the OIDC login process for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| loginDTO | TOidcLoginDTO | Object containing user information from OIDC provider |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| loginResult | Object | Contains isUserCompleted flag and providerAuthToken |
+
+#### Internal Logic
+1. Checks if OIDC login is enabled.
+2. Finds or creates a user based on the OIDC information.
+3. Creates or updates organization membership for the user.
+4. Generates a provider authentication token.
+5. Sends email verification if necessary.
+
+### `updateOidcCfg`
+#### Description
+Updates the OIDC configuration for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updateDTO | TUpdateOidcCfgDTO | Object containing updated OIDC configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updatedConfig | Object | Updated OIDC configuration |
+
+#### Internal Logic
+1. Checks organization existence and permissions.
+2. Verifies license plan allows OIDC SSO.
+3. Encrypts sensitive information (client ID and secret).
+4. Updates the OIDC configuration in the database.
+
+### `createOidcCfg`
+#### Description
+Creates a new OIDC configuration for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| createDTO | TCreateOidcCfgDTO | Object containing new OIDC configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| newConfig | Object | Newly created OIDC configuration |
+
+#### Internal Logic
+1. Checks organization existence and permissions.
+2. Verifies license plan allows OIDC SSO.
+3. Creates or retrieves organization bot for encryption.
+4. Encrypts sensitive information (client ID and secret).
+5. Creates the OIDC configuration in the database.
+
+### `getOrgAuthStrategy`
+#### Description
+Retrieves the OIDC authentication strategy for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgSlug | string | Organization slug |
+| callbackPort | string | Optional callback port |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| strategy | OpenIdStrategy | OIDC authentication strategy for the organization |
+
+#### Internal Logic
+1. Retrieves the OIDC configuration for the organization.
+2. Creates an OpenID Issuer based on the configuration.
+3. Sets up the OIDC client with the retrieved configuration.
+4. Creates and returns an OpenIdStrategy for authentication.
+
+## Dependencies
+The code relies on various external libraries and internal modules, including:
+- @casl/ability
+- jsonwebtoken
+- openid-client
+- Various internal services and data access layers
+
+## Error Handling
+The code uses custom error classes (e.g., `BadRequestError`, `ForbiddenError`) to handle and throw specific errors related to OIDC operations, such as missing configurations or permission issues.
+
+## Logging
+No explicit logging mechanisms are implemented in this code.
+
+## Security Considerations
+1. The code uses encryption for sensitive data like client IDs and secrets.
+2. It implements permission checks for certain operations.
+3. It verifies license plans before allowing certain OIDC operations.
+4. The code uses secure random bytes for generating encryption keys.

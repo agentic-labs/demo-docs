@@ -1,0 +1,159 @@
+---
+title: "docker-compose.dev.yml"
+---
+
+## High-level description
+This Docker Compose file defines a development environment for the Infisical application. It sets up multiple services including a web server, databases, caching, backend, frontend, and various supporting tools for development and testing purposes.
+
+## Code Structure
+The file defines multiple services that work together to create a complete development environment. Services are interconnected through network links, volume mounts, and environment variables.
+
+## Symbols
+
+### `version`
+#### Description
+Specifies the version of the Docker Compose file format being used.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| version | string | The version number of the Docker Compose file format |
+
+### `services`
+#### Description
+Defines the various services that make up the application stack.
+
+#### Internal Logic
+Each service is defined with its own configuration, including image, build instructions, environment variables, ports, volumes, and dependencies.
+
+### `nginx`
+#### Description
+Sets up an Nginx web server as a reverse proxy for the application.
+
+#### Internal Logic
+- Uses the official Nginx image
+- Maps ports 8080 and 8443 to 80 and 443 respectively
+- Mounts a custom configuration file
+- Depends on the backend and frontend services
+
+### `db`
+#### Description
+Configures a PostgreSQL database for the main application.
+
+#### Internal Logic
+- Uses PostgreSQL 14 Alpine image
+- Exposes port 5432
+- Sets up a named volume for data persistence
+- Configures database credentials through environment variables
+
+### `redis`
+#### Description
+Sets up a Redis instance for caching.
+
+#### Internal Logic
+- Uses the official Redis image
+- Allows empty password for development
+- Exposes port 6379
+- Uses a named volume for data persistence
+
+### `redis-commander`
+#### Description
+Provides a web interface for Redis management.
+
+#### Internal Logic
+- Depends on the Redis service
+- Exposes port 8085 for web access
+
+### `db-test`
+#### Description
+Configures a separate PostgreSQL instance for testing.
+
+#### Internal Logic
+- Uses the same PostgreSQL image as the main database
+- Exposes port 5430
+- Sets up test database credentials
+
+### `db-migration`
+#### Description
+Handles database migrations for the main database.
+
+#### Internal Logic
+- Builds from a custom Dockerfile
+- Depends on the main database service
+- Runs migration command on startup
+
+### `backend`
+#### Description
+Sets up the backend service for the application.
+
+#### Internal Logic
+- Builds from a custom Dockerfile
+- Depends on database, Redis, and migration services
+- Mounts source code for live development
+- Configures environment variables including database connection
+
+### `frontend`
+#### Description
+Configures the frontend service for the application.
+
+#### Internal Logic
+- Builds from a custom Dockerfile
+- Depends on the backend service
+- Mounts source code and public assets for live development
+- Sets environment variables for development mode
+
+### `pgadmin`
+#### Description
+Provides a web-based PostgreSQL admin interface.
+
+#### Internal Logic
+- Uses the official pgAdmin image
+- Sets up admin credentials
+- Exposes port 5050 for web access
+
+### `smtp-server`
+#### Description
+Sets up a development SMTP server using MailHog.
+
+#### Internal Logic
+- Uses a custom MailHog image
+- Exposes ports for SMTP (1025) and web UI (8025)
+
+### `openldap` and `phpldapadmin`
+#### Description
+Configures OpenLDAP server and phpLDAPadmin for LDAP testing and management.
+
+#### Internal Logic
+- Sets up OpenLDAP with basic configuration
+- Provides phpLDAPadmin for web-based LDAP management
+- Uses Docker profiles to allow optional inclusion
+
+### `volumes`
+#### Description
+Defines named volumes for persistent data storage.
+
+#### Internal Logic
+Specifies volumes for PostgreSQL data, Redis data, and LDAP data and configuration.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| nginx | Web server and reverse proxy |
+| postgres | Main and test databases |
+| redis | Caching service |
+| rediscommander/redis-commander | Redis management UI |
+| dpage/pgadmin4 | PostgreSQL management UI |
+| lytrax/mailhog | SMTP testing server |
+| osixia/openldap | LDAP server |
+| osixia/phpldapadmin | LDAP management UI |
+
+## Configuration
+Environment variables and build contexts are defined for various services to configure the development environment.
+
+## Error Handling
+No specific error handling mechanisms are defined in this file. Error handling would be managed by individual services and the Docker runtime.
+
+## Logging
+Logging configuration is minimal, with only the SMTP server having explicit logging settings (disabled).
+
+This Docker Compose file sets up a comprehensive development environment for the Infisical application, including all necessary services and tools for development and testing.

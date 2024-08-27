@@ -1,0 +1,77 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/context/ServerConfigContext` directory contains the implementation of a React context and provider for managing server configuration in a Next.js application. It provides a centralized way to fetch, store, and access server configuration data throughout the application.
+
+## What does it do?
+This module performs several key functions:
+
+1. Fetches server configuration data when the application loads.
+2. Manages the loading state while fetching the configuration.
+3. Handles special cases such as maintenance mode or when the server is not initialized.
+4. Provides the server configuration data to all child components in the application.
+5. Offers a custom hook for easy access to the server configuration from any component.
+
+In simpler terms, it's like a central information desk for the application. When the app starts, it goes to the server to get important setup information. While it's getting this information, it shows a "please wait" message. If the server is under maintenance or not set up yet, it takes care of that too. Once it has all the information, it makes it available to all parts of the app that need it, without having to pass it down through every component manually.
+
+## Key Files
+
+### ServerConfigContext.tsx
+This is the main file that implements the server configuration context and provider. It contains:
+
+1. `ServerConfigContext`: A React context for holding the server configuration data.
+2. `ServerConfigProvider`: A component that fetches the server configuration and provides it to its children. It handles loading states, maintenance mode, and redirects to signup if necessary.
+3. `useServerConfig`: A custom hook that allows components to easily access the server configuration.
+
+Here's a simplified example of how the `ServerConfigProvider` works:
+
+```tsx
+const ServerConfigProvider: React.FC&lt;{ children: ReactNode }&gt; = ({ children }) =&gt; {
+  const { data, isLoading } = useGetServerConfig();
+
+  if (isLoading) {
+    return &lt;ContentLoader /&gt;;
+  }
+
+  if (data?.isMigrationModeOn) {
+    return &lt;MaintenanceModePage /&gt;;
+  }
+
+  // ... other checks and logic ...
+
+  return (
+    &lt;ServerConfigContext.Provider value={memoizedValue}&gt;
+      {children}
+    &lt;/ServerConfigContext.Provider&gt;
+  );
+};
+```
+
+### index.tsx
+This file serves as the entry point for the module. It re-exports the `ServerConfigProvider` and `useServerConfig` from `ServerConfigContext.tsx`, making them easily accessible to other parts of the application:
+
+```tsx
+export { ServerConfigProvider, useServerConfig } from './ServerConfigContext';
+```
+
+## Dependencies
+The module relies on several external libraries and internal components:
+
+1. React: For creating the context, provider, and custom hook.
+2. Next.js: For routing (`next/router`) and head management (`next/head`).
+3. Custom components: 
+   - `@app/components/v2/ContentLoader`: For displaying loading states.
+   - `@app/hooks/api`: For fetching server configuration data.
+   - `@app/hooks/api/admin/types`: For type definitions related to server configuration.
+
+## Configuration
+The server configuration itself is fetched from the server, likely through an API call. The exact structure of this configuration is not detailed in the provided code, but it includes at least the following fields:
+
+- `isMigrationModeOn`: Indicates if the server is in maintenance mode.
+- Other fields that determine if the server is initialized and if signup is required.
+
+The configuration is fetched using a custom hook `useGetServerConfig`, which is likely defined in the `@app/hooks/api` module.
+
+In summary, this module provides a robust and centralized way to manage server configuration in a Next.js application. It handles various states and scenarios, ensuring that the application has the necessary configuration before rendering its main content, and provides an easy way for components to access this configuration when needed.

@@ -1,0 +1,91 @@
+---
+title: "project-role-service.ts"
+---
+
+## High-level description
+The `project-role-service.ts` file defines a factory function `projectRoleServiceFactory` that creates a service for managing project roles. This service provides methods for creating, retrieving, updating, deleting, and listing project roles, as well as retrieving user permissions within a project.
+
+## Code Structure
+The `projectRoleServiceFactory` function takes a dependency object as input and returns an object containing various project role management functions. These functions internally utilize the provided dependencies like `projectRoleDAL`, `permissionService`, etc. to interact with the database and enforce permissions.
+
+## References
+- `@casl/ability`: Used for managing and enforcing authorization rules.
+- `@app/db/schemas`: Defines the database schemas for project roles and permissions.
+- `@app/ee/services/permission/permission-service`: Provides functions for retrieving and managing project permissions.
+- `@app/lib/errors`: Defines custom error classes used for error handling.
+- `@app/services/auth/auth-type`: Defines authentication types and methods.
+- Various other service factories for interacting with different entities like projects, users, and identities.
+
+## Symbols
+
+### `projectRoleServiceFactory`
+#### Description
+This factory function creates and returns a service object for managing project roles. It takes a dependency object as input and returns an object containing functions for various project role operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectRoleDAL | `TProjectRoleDALFactory` | Data access layer for interacting with project roles in the database. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findProjectBySlug"&gt;` | Data access layer for interacting with projects, specifically the `findProjectBySlug` function. |
+| permissionService | `Pick&lt;TPermissionServiceFactory, "getProjectPermission" | "getUserProjectPermission"&gt;` | Service for managing and retrieving project permissions. |
+| identityProjectMembershipRoleDAL | `TIdentityProjectMembershipRoleDALFactory` | Data access layer for managing identity-project membership roles. |
+| projectUserMembershipRoleDAL | `TProjectUserMembershipRoleDALFactory` | Data access layer for managing project-user membership roles. |
+
+#### Outputs
+An object containing the following functions:
+- `createRole`: Creates a new project role.
+- `getRoleBySlug`: Retrieves a project role by its slug.
+- `updateRole`: Updates an existing project role.
+- `deleteRole`: Deletes a project role.
+- `listRoles`: Lists all project roles for a given project.
+- `getUserPermission`: Retrieves the permissions of a user within a project.
+
+#### Internal Logic
+The factory function initializes and returns an object containing the following functions:
+
+- **`createRole`**:
+    - Retrieves the project based on the provided slug.
+    - Checks if the actor has permission to create roles.
+    - Ensures that a role with the same slug doesn't already exist.
+    - Creates the new role in the database.
+- **`getRoleBySlug`**:
+    - Retrieves the project based on the provided slug.
+    - Checks if the actor has permission to read roles.
+    - If the role slug is predefined, it retrieves the predefined role.
+    - Otherwise, it retrieves the custom role from the database.
+- **`updateRole`**:
+    - Retrieves the project based on the provided slug.
+    - Checks if the actor has permission to edit roles.
+    - Ensures that a role with the same slug doesn't already exist if the slug is being updated.
+    - Updates the role in the database.
+- **`deleteRole`**:
+    - Retrieves the project based on the provided slug.
+    - Checks if the actor has permission to delete roles.
+    - Ensures that the role is not assigned to any identities or users.
+    - Deletes the role from the database.
+- **`listRoles`**:
+    - Retrieves the project based on the provided slug.
+    - Checks if the actor has permission to read roles.
+    - Retrieves all custom roles for the project.
+    - Combines predefined and custom roles and returns the list.
+- **`getUserPermission`**:
+    - Retrieves the user's project permission and membership using the `permissionService`.
+    - Returns the packed permissions and membership information.
+
+## Dependencies
+- `@casl/ability`: For managing and enforcing authorization rules.
+- `@app/db/schemas`: For database schema definitions.
+- `@app/ee/services/identity-project-additional-privilege/identity-project-additional-privilege-service`: For managing identity-project additional privileges.
+- `@app/ee/services/permission/permission-service`: For managing and retrieving project permissions.
+- `@app/lib/errors`: For custom error classes.
+- `@app/services/auth/auth-type`: For authentication types and methods.
+- Various other service factories for interacting with different entities.
+
+## Error Handling
+The service functions utilize custom error classes defined in `@app/lib/errors` to handle various error scenarios, such as:
+- `BadRequestError`: Thrown for invalid requests, like duplicate roles or missing data.
+- `UnauthorizedError`: Thrown when the actor lacks permission to perform an action.
+- `ForbiddenError`: Thrown by the `@casl/ability` library when an action is forbidden based on the defined permissions.
+
+## API/Interface Reference
+This file does not expose a public API. It defines a factory function that creates a service object used internally for managing project roles.

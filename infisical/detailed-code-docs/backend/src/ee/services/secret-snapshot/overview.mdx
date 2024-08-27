@@ -1,0 +1,64 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a secret snapshot service for managing snapshots of secrets and folders within a project environment. It includes data access layers (DALs) for interacting with the database, service functions for performing snapshot operations, and type definitions for the various data transfer objects (DTOs) used in the service.
+
+## What does it do?
+The secret snapshot service allows users to create, list, retrieve, and roll back snapshots of secrets and folders within a project environment. Here's a simplified explanation of its functionality:
+
+1. Users can create snapshots of their secrets and folders, which are like save points of their current state.
+2. They can view a list of these snapshots, seeing when they were created and what they contain.
+3. Users can look at the details of a specific snapshot, including the values of secrets at that point in time.
+4. If needed, users can roll back to a previous snapshot, restoring their secrets and folders to a past state.
+5. The service also manages the number of snapshots kept, automatically removing older ones to prevent clutter.
+
+This functionality allows for version control and easy recovery of secret data, which is crucial for maintaining secure and manageable configurations in software projects.
+
+## Entry points
+The main entry point for this service is the `secret-snapshot-service.ts` file. This file defines the `secretSnapshotServiceFactory` function, which creates and returns an object with methods for managing secret snapshots. These methods include:
+
+- `projectSecretSnapshotCount`: Counts snapshots for a given project, environment, and path.
+- `listSnapshots`: Lists snapshots with pagination.
+- `getSnapshotData`: Retrieves detailed data for a specific snapshot.
+- `performSnapshot`: Creates a new snapshot.
+- `rollbackSnapshot`: Rolls back to a specific snapshot.
+
+The service interacts with various DALs (defined in `snapshot-dal.ts`, `snapshot-folder-dal.ts`, `snapshot-secret-dal.ts`, and `snapshot-secret-v2-dal.ts`) to perform database operations. The `snapshot-service-fns.ts` file contains utility functions used by the service, such as `getFullFolderPath` for constructing folder paths.
+
+The data flow typically starts from the service methods, which call the appropriate DAL functions to interact with the database. The service methods also handle permissions, error checking, and data transformation before returning results to the caller.
+
+## Key Files
+1. `secret-snapshot-service.ts`: The main service file that implements the core functionality for managing snapshots.
+2. `snapshot-dal.ts`: Data Access Layer for general snapshot operations.
+3. `snapshot-folder-dal.ts`: DAL for snapshot folder operations.
+4. `snapshot-secret-dal.ts` and `snapshot-secret-v2-dal.ts`: DALs for snapshot secret operations (v1 and v2).
+5. `secret-snapshot-types.ts`: Type definitions for DTOs used in the service.
+6. `snapshot-service-fns.ts`: Utility functions used by the snapshot service.
+
+## Dependencies
+The secret snapshot service relies on several external libraries and internal modules:
+
+1. `@casl/ability`: Used for handling permissions and abilities.
+2. `knex`: SQL query builder for database operations.
+3. `zod`: Runtime type checking and validation.
+4. `@app/lib/crypto`: For decryption operations.
+5. `@app/lib/errors`: Custom error types.
+6. `@app/lib/fn`: Utility functions.
+7. `@app/lib/logger`: Logging functionality.
+8. `@app/db`: Database schemas and types.
+9. `@app/lib/knex`: Utility functions for Knex queries.
+
+These dependencies are chosen to provide robust database interactions, type safety, permission handling, and error management within the service.
+
+## Configuration
+The secret snapshot service does not appear to use explicit configuration files or environment variables. However, it does rely on the configuration of the database client and other services it interacts with, such as the crypto service for decryption operations.
+
+Key configurable aspects of the service include:
+
+1. Database connection: Provided through the `db` client passed to the DAL factories.
+2. Permissions: Handled through the CASL ability system, which likely has its own configuration elsewhere in the application.
+3. Snapshot retention: The `pruneExcessSnapshots` function in `snapshot-dal.ts` suggests that there's a configurable limit to the number of snapshots retained, but the actual configuration is not visible in these files.
+
+In summary, this directory implements a comprehensive secret snapshot service that allows for version control and management of secrets and folders within a project environment. It provides a well-structured API for creating, listing, retrieving, and rolling back snapshots, with careful attention to permissions, error handling, and database interactions.

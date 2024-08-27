@@ -1,0 +1,69 @@
+---
+title: "20231204092737_organization.ts"
+---
+
+## High-level description
+This code defines database migration scripts for managing the `Organization` table in a PostgreSQL database using Knex.js. It handles both upgrading (creating or modifying the table) and downgrading (reverting the changes) the database schema related to organizations and their association with authentication tokens.
+
+## References
+- `TableName`: An enum or object defining table names used in the schema.
+- `createOnUpdateTrigger`: A utility function to create a trigger for updating timestamps on the `Organization` table.
+- `dropOnUpdateTrigger`: A utility function to drop the update trigger on the `Organization` table.
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function defines the steps to upgrade the database schema to include the `Organization` table and its associated relationships. It checks if the table exists before creating it to avoid errors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `Organization` table already exists.
+2. If not, creates the `Organization` table with columns for:
+    - `id`: UUID primary key, automatically generated.
+    - `name`: Required string for the organization's name.
+    - `customerId`: Optional string for a customer ID.
+    - `slug`: Required and unique string for the organization's slug.
+    - `created_at`, `updated_at`, `deleted_at`: Timestamps for tracking creation, updates, and soft deletion.
+3. Alters the `AuthTokens` table to add a foreign key relationship to the `Organization` table:
+    - Adds an `orgId` column referencing the `id` column in the `Organization` table.
+    - Sets up cascading delete behavior, so deleting an organization also deletes related auth tokens.
+4. Calls `createOnUpdateTrigger` to set up automatic timestamp updates on the `Organization` table.
+
+### `down`
+#### Description
+This asynchronous function defines the steps to downgrade the database schema by reverting the changes made in the `up` function. It removes the `Organization` table and its associated relationships.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `AuthTokens` table has the `orgId` column.
+2. If it does, removes the `orgId` column from the `AuthTokens` table.
+3. Drops the `Organization` table if it exists.
+4. Calls `dropOnUpdateTrigger` to remove the update trigger on the `Organization` table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex       | Provides a connection to the PostgreSQL database and methods for schema manipulation. |
+
+## Side Effects
+- Modifies the database schema by creating, altering, or dropping tables and triggers.
+- Establishes a foreign key relationship between the `AuthTokens` and `Organization` tables.

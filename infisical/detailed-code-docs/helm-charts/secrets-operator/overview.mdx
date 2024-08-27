@@ -1,0 +1,82 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the Helm chart for the Infisical Secrets Operator, which is designed to manage secrets in a Kubernetes environment by integrating with the Infisical secrets management system. The chart includes templates for deploying the operator, setting up necessary RBAC rules, defining custom resources, and configuring metrics exposure.
+
+## What does it do?
+The Infisical Secrets Operator Helm chart facilitates the deployment and configuration of a system that:
+
+1. Deploys a controller manager to handle secret synchronization between Infisical and Kubernetes.
+2. Defines a CustomResourceDefinition (CRD) for InfisicalSecret, allowing users to declaratively manage Infisical secrets in Kubernetes.
+3. Sets up RBAC rules for the operator to function within the cluster, including permissions for leader election and metrics reading.
+4. Exposes metrics for monitoring the operator's performance.
+5. Provides a mechanism for users to sync secrets from Infisical to Kubernetes, creating managed Kubernetes secrets.
+6. Offers options for consuming the managed secrets in Kubernetes deployments, including environment variables and volumes.
+7. Supports auto-reloading of deployments when secrets change.
+
+## Entry points
+The main entry points for this Helm chart are:
+
+1. `Chart.yaml`: Defines the chart metadata, including its name, version, and the version of the application it deploys.
+2. `values.yaml`: Contains the default configuration values for the chart, allowing users to customize the deployment.
+3. `templates/deployment.yaml`: The primary template for deploying the secrets-operator controller manager.
+
+The chart is structured to allow easy customization and deployment using Helm commands, with options for inline value overrides or using a custom values file.
+
+## Key Files
+1. `README.md`: Provides installation instructions, usage examples, and an overview of the chart's functionality.
+2. `templates/infisicalsecret-crd.yaml`: Defines the CustomResourceDefinition for InfisicalSecret.
+3. `templates/manager-rbac.yaml`: Sets up cluster-wide RBAC rules for the secrets-operator.
+4. `templates/metrics-service.yaml`: Exposes the metrics endpoint as a Kubernetes Service.
+5. `templates/serviceaccount.yaml`: Creates a ServiceAccount for the secrets-operator.
+
+## Dependencies
+The chart relies on the following key dependencies:
+
+1. Kubernetes: The target platform for deployment.
+2. Helm: Used as the package manager and templating engine.
+3. Infisical: The external secrets management system integrated with this operator.
+4. kube-rbac-proxy: Used for handling RBAC proxying (version specified in values.yaml).
+
+## Configuration
+The chart offers extensive configuration options through the `values.yaml` file, including:
+
+1. Controller manager settings (replicas, image, resources)
+2. RBAC proxy configuration
+3. Metrics service setup
+4. Node selectors and tolerations
+5. Kubernetes cluster domain
+
+Key configuration options include:
+
+```yaml
+controllerManager:
+  replicas: 1
+  image:
+    repository: infisical/kubernetes-operator
+    tag: v0.7.1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+
+metricsService:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+
+kubernetesClusterDomain: cluster.local
+```
+
+Users can customize these values during installation or upgrade using Helm's `--set` flag or by providing a custom values file.
+
+The chart also supports creating and managing InfisicalSecret resources, which require additional configuration such as specifying the Infisical token and defining the managed Kubernetes secret. These configurations are applied post-installation through Kubernetes manifests, as demonstrated in the README.md file.
+
+This Helm chart provides a comprehensive and flexible solution for integrating Infisical's secret management capabilities into a Kubernetes environment, with options for customization, monitoring, and automatic secret synchronization.

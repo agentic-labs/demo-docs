@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This script is designed to re-encrypt sensitive data (bot private keys and secret blind index data salts) using a new 256-bit encryption key. It migrates the encryption from a 16-byte hex key to a 32-byte base64 key, enhancing security by using a stronger encryption method.
+
+## Code Structure
+The code is structured as a Node.js script that uses MongoDB for data storage and retrieval. It defines utility functions for encryption, decryption, and key validation, then applies these functions to re-encrypt data stored in two MongoDB collections: Bot and SecretBlindIndexData.
+
+## Symbols
+
+### `decryptSymmetric`
+#### Description
+Decrypts data that was encrypted using AES-256-GCM symmetric encryption.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The encrypted data in base64 encoding |
+| iv | string | Initialization vector in base64 encoding |
+| tag | string | Authentication tag in base64 encoding |
+| key | string | Encryption key |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cleartext | string | The decrypted data in UTF-8 encoding |
+
+#### Internal Logic
+1. Creates a decipher using AES-256-GCM algorithm, the provided key, and IV.
+2. Sets the authentication tag.
+3. Updates the decipher with the ciphertext and finalizes it.
+4. Returns the decrypted cleartext.
+
+### `encryptSymmetric`
+#### Description
+Encrypts data using AES-256-GCM symmetric encryption.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plaintext | string | The data to be encrypted |
+| key | string | Encryption key in base64 encoding |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The encrypted data in base64 encoding |
+| iv | string | Initialization vector in base64 encoding |
+| tag | string | Authentication tag in base64 encoding |
+
+#### Internal Logic
+1. Generates a random 12-byte IV.
+2. Creates a cipher using AES-256-GCM algorithm, the provided key, and IV.
+3. Encrypts the plaintext and finalizes the cipher.
+4. Returns an object containing the ciphertext, IV, and authentication tag.
+
+### `validateEncryptionKey`
+#### Description
+Validates that an encryption key is correctly encoded and has the expected length.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encryptionKey | string | The encryption key to validate |
+| encoding | string | The expected encoding (e.g., 'hex' or 'base64') |
+| bytes | number | The expected length in bytes |
+
+#### Internal Logic
+1. Decodes the key using the specified encoding.
+2. Checks if the decoded key matches the original key.
+3. Verifies that the key has the expected length in bytes.
+4. Throws an error if either check fails.
+
+### `main`
+#### Description
+The main function that orchestrates the re-encryption process for bot private keys and secret blind index data salts.
+
+#### Internal Logic
+1. Validates both the old and new encryption keys.
+2. Connects to the MongoDB database.
+3. Retrieves all bots and secret blind index data that need to be re-encrypted.
+4. For each bot and secret blind index datum:
+   a. Decrypts the sensitive data using the old key.
+   b. Re-encrypts the data using the new key.
+   c. Prepares an update operation with the new encrypted data.
+5. Performs bulk write operations to update the re-encrypted data in the database.
+6. Logs the results of the bulk write operations.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| dotenv | Load environment variables from a .env file |
+| crypto | Provide cryptographic functionality |
+| mongoose | MongoDB object modeling tool |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| ENCRYPTION_KEY | string | N/A | 16-byte hex encryption key to migrate from |
+| ROOT_ENCRYPTION_KEY | string | N/A | 32-byte base64 encryption key to migrate to |
+| MONGO_URI | string | N/A | MongoDB connection string |
+
+## Error Handling
+The script includes basic error handling, primarily through throwing errors in the `validateEncryptionKey` function. It does not implement comprehensive error handling or recovery mechanisms.
+
+## Performance Considerations
+The script uses `bulkWrite` operations for updating multiple documents in MongoDB, which is more efficient than individual updates. However, for large datasets, the script may need to be optimized to process data in batches to avoid memory issues.

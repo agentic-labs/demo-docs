@@ -1,0 +1,262 @@
+---
+title: "identity-token-auth-service.ts"
+---
+
+## High-level description
+This code defines the `identityTokenAuthServiceFactory`, which is responsible for managing authentication and authorization for identities using token-based authentication. It provides methods for attaching, updating, retrieving, and revoking token authentication settings for identities, as well as managing individual access tokens.
+
+## Code Structure
+The `identityTokenAuthServiceFactory` depends on several other factories to interact with the database and other services. It uses these dependencies to implement its core functionality, such as creating and revoking tokens, managing token permissions, and enforcing access control.
+
+## References
+- `@app/db/schemas`: Defines database schemas and types.
+- `@app/ee/services/license/license-service`: Provides access to license information.
+- `@app/ee/services/permission/permission-service`: Provides permission management functionality.
+- `@app/lib/casl`: Used for authorization and permission checking.
+- `@app/lib/config/env`: Provides access to application configuration.
+- `@app/lib/errors`: Defines custom error types.
+- `@app/lib/ip`: Provides IP address validation and extraction utilities.
+- `../auth/auth-type`: Defines authentication types.
+- `../identity/identity-dal`: Provides data access for identities.
+- `../identity/identity-org-dal`: Provides data access for identity organization memberships.
+- `../identity-access-token/identity-access-token-dal`: Provides data access for identity access tokens.
+- `../identity-access-token/identity-access-token-types`: Defines types related to identity access tokens.
+- `./identity-token-auth-dal`: Provides data access for identity token authentication settings.
+- `./identity-token-auth-types`: Defines types related to identity token authentication.
+
+## Symbols
+
+### `identityTokenAuthServiceFactory`
+#### Description
+This factory function creates and returns an instance of the `identityTokenAuthService` object, which provides methods for managing token-based authentication for identities.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityTokenAuthDAL | Pick&lt;TIdentityTokenAuthDALFactory, "transaction" \| "create" \| "findOne" \| "updateById" \| "delete"&gt; | Data access object for identity token authentication settings. |
+| identityDAL | Pick&lt;TIdentityDALFactory, "updateById"&gt; | Data access object for identities. |
+| identityOrgMembershipDAL | Pick&lt;TIdentityOrgDALFactory, "findOne"&gt; | Data access object for identity organization memberships. |
+| identityAccessTokenDAL | Pick&lt;TIdentityAccessTokenDALFactory, "create" \| "find" \| "update" \| "findById" \| "findOne" \| "updateById"&gt; | Data access object for identity access tokens. |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Service for managing permissions. |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for retrieving license information. |
+
+#### Outputs
+Returns an object of type `{ attachTokenAuth: (...args: any[]) =&gt; any, updateTokenAuth: (...args: any[]) =&gt; any, getTokenAuth: (...args: any[]) =&gt; any, revokeIdentityTokenAuth: (...args: any[]) =&gt; any, createTokenAuthToken: (...args: any[]) =&gt; any, getTokenAuthTokens: (...args: any[]) =&gt; any, updateTokenAuthToken: (...args: any[]) =&gt; any, revokeTokenAuthToken: (...args: any[]) =&gt; any }` containing the following methods:
+
+- `attachTokenAuth`: Attaches token authentication settings to an identity.
+- `updateTokenAuth`: Updates token authentication settings for an identity.
+- `getTokenAuth`: Retrieves token authentication settings for an identity.
+- `revokeIdentityTokenAuth`: Revokes token authentication for an identity.
+- `createTokenAuthToken`: Creates a new access token for an identity.
+- `getTokenAuthTokens`: Retrieves a list of access tokens for an identity.
+- `updateTokenAuthToken`: Updates an existing access token for an identity.
+- `revokeTokenAuthToken`: Revokes an access token for an identity.
+
+#### Internal Logic
+The factory function initializes each method with the necessary dependencies and logic to perform its specific task. For example, the `createTokenAuthToken` method uses the `jwt` library to generate a JWT token, while the `revokeTokenAuthToken` method updates the `isAccessTokenRevoked` flag in the database.
+
+## Dependencies
+- `@casl/ability`: For authorization and permission checking.
+- `jsonwebtoken`: For generating and verifying JWT tokens.
+
+### `attachTokenAuth`
+#### Description
+Attaches token authentication settings to an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| accessTokenTTL | number | The time-to-live for access tokens. |
+| accessTokenMaxTTL | number | The maximum time-to-live for access tokens. |
+| accessTokenNumUsesLimit | number | The maximum number of times an access token can be used. |
+| accessTokenTrustedIps | { ipAddress: string }[] | A list of trusted IP addresses for the access token. |
+| actorId | string | The ID of the actor performing the action. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actor | any | The actor object. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with the created identity token authentication settings object.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity already has an authentication method configured.
+3. Validates that the access token TTL is not greater than the maximum TTL.
+4. Checks if the actor has permission to create identity token authentication settings.
+5. Retrieves the license plan for the organization.
+6. Validates and formats the list of trusted IP addresses.
+7. Creates the identity token authentication settings in the database.
+8. Updates the identity's authentication method to `TOKEN_AUTH`.
+
+### `updateTokenAuth`
+#### Description
+Updates token authentication settings for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| accessTokenTTL | number | The time-to-live for access tokens. |
+| accessTokenMaxTTL | number | The maximum time-to-live for access tokens. |
+| accessTokenNumUsesLimit | number | The maximum number of times an access token can be used. |
+| accessTokenTrustedIps | { ipAddress: string }[] | A list of trusted IP addresses for the access token. |
+| actorId | string | The ID of the actor performing the action. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actor | any | The actor object. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with the updated identity token authentication settings object.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity has token authentication configured.
+3. Validates that the access token TTL is not greater than the maximum TTL.
+4. Checks if the actor has permission to edit identity token authentication settings.
+5. Retrieves the license plan for the organization.
+6. Validates and formats the list of trusted IP addresses.
+7. Updates the identity token authentication settings in the database.
+
+### `getTokenAuth`
+#### Description
+Retrieves token authentication settings for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with the identity token authentication settings object.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity has token authentication configured.
+3. Checks if the actor has permission to read identity token authentication settings.
+4. Retrieves the identity token authentication settings from the database.
+
+### `revokeIdentityTokenAuth`
+#### Description
+Revokes token authentication for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with the revoked identity token authentication settings object.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity has token authentication configured.
+3. Checks if the actor has permission to edit identity token authentication settings.
+4. Checks if the actor has sufficient privileges to revoke token authentication for the identity.
+5. Deletes the identity token authentication settings from the database.
+6. Updates the identity's authentication method to `null`.
+
+### `createTokenAuthToken`
+#### Description
+Creates a new access token for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+| name | string | The name of the access token. |
+
+#### Outputs
+Returns a Promise that resolves with an object containing the access token, identity token authentication settings, identity access token object, and identity organization membership.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity has token authentication configured.
+3. Checks if the actor has permission to edit identity token authentication settings.
+4. Checks if the actor has sufficient privileges to create an access token for the identity.
+5. Retrieves the identity token authentication settings from the database.
+6. Creates a new identity access token in the database.
+7. Generates a JWT access token using the `jsonwebtoken` library.
+
+### `getTokenAuthTokens`
+#### Description
+Retrieves a list of access tokens for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity. |
+| offset | number | The offset for pagination. |
+| limit | number | The maximum number of tokens to retrieve. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with an object containing the list of access tokens and the identity organization membership.
+
+#### Internal Logic
+1. Retrieves the identity organization membership.
+2. Checks if the identity has token authentication configured.
+3. Checks if the actor has permission to read identity token authentication settings.
+4. Retrieves the list of access tokens from the database.
+
+### `updateTokenAuthToken`
+#### Description
+Updates an existing access token for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tokenId | string | The ID of the access token. |
+| name | string | The new name of the access token. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with an object containing the updated access token and the identity organization membership.
+
+#### Internal Logic
+1. Retrieves the access token from the database.
+2. Retrieves the identity organization membership.
+3. Checks if the identity has token authentication configured.
+4. Checks if the actor has permission to edit identity token authentication settings.
+5. Checks if the actor has sufficient privileges to update the access token.
+6. Updates the access token in the database.
+
+### `revokeTokenAuthToken`
+#### Description
+Revokes an access token for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tokenId | string | The ID of the access token. |
+| actorId | string | The ID of the actor performing the action. |
+| actor | any | The actor object. |
+| actorAuthMethod | string | The authentication method of the actor. |
+| actorOrgId | string | The ID of the organization the actor belongs to. |
+
+#### Outputs
+Returns a Promise that resolves with an object containing the revoked access token.
+
+#### Internal Logic
+1. Retrieves the access token from the database.
+2. Retrieves the identity organization membership.
+3. Checks if the actor has permission to edit identity token authentication settings.
+4. Updates the `isAccessTokenRevoked` flag for the access token in the database.

@@ -1,0 +1,116 @@
+---
+title: "access-approval-request-router.ts"
+---
+
+## High-level description
+This code defines a FastifyZodProvider router for handling access approval requests in a backend application. It includes routes for creating, listing, counting, and reviewing access approval requests, with authentication and schema validation.
+
+## Code Structure
+The main function `registerAccessApprovalRequestRouter` sets up four routes: POST for creating a request, GET for listing requests, GET for counting requests, and POST for reviewing a request. Each route uses Zod for input validation and output schema definition.
+
+## Symbols
+
+### `registerAccessApprovalRequestRouter`
+#### Description
+This async function registers routes for access approval requests on a FastifyZodProvider server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The server instance to register routes on |
+
+#### Internal Logic
+1. Defines four routes: POST "/", GET "/count", GET "/", and POST "/:requestId/review"
+2. Each route includes schema validation, authentication, and a handler function
+3. Handlers interact with the `accessApprovalRequest` service to perform operations
+
+### Route: POST "/"
+#### Description
+Creates a new access approval request.
+
+#### Inputs (Body)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissions | array | Requested permissions |
+| isTemporary | boolean | Whether the request is temporary |
+| temporaryRange | string (optional) | Time range for temporary access |
+
+#### Inputs (Query)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectSlug | string | Project identifier |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| approval | AccessApprovalRequestsSchema | Created approval request |
+
+### Route: GET "/count"
+#### Description
+Retrieves counts of pending and finalized access approval requests.
+
+#### Inputs (Query)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectSlug | string | Project identifier |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pendingCount | number | Count of pending requests |
+| finalizedCount | number | Count of finalized requests |
+
+### Route: GET "/"
+#### Description
+Lists access approval requests.
+
+#### Inputs (Query)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectSlug | string | Project identifier |
+| authorProjectMembershipId | string (optional) | Author's project membership ID |
+| envSlug | string (optional) | Environment identifier |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| requests | Array of AccessApprovalRequestsSchema (extended) | List of approval requests with additional details |
+
+### Route: POST "/:requestId/review"
+#### Description
+Reviews an access approval request.
+
+#### Inputs (Params)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| requestId | string | ID of the request to review |
+
+#### Inputs (Body)
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | enum (ApprovalStatus) | Review status (APPROVED or REJECTED) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| review | AccessApprovalRequestsReviewersSchema | Review details |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| zod | Schema validation and type inference |
+| @app/db/schemas | Database schema definitions |
+| @app/ee/services/access-approval-request/access-approval-request-types | Access approval request types |
+| @app/server/plugins/auth/verify-auth | Authentication verification |
+| @app/services/auth/auth-type | Authentication types |
+
+## Error Handling
+The code relies on Fastify's built-in error handling. Zod schema validation will automatically handle input validation errors.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| / | POST | Body: permissions, isTemporary, temporaryRange; Query: projectSlug | 200: { approval: AccessApprovalRequestsSchema } | Create a new access approval request |
+| /count | GET | Query: projectSlug | 200: { pendingCount: number, finalizedCount: number } | Get counts of approval requests |
+| / | GET | Query: projectSlug, authorProjectMembershipId?, envSlug? | 200: { requests: Array&lt;ExtendedAccessApprovalRequestsSchema&gt; } | List access approval requests |
+| /:requestId/review | POST | Params: requestId; Body: status | 200: { review: AccessApprovalRequestsReviewersSchema } | Review an access approval request |

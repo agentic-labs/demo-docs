@@ -1,0 +1,388 @@
+---
+title: "certificate-authority-service.ts"
+---
+
+## High-level description
+This code defines a certificate authority service that manages the creation, retrieval, and manipulation of certificate authorities (CAs) and certificates. It provides functionality for generating root and intermediate CAs, issuing certificates, and managing the lifecycle of certificates within a project or organization.
+
+## Code Structure
+The main function `certificateAuthorityServiceFactory` creates and returns an object with methods for various CA operations. These methods interact with different data access layers (DALs) and services to perform operations such as creating CAs, issuing certificates, and managing CA certificates.
+
+## Symbols
+
+### `certificateAuthorityServiceFactory`
+#### Description
+This factory function creates and returns an object with methods for managing certificate authorities and certificates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certificateAuthorityDAL | Object | Data access layer for certificate authorities |
+| certificateAuthorityCertDAL | Object | Data access layer for CA certificates |
+| certificateAuthoritySecretDAL | Object | Data access layer for CA secrets |
+| certificateAuthorityCrlDAL | Object | Data access layer for CA certificate revocation lists |
+| certificateTemplateDAL | Object | Data access layer for certificate templates |
+| certificateDAL | Object | Data access layer for certificates |
+| certificateBodyDAL | Object | Data access layer for certificate bodies |
+| pkiCollectionDAL | Object | Data access layer for PKI collections |
+| pkiCollectionItemDAL | Object | Data access layer for PKI collection items |
+| projectDAL | Object | Data access layer for projects |
+| kmsService | Object | Key Management Service |
+| permissionService | Object | Permission service for access control |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | An object containing methods for CA operations |
+
+#### Internal Logic
+1. Defines various methods for CA operations (e.g., `createCa`, `getCaById`, `updateCaById`, etc.).
+2. Each method typically involves permission checks, data retrieval, and cryptographic operations.
+3. Utilizes the provided DALs and services to perform operations and manage data.
+
+### `createCa`
+#### Description
+Creates a new root or intermediate certificate authority.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectSlug | string | Project identifier |
+| type | CaType | Type of CA (root or intermediate) |
+| friendlyName | string | Human-readable name for the CA |
+| commonName | string | Common Name for the CA |
+| organization | string | Organization name |
+| ou | string | Organizational Unit |
+| country | string | Country code |
+| province | string | Province or state |
+| locality | string | Locality or city |
+| notBefore | Date | Start date of CA validity |
+| notAfter | Date | End date of CA validity |
+| maxPathLength | number | Maximum path length for CA chain |
+| keyAlgorithm | CertKeyAlgorithm | Key algorithm for CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | The created CA object |
+
+#### Internal Logic
+1. Checks permissions for creating a CA.
+2. Generates a new key pair for the CA.
+3. Creates the CA record in the database.
+4. For root CAs, generates a self-signed certificate.
+5. Creates an empty Certificate Revocation List (CRL).
+
+### `getCaById`
+#### Description
+Retrieves a certificate authority by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA to retrieve |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | The retrieved CA object |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions for reading the CA.
+3. Returns the CA object if authorized.
+
+### `updateCaById`
+#### Description
+Updates a certificate authority's status.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA to update |
+| status | CaStatus | New status for the CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | The updated CA object |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions for updating the CA.
+3. Updates the CA status in the database.
+
+### `deleteCaById`
+#### Description
+Deletes a certificate authority.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA to delete |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | The deleted CA object |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions for deleting the CA.
+3. Deletes the CA from the database.
+
+### `getCaCsr`
+#### Description
+Generates a Certificate Signing Request (CSR) for an intermediate CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the CSR and CA information |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions and validates that it's an intermediate CA.
+3. Generates a CSR using the CA's key pair.
+
+### `renewCaCert`
+#### Description
+Renews a certificate for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA |
+| notAfter | Date | New expiration date |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the new certificate and chain information |
+
+#### Internal Logic
+1. Retrieves the CA and its current certificate.
+2. Checks permissions and validates the renewal conditions.
+3. Generates a new certificate with the same key pair.
+4. Updates the CA record with the new certificate.
+
+### `getCaCerts`
+#### Description
+Retrieves all certificates for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the CA and its certificates |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions for reading the CA certificates.
+3. Fetches all certificates associated with the CA.
+
+### `getCaCert`
+#### Description
+Retrieves the current certificate for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the current certificate and chain information |
+
+#### Internal Logic
+1. Retrieves the CA and its current certificate from the database.
+2. Checks permissions for reading the CA certificate.
+3. Fetches the certificate chain.
+
+### `signIntermediate`
+#### Description
+Signs a certificate for an intermediate CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the signing CA |
+| csr | string | Certificate Signing Request |
+| notBefore | Date | Start date of certificate validity |
+| notAfter | Date | End date of certificate validity |
+| maxPathLength | number | Maximum path length for the intermediate CA |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the signed certificate and chain information |
+
+#### Internal Logic
+1. Retrieves the signing CA from the database.
+2. Checks permissions and validates the signing conditions.
+3. Parses the CSR and generates a new certificate.
+4. Returns the signed certificate and certificate chain.
+
+### `importCertToCa`
+#### Description
+Imports an external certificate for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the CA |
+| certificate | string | Certificate to import |
+| certificateChain | string | Certificate chain |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the updated CA information |
+
+#### Internal Logic
+1. Retrieves the CA from the database.
+2. Checks permissions for importing a certificate.
+3. Validates the imported certificate and chain.
+4. Updates the CA record with the new certificate information.
+
+### `issueCertFromCa`
+#### Description
+Issues a new leaf certificate from a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the issuing CA |
+| certificateTemplateId | string | ID of the certificate template (optional) |
+| pkiCollectionId | string | ID of the PKI collection (optional) |
+| friendlyName | string | Human-readable name for the certificate |
+| commonName | string | Common Name for the certificate |
+| altNames | string | Alternative names for the certificate |
+| ttl | string | Time-to-live for the certificate |
+| notBefore | Date | Start date of certificate validity |
+| notAfter | Date | End date of certificate validity |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the issued certificate, private key, and chain information |
+
+#### Internal Logic
+1. Retrieves the CA and certificate template (if provided) from the database.
+2. Checks permissions for issuing a certificate.
+3. Generates a new key pair for the certificate.
+4. Creates a Certificate Signing Request (CSR) with the provided details.
+5. Signs the CSR with the CA's private key to create the certificate.
+6. Stores the new certificate in the database and associates it with a PKI collection if specified.
+7. Returns the issued certificate, private key, and certificate chain.
+
+### `signCertFromCa`
+#### Description
+Signs a certificate using a CA based on a provided CSR.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the signing CA |
+| certificateTemplateId | string | ID of the certificate template (optional) |
+| csr | string | Certificate Signing Request |
+| pkiCollectionId | string | ID of the PKI collection (optional) |
+| friendlyName | string | Human-readable name for the certificate |
+| commonName | string | Common Name for the certificate (optional) |
+| altNames | string | Alternative names for the certificate (optional) |
+| ttl | string | Time-to-live for the certificate (optional) |
+| notBefore | Date | Start date of certificate validity (optional) |
+| notAfter | Date | End date of certificate validity (optional) |
+| actorId | string | ID of the actor performing the operation |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Contains the signed certificate and chain information |
+
+#### Internal Logic
+1. Retrieves the CA and certificate template (if provided) from the database.
+2. Checks permissions for signing a certificate.
+3. Parses the provided CSR and extracts necessary information.
+4. Validates the certificate details against the template if provided.
+5. Signs the CSR with the CA's private key to create the certificate.
+6. Stores the new certificate in the database and associates it with a PKI collection if specified.
+7. Returns the signed certificate and certificate chain.
+
+## Dependencies
+- @casl/ability: For permission handling
+- @peculiar/x509: For X.509 certificate operations
+- crypto: For cryptographic operations
+- ms: For parsing time strings
+- zod: For data validation
+
+## Error Handling
+The code uses custom error classes like `BadRequestError`, `NotFoundError`, and `ForbiddenError` to handle various error scenarios. These errors are thrown when invalid inputs are provided, resources are not found, or permissions are insufficient.
+
+## Logging
+The code doesn't implement explicit logging, but it's recommended to add logging for important operations and error scenarios.
+
+## Performance Considerations
+- The code uses transactions for database operations that involve multiple steps to ensure data consistency.
+- Cryptographic operations are computationally expensive, so caching of frequently used data (like CA certificates) might be beneficial for performance optimization.
+
+## TODOs
+- Consider renaming `getCaCertChain` function (line 55)
+- Look into optimal way to support renewal of intermediate CA with external parent CA (line 1009)

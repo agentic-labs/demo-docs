@@ -1,0 +1,37 @@
+---
+title: "certificate-template-fns.ts"
+---
+
+## High-level description
+This code defines a function `validateCertificateDetailsAgainstTemplate` that validates the details of a certificate against a predefined template. It checks if the certificate's common name, validity period, and alternative names adhere to the rules specified in the template.
+
+## Symbols
+
+### `validateCertificateDetailsAgainstTemplate`
+#### Description
+This function validates a certificate's details against a predefined template. It checks the common name, validity period (notBeforeDate, notAfterDate), and alternative names against regex patterns and TTL defined in the template.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cert | `{ commonName: string; notBeforeDate: Date; notAfterDate: Date; altNames: string[]; }` | An object containing the certificate details: common name, notBeforeDate, notAfterDate, and an array of alternative names. |
+| template | `TCertificateTemplates` | An object representing the certificate template, containing properties like commonName regex, subjectAlternativeName regex, and TTL. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+1. **Common Name Validation:** Creates a RegExp object from `template.commonName` and tests it against `cert.commonName`. Throws a BadRequestError if the common name doesn't match the pattern.
+2. **Validity Period Validation:** Calculates the difference between `cert.notAfterDate` and `cert.notBeforeDate` in milliseconds. Compares this difference with the TTL defined in `template.ttl` (converted to milliseconds using `ms`). Throws a BadRequestError if the validity period exceeds the allowed TTL.
+3. **Alternative Names Validation:** Iterates through each alternative name in `cert.altNames`. For each name, it creates a RegExp object from `template.subjectAlternativeName` and tests it against the current alternative name. Throws a BadRequestError if any alternative name doesn't match the pattern.
+
+#### Side Effects
+- Throws a `BadRequestError` if any validation fails.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| ms | Used to convert the TTL value from a human-readable format (e.g., "1y") to milliseconds. |
+
+## Error Handling
+This function throws `BadRequestError` with a descriptive message if any of the certificate details fail to validate against the template.

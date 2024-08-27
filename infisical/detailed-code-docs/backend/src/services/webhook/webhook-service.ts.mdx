@@ -1,0 +1,177 @@
+---
+title: "webhook-service.ts"
+---
+
+## High-level description
+The code defines a factory function `webhookServiceFactory` that creates and returns an object containing methods for managing webhooks. These methods include creating, updating, deleting, listing, and testing webhooks associated with a project.
+
+## Code Structure
+The `webhookServiceFactory` depends on several DAL factories (Data Access Layer) like `webhookDAL`, `projectEnvDAL`, and `projectDAL` to interact with the database. It also uses the `permissionService` to enforce access control based on the user's permissions. The factory returns an object with methods like `createWebhook`, `updateWebhook`, `deleteWebhook`, `testWebhook`, and `listWebhooks` that utilize these dependencies to implement their functionality.
+
+## References
+- `@app/db/schemas`: Used for defining the shape of data for database interactions.
+- `@app/ee/services/permission/permission-service`: Provides functionality for managing and checking user permissions.
+- `@app/lib/crypto/encryption`: Offers encryption utilities used for securing webhook secrets and URLs.
+- `@app/lib/errors`: Contains custom error classes used for handling and reporting errors.
+- `./webhook-dal`: Provides data access methods for interacting with webhook data in the database.
+- `./webhook-fns`: Contains helper functions for common webhook operations like triggering requests and decrypting details.
+- `./webhook-types`: Defines TypeScript types used for webhook-related data structures.
+
+## Symbols
+
+### `webhookServiceFactory`
+#### Description
+This factory function initializes and returns an object containing methods for managing webhooks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| webhookDAL | `TWebhookDALFactory` |  Provides methods for interacting with webhook data in the database. |
+| projectEnvDAL | `TProjectEnvDALFactory` | Provides methods for interacting with project environment data in the database. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findById"&gt;` | Provides a method for finding a project by its ID. |
+| permissionService | `Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt;` | Provides a method for retrieving project permissions for a given user. |
+
+#### Outputs
+Returns an object of type `TWebhookServiceFactory` containing the following methods:
+- `createWebhook`: Creates a new webhook.
+- `updateWebhook`: Updates an existing webhook.
+- `deleteWebhook`: Deletes a webhook.
+- `testWebhook`: Tests a webhook by sending a test request.
+- `listWebhooks`: Retrieves a list of webhooks for a project.
+
+#### Internal Logic
+The factory function initializes each method by injecting the required dependencies and returns them as a collection.
+
+### `createWebhook`
+#### Description
+Creates a new webhook associated with a specific project and environment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor |  | The user performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod |  | The authentication method used by the user. |
+| projectId | `string` | The ID of the project to associate the webhook with. |
+| webhookUrl | `string` | The URL of the webhook endpoint. |
+| environment | `string` | The slug of the environment to associate the webhook with. |
+| secretPath | `string` | The path to the secret used for webhook verification. |
+| webhookSecretKey | `string` | The secret key used for webhook verification. |
+| type | `string` | The type of the webhook. |
+
+#### Outputs
+Returns a `Promise` that resolves with the newly created webhook object.
+
+#### Internal Logic
+1. Checks user permissions to create webhooks for the specified project.
+2. Retrieves the environment associated with the provided project ID and environment slug.
+3. Encrypts the webhook secret key and URL using `infisicalSymmetricEncypt`.
+4. Creates a new webhook document in the database using `webhookDAL.create`.
+5. Returns the created webhook object.
+
+### `updateWebhook`
+#### Description
+Updates an existing webhook's `isDisabled` status.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actorId | `string` | The ID of the user performing the action. |
+| actor |  | The user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod |  | The authentication method used by the user. |
+| id | `string` | The ID of the webhook to update. |
+| isDisabled | `boolean` | The new `isDisabled` status of the webhook. |
+
+#### Outputs
+Returns a `Promise` that resolves with the updated webhook object.
+
+#### Internal Logic
+1. Retrieves the webhook from the database using `webhookDAL.findById`.
+2. Checks user permissions to edit webhooks for the project associated with the webhook.
+3. Updates the webhook's `isDisabled` status in the database using `webhookDAL.updateById`.
+4. Returns the updated webhook object.
+
+### `deleteWebhook`
+#### Description
+Deletes a webhook.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the webhook to delete. |
+| actor |  | The user performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorAuthMethod |  | The authentication method used by the user. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+
+#### Outputs
+Returns a `Promise` that resolves with the deleted webhook object.
+
+#### Internal Logic
+1. Retrieves the webhook from the database using `webhookDAL.findById`.
+2. Checks user permissions to delete webhooks for the project associated with the webhook.
+3. Deletes the webhook from the database using `webhookDAL.deleteById`.
+4. Returns the deleted webhook object.
+
+### `testWebhook`
+#### Description
+Tests a webhook by sending a test request to the webhook URL and updates the webhook's last status and error message.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the webhook to test. |
+| actor |  | The user performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorAuthMethod |  | The authentication method used by the user. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+
+#### Outputs
+Returns a `Promise` that resolves with the tested webhook object including the updated `lastStatus` and `lastRunErrorMessage`.
+
+#### Internal Logic
+1. Retrieves the webhook from the database using `webhookDAL.findById`.
+2. Checks user permissions to read webhooks for the project associated with the webhook.
+3. Fetches the project associated with the webhook.
+4. Constructs the webhook payload using `getWebhookPayload`.
+5. Attempts to trigger the webhook request using `triggerWebhookRequest`.
+6. Updates the webhook's `lastStatus` and `lastRunErrorMessage` based on the test result.
+7. Returns the updated webhook object.
+
+### `listWebhooks`
+#### Description
+Retrieves a list of webhooks for a specific project, environment, and secret path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actorId | `string` | The ID of the user performing the action. |
+| actor |  | The user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod |  | The authentication method used by the user. |
+| projectId | `string` | The ID of the project to retrieve webhooks for. |
+| secretPath | `string` | The path to the secret used for webhook verification. |
+| environment | `string` | The slug of the environment to filter webhooks by. |
+
+#### Outputs
+Returns a `Promise` that resolves with an array of webhook objects.
+
+#### Internal Logic
+1. Checks user permissions to read webhooks for the specified project.
+2. Retrieves all webhooks matching the provided criteria using `webhookDAL.findAllWebhooks`.
+3. Decrypts the webhook URLs using `decryptWebhookDetails`.
+4. Returns the array of webhook objects with decrypted URLs.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Provides utilities for managing and enforcing user permissions. |
+| @app/db/schemas | Defines the shape of data for database interactions. |
+| @app/ee/services/permission/permission-service | Provides functionality for managing and checking user permissions. |
+| @app/lib/crypto/encryption | Offers encryption utilities used for securing webhook secrets and URLs. |
+| @app/lib/errors | Contains custom error classes used for handling and reporting errors. |
+
+## Error Handling
+The code utilizes custom error classes from `@app/lib/errors` like `BadRequestError` to handle invalid requests and data inconsistencies. It also leverages `ForbiddenError` from `@casl/ability` to manage unauthorized access attempts.

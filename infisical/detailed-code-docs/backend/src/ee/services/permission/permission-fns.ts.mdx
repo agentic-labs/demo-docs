@@ -1,0 +1,64 @@
+---
+title: "permission-fns.ts"
+---
+
+## High-level description
+This code provides utility functions for handling authentication methods, specifically focusing on SAML (Security Assertion Markup Language) authentication in an organization context. It includes functions to check if an authentication method is SAML-based and to validate organization-scoped SAML enforcement.
+
+## Symbols
+
+### `isAuthMethodSaml`
+#### Description
+This function determines whether a given authentication method is SAML-based.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actorAuthMethod | ActorAuthMethod | The authentication method to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | boolean | True if the method is SAML-based, false otherwise |
+
+#### Internal Logic
+1. If `actorAuthMethod` is falsy (undefined, null, etc.), return false.
+2. Check if the `actorAuthMethod` is included in an array of SAML-based authentication methods.
+3. Return true if it's included, false otherwise.
+
+### `validateOrgSAML`
+#### Description
+This function validates the organization's SAML enforcement against the actor's authentication method.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actorAuthMethod | ActorAuthMethod | The actor's authentication method |
+| isSamlEnforced | TOrganizations["authEnforced"] | Whether SAML is enforced for the organization |
+
+#### Outputs
+This function doesn't return a value but may throw an error.
+
+#### Internal Logic
+1. If `actorAuthMethod` is undefined, throw an UnauthorizedError with the message "No auth method defined".
+2. If SAML is enforced (`isSamlEnforced` is true), `actorAuthMethod` is not null, and `actorAuthMethod` is not a SAML method (checked using `isAuthMethodSaml`), throw an UnauthorizedError with the message "Cannot access org-scoped resource".
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @app/db/schemas | Importing TOrganizations type |
+| @app/lib/errors | Importing UnauthorizedError for error handling |
+| @app/services/auth/auth-type | Importing ActorAuthMethod and AuthMethod types |
+
+## Error Handling
+The code uses the `UnauthorizedError` class for handling unauthorized access attempts. This error is thrown in two scenarios:
+1. When no authentication method is defined.
+2. When SAML is enforced for an organization, but the actor's authentication method is not SAML-based.
+
+## References
+The code references the `AuthMethod` enum from the `auth-type.ts` file, which defines various authentication methods including SAML-based ones.
+
+## Notes
+1. The code assumes that the `ActorAuthMethod` type can be `null`, which is consistent with its definition in the related `auth-type.ts` file.
+2. The SAML authentication methods are hardcoded in the `isAuthMethodSaml` function. If new SAML methods are added, this function would need to be updated.
+3. The code doesn't handle cases where `isSamlEnforced` is true and `actorAuthMethod` is null. This might be an edge case that should be considered.

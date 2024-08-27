@@ -1,0 +1,66 @@
+---
+title: "20231228075011_identity-access-token.ts"
+---
+
+## High-level description
+This code defines database migration scripts for managing the `IdentityAccessToken` table in a PostgreSQL database using Knex.js. It handles both upgrading (creating or modifying the table) and downgrading (reverting changes) the database schema related to identity access tokens.
+
+## References
+- `TableName`: An enum or object defining table names used in the database schema.
+- `createOnUpdateTrigger`: A utility function to create a trigger for updating timestamps on table updates.
+- `dropOnUpdateTrigger`: A utility function to drop the update timestamp trigger.
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function defines the steps to upgrade the database schema to include the `IdentityAccessToken` table. It checks if the table exists and creates it if it doesn't, defining columns and constraints.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return a value. |
+
+#### Internal Logic
+1. Checks if the `IdentityAccessToken` table exists using `knex.schema.hasTable`.
+2. If the table doesn't exist, creates it using `knex.schema.createTable` with the following columns:
+    - `id`: A UUID primary key.
+    - `accessTokenTTL`, `accessTokenMaxTTL`: Integers representing token time-to-live values.
+    - `accessTokenNumUses`, `accessTokenNumUsesLimit`: Integers tracking token usage.
+    - `accessTokenLastUsedAt`, `accessTokenLastRenewedAt`: Timestamps for tracking token usage and renewal.
+    - `isAccessTokenRevoked`: A boolean indicating if the token is revoked.
+    - `identityUAClientSecretId`: A foreign key referencing the `IdentityUaClientSecret` table.
+    - `identityId`: A foreign key referencing the `Identity` table.
+    - `created_at`, `updated_at`, `deleted_at`: Timestamps for tracking creation, update, and deletion of the record.
+3. Creates an `onUpdate` trigger on the table using the `createOnUpdateTrigger` utility function.
+
+### `down`
+#### Description
+This asynchronous function defines the steps to downgrade the database schema by reverting the changes made in the `up` function. It drops the `IdentityAccessToken` table if it exists and removes the associated update trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return a value. |
+
+#### Internal Logic
+1. Drops the `IdentityAccessToken` table if it exists using `knex.schema.dropTableIfExists`.
+2. Drops the `onUpdate` trigger associated with the table using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides a connection to the PostgreSQL database and methods for schema manipulation. |
+
+## Side Effects
+- Modifies the database schema by creating or deleting the `IdentityAccessToken` table and its associated trigger. 

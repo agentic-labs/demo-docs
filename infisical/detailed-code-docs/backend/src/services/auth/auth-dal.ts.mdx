@@ -1,0 +1,79 @@
+---
+title: "auth-dal.ts"
+---
+
+## High-level description
+This code defines a Data Access Layer (DAL) for authentication-related operations in a backend application. It provides functions to interact with a database table for managing backup private keys associated with user IDs.
+
+## Code Structure
+The code exports a factory function `authDALFactory` that creates an object with methods for database operations. These methods are wrapped with a transaction mechanism using the `withTransaction` function.
+
+## Symbols
+
+### `authDALFactory`
+#### Description
+A factory function that creates an object with methods for interacting with the backup private key table in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TAuthDALFactory | An object containing methods for database operations |
+
+#### Internal Logic
+1. Defines two internal functions: `getBackupPrivateKeyByUserId` and `upsertBackupKey`.
+2. Returns these functions wrapped with the `withTransaction` mechanism.
+
+### `getBackupPrivateKeyByUserId`
+#### Description
+Retrieves the backup private key for a given user ID from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;TBackupPrivateKey \| undefined&gt; | Promise | The backup private key object or undefined if not found |
+
+### `upsertBackupKey`
+#### Description
+Inserts or updates a backup private key for a given user ID in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user |
+| data | Partial&lt;TBackupPrivateKey&gt; | The data to be inserted or updated |
+| tx | Knex (optional) | A Knex transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;TBackupPrivateKey \| undefined&gt; | Promise | The inserted or updated backup private key object |
+
+#### Internal Logic
+1. Constructs an object with userId, provided data, and current timestamp.
+2. Performs an insert operation with conflict resolution on the "userId" column.
+3. If a conflict occurs, merges the new data with the existing record.
+4. Returns the inserted or updated record.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | SQL query builder |
+| @app/db | Custom database client type |
+| @app/db/schemas | Database schema definitions |
+| @app/lib/knex | Custom Knex utility functions |
+
+## Error Handling
+This code does not implement explicit error handling. Errors that occur during database operations will likely be propagated to the caller.
+
+## Performance Considerations
+The `upsertBackupKey` function uses an "upsert" operation, which is generally more efficient than separate insert and update operations. However, the performance may vary depending on the underlying database system and the frequency of conflicts.

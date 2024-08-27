@@ -1,0 +1,73 @@
+---
+title: "20240818184238_add-certificate-template.ts"
+---
+
+## High-level description
+This code defines a database migration script using Knex.js. It aims to add a new table `CertificateTemplate` to the database and establish a relationship between `CertificateTemplate` and `Certificate` tables. It also includes rollback logic for potential down migrations.
+
+## Code Structure
+The code defines two asynchronous functions: `up` and `down`. 
+- `up` is executed when running the migration and is responsible for creating the `CertificateTemplate` table and adding the `certificateTemplateId` column to the `Certificate` table. 
+- `down` is executed when rolling back the migration and performs the opposite actions. 
+
+Both functions check for the existence of tables and columns before attempting to create or drop them.
+
+## References
+- `TableName`: An enum-like object that holds the names of database tables.
+- `createOnUpdateTrigger`: A utility function that creates an "on update" trigger for a given table.
+- `dropOnUpdateTrigger`: A utility function that drops an "on update" trigger for a given table.
+
+## Symbols
+### `up`
+#### Description
+This asynchronous function is responsible for applying the migration to the database. It creates the `CertificateTemplate` table and adds the `certificateTemplateId` column to the `Certificate` table if they don't exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `CertificateTemplate` table already exists.
+2. If not, creates the `CertificateTemplate` table with the following columns:
+    - `id`: UUID, primary key, default value is a generated UUID.
+    - `caId`: UUID, not nullable, foreign key referencing the `id` column in the `CertificateAuthority` table with `CASCADE` delete rule.
+    - `pkiCollectionId`: UUID, nullable, foreign key referencing the `id` column in the `PkiCollection` table with `SET NULL` delete rule.
+    - `name`: String, not nullable.
+    - `commonName`: String, not nullable.
+    - `subjectAlternativeName`: String, not nullable.
+    - `ttl`: String, not nullable.
+    - `created_at`: Timestamp, automatically managed by the database.
+    - `updated_at`: Timestamp, automatically managed by the database.
+    - `deleted_at`: Timestamp, automatically managed by the database.
+3. Creates an "on update" trigger for the `CertificateTemplate` table using the `createOnUpdateTrigger` utility function.
+4. Checks if the `Certificate` table has the `certificateTemplateId` column.
+5. If not, adds the `certificateTemplateId` column to the `Certificate` table as a nullable UUID foreign key referencing the `id` column in the `CertificateTemplate` table with `SET NULL` delete rule.
+
+### `down`
+#### Description
+This asynchronous function is responsible for reverting the changes applied by the `up` function during a database migration rollback. It drops the `certificateTemplateId` column from the `Certificate` table and then drops the `CertificateTemplate` table if they exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `Certificate` table has the `certificateTemplateId` column.
+2. If it exists, removes the `certificateTemplateId` column from the `Certificate` table.
+3. Checks if the `CertificateTemplate` table exists.
+4. If it exists, drops the `CertificateTemplate` table and its associated "on update" trigger using the `dropOnUpdateTrigger` utility function.
+
+## Side Effects
+This code modifies the database schema by adding a new table and a column to an existing table. It also creates and drops database triggers.

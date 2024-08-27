@@ -1,0 +1,122 @@
+---
+title: "group-fns.ts"
+---
+
+## High-level description
+This code implements a service for managing LDAP (Lightweight Directory Access Protocol) configurations and group mappings for an organization. It provides functionality for creating, updating, and retrieving LDAP configurations, as well as managing LDAP group mappings and user authentication.
+
+## Code Structure
+The code defines several functions that work together to manage LDAP configurations and related operations. These functions are organized into a service factory that takes various dependencies as input and returns an object with methods for LDAP-related operations.
+
+## Symbols
+
+### `addAcceptedUsersToGroup`
+#### Description
+This function adds accepted users to a group and handles the necessary project key sharing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userIds | string[] | Array of user IDs to add to the group |
+| group | TGroups | The group to add users to |
+| userDAL | Pick&lt;TUserDALFactory, "findUserEncKeyByUserIdsBatch"&gt; | Data access layer for user operations |
+| userGroupMembershipDAL | Pick&lt;TUserGroupMembershipDALFactory, "find" \| "transaction" \| "insertMany"&gt; | Data access layer for user group membership operations |
+| groupProjectDAL | Pick&lt;TGroupProjectDALFactory, "find"&gt; | Data access layer for group project operations |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "find" \| "findLatestProjectKey" \| "insertMany"&gt; | Data access layer for project key operations |
+| projectDAL | Pick&lt;TProjectDALFactory, "findProjectGhostUser"&gt; | Data access layer for project operations |
+| projectBotDAL | Pick&lt;TProjectBotDALFactory, "findOne"&gt; | Data access layer for project bot operations |
+| tx | Knex | Database transaction object |
+
+#### Internal Logic
+1. Find user encryption keys for the given user IDs
+2. Insert user group memberships
+3. Find projects associated with the group
+4. Check if users need project keys and add them if necessary
+5. Decrypt and re-encrypt project keys for new users
+
+### `addUsersToGroupByUserIds`
+#### Description
+This function adds users to a group, handling both accepted and pending users.
+
+#### Inputs
+| Name | Type | Description |
+| group | TGroups | The group to add users to |
+| userIds | string[] | Array of user IDs to add to the group |
+| userDAL | Pick&lt;TUserDALFactory, "find" \| "findUserEncKeyByUserIdsBatch" \| "transaction"&gt; | Data access layer for user operations |
+| userGroupMembershipDAL | Pick&lt;TUserGroupMembershipDALFactory, "find" \| "transaction" \| "insertMany"&gt; | Data access layer for user group membership operations |
+| orgDAL | Pick&lt;TOrgDALFactory, "findMembership"&gt; | Data access layer for organization operations |
+| groupProjectDAL | Pick&lt;TGroupProjectDALFactory, "find"&gt; | Data access layer for group project operations |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "find" \| "findLatestProjectKey" \| "insertMany"&gt; | Data access layer for project key operations |
+| projectDAL | Pick&lt;TProjectDALFactory, "findProjectGhostUser"&gt; | Data access layer for project operations |
+| projectBotDAL | Pick&lt;TProjectBotDALFactory, "findOne"&gt; | Data access layer for project bot operations |
+| tx | Knex | Optional database transaction object |
+
+#### Internal Logic
+1. Find users by their IDs
+2. Check if users are already part of the group
+3. Verify users are part of the organization
+4. Separate users into accepted and pending groups
+5. Add accepted users to the group
+6. Create pending group additions for incomplete users
+
+### `removeUsersFromGroupByUserIds`
+#### Description
+This function removes users from a group, handling both non-pending and pending users.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| group | TGroups | The group to remove users from |
+| userIds | string[] | Array of user IDs to remove from the group |
+| userDAL | Pick&lt;TUserDALFactory, "find" \| "transaction"&gt; | Data access layer for user operations |
+| userGroupMembershipDAL | Pick&lt;TUserGroupMembershipDALFactory, "find" \| "filterProjectsByUserMembership" \| "delete"&gt; | Data access layer for user group membership operations |
+| groupProjectDAL | Pick&lt;TGroupProjectDALFactory, "find"&gt; | Data access layer for group project operations |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "delete"&gt; | Data access layer for project key operations |
+| tx | Knex | Optional database transaction object |
+
+#### Internal Logic
+1. Find users by their IDs
+2. Check if users are part of the group
+3. Separate users into non-pending and pending groups
+4. Remove non-pending users from the group and delete their project keys
+5. Remove pending users from the group
+
+### `convertPendingGroupAdditionsToGroupMemberships`
+#### Description
+This function converts pending group additions to group memberships for users who have completed their accounts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userIds | string[] | Array of user IDs to convert pending group additions |
+| userDAL | Pick&lt;TUserDALFactory, "find" \| "transaction" \| "findUserEncKeyByUserId"&gt; | Data access layer for user operations |
+| userGroupMembershipDAL | Pick&lt;TUserGroupMembershipDALFactory, "deletePendingUserGroupMembershipsByUserIds"&gt; | Data access layer for user group membership operations |
+| groupProjectDAL | Pick&lt;TGroupProjectDALFactory, "find"&gt; | Data access layer for group project operations |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "find" \| "findLatestProjectKey" \| "insertMany"&gt; | Data access layer for project key operations |
+| projectDAL | Pick&lt;TProjectDALFactory, "findProjectGhostUser"&gt; | Data access layer for project operations |
+| projectBotDAL | Pick&lt;TProjectBotDALFactory, "findOne"&gt; | Data access layer for project bot operations |
+| tx | Knex | Optional database transaction object |
+
+#### Internal Logic
+1. Find users by their IDs
+2. Verify users have confirmed their accounts
+3. Delete pending user group memberships
+4. Add accepted users to the groups
+
+## Dependencies
+The code relies on various external libraries and modules, including:
+- @casl/ability
+- jwt
+- knex
+- @app/lib/config/env
+- @app/lib/crypto/encryption
+- @app/lib/errors
+
+## Error Handling
+The code uses custom error classes like `BadRequestError`, `ForbiddenError`, and `ScimRequestError` to handle different types of errors that may occur during LDAP operations.
+
+## Logging
+There is no explicit logging implemented in this code snippet.
+
+## Performance Considerations
+The code uses database transactions to ensure data consistency when performing multiple database operations. It also batches some operations, such as finding user encryption keys, to improve performance.

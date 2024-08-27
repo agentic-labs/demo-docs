@@ -1,0 +1,93 @@
+---
+title: "20240405000045_org-memberships-unique-constraint.ts"
+---
+
+## High-level description
+This code defines a database migration script that adds a unique constraint to the `OrgMembership` table, ensuring that a user can only have one membership per organization. It achieves this by first identifying and removing any existing duplicate memberships in the database.
+
+## Code Structure
+The code defines two main functions: `up` and `down`. The `up` function is responsible for applying the migration (adding the unique constraint), while the `down` function reverts it. Both functions interact with the database schema using the `knex` library. The `validateOrgMembership` function is a helper used to ensure that duplicate memberships are indeed identical before deletion.
+
+## References
+- `TableName`: An enum-like object likely defined in `../schemas` that holds the names of database tables.
+- `TOrgMemberships`: A type definition for organization memberships, also likely from `../schemas`.
+
+## Symbols
+
+### `up`
+#### Description
+This function applies the database migration, adding a unique constraint on the `userId` and `orgId` columns of the `OrgMembership` table. Before adding the constraint, it identifies and removes any existing duplicate memberships.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | The function does not return any value. |
+
+#### Internal Logic
+1. **Identify duplicate rows:**
+   - Selects `userId`, `orgId`, and counts occurrences of each combination in the `OrgMembership` table.
+   - Groups results by `userId` and `orgId` to find duplicates.
+   - Filters for groups with a count greater than 1, indicating duplicates.
+2. **Process duplicate rows:**
+   - Iterates through the identified duplicate rows.
+   - For each duplicate set:
+     - Retrieves all memberships with the same `userId` and `orgId`.
+     - Validates that all retrieved memberships have identical data except for `id`, `createdAt`, and `updatedAt`.
+     - Identifies the membership with the earliest `createdAt` timestamp to keep.
+     - Deletes all other duplicate memberships.
+3. **Add unique constraint:**
+   - Alters the `OrgMembership` table schema to add a unique constraint on the `userId` and `orgId` columns.
+
+### `down`
+#### Description
+This function reverts the database migration by removing the unique constraint added by the `up` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | The function does not return any value. |
+
+#### Internal Logic
+- Alters the `OrgMembership` table schema to drop the unique constraint on the `userId` and `orgId` columns.
+
+### `validateOrgMembership`
+#### Description
+This helper function compares two `TOrgMemberships` objects and throws an error if any fields except `id`, `createdAt`, or `updatedAt` are different.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| membershipToValidate | TOrgMemberships | The organization membership to validate. |
+| firstMembership | TOrgMemberships | The reference organization membership to compare against. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | The function does not return any value, but throws an error if validation fails. |
+
+#### Internal Logic
+- Compares each field of `membershipToValidate` with the corresponding field in `firstMembership`.
+- Ignores differences in the `id`, `createdAt`, and `updatedAt` fields.
+- Throws an error if any other fields differ, indicating inconsistent data for the same user and organization.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides database interaction capabilities for running migrations. |
+| zod | Used for data validation and parsing. |
+
+## Error Handling
+The code uses basic exception handling with `throw new Error(...)` to signal issues during the migration process. This will likely be caught and handled by the migration runner.
+
+## Logging
+The code logs the number of deleted duplicate memberships for each user and organization combination to the console. This provides feedback on the migration progress and potential issues.

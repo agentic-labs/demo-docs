@@ -1,0 +1,74 @@
+---
+title: "build-staging-and-deploy-aws.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file defines a deployment pipeline for building and deploying a backend application to staging (gamma) and production environments on AWS ECS. It includes steps for building a Docker image, pushing it to Docker Hub, and updating ECS task definitions in both environments.
+
+## Code Structure
+The workflow consists of three main jobs: `infisical-image`, `gamma-deployment`, and `production-postgres-deployment`. These jobs are executed sequentially, with each job depending on the successful completion of the previous one.
+
+## Symbols
+
+### `infisical-image`
+#### Description
+This job builds the backend Docker image and pushes it to Docker Hub.
+
+#### Internal Logic
+1. Checks out the source code
+2. Installs production dependencies
+3. Saves commit hashes for tagging
+4. Sets up Docker Buildx and logs in to Docker Hub
+5. Sets up Depot CLI
+6. Builds and pushes the Docker image using Depot's build-push-action
+
+### `gamma-deployment`
+#### Description
+This job deploys the built image to the gamma (staging) environment on AWS ECS.
+
+#### Internal Logic
+1. Sets up Twingate for secure access
+2. Checks out the code and sets up Node.js
+3. Runs database migrations
+4. Configures AWS credentials
+5. Updates the ECS task definition with the new image
+6. Deploys the updated task definition to the gamma ECS service
+
+### `production-postgres-deployment`
+#### Description
+This job deploys the built image to the production environment on AWS ECS.
+
+#### Internal Logic
+Similar to the `gamma-deployment` job, but targets the production ECS service and cluster.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checking out the source code |
+| actions/setup-node | Setting up Node.js environment |
+| docker/setup-buildx-action | Setting up Docker Buildx |
+| docker/login-action | Logging in to Docker Hub |
+| depot/setup-action | Setting up Depot CLI |
+| depot/build-push-action | Building and pushing Docker image |
+| aws-actions/configure-aws-credentials | Configuring AWS credentials |
+| aws-actions/amazon-ecs-render-task-definition | Rendering ECS task definitions |
+| aws-actions/amazon-ecs-deploy-task-definition | Deploying to ECS services |
+| twingate/github-action | Setting up secure access via Twingate |
+
+## Configuration
+The workflow uses several GitHub secrets for configuration:
+- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for Docker Hub authentication
+- `DEPOT_PROJECT_TOKEN` for Depot CLI authentication
+- `PUBLIC_POSTHOG_API_KEY` for PostHog integration
+- `TWINGATE_SERVICE_KEY` for Twingate secure access
+- `DB_CONNECTION_URI` for database connection
+- AWS role ARNs for assuming roles in different environments
+
+## Error Handling
+The workflow uses the `wait-for-service-stability: true` option in the ECS deployment steps, which ensures that the deployment is considered successful only if the ECS service reaches a stable state.
+
+## Logging
+The workflow sets the `LOG_LEVEL` environment variable to "info" for both gamma and production deployments, which likely controls the verbosity of application logging.
+
+## API/Interface Reference
+This workflow file doesn't define an API but rather orchestrates the deployment process. It can be triggered manually using the `workflow_dispatch` event.

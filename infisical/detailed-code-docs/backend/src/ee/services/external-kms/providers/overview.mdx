@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of external Key Management Service (KMS) providers for a backend service, with a focus on AWS KMS. It defines the data models, schemas, and functional interfaces for interacting with KMS providers, as well as the specific implementation for AWS KMS.
+
+## What does it do?
+The code in this directory enables secure key management and cryptographic operations using external KMS providers, specifically AWS KMS. It allows the backend service to:
+
+1. Configure and connect to AWS KMS using different credential types (AssumeRole or AccessKey).
+2. Generate new KMS keys if not provided.
+3. Validate connections to the KMS service.
+4. Perform encryption and decryption operations using the configured KMS keys.
+
+This functionality is crucial for maintaining security in applications that require robust key management and encryption capabilities, such as those handling sensitive data or implementing data protection features.
+
+## Key Files
+
+### model.ts
+This file defines the data models and schemas for KMS providers using Zod for validation and type inference. Key components include:
+
+- `KmsProviders` enum: Defines available KMS providers (currently only AWS).
+- `KmsAwsCredentialType` enum: Specifies AWS credential types (AssumeRole and AccessKey).
+- `ExternalKmsAwsSchema`: Zod schema for AWS KMS configuration.
+- `ExternalKmsInputSchema`: Root schema for KMS input, supporting multiple providers.
+- `TExternalKmsProviderFns`: TypeScript type defining common functions for KMS providers.
+
+### aws-kms.ts
+This file implements the AWS KMS provider functionality:
+
+- `getAwsKmsClient`: Creates an AWS KMS client based on provided credentials.
+- `AwsKmsProviderFactory`: Main function that creates an object with methods for AWS KMS operations, including:
+  - `generateInputKmsKey`: Creates a new KMS key if not provided.
+  - `validateConnection`: Checks if the KMS key is accessible.
+  - `encrypt`: Encrypts data using the KMS key.
+  - `decrypt`: Decrypts data using the KMS key.
+
+## Dependencies
+The code relies on the following external libraries:
+
+1. `@aws-sdk/client-kms` (version not specified): Provides the AWS KMS client and commands for interacting with AWS Key Management Service.
+   - Chosen for its official support and integration with AWS services.
+
+2. `@aws-sdk/client-sts` (version not specified): Used for assuming IAM roles when using the AssumeRole credential type.
+   - Necessary for implementing the AssumeRole authentication method.
+
+3. `zod` (version not specified): Used for schema validation and type inference in the data models.
+   - Chosen for its robust type-safe schema validation capabilities in TypeScript.
+
+4. `crypto` (Node.js built-in module): Used for generating random UUIDs.
+   - Built-in module chosen for its reliability and availability in Node.js environments.
+
+## Configuration
+The KMS provider configuration is defined through the `ExternalKmsAwsSchema` in `model.ts`. Key configurable fields include:
+
+- `type`: The KMS provider type (currently only "aws" is supported).
+- `credentialType`: The type of AWS credentials to use ("AssumeRole" or "AccessKey").
+- `region`: The AWS region for the KMS service.
+- `kmsKeyId`: (Optional) The ID of the KMS key to use.
+
+For AssumeRole credentials:
+- `roleArn`: The ARN of the IAM role to assume.
+- `externalId`: (Optional) An external ID for additional security when assuming the role.
+
+For AccessKey credentials:
+- `accessKeyId`: The AWS access key ID.
+- `secretAccessKey`: The AWS secret access key.
+
+Example configuration for AssumeRole:
+
+```typescript
+const config = {
+  type: "aws",
+  credentialType: "AssumeRole",
+  roleArn: "arn:aws:iam::123456789012:role/KMSRole",
+  externalId: "ExternalID123",
+  region: "us-west-2",
+  kmsKeyId: "12345678-1234-1234-1234-123456789012"
+};
+```
+
+Example configuration for AccessKey:
+
+```typescript
+const config = {
+  type: "aws",
+  credentialType: "AccessKey",
+  accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+  secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  region: "us-east-1",
+  kmsKeyId: "12345678-1234-1234-1234-123456789012"
+};
+```
+
+The `AwsKmsProviderFactory` function in `aws-kms.ts` uses this configuration to set up the AWS KMS client and provide the necessary functionality for key management and cryptographic operations.

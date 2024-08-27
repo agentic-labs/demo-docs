@@ -1,0 +1,98 @@
+---
+title: "telemetry-service.ts"
+---
+
+## High-level description
+This code defines the `telemetryServiceFactory`, which creates a telemetry service for collecting and sending usage data in the Infisical application. It handles both PostHog events for general telemetry and Loops events for email marketing purposes, with considerations for different instance types and production environments.
+
+## Code Structure
+The main function `telemetryServiceFactory` takes dependencies (`keyStore` and `licenseService`) and returns an object with methods for sending telemetry events. It uses configuration settings to determine whether telemetry is enabled and sets up the PostHog client accordingly.
+
+## Symbols
+
+### telemetryServiceFactory
+#### Description
+Creates and returns a telemetry service with methods for sending events to PostHog and Loops.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| keyStore | Pick&lt;TKeyStoreFactory, "getItem" \| "incrementBy"&gt; | Interface for storing and retrieving key-value pairs |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getInstanceType"&gt; | Service for determining the instance type |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sendLoopsEvent | Function | Sends event data to Loops for email marketing |
+| sendPostHogEvents | Function | Sends telemetry events to PostHog |
+| flushAll | Function | Flushes all pending telemetry data |
+
+#### Internal Logic
+1. Retrieves application configuration.
+2. Logs a message about telemetry if in production mode and telemetry is disabled.
+3. Initializes PostHog client if telemetry is enabled.
+4. Defines methods for sending events to Loops and PostHog.
+5. Implements logic for handling different types of events based on instance type.
+
+### sendLoopsEvent
+#### Description
+Sends an event to Loops for email marketing purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | string | User's email address |
+| firstName | string (optional) | User's first name |
+| lastName | string (optional) | User's last name |
+
+#### Internal Logic
+1. Checks if in production mode and Loops API key is available.
+2. Sends a POST request to Loops API with user data.
+3. Logs any errors that occur during the process.
+
+### sendPostHogEvents
+#### Description
+Sends telemetry events to PostHog or increments local counters based on the instance type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event | TPostHogEvent | Event data to be sent to PostHog |
+
+#### Internal Logic
+1. Determines the instance type using the license service.
+2. For cloud instances or user signup events, sends the event directly to PostHog.
+3. For self-hosted instances and specific secret-related events, increments local counters.
+
+### flushAll
+#### Description
+Flushes all pending telemetry data.
+
+#### Internal Logic
+Calls the `shutdownAsync` method on the PostHog client if it exists.
+
+## Side Effects
+- Sends HTTP requests to external services (Loops and PostHog).
+- Modifies values in the keyStore for certain events in self-hosted instances.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| posthog-node | PostHog client for sending telemetry data |
+| @app/lib/config/env | Retrieves application configuration |
+| @app/lib/config/request | Makes HTTP requests |
+| @app/lib/logger | Logging utility |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| TELEMETRY_ENABLED | boolean | undefined | Enables or disables telemetry collection |
+| POSTHOG_PROJECT_API_KEY | string | undefined | API key for PostHog project |
+| POSTHOG_HOST | string | undefined | Host URL for PostHog service |
+| LOOPS_API_KEY | string | undefined | API key for Loops service |
+
+## Error Handling
+Errors during Loops event sending are caught and logged using the logger.error method.
+
+## Logging
+The code uses a logger (imported from "@app/lib/logger") to log errors that occur during the Loops event sending process.

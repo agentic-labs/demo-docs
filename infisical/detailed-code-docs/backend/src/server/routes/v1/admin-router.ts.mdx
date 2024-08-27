@@ -1,0 +1,74 @@
+---
+title: "admin-router.ts"
+---
+
+## High-level description
+This code defines the API routes for admin-related operations in the backend application. It handles routes for managing server configuration, user management, and initial admin signup.
+
+## Code Structure
+The code defines a single function `registerAdminRouter` which takes a `FastifyZodProvider` instance as input. Inside this function, multiple routes are defined using the `server.route` method. Each route definition includes the HTTP method, URL, schema validation for request and response, optional middleware for authentication and authorization, and a handler function to process the request.
+
+## References
+- `@app/db/schemas`: Used for schema validation of database models like `OrganizationsSchema`, `SuperAdminSchema`, and `UsersSchema`.
+- `@app/lib/config/env`: Imports `getConfig` to access environment variables.
+- `@app/lib/errors`: Imports `UnauthorizedError` for handling unauthorized access attempts.
+- `@app/server/config/rateLimiter`: Imports rate limiting configurations.
+- `@app/server/plugins/auth/*`: Imports authentication middleware like `verifySuperAdmin` and `verifyAuth`.
+- `@app/services/auth/auth-type`: Imports `AuthMode` enum for authentication types.
+- `@app/services/super-admin/*`: Imports functions and types related to super admin operations.
+- `@app/services/telemetry/telemetry-types`: Imports `PostHogEventTypes` for telemetry events.
+
+## Symbols
+
+### `registerAdminRouter`
+#### Description
+This function registers all the admin API routes on the Fastify server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of the Fastify server with Zod validation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| void | void | This function does not return any value. |
+
+#### Internal Logic
+The function defines multiple routes related to admin functionalities like fetching and updating server configuration, managing users, and handling initial admin signup. Each route definition includes:
+- **Method:** HTTP method of the route.
+- **URL:** Route path.
+- **Schema:** Zod schemas for request validation and response typing.
+- **Config:** Optional configurations like rate limiting.
+- **onRequest:** Optional middleware for authentication and authorization.
+- **handler:** Async function to handle the request and send the response.
+
+## Side Effects
+- This function modifies the Fastify server instance by registering new routes.
+- It interacts with the database to fetch and update data.
+- It may send telemetry events using the `@app/services/telemetry` module.
+- It sets cookies in the response for authentication purposes.
+
+## Dependencies
+- `fastify-zod`: For request validation and response typing.
+- `zod`: For defining schemas.
+
+## Error Handling
+- Uses `UnauthorizedError` from `@app/lib/errors` to handle unauthorized access attempts.
+
+## Logging
+- The code does not explicitly implement logging, but it might use a logging library indirectly through the `@app/services/telemetry` module.
+
+## API/Interface Reference
+This code defines the following API endpoints:
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /config | GET | None | `{ config: ServerConfig }` | Retrieves the server configuration. |
+| /config | PATCH | `{ allowSignUp: boolean, allowedSignUpDomain: string, trustSamlEmails: boolean, trustLdapEmails: boolean, trustOidcEmails: boolean, defaultAuthOrgId: string, enabledLoginMethods: LoginMethod[] }` | `{ config: ServerConfig }` | Updates the server configuration. |
+| /user-management/users | GET | `{ searchTerm: string, offset: number, limit: number }` | `{ users: User[] }` | Retrieves a list of users. |
+| /user-management/users/:userId | DELETE | None | `{ users: User }` | Deletes a user by ID. |
+| /signup | POST | `{ email: string, password: string, firstName: string, lastName: string, protectedKey: string, protectedKeyIV: string, protectedKeyTag: string, publicKey: string, encryptedPrivateKey: string, encryptedPrivateKeyIV: string, encryptedPrivateKeyTag: string, salt: string, verifier: string }` | `{ message: string, user: User, organization: Organization, token: string, new: string }` | Creates a new admin user and organization. |
+
+## TODOs
+- The `/signup` route has a hardcoded value "123" in the response. This should be replaced with a meaningful value or removed if not needed. 

@@ -1,0 +1,295 @@
+---
+title: "user-service.ts"
+---
+
+## High-level description
+The `user-service.ts` file defines the `userServiceFactory`, which provides a set of functions related to user management within the application. These functions handle tasks such as email verification, MFA settings, user updates, and user actions.
+
+## Code Structure
+The `userServiceFactory` is a function that takes a dependency object as input and returns an object containing various user management functions. These functions utilize the provided dependencies to interact with the database and other services.
+
+## References
+- `@app/db/schemas`: Used for importing data types related to database schemas.
+- `@app/lib/crypto/encryption`: Used for importing encryption and decryption functions.
+- `@app/lib/errors`: Used for importing custom error classes.
+- `@app/services/auth-token/auth-token-service`: Used for interacting with the authentication token service.
+- `@app/services/org-membership/org-membership-dal`: Used for interacting with the organization membership data access layer.
+- `@app/services/smtp/smtp-service`: Used for sending emails.
+- `@app/services/user-alias/user-alias-dal`: Used for interacting with the user alias data access layer.
+- `../auth/auth-type`: Used for importing authentication method types.
+- `../project-membership/project-membership-dal`: Used for interacting with the project membership data access layer.
+- `./user-dal`: Used for interacting with the user data access layer.
+
+## Symbols
+
+### `userServiceFactory`
+#### Description
+This factory function initializes and returns an object containing various user management functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userDAL | `Pick&lt;TUserDALFactory, 'find' \| 'findOne' \| 'findById' \| 'transaction' \| 'updateById' \| 'update' \| 'deleteById' \| 'findOneUserAction' \| 'createUserAction' \| 'findUserEncKeyByUserId' \| 'delete'&gt;` | Provides functions for interacting with the user data access layer. |
+| userAliasDAL | `Pick&lt;TUserAliasDALFactory, 'find' \| 'insertMany'&gt;` | Provides functions for interacting with the user alias data access layer. |
+| orgMembershipDAL | `Pick&lt;TOrgMembershipDALFactory, 'find' \| 'insertMany' \| 'findOne' \| 'updateById'&gt;` | Provides functions for interacting with the organization membership data access layer. |
+| projectMembershipDAL | `Pick&lt;TProjectMembershipDALFactory, 'find'&gt;` | Provides functions for interacting with the project membership data access layer. |
+| tokenService | `Pick&lt;TAuthTokenServiceFactory, 'createTokenForUser' \| 'validateTokenForUser'&gt;` | Provides functions for interacting with the authentication token service. |
+| smtpService | `Pick&lt;TSmtpService, 'sendMail'&gt;` | Provides functions for sending emails. |
+
+#### Outputs
+`TUserServiceFactory`: An object containing the following user management functions:
+- `sendEmailVerificationCode`
+- `verifyEmailVerificationCode`
+- `toggleUserMfa`
+- `updateUserName`
+- `updateAuthMethods`
+- `getMe`
+- `deleteUser`
+- `createUserAction`
+- `getUserAction`
+- `unlockUser`
+- `getUserPrivateKey`
+- `getUserProjectFavorites`
+- `updateUserProjectFavorites`
+
+#### Internal Logic
+The factory function initializes each function by injecting the required dependencies from the input object.
+
+### `sendEmailVerificationCode`
+#### Description
+This function sends an email verification code to the user's registered email address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| username | `string` | The username of the user. |
+
+#### Outputs
+`Promise&lt;void&gt;`: A promise that resolves when the email is sent.
+
+#### Internal Logic
+1. Retrieves the user from the database based on the provided username.
+2. Throws an error if the user is not found, does not have an email address, or has already verified their email.
+3. Generates an email verification token using the `tokenService`.
+4. Sends an email with the verification code using the `smtpService`.
+
+### `verifyEmailVerificationCode`
+#### Description
+This function verifies the email verification code provided by the user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| username | `string` | The username of the user. |
+| code | `string` | The email verification code. |
+
+#### Outputs
+`Promise&lt;void&gt;`: A promise that resolves when the email is verified.
+
+#### Internal Logic
+1. Retrieves the user from the database based on the provided username.
+2. Throws an error if the user is not found, does not have an email address, or has already verified their email.
+3. Validates the email verification code using the `tokenService`.
+4. Updates the user's `isEmailVerified` flag to `true` in the database.
+5. If there are other verified users with the same email address, merges the current user's data into one of the existing users and deletes the current user.
+6. If no other verified users with the same email address exist, updates the current user's username to their email address and deletes any unverified users with the same email address.
+
+### `toggleUserMfa`
+#### Description
+This function toggles the MFA status of a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| isMfaEnabled | `boolean` | Whether MFA should be enabled or disabled. |
+
+#### Outputs
+`Promise&lt;User&gt;`: A promise that resolves with the updated user object.
+
+#### Internal Logic
+1. Retrieves the user from the database based on the provided user ID.
+2. Throws an error if the user is not found or does not have an email address.
+3. Updates the user's `isMfaEnabled` flag and `mfaMethods` array in the database.
+4. Returns the updated user object.
+
+### `updateUserName`
+#### Description
+This function updates the first and last name of a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| firstName | `string` | The new first name of the user. |
+| lastName | `string` | The new last name of the user. |
+
+#### Outputs
+`Promise&lt;User&gt;`: A promise that resolves with the updated user object.
+
+#### Internal Logic
+1. Updates the user's `firstName` and `lastName` fields in the database.
+2. Returns the updated user object.
+
+### `updateAuthMethods`
+#### Description
+This function updates the authentication methods used by a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| authMethods | `AuthMethod[]` | An array of authentication methods. |
+
+#### Outputs
+`Promise&lt;User&gt;`: A promise that resolves with the updated user object.
+
+#### Internal Logic
+1. Retrieves the user from the database based on the provided user ID.
+2. Throws an error if the user is not found.
+3. Throws an error if the user is trying to update or remove the LDAP authentication method.
+4. Updates the user's `authMethods` array in the database.
+5. Returns the updated user object.
+
+### `getMe`
+#### Description
+This function retrieves the user's information, including their encrypted private key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+
+#### Outputs
+`Promise&lt;User&gt;`: A promise that resolves with the user object.
+
+#### Internal Logic
+1. Retrieves the user and their encrypted private key from the database based on the provided user ID.
+2. Throws an error if the user is not found.
+3. Returns the user object.
+
+### `deleteUser`
+#### Description
+This function deletes a user from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+
+#### Outputs
+`Promise&lt;User&gt;`: A promise that resolves with the deleted user object.
+
+#### Internal Logic
+1. Deletes the user from the database based on the provided user ID.
+2. Returns the deleted user object.
+
+### `createUserAction`
+#### Description
+This function creates a new user action in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| action | `string` | The action performed by the user. |
+
+#### Outputs
+`Promise&lt;UserAction&gt;`: A promise that resolves with the created user action object.
+
+#### Internal Logic
+1. Checks if a user action with the same action and user ID already exists in the database.
+2. If an existing action is found, returns the existing action object.
+3. If no existing action is found, creates a new user action in the database with the provided action and user ID.
+4. Returns the created user action object.
+
+### `getUserAction`
+#### Description
+This function retrieves a user action from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| action | `string` | The action performed by the user. |
+
+#### Outputs
+`Promise&lt;UserAction \| null&gt;`: A promise that resolves with the user action object, or `null` if no matching action is found.
+
+#### Internal Logic
+1. Retrieves the user action from the database based on the provided user ID and action.
+2. Returns the user action object, or `null` if no matching action is found.
+
+### `unlockUser`
+#### Description
+This function unlocks a user's account.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| token | `string` | The user unlock token. |
+
+#### Outputs
+`Promise&lt;void&gt;`: A promise that resolves when the user is unlocked.
+
+#### Internal Logic
+1. Validates the user unlock token using the `tokenService`.
+2. Resets the user's `consecutiveFailedMfaAttempts` counter, sets `isLocked` to `false`, and clears the `temporaryLockDateEnd` field in the database.
+
+### `getUserPrivateKey`
+#### Description
+This function retrieves the user's decrypted private key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+
+#### Outputs
+`Promise&lt;string&gt;`: A promise that resolves with the user's decrypted private key.
+
+#### Internal Logic
+1. Retrieves the user and their encrypted private key information from the database based on the provided user ID.
+2. Throws an error if the user is not found or if any of the required private key information is missing.
+3. Decrypts the user's private key using the `infisicalSymmetricDecrypt` function.
+4. Returns the decrypted private key.
+
+### `getUserProjectFavorites`
+#### Description
+This function retrieves a user's favorite projects within a specific organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| orgId | `string` | The ID of the organization. |
+
+#### Outputs
+`Promise&lt;{ projectFavorites: string[] }&gt;`: A promise that resolves with an object containing an array of favorite project IDs.
+
+#### Internal Logic
+1. Retrieves the user's organization membership based on the provided user ID and organization ID.
+2. Throws an error if the user is not a member of the organization.
+3. Returns an object containing the user's favorite project IDs, which is retrieved from the organization membership.
+
+### `updateUserProjectFavorites`
+#### Description
+This function updates a user's favorite projects within a specific organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The ID of the user. |
+| orgId | `string` | The ID of the organization. |
+| projectIds | `string[]` | An array of project IDs to set as favorites. |
+
+#### Outputs
+`Promise&lt;string[]&gt;`: A promise that resolves with an array of the updated favorite project IDs.
+
+#### Internal Logic
+1. Retrieves the user's organization membership based on the provided user ID and organization ID.
+2. Throws an error if the user is not a member of the organization.
+3. Retrieves the user's project memberships for the provided project IDs.
+4. Updates the user's favorite project IDs in the organization membership with the project IDs from the retrieved project memberships.
+5. Returns the updated array of favorite project IDs.

@@ -1,0 +1,97 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains mock implementations of various services used for end-to-end (e2e) testing in the backend of the application. It includes mocks for a key-value store, a queue service, and an SMTP server. These mocks are designed to simulate the behavior of real services without actually interacting with external systems, allowing for isolated and controlled testing environments.
+
+## What does it do?
+The mocks in this directory provide simplified versions of key backend services:
+
+1. Key-value store: Simulates a storage system where data can be set, retrieved, and deleted using keys. It also mimics locking functionality.
+
+2. Queue service: Imitates a job queue system where tasks can be added, workers can be assigned, and events can be listened to.
+
+3. SMTP server: Simulates an email sending service by capturing and storing email data without actually sending emails.
+
+These mocks allow developers to test the application's behavior and workflows that depend on these services without the need for actual external connections. This is particularly useful for running e2e tests in isolated environments or CI/CD pipelines.
+
+## Key Files
+
+### keystore.ts
+This file contains a mock implementation of a key-value store. It provides methods for setting, getting, and deleting items, as well as simulating locking mechanisms. The mock store uses an in-memory object to store data, making it fast and easy to reset between tests.
+
+Key features:
+- `setItem` and `getItem` for basic key-value operations
+- `setItemWithExpiry` (though expiry is not actually implemented)
+- `deleteItem` for removing entries
+- `incrementBy` (always returns 1, not actually incrementing)
+- `acquireLock` for simulating locking mechanisms
+
+Example usage:
+```typescript
+const store = mockKeyStore();
+await store.setItem('key', 'value');
+const value = await store.getItem('key');
+console.log(value); // Outputs: 'value'
+```
+
+### queue.ts
+This file provides a mock implementation of a queue service. It simulates the behavior of adding jobs to queues, starting workers, and listening for events. The mock stores all data in-memory using JavaScript objects.
+
+Key features:
+- `queue` for adding jobs to a queue
+- `start` for simulating the start of a worker
+- `listen` for attaching event listeners
+- `stopRepeatableJob` and `stopRepeatableJobByJobId` (always return true)
+
+Example usage:
+```typescript
+const queueService = mockQueue();
+await queueService.queue('testQueue', { data: 'job data' });
+queueService.start('testQueue', async (job) =&gt; {
+  console.log('Processing job:', job);
+});
+```
+
+### smtp.ts
+This file contains a mock SMTP server implementation. It simulates sending emails by storing the email data in memory instead of actually sending them. This is useful for testing email-sending functionality without affecting real email systems.
+
+Key features:
+- `sendMail` method for capturing email send requests
+
+Example usage:
+```typescript
+const smtpService = mockSmtpServer();
+await smtpService.sendMail({
+  from: 'sender@example.com',
+  to: 'recipient@example.com',
+  subject: 'Test Email',
+  text: 'This is a test email'
+});
+```
+
+## Dependencies
+The mock implementations in this directory depend on type definitions from other parts of the application:
+
+1. `@app/keystore/keystore`: Provides the `TKeyStoreFactory` type for the key-value store mock.
+2. `@app/lib/red-lock`: Provides the `Lock` type for simulating locking mechanisms.
+3. `@app/queue`: Imports the `TQueueServiceFactory` type for the queue service mock.
+4. `@app/services/smtp/smtp-service`: Provides type definitions for the SMTP service and email data.
+
+These dependencies ensure that the mock implementations conform to the same interfaces as the real services they are replacing, maintaining type safety throughout the testing process.
+
+## Notes
+1. These mocks are simplified implementations and may not fully replicate all behaviors of their real counterparts. For example, the key-value store doesn't implement actual expiry for `setItemWithExpiry`, and the queue service doesn't perform real job processing.
+
+2. The mocks store all data in-memory, which makes them fast and easy to use in tests, but also means that data doesn't persist between test runs unless explicitly managed.
+
+3. Some methods in these mocks (e.g., `shutdown`, `clearQueue` in the queue service) are implemented as no-op functions to maintain the expected interface without actual functionality.
+
+4. These mocks are particularly useful for e2e tests where you want to verify the application's behavior without the complexity and potential instability of real external services.
+
+5. When using these mocks in tests, remember to reset their state between test cases to ensure isolation and prevent test interference.
+
+6. Consider adding methods to retrieve stored data (e.g., sent emails in the SMTP mock) if needed for more comprehensive test assertions.
+
+By using these mocks, developers can create robust e2e tests that cover various scenarios without the need for complex setup or external dependencies, leading to more reliable and faster test suites.

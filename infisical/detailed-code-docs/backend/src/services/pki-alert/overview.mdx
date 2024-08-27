@@ -1,0 +1,66 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a PKI (Public Key Infrastructure) alert system. It is responsible for managing alerts related to expiring certificates and Certificate Authorities (CAs) within a PKI collection. The system handles the creation, retrieval, updating, and deletion of alerts, as well as sending email notifications for expiring PKI items.
+
+## What does it do?
+The PKI alert system performs the following main functions:
+
+1. Manages PKI alerts: It allows users to create, retrieve, update, and delete alerts for PKI collections.
+2. Monitors expiring PKI items: The system checks for certificates and CAs that are approaching their expiration date based on the configured alert settings.
+3. Sends email notifications: When PKI items are about to expire, the system sends email notifications to the specified recipients.
+4. Schedules daily checks: A daily cron job is set up to trigger the alert sending process automatically.
+5. Enforces permissions: The system ensures that users have the appropriate permissions to perform actions on PKI alerts.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `pki-alert-service.ts`: This file contains the `pkiAlertServiceFactory`, which is the primary interface for interacting with the PKI alert system. It provides methods for creating, retrieving, updating, and deleting alerts, as well as sending expiry notices.
+
+2. `expiring-pki-item-alert-queue.ts`: This file sets up the daily cron job for sending expiring PKI item alerts. It uses a queue system to manage the alert sending process.
+
+The data flow in this system typically follows this pattern:
+1. The `pki-alert-service.ts` interacts with the database through `pki-alert-dal.ts` to manage alert data.
+2. The `expiring-pki-item-alert-queue.ts` schedules daily checks and triggers the alert sending process.
+3. When triggered, the system retrieves expiring PKI items from the database and sends email notifications using the SMTP service.
+
+## Key Files
+1. `pki-alert-dal.ts`: This file contains the Data Access Layer (DAL) for PKI alerts. It provides methods for interacting with the database, including retrieving expiring PKI items that require alerting.
+
+2. `pki-alert-types.ts`: This file defines TypeScript types used throughout the PKI alert system, ensuring type safety and consistency in data structures.
+
+## Dependencies
+The PKI alert system relies on several external libraries and internal modules:
+
+1. `knex`: Used for building and executing SQL queries.
+2. `@casl/ability`: Utilized for defining and enforcing permissions.
+3. `nodemailer`: Employed for sending email notifications.
+4. `handlebars`: Used as a templating engine for generating email content.
+
+Internal dependencies include:
+- `@app/db`: Provides database client and schema definitions.
+- `@app/lib/errors`: Contains custom error classes for error handling.
+- `@app/lib/knex`: Offers utilities for working with Knex.js.
+- `@app/queue`: Provides queue service functionality.
+- `@app/services/pki-collection`: Handles PKI collection data and types.
+- `@app/services/smtp`: Provides email sending functionality.
+- `@app/ee/services/permission`: Manages project permissions.
+
+## Configuration
+The PKI alert system uses the following configuration:
+
+1. Database configuration: The system relies on the database configuration provided by the `@app/db` module.
+
+2. SMTP configuration: Email sending is configured through the SMTP service, which likely uses environment variables for server settings.
+
+3. Cron job configuration: The daily alert check is scheduled to run at 12 Midnight UTC, with a 5-second delay before execution.
+
+4. Alert settings: Each alert can be configured with the following parameters:
+   - `name`: Name of the alert
+   - `pkiCollectionId`: ID of the associated PKI collection
+   - `alertBeforeDays`: Number of days before expiry to trigger the alert
+   - `emails`: Array of email addresses to receive notifications
+
+The system is designed to be flexible and scalable, allowing for easy management of PKI alerts across multiple collections and projects. It integrates with the broader application's permission system to ensure secure access to alert management functions.

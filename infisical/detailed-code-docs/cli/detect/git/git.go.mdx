@@ -1,0 +1,97 @@
+---
+title: "git.go"
+---
+
+## High-level description
+This file contains functions for interacting with Git repositories, specifically for retrieving commit logs and diffs. It provides functionality to execute Git commands and parse their output into a structured format using the `gitdiff` package.
+
+## Code Structure
+The main functions in this file are `GitLog` and `GitDiff`, which execute Git commands and return channels of `gitdiff.File` objects. The `listenForStdErr` function is used by both to handle error output from Git commands.
+
+## Symbols
+
+### `GitLog`
+#### Description
+Executes the `git log -p` command on a given source and returns a channel of `gitdiff.File` objects.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | string | The path to the Git repository |
+| logOpts | string | Additional options for the Git log command |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| &lt;-chan *gitdiff.File | channel | A channel of gitdiff.File objects |
+| error | error | Any error encountered during execution |
+
+#### Internal Logic
+1. Cleans the source path
+2. Constructs the Git command with appropriate arguments
+3. Sets up pipes for stdout and stderr
+4. Starts the command execution
+5. Parses the output using `gitdiff.Parse`
+
+### `GitDiff`
+#### Description
+Executes the `git diff` command on a given source and returns a channel of `gitdiff.File` objects.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | string | The path to the Git repository |
+| staged | bool | Whether to include staged changes |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| &lt;-chan *gitdiff.File | channel | A channel of gitdiff.File objects |
+| error | error | Any error encountered during execution |
+
+#### Internal Logic
+Similar to `GitLog`, but uses the `git diff` command instead.
+
+### `listenForStdErr`
+#### Description
+Listens for stderr output from Git commands and handles specific error cases.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stderr | io.ReadCloser | The stderr pipe from the Git command |
+
+#### Internal Logic
+1. Scans the stderr output line by line
+2. Checks for specific error messages related to rename detection
+3. Logs warnings for these specific cases
+4. Logs errors for other cases and sets `ErrEncountered` to true
+
+## Side Effects
+- Sets the global `ErrEncountered` variable to true when non-specific errors are encountered.
+- Logs warnings and errors to the console.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/gitleaks/go-gitdiff/gitdiff | Parsing Git diff output |
+| github.com/rs/zerolog/log | Logging |
+
+## Error Handling
+The code implements specific error handling for Git command execution:
+- Specific error messages related to rename detection are logged as warnings.
+- Other error messages are logged as errors and trigger the `ErrEncountered` flag.
+
+## Logging
+The code uses the `zerolog` package for logging:
+- Debug messages for executed commands
+- Warning messages for specific Git errors
+- Error messages for other Git errors
+
+## TODOs
+There is a HACK comment mentioning a sleep to avoid an issue:
+```go
+// HACK: to avoid https://github.com/zricethezav/gitleaks/issues/722
+time.Sleep(50 * time.Millisecond)
+```
+This might need to be addressed in the future for a more robust solution.

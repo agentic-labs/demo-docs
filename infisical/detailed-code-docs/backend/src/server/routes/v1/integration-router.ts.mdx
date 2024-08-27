@@ -1,0 +1,102 @@
+---
+title: "integration-router.ts"
+---
+
+## High-level description
+This code defines an Express.js router that handles API routes related to integrations. It allows for creating, updating, deleting, and manually syncing integrations. 
+
+The router uses various middleware for authentication, rate limiting, and schema validation. It also interacts with several services to perform operations like creating audit logs and sending telemetry events.
+
+## Code Structure
+The `registerIntegrationRouter` function takes a FastifyZodProvider instance and registers multiple routes related to integrations. Each route handler utilizes various services from the server to perform operations like creating, updating, deleting, and syncing integrations. They also log audit trails and send telemetry events for these actions.
+
+## References
+- `IntegrationsSchema` from "@app/db/schemas"
+- `EventType` from "@app/ee/services/audit-log/audit-log-types"
+- `INTEGRATION` from "@app/lib/api-docs"
+- `removeTrailingSlash`, `shake` from "@app/lib/fn"
+- `writeLimit` from "@app/server/config/rateLimiter"
+- `getTelemetryDistinctId` from "@app/server/lib/telemetry"
+- `verifyAuth` from "@app/server/plugins/auth/verify-auth"
+- `AuthMode` from "@app/services/auth/auth-type"
+- `IntegrationMetadataSchema` from "@app/services/integration/integration-schema"
+- `PostHogEventTypes`, `TIntegrationCreatedEvent` from "@app/services/telemetry/telemetry-types"
+
+## Symbols
+
+### `registerIntegrationRouter`
+#### Description
+This function registers routes for managing integrations within a Fastify server instance. It defines routes for creating, updating, deleting, and syncing integrations. Each route handler performs input validation, authentication, and authorization before interacting with the appropriate services to execute the requested action.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of a Fastify server with Zod schema validation. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+This function defines five routes:
+1. **POST /**: Creates a new integration.
+    - Validates the request body against the `IntegrationsSchema`.
+    - Uses the `integration` service to create a new integration and its associated authentication.
+    - Creates an audit log entry for the creation event.
+    - Sends a `IntegrationCreated` telemetry event.
+2. **PATCH /:integrationId**: Updates an existing integration.
+    - Validates the request body against a subset of the `IntegrationsSchema`.
+    - Uses the `integration` service to update the integration.
+3. **DELETE /:integrationId**: Deletes an existing integration.
+    - Uses the `integration` service to delete the integration.
+    - Creates an audit log entry for the deletion event.
+4. **POST /:integrationId/sync**: Manually triggers a sync for an integration.
+    - Uses the `integration` service to sync the integration.
+    - Creates an audit log entry for the manual sync event.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @app/db/schemas | Provides database schemas, including the `IntegrationsSchema`. |
+| @app/ee/services/audit-log/audit-log-types | Provides audit log event types. |
+| @app/lib/api-docs | Provides API documentation constants, likely for generating OpenAPI specs. |
+| @app/lib/fn | Provides utility functions like `removeTrailingSlash` and `shake`. |
+| @app/server/config/rateLimiter | Provides rate limiting configuration, specifically the `writeLimit`. |
+| @app/server/lib/telemetry | Provides telemetry-related functions, including `getTelemetryDistinctId`. |
+| @app/server/plugins/auth/verify-auth | Provides authentication middleware (`verifyAuth`). |
+| @app/services/auth/auth-type | Provides authentication mode constants (`AuthMode`). |
+| @app/services/integration/integration-schema | Provides the `IntegrationMetadataSchema` for validating integration metadata. |
+| @app/services/telemetry/telemetry-types | Provides telemetry event types and properties, including `PostHogEventTypes` and `TIntegrationCreatedEvent`. |
+| zod | Provides schema validation using Zod. |
+
+## Error Handling
+The code does not implement specific error handling beyond what is provided by Fastify. It's assumed that Fastify handles errors gracefully and returns appropriate error responses.
+
+## Logging
+The code utilizes the `server.services.auditLog` service to create audit log entries for various integration-related events, such as creation, deletion, and manual sync. 
+
+## API/Interface Reference
+This code defines an API for managing integrations.
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| / | POST | `{ integrationAuthId, app?, isActive?, appId?, secretPath?, sourceEnvironment, targetEnvironment?, targetEnvironmentId?, targetService?, targetServiceId?, owner?, url?, path?, region?, metadata? }` | `{ integration }` | Creates a new integration. |
+| /:integrationId | PATCH | `{ app?, appId?, isActive, secretPath?, targetEnvironment, owner, environment, metadata? }` | `{ integration }` | Updates an existing integration. |
+| /:integrationId | DELETE | `?shouldDeleteIntegrationSecrets=true/false` | `{ integration }` | Deletes an existing integration. |
+| /:integrationId/sync | POST |  | `{ integration }` | Manually triggers a sync for an integration. |
+
+**Request Parameters:**
+
+- `integrationId`: The ID of the integration.
+- `shouldDeleteIntegrationSecrets`: (Optional) A boolean flag indicating whether to delete associated secrets when deleting an integration.
+
+**Request Body:**
+
+Refer to the `IntegrationsSchema` and the route definitions for the specific fields and their data types.
+
+**Response Body:**
+
+- `integration`: The created or updated integration object.
+
+**Authentication:**
+
+All endpoints require authentication using either JWT or an Identity Access Token.

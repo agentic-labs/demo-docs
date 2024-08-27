@@ -1,0 +1,71 @@
+---
+title: "identity-gcp-auth-fns.ts"
+---
+
+## High-level description
+This code provides functions for validating Google Cloud Platform (GCP) authentication tokens. It includes two main functions: one for validating GCP ID tokens from Compute Engine instances, and another for validating signed JWT tokens from GCP service accounts.
+
+## Symbols
+
+### `validateIdTokenIdentity`
+#### Description
+This function validates a GCP ID token sent from a client Compute Engine instance as part of GCP ID Token authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity in Infisical being authenticated against (used as audience) |
+| jwt | string | The identity token to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { email: string, computeEngineDetails: object } | An object containing the validated email and Compute Engine details |
+
+#### Internal Logic
+1. Creates a new OAuth2Client instance
+2. Retrieves federated sign-on certificates
+3. Verifies the signed JWT with the certificates
+4. Extracts and validates the payload
+5. Returns the email and Compute Engine details if validation is successful
+
+### `validateIamIdentity`
+#### Description
+This function validates a signed JWT token for a GCP service account as part of GCP IAM authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity in Infisical being authenticated against (used as audience) |
+| jwt | string | The signed JWT token to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { email: string } | An object containing the validated email |
+
+#### Internal Logic
+1. Decodes the JWT token
+2. Retrieves the public key for the service account
+3. Verifies the JWT token using the public key
+4. Checks if the audience matches the provided identityId
+5. Returns the email (subject) if validation is successful
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| axios | Used for making HTTP requests to retrieve public keys |
+| google-auth-library | Provides OAuth2Client for token verification |
+| jsonwebtoken | Used for JWT decoding and verification |
+| @app/lib/errors | Imports UnauthorizedError for error handling |
+
+## Error Handling
+Both functions throw an `UnauthorizedError` if the token validation fails or if required data is missing.
+
+## API/Interface Reference
+| Function | Inputs | Outputs | Description |
+|:---------|:-------|:--------|:------------|
+| validateIdTokenIdentity | { identityId: string, jwt: string } | { email: string, computeEngineDetails: object } | Validates GCP ID tokens from Compute Engine instances |
+| validateIamIdentity | { identityId: string, jwt: string } | { email: string } | Validates signed JWT tokens from GCP service accounts |
+
+These functions serve as the core authentication mechanisms for GCP-based identities in the Infisical system, ensuring secure access to resources based on valid GCP credentials.

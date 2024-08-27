@@ -1,0 +1,153 @@
+---
+title: "project-env-service.ts"
+---
+
+## High-level description
+The `project-env-service.ts` file defines a factory function `projectEnvServiceFactory` that creates a service object for managing project environments. This service provides methods for creating, updating, deleting, and retrieving project environments, while enforcing authorization and resource limits.
+
+## Code Structure
+The `projectEnvServiceFactory` function takes a dependency object and returns an object containing the following methods: `createEnvironment`, `updateEnvironment`, `deleteEnvironment`, and `getEnvironmentById`. Each method interacts with the provided DALs (Data Access Layers) to perform database operations and enforces authorization using the permission service.
+
+## References
+- `@app/ee/services/license/license-service`: Used to access the `getPlan` method for retrieving plan details.
+- `@app/ee/services/permission/permission-service`: Used to access the `getProjectPermission` method for authorization.
+- `@app/lib/errors`: Used to throw specific error types like `BadRequestError` and `NotFoundError`.
+- `project-env-dal`: Used to interact with the project environment database table.
+- `secret-folder-dal`: Used to create the root secret folder for new environments.
+- `project-dal`: Used to retrieve project details by ID.
+
+## Symbols
+
+### `projectEnvServiceFactory`
+#### Description
+This factory function creates and returns a service object for managing project environments. It takes a dependency object containing various DAL factories and services.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectEnvDAL | `TProjectEnvDALFactory` | Factory for accessing the project environment DAL. |
+| folderDAL | `Pick&lt;TSecretFolderDALFactory, "create"&gt;` | Factory for accessing the secret folder DAL, specifically the `create` method. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findById"&gt;` | Factory for accessing the project DAL, specifically the `findById` method. |
+| permissionService | `Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt;` | Factory for accessing the permission service, specifically the `getProjectPermission` method. |
+| licenseService | `Pick&lt;TLicenseServiceFactory, "getPlan"&gt;` | Factory for accessing the license service, specifically the `getPlan` method. |
+
+#### Outputs
+Returns a `TProjectEnvServiceFactory` object, which contains the following methods:
+- `createEnvironment`: Creates a new project environment.
+- `updateEnvironment`: Updates an existing project environment.
+- `deleteEnvironment`: Deletes a project environment.
+- `getEnvironmentById`: Retrieves a project environment by its ID.
+
+### `createEnvironment`
+#### Description
+Creates a new environment for a project, ensuring the user has permission and the environment limit is not exceeded.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project to create the environment for. |
+| actorId | `string` | The ID of the user performing the action. |
+| actor | `unknown` | The user object performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod | `string` | The authentication method used by the user. |
+| name | `string` | The name of the new environment. |
+| slug | `string` | The slug of the new environment. |
+
+#### Outputs
+Returns a Promise that resolves with the newly created environment object.
+
+#### Internal Logic
+1. Checks if the user has permission to create environments in the project.
+2. Checks if an environment with the same slug already exists within the project.
+3. Retrieves the project details and the organization's plan to check for environment limits.
+4. If the limit is reached, throws a `BadRequestError`.
+5. Creates the environment in a transaction, ensuring atomicity.
+6. Creates a root secret folder for the new environment.
+
+### `updateEnvironment`
+#### Description
+Updates an existing environment's name, slug, and position within a project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project the environment belongs to. |
+| slug | `string` | The new slug for the environment (optional). |
+| actor | `unknown` | The user object performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod | `string` | The authentication method used by the user. |
+| name | `string` | The new name for the environment (optional). |
+| id | `string` | The ID of the environment to update. |
+| position | `number` | The new position for the environment (optional). |
+
+#### Outputs
+Returns a Promise that resolves with an object containing the updated environment and the original environment object.
+
+#### Internal Logic
+1. Checks if the user has permission to edit environments in the project.
+2. Retrieves the existing environment by ID and project ID.
+3. If a new slug is provided, checks if another environment with the same slug already exists.
+4. Updates the environment in a transaction, ensuring atomicity.
+5. If a new position is provided, updates the positions of other environments accordingly.
+
+### `deleteEnvironment`
+#### Description
+Deletes an environment from a project, ensuring the user has permission.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project the environment belongs to. |
+| actor | `unknown` | The user object performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod | `string` | The authentication method used by the user. |
+| id | `string` | The ID of the environment to delete. |
+
+#### Outputs
+Returns a Promise that resolves with the deleted environment object.
+
+#### Internal Logic
+1. Checks if the user has permission to delete environments in the project.
+2. Deletes the environment in a transaction, ensuring atomicity.
+3. Updates the positions of other environments to reflect the deletion.
+
+### `getEnvironmentById`
+#### Description
+Retrieves an environment by its ID, ensuring the user has permission to access it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project the environment belongs to. |
+| actor | `unknown` | The user object performing the action. |
+| actorId | `string` | The ID of the user performing the action. |
+| actorOrgId | `string` | The ID of the organization the user belongs to. |
+| actorAuthMethod | `string` | The authentication method used by the user. |
+| id | `string` | The ID of the environment to retrieve. |
+
+#### Outputs
+Returns a Promise that resolves with the retrieved environment object.
+
+#### Internal Logic
+1. Checks if the user has permission to read environments in the project.
+2. Retrieves the environment by ID and project ID.
+3. If the environment is not found, throws a `NotFoundError`.
+
+## Error Handling
+The code utilizes custom error classes defined in `@app/lib/errors` to provide specific error messages and types for different scenarios:
+- `BadRequestError`: Thrown for invalid requests, such as exceeding environment limits or providing conflicting data.
+- `NotFoundError`: Thrown when an environment is not found.
+- `ForbiddenError`: Thrown when the user does not have the required permissions.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `@casl/ability` | Used for managing and enforcing user permissions. |
+| `@app/ee/services/license/license-service` | Provides access to license and plan information. |
+| `@app/ee/services/permission/permission-service` | Provides methods for checking user permissions. |
+| `@app/lib/errors` | Defines custom error classes for specific error scenarios. |
+| `project-env-dal` | Provides data access methods for the project environment table. |
+| `secret-folder-dal` | Provides data access methods for the secret folder table. |
+| `project-dal` | Provides data access methods for the project table. | 

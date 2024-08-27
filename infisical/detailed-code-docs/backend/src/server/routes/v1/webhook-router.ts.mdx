@@ -1,0 +1,103 @@
+---
+title: "webhook-router.ts"
+---
+
+## High-level description
+This code defines an API router for managing webhooks using the Fastify framework. It provides endpoints for creating, updating, deleting, testing, and listing webhooks. The router implements authentication, rate limiting, and input validation.
+
+## Code Structure
+The `registerWebhookRouter` function registers multiple routes on the provided Fastify server. Each route corresponds to a specific webhook operation (create, update, delete, test, list). The routes share common middleware for authentication and rate limiting.
+
+## References
+- `WebhooksSchema`: Database schema for webhooks.
+- `EventType`: Enum for audit log event types.
+- `removeTrailingSlash`: Utility function for string manipulation.
+- `readLimit`, `writeLimit`: Rate limit configurations.
+- `verifyAuth`: Authentication middleware.
+- `AuthMode`: Enum for authentication modes.
+- `WebhookType`: Enum for webhook types.
+- `sanitizedWebhookSchema`: Zod schema for sanitizing webhook data.
+
+## Symbols
+### `registerWebhookRouter`
+#### Description
+Registers API routes for managing webhooks on the provided Fastify server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | Fastify server instance with Zod validation plugin. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| N/A | void | This function does not return a value. |
+
+#### Internal Logic
+1. **POST /**: Creates a new webhook.
+    - Validates the request body using a Zod schema.
+    - Calls the `createWebhook` service to persist the webhook data.
+    - Creates an audit log entry for the webhook creation event.
+    - Returns a success message and the sanitized webhook data.
+2. **PATCH /:webhookId**: Updates an existing webhook.
+    - Validates the request parameters and body using Zod schemas.
+    - Calls the `updateWebhook` service to update the webhook data.
+    - Creates an audit log entry for the webhook update event.
+    - Returns a success message and the sanitized webhook data.
+3. **DELETE /:webhookId**: Deletes a webhook.
+    - Validates the request parameters using a Zod schema.
+    - Calls the `deleteWebhook` service to delete the webhook.
+    - Creates an audit log entry for the webhook deletion event.
+    - Returns a success message and the sanitized webhook data.
+4. **POST /:webhookId/test**: Tests a webhook by sending a test request.
+    - Validates the request parameters using a Zod schema.
+    - Calls the `testWebhook` service to send a test request to the webhook URL.
+    - Returns a success message and the sanitized webhook data.
+5. **GET /**: Lists webhooks based on query parameters.
+    - Validates the query parameters using a Zod schema.
+    - Calls the `listWebhooks` service to retrieve the matching webhooks.
+    - Returns a success message and an array of sanitized webhook data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| z | Zod validation library. |
+| @app/db/schemas | Database schemas. |
+| @app/ee/services/audit-log/audit-log-types | Audit log event types. |
+| @app/lib/fn | Utility functions. |
+| @app/server/config/rateLimiter | Rate limit configurations. |
+| @app/server/plugins/auth/verify-auth | Authentication middleware. |
+| @app/services/auth/auth-type | Authentication modes. |
+| @app/services/webhook/webhook-types | Webhook types. |
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| / | POST | `{ "type": WebhookType, "workspaceId": string, "environment": string, "webhookUrl": string, "webhookSecretKey"?: string, "secretPath"?: string }` | `{ "message": string, "webhook": Webhook }` | Creates a new webhook. |
+| /:webhookId | PATCH | `{ "isDisabled": boolean }` | `{ "message": string, "webhook": Webhook }` | Updates an existing webhook. |
+| /:webhookId | DELETE |  | `{ "message": string, "webhook": Webhook }` | Deletes a webhook. |
+| /:webhookId/test | POST |  | `{ "message": string, "webhook": Webhook }` | Tests a webhook by sending a test request. |
+| / | GET | `?workspaceId=string&environment=string&secretPath=string` | `{ "message": string, "webhooks": Webhook[] }` | Lists webhooks based on query parameters. |
+
+**Webhook object:**
+
+```typescript
+{
+  id: string;
+  secretPath: string;
+  lastStatus: string;
+  lastRunErrorMessage: string;
+  isDisabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  envId: string;
+  type: WebhookType;
+  projectId: string;
+  environment: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  url?: string; // Only present in GET / response
+}
+```

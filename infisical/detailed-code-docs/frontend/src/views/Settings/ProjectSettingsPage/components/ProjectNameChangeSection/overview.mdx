@@ -1,0 +1,105 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains components related to changing a project's name in the settings page of a React application. The main component is `ProjectNameChangeSection`, which provides a form for users to update the project name, along with additional functionality like copying project-related information.
+
+## What does it do?
+The `ProjectNameChangeSection` component allows users to:
+1. View and edit the current project name
+2. Copy the project slug and ID
+3. Submit a form to rename the project
+
+The component includes form validation, permission checks, and integrates with an API to perform the actual renaming operation. It provides visual feedback through notifications for successful or failed operations.
+
+## Key Files
+1. `ProjectNameChangeSection.tsx`: The main component that renders the form for changing the project name. It handles form management, validation, API integration, and user interactions.
+
+2. `CopyButton.tsx`: A reusable component that provides copy-to-clipboard functionality with visual feedback and notifications.
+
+3. `index.tsx`: A re-export file that simplifies the import process for the `ProjectNameChangeSection` component.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React (v16.8+): For building the user interface components.
+2. react-hook-form: Used for form handling and validation in `ProjectNameChangeSection`.
+3. Yup: Employed for schema validation of the form inputs.
+4. @fortawesome/react-fontawesome and @fortawesome/free-solid-svg-icons: Used in `CopyButton` for icons.
+5. Internal components and hooks:
+   - `@app/components/notifications`: For displaying notifications.
+   - `@app/components/permissions`: For handling permission checks.
+   - `@app/components/v2`: For UI components like Button, FormControl, and Input.
+   - `@app/context`: For accessing workspace context and permission constants.
+   - `@app/hooks/api`: Custom hook for renaming the workspace.
+   - `@app/hooks`: Custom hooks, including `useToggle`.
+
+## Configuration
+The components in this directory don't rely on specific configuration files or environment variables. However, they do use constants and context values from the application's global state, such as permission constants and workspace data.
+
+Here's an example of how the `ProjectNameChangeSection` component is structured:
+
+```tsx
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { useWorkspace } from '@app/context';
+import { useRenameWorkspace } from '@app/hooks/api';
+import { createNotification } from '@app/components/notifications';
+import { Button, FormControl, Input } from '@app/components/v2';
+import { CopyButton } from './CopyButton';
+
+const formSchema = yup.object().shape({
+  name: yup.string().required('Project name is required'),
+});
+
+type FormData = yup.InferType&lt;typeof formSchema&gt;;
+
+export const ProjectNameChangeSection: React.FC = () =&gt; {
+  const { workspace } = useWorkspace();
+  const { mutateAsync: renameWorkspace } = useRenameWorkspace();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm&lt;FormData&gt;({
+    resolver: yupResolver(formSchema),
+    defaultValues: { name: workspace?.name || '' },
+  });
+
+  useEffect(() =&gt; {
+    reset({ name: workspace?.name || '' });
+  }, [workspace, reset]);
+
+  const onSubmit = async (data: FormData) =&gt; {
+    try {
+      await renameWorkspace({ name: data.name });
+      createNotification({ type: 'success', message: 'Project renamed successfully' });
+    } catch (error) {
+      console.error('Failed to rename workspace:', error);
+      createNotification({ type: 'error', message: 'Failed to rename project' });
+    }
+  };
+
+  return (
+    &lt;form onSubmit={handleSubmit(onSubmit)}&gt;
+      &lt;FormControl
+        label="Project Name"
+        error={errors.name?.message}
+      &gt;
+        &lt;Input
+          {...register('name')}
+          placeholder="Enter project name"
+        /&gt;
+      &lt;/FormControl&gt;
+      &lt;CopyButton value={workspace?.slug || ''} hoverText="Copy project slug"&gt;
+        Copy project slug
+      &lt;/CopyButton&gt;
+      &lt;CopyButton value={workspace?.id || ''} hoverText="Copy project ID"&gt;
+        Copy project ID
+      &lt;/CopyButton&gt;
+      &lt;Button type="submit"&gt;Save Changes&lt;/Button&gt;
+    &lt;/form&gt;
+  );
+};
+```
+
+This component demonstrates the integration of form handling, API calls, and user feedback in a cohesive interface for managing project settings. The `CopyButton` component is used to provide easy access to project-related information, enhancing the user experience in the settings page.

@@ -1,0 +1,50 @@
+---
+title: "manager-rbac.yaml"
+---
+
+## High-level description
+This YAML file defines Kubernetes RBAC (Role-Based Access Control) resources for the secrets-operator. It creates a ClusterRole with specific permissions and a ClusterRoleBinding to associate the role with a ServiceAccount, enabling the secrets-operator to manage various Kubernetes resources.
+
+## Symbols
+
+### ClusterRole
+#### Description
+Defines a set of permissions for the secrets-operator manager role across the entire cluster.
+
+#### Internal Logic
+The ClusterRole specifies rules for different API groups and resources:
+1. Core API group (""):
+   - Manages configmaps, secrets, and serviceaccounts
+2. Apps API group:
+   - Manages deployments
+3. Custom API group (secrets.infisical.com):
+   - Manages infisicalsecrets, their finalizers, and status
+
+Each rule defines the allowed verbs (actions) for the specified resources.
+
+### ClusterRoleBinding
+#### Description
+Associates the ClusterRole with a ServiceAccount, granting the defined permissions to the secrets-operator controller manager.
+
+#### Internal Logic
+1. References the ClusterRole created above
+2. Specifies the ServiceAccount as the subject, using the release namespace
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | Used for templating and variable substitution (e.g., `{{ include "secrets-operator.fullname" . }}`) |
+
+## Configuration
+The file uses Helm templating for dynamic configuration:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| `secrets-operator.fullname` | string | Used to generate names for resources |
+| `secrets-operator.labels` | map | Provides labels for the resources |
+| `Release.Namespace` | string | Specifies the namespace for the ServiceAccount |
+
+## Notes
+1. The file creates cluster-wide permissions, which means the secrets-operator will have the specified access across all namespaces in the cluster.
+2. The custom API group `secrets.infisical.com` suggests that this operator is designed to work with custom resources related to Infisical secrets.
+3. The ClusterRoleBinding includes additional labels related to Kubernetes operators, indicating that this is part of a larger operator ecosystem.

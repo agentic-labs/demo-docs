@@ -1,0 +1,140 @@
+---
+title: "aws-iam.ts"
+---
+
+## High-level description
+This code defines an AWS IAM provider for dynamic secrets management. It provides functionality to create, revoke, and renew IAM users with specific permissions, groups, and policies. The provider interacts with AWS IAM using the AWS SDK for JavaScript.
+
+## Code Structure
+The main symbol is the `AwsIamProvider` function, which returns an object containing several functions for managing IAM users. These functions include `validateProviderInputs`, `validateConnection`, `create`, `revoke`, and `renew`.
+
+## Symbols
+
+### AwsIamProvider
+#### Description
+This function creates and returns an object with methods for managing AWS IAM users as part of a dynamic secret provider.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TDynamicProviderFns | An object containing functions for managing IAM users |
+
+#### Internal Logic
+1. Defines helper functions for input validation and client creation.
+2. Implements functions for creating, revoking, and renewing IAM users.
+3. Handles attaching policies, adding users to groups, and managing access keys.
+
+### validateProviderInputs
+#### Description
+Validates the input parameters for the AWS IAM provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | The input parameters to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| providerInputs | z.infer&lt;typeof DynamicSecretAwsIamSchema&gt; | Validated provider inputs |
+
+### getClient
+#### Description
+Creates and returns an AWS IAM client using the provided credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| providerInputs | z.infer&lt;typeof DynamicSecretAwsIamSchema&gt; | Validated provider inputs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | IAMClient | An instance of the AWS IAM client |
+
+### validateConnection
+#### Description
+Validates the connection to AWS IAM using the provided credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | The input parameters to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isConnected | boolean | Indicates if the connection is valid |
+
+### create
+#### Description
+Creates a new IAM user with specified permissions, groups, and policies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | The input parameters for creating the user |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { entityId: string, data: { ACCESS_KEY: string, SECRET_ACCESS_KEY: string, USERNAME: string } } | Created user details |
+
+#### Internal Logic
+1. Validates inputs and creates an IAM client.
+2. Generates a unique username.
+3. Creates the IAM user with specified path and permission boundary.
+4. Adds the user to specified groups.
+5. Attaches specified policies to the user.
+6. Creates an access key for the user.
+
+### revoke
+#### Description
+Revokes an IAM user by removing their permissions, access keys, and deleting the user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | The input parameters for revoking the user |
+| entityId | string | The username of the IAM user to revoke |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { entityId: string } | The revoked user's entityId |
+
+#### Internal Logic
+1. Validates inputs and creates an IAM client.
+2. Removes the user from all groups.
+3. Deletes all access keys associated with the user.
+4. Removes all inline and attached policies from the user.
+5. Deletes the IAM user.
+
+### renew
+#### Description
+Placeholder function for renewing an IAM user (currently does nothing).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| _inputs | unknown | Unused input parameters |
+| entityId | string | The username of the IAM user to renew |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { entityId: string } | The renewed user's entityId |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @aws-sdk/client-iam | AWS SDK for interacting with IAM service |
+| zod | Schema validation library |
+| @app/lib/errors | Custom error types |
+| @app/lib/nanoid | Generates unique identifiers |
+
+## Error Handling
+The code uses custom `BadRequestError` for handling errors during user creation and access key generation. It also uses try-catch blocks implicitly through the use of `async/await`.
+
+## Performance Considerations
+The code uses `Promise.all` for parallel execution of multiple AWS API calls, which can improve performance when dealing with multiple groups or policies.

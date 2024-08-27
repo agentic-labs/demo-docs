@@ -1,0 +1,113 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+The `helm-charts` directory contains Helm charts for deploying Infisical, a secrets management platform, and its associated components on Kubernetes. It includes charts for the main Infisical application with PostgreSQL and Redis, as well as a separate chart for the Infisical Secrets Operator.
+
+## What does it do?
+
+This directory provides Helm charts that automate the deployment and configuration of Infisical and its components in a Kubernetes environment. The charts facilitate:
+
+1. Deployment of the core Infisical application with PostgreSQL for data storage and Redis for caching.
+2. Setup of the Infisical Secrets Operator, which manages the synchronization of secrets between Infisical and Kubernetes.
+3. Configuration of necessary RBAC rules, custom resources, and metrics exposure for both Infisical and the Secrets Operator.
+4. Customizable deployments through extensive configuration options in the `values.yaml` files.
+
+## Entry points
+
+The main entry points for these Helm charts are:
+
+1. `infisical-standalone-postgres/Chart.yaml`: Defines the chart for the main Infisical application with PostgreSQL and Redis.
+2. `secrets-operator/Chart.yaml`: Defines the chart for the Infisical Secrets Operator.
+3. `README.md`: Provides overall instructions for adding the Infisical Helm repository and installing the charts.
+
+## Key Files
+
+1. `infisical-standalone-postgres/values.yaml`: Contains configuration options for the main Infisical deployment, including application settings, ingress configuration, and database settings.
+
+2. `infisical-standalone-postgres/templates/infisical.yaml`: Defines the core Infisical application Deployment and Service resources.
+
+3. `secrets-operator/values.yaml`: Contains configuration options for the Secrets Operator, including controller manager settings, RBAC proxy configuration, and metrics service setup.
+
+4. `secrets-operator/templates/deployment.yaml`: The primary template for deploying the secrets-operator controller manager.
+
+5. `secrets-operator/templates/infisicalsecret-crd.yaml`: Defines the CustomResourceDefinition for InfisicalSecret.
+
+## Dependencies
+
+The charts rely on the following key dependencies:
+
+1. Kubernetes: The target platform for deployment.
+2. Helm: Used as the package manager and templating engine.
+3. ingress-nginx: Provides the Ingress controller for the main Infisical application (version 4.0.13).
+4. postgresql: Provides the database service for Infisical (version 14.1.3).
+5. redis: Provides caching and message broker services (version 18.14.0).
+6. kube-rbac-proxy: Used for handling RBAC proxying in the Secrets Operator.
+
+## Configuration
+
+Both charts offer extensive configuration options through their respective `values.yaml` files. Key configuration areas include:
+
+1. For the main Infisical application:
+   - Infisical application settings (image, replicas, resources)
+   - Ingress configuration
+   - PostgreSQL and Redis settings
+
+2. For the Secrets Operator:
+   - Controller manager settings (replicas, image, resources)
+   - RBAC proxy configuration
+   - Metrics service setup
+   - Node selectors and tolerations
+
+Example configuration for the main Infisical application:
+
+```yaml
+infisical:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: infisical/infisical
+    tag: "v0.46.3-postgres"
+  autoDatabaseSchemaMigration: true
+
+ingress:
+  enabled: false
+  ingressClassName: nginx
+  annotations: {}
+  hostName: chart-example.local
+
+postgresql:
+  enabled: true
+  auth:
+    username: infisical
+    password: changeme
+    database: infisical
+```
+
+Example configuration for the Secrets Operator:
+
+```yaml
+controllerManager:
+  replicas: 1
+  image:
+    repository: infisical/kubernetes-operator
+    tag: v0.7.1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+
+metricsService:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+```
+
+These Helm charts provide a flexible and comprehensive solution for deploying Infisical and its components in a Kubernetes environment, with options for customization, monitoring, and automatic secret synchronization.

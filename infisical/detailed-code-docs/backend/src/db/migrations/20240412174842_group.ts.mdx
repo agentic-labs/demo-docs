@@ -1,0 +1,72 @@
+---
+title: "20240412174842_group.ts"
+---
+
+## High-level description
+This migration script sets up database tables related to user groups and their memberships in the application. It creates tables for storing group information, user-group memberships, group-project memberships, and roles within those memberships. 
+
+The script also defines foreign key constraints to maintain data integrity and creates triggers to automatically update timestamps on record changes.
+
+## Code Structure
+The code defines two main asynchronous functions, `up` and `down`, which handle the database migration up and down operations, respectively. Both functions utilize the `knex` library for interacting with the database.
+
+- `up`: Creates the necessary tables (`Groups`, `UserGroupMembership`, `GroupProjectMembership`, `GroupProjectMembershipRole`) if they don't exist, defines their schema (columns, data types, constraints), and sets up triggers for automatic timestamp updates.
+- `down`: Handles the rollback by dropping the tables created in the `up` function in reverse order and removing the associated triggers.
+
+## References
+This code references several table names defined in the `TableName` enum from the `../schemas` module. It also utilizes utility functions `createOnUpdateTrigger` and `dropOnUpdateTrigger` from the `../utils` module for managing database triggers.
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function is responsible for creating the database tables related to user groups and their memberships if they don't already exist. It defines the schema for each table, including columns, data types, constraints, and foreign key relationships. Additionally, it sets up triggers to automatically update timestamps on record changes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex library for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the database migration is complete. |
+
+#### Internal Logic
+1. **Check for Table Existence:** The function first checks if each table already exists in the database using `knex.schema.hasTable`.
+2. **Create Tables:** If a table doesn't exist, it's created using `knex.schema.createTable` with the appropriate schema definition.
+    - **Groups Table:** Stores information about user groups, including their name, slug, associated organization, and role.
+    - **UserGroupMembership Table:** Tracks memberships between users and groups.
+    - **GroupProjectMembership Table:** Tracks memberships between groups and projects.
+    - **GroupProjectMembershipRole Table:** Defines roles for groups within specific projects, including temporary roles with start and end times.
+3. **Create Triggers:** After creating each table, the function calls `createOnUpdateTrigger` to set up a trigger that automatically updates the `updatedAt` timestamp whenever a record in the table is updated.
+
+### `down`
+#### Description
+This asynchronous function handles the database migration rollback by dropping the tables created in the `up` function. It ensures that the tables are dropped in reverse order to avoid foreign key constraint violations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex library for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the database rollback is complete. |
+
+#### Internal Logic
+1. **Drop Tables:** The function uses `knex.schema.dropTableIfExists` to drop each table if it exists. The tables are dropped in reverse order of their creation in the `up` function.
+2. **Drop Triggers:** After dropping each table, the function calls `dropOnUpdateTrigger` to remove the associated trigger that was set up in the `up` function.
+
+## Side Effects
+- **Database Schema Modification:** This code directly modifies the database schema by creating and dropping tables and triggers.
+- **Data Persistence:** The tables created by this script are intended to persist data related to user groups and their memberships.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides a query builder and schema builder for interacting with various databases. |
+
+## Error Handling
+The code uses `knex.schema.hasTable` and `knex.schema.dropTableIfExists` to prevent errors when checking for table existence and dropping tables. This ensures that the migration can be run multiple times without causing issues.

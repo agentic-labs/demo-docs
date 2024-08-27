@@ -1,0 +1,53 @@
+---
+title: "monitor.yaml"
+---
+
+## High-level description
+This YAML file defines a ServiceMonitor resource for Prometheus monitoring in a Kubernetes environment. It specifically targets the controller-manager's metrics endpoint, enabling Prometheus to scrape and collect metrics from the controller-manager component of the k8-operator.
+
+## Symbols
+
+### ServiceMonitor
+#### Description
+The ServiceMonitor is a Custom Resource Definition (CRD) provided by the Prometheus Operator. It defines how Prometheus should discover and scrape metrics from services in the Kubernetes cluster.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metadata | object | Contains metadata about the ServiceMonitor resource |
+| spec | object | Defines the specification for the ServiceMonitor |
+
+#### Internal Logic
+The ServiceMonitor is configured to:
+1. Target services with the label `control-plane: controller-manager`
+2. Scrape metrics from the `/metrics` endpoint on the `https` port
+3. Use HTTPS scheme with bearer token authentication
+4. Skip TLS verification (insecure, but sometimes necessary in certain environments)
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| monitoring.coreos.com/v1 | API version for the ServiceMonitor CRD, provided by Prometheus Operator |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| metadata.name | string | controller-manager-metrics-monitor | Name of the ServiceMonitor resource |
+| metadata.namespace | string | system | Namespace where the ServiceMonitor is deployed |
+| spec.endpoints[0].path | string | /metrics | Path to scrape metrics from |
+| spec.endpoints[0].port | string | https | Port name to scrape metrics from |
+| spec.endpoints[0].scheme | string | https | Protocol scheme to use for scraping |
+| spec.endpoints[0].bearerTokenFile | string | /var/run/secrets/kubernetes.io/serviceaccount/token | Path to the bearer token file for authentication |
+| spec.endpoints[0].tlsConfig.insecureSkipVerify | boolean | true | Whether to skip TLS verification |
+
+## Side Effects
+This ServiceMonitor, when applied to a Kubernetes cluster with Prometheus Operator installed, will cause Prometheus to discover and start scraping metrics from the controller-manager component of the k8-operator. This may increase the load on the controller-manager and Prometheus, and will result in metric data being collected and stored in Prometheus.
+
+## Performance Considerations
+The frequency of metric scraping and the volume of metrics collected can impact both the controller-manager and Prometheus performance. It's important to monitor the resource usage of both components and adjust the scraping interval if necessary (though this is not configurable in the provided YAML).
+
+## Error Handling
+There is no explicit error handling in this configuration. However, if Prometheus fails to scrape metrics (e.g., due to network issues or service unavailability), it will typically retry based on its own configuration and log the failures.
+
+## Logging
+This configuration does not directly implement any logging. However, failed scrape attempts and other issues will be logged by Prometheus itself.

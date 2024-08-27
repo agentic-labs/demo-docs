@@ -1,0 +1,59 @@
+---
+title: "boot-strap-check.ts"
+---
+
+## High-level description
+The `bootstrapCheck` function in `boot-strap-check.ts` performs a series of health checks on external services and configurations crucial for the application's operation. It verifies the connectivity and functionality of the SMTP server, PostgreSQL database, and Redis instance. 
+
+This check runs during the application's bootstrap process, ensuring that all dependencies are functioning correctly before the application starts serving requests. If the application is running in development mode, the checks are skipped.
+
+## References
+- `getConfig` from `@app/lib/config/env`: Retrieves application configuration values.
+- `logger` from `@app/lib/logger`: Provides logging functionality.
+- `getServerCfg` from `@app/services/super-admin/super-admin-service`: Fetches server-specific configurations.
+
+## Symbols
+
+### `bootstrapCheck`
+#### Description
+This asynchronous function performs a series of checks to ensure that the application's dependencies are functioning correctly. It checks the SMTP, PostgreSQL, and Redis connections. If all checks pass, it returns a callback function that logs a welcome message.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { db } | `BootstrapOpt` | An object containing a Knex instance representing the database connection. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `bootstrapCb` | `() =&gt; Promise&lt;void&gt;` | A callback function that logs a welcome message based on whether the server is initialized. |
+
+#### Internal Logic
+1. **Check Environment:** If the application is running in development mode, skip the checks and log a message.
+2. **SMTP Check:**
+   - Formats the SMTP configuration using `formatSmtpConfig`.
+   - Attempts to create a Nodemailer transport instance with the SMTP configuration.
+   - Verifies the connection to the SMTP server using `verify`.
+   - Logs a success or error message based on the verification result.
+3. **PostgreSQL Check:**
+   - Executes a raw SQL query `SELECT NOW()` on the provided `db` instance.
+   - Logs a success or error message based on the query execution result.
+4. **Redis Check:**
+   - Creates a new Redis client instance using the `REDIS_URL` from the application configuration.
+   - Pings the Redis server using `ping`.
+   - Logs a success or error message based on the ping response.
+   - Disconnects the Redis client.
+5. **Return Callback:** Returns the `bootstrapCb` function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| ioredis | Interacting with the Redis database. |
+| knex | Interacting with the PostgreSQL database. |
+| nodemailer | Sending emails via SMTP. |
+
+## Error Handling
+The function uses `try...catch` blocks to handle potential errors during the SMTP, PostgreSQL, and Redis checks. Errors are logged using the `logger.error` method.
+
+## Logging
+The function logs messages to the console to provide feedback on the status of each check. It uses `console.info` for informational messages, `console.error` for error messages, and `console.log` for general messages. Additionally, it uses the `logger` instance to log errors encountered during the checks. 

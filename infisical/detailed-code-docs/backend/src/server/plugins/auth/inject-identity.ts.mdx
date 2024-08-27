@@ -1,0 +1,56 @@
+---
+title: "inject-identity.ts"
+---
+
+## High-level description
+The `injectIdentity` plugin for the Fastify server is responsible for authenticating incoming requests and decorating the request object with the authenticated identity. It supports various authentication modes, including JWT, API keys, service tokens, identity access tokens, and SCIM tokens. 
+
+This plugin is crucial for enforcing authorization and providing context about the authenticated entity for subsequent request handling.
+
+## Code Structure
+The code defines a single function `injectIdentity` which is a Fastify plugin. This function first defines a helper function `extractAuth` to determine the authentication mode and extract the token. Then, it decorates the request object with an `auth` property based on the validated identity.
+
+## References
+- `UnauthorizedError`: Custom error class thrown when authentication fails.
+- `getConfig`: Function to retrieve application configuration.
+- Various service factories from `@app/services`: Used to validate different types of tokens and retrieve user/identity information.
+
+## Symbols
+### `injectIdentity`
+#### Description
+This function is a Fastify plugin that intercepts incoming requests, determines the authentication mode from the request headers, validates the provided token, and decorates the request object with the authenticated identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The Fastify server instance. |
+
+#### Outputs
+This function is a plugin and doesn't return any value.
+
+#### Internal Logic
+1. **Skip Authentication for Specific Routes:** If the request URL includes ".well-known/est" or "/api/v3/auth/", authentication is skipped.
+2. **Extract Authentication Information:** The `extractAuth` helper function is called to determine the authentication mode (JWT, API key, service token, etc.) and extract the token from the request headers.
+3. **Validate Token and Decorate Request:** Based on the identified `authMode`, the corresponding service is used to validate the token. If validation is successful, the `req.auth` property is decorated with the following information:
+    - `JWT`: User object, user ID, token version ID, organization ID, and authentication method.
+    - `IDENTITY_ACCESS_TOKEN`: Organization ID, identity ID, identity name.
+    - `SERVICE_TOKEN`: Organization ID, service token object, service token ID.
+    - `API_KEY`: User ID, user object, organization ID (set to "API_KEY" as API keys aren't linked to a specific organization).
+    - `SCIM_TOKEN`: Organization ID, SCIM token ID.
+4. **Throw Error for Unknown Token Strategy:** If the token strategy is not recognized, an `UnauthorizedError` is thrown.
+
+## Side Effects
+- **Decorates Request Object:** This plugin adds an `auth` property to the Fastify request object (`req.auth`). This property holds the validated identity information.
+
+## Dependencies
+- `fastify-plugin`: Used to create a Fastify plugin.
+- `jsonwebtoken`: Used for verifying JWT tokens.
+- `@app/lib/config/env`: Used to retrieve the application configuration.
+- `@app/lib/errors`: Used to throw an `UnauthorizedError` in case of authentication failure.
+- Various service factories from `@app/services`: Used for validating different types of authentication tokens.
+
+## Error Handling
+- **UnauthorizedError:** Thrown if the authentication mode is not recognized or if the token validation fails.
+
+## Logging
+This code doesn't implement any specific logging mechanisms.

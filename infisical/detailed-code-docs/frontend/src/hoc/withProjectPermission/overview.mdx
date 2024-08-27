@@ -1,0 +1,79 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/hoc/withProjectPermission` directory contains a Higher-Order Component (HOC) implementation for handling project-level permissions in a React application. The main purpose of this HOC is to wrap components and conditionally render them based on the user's permissions for specific project-related actions and subjects.
+
+## What does it do?
+The `withProjectPermission` HOC provides a reusable way to apply permission checks to components throughout the frontend. When a component is wrapped with this HOC, it performs the following workflow:
+
+1. It checks the user's permissions for a specific action and subject related to the project.
+2. If the user has the required permissions, it renders the wrapped component with its original props.
+3. If the user doesn't have the required permissions, it displays a "Permission Denied" message instead of the component.
+
+This allows developers to easily control access to different parts of the application based on the user's project-level permissions without repeating permission-checking logic in multiple components.
+
+## Key Files
+
+### index.tsx
+This file serves as the entry point for the `withProjectPermission` HOC. It exports the HOC from the `./withProjectPermission` module, making it available for use in other parts of the application.
+
+### withProjectPermission.tsx
+This file contains the main implementation of the `withProjectPermission` HOC. It defines the HOC function, which wraps a given React component and adds project-level permission checks using the `useProjectPermission` hook.
+
+## Dependencies
+The `withProjectPermission` HOC relies on several external libraries and internal modules:
+
+1. react: Used for React component types and hooks.
+2. @casl/ability: Provides permission-related types.
+3. @fortawesome/free-solid-svg-icons: Used for the lock icon in the permission denied message.
+4. @fortawesome/react-fontawesome: Used for rendering FontAwesome icons.
+5. tailwind-merge: Used for merging Tailwind CSS classes.
+6. @app/context: Provides the `useProjectPermission` hook and related types.
+
+## Configuration
+The `withProjectPermission` HOC accepts configuration options when wrapping a component:
+
+```typescript
+withProjectPermission(Component, {
+  action: ProjectPermissionActions.Read,
+  subject: ProjectPermissionSub.Integrations,
+  className: "optional-custom-class",
+  containerClassName: "optional-container-class"
+})
+```
+
+- `action`: Specifies the action to check permission for (e.g., Read, Write, Delete).
+- `subject`: Specifies the subject to check permission against (e.g., Integrations, Users, Settings).
+- `className`: Optional CSS class for styling the permission denied message.
+- `containerClassName`: Optional CSS class for styling the container of the permission denied message.
+
+## Usage Example
+Here's an example of how the `withProjectPermission` HOC is used in the application:
+
+```typescript
+export const IntegrationsPage = withProjectPermission(
+  ({ frameworkIntegrations, infrastructureIntegrations }: Props) =&gt; {
+    // Component implementation
+  },
+  { action: ProjectPermissionActions.Read, subject: ProjectPermissionSub.Integrations }
+);
+```
+
+In this example, the `IntegrationsPage` component is wrapped with `withProjectPermission`. The HOC checks if the user has read permissions for the Integrations subject before rendering the component. If the user doesn't have the required permissions, a "Permission Denied" message will be displayed instead.
+
+## Performance Considerations
+The `withProjectPermission` HOC uses the `useProjectPermission` hook, which likely performs a permission check on each render. Depending on the implementation of this hook, it could potentially impact performance if used extensively throughout the application. Developers should be aware of this and consider optimizing the permission checking process if necessary.
+
+## Error Handling and Known Issues
+There's a known TypeScript bug related to the `casl/react` library. The code currently uses an `as any` type assertion to work around this issue:
+
+```typescript
+// akhilmhdh: Set as any due to casl/react ts type bug
+// REASON: casl due to its type checking can't seem to union even if union intersection is applied
+```
+
+This workaround may hide potential type errors, and developers should be cautious when modifying the HOC or its usage. It's recommended to revisit this part of the code once the bug is resolved or a better workaround is found.
+
+In conclusion, the `withProjectPermission` HOC provides a powerful and flexible way to implement project-level permission checks in the frontend application. It encapsulates the permission-checking logic, making it easy to apply consistent access control across different components while keeping the codebase clean and maintainable.

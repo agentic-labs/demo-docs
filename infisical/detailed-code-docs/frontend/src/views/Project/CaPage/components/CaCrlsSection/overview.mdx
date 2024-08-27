@@ -1,0 +1,107 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for displaying Certificate Authority (CA) Certificate Revocation Lists (CRLs) in a project's frontend. The main component, `CaCrlsSection`, renders a section with a title and a table of CRLs for a specific CA. The `CaCrlsTable` component fetches and displays the actual CRL data, including functionality to download individual CRLs.
+
+## What does it do?
+The code in this directory creates a user interface for viewing and managing Certificate Revocation Lists (CRLs) associated with a Certificate Authority (CA). Here's a breakdown of its functionality:
+
+1. It displays a section titled "CA Certificate Revocation Lists (CRLs)" on a webpage.
+2. It fetches CRL data for a specific CA using an API hook.
+3. It presents the CRL data in a table format, showing the Distribution Point URL for each CRL.
+4. It provides a download button for each CRL, allowing users to save the CRL content as a text file.
+5. It handles different states of the UI, such as loading (showing a skeleton loader) and empty (when no CRLs are available).
+
+This functionality allows users to easily view and manage CRLs, which are important for maintaining the security of a Public Key Infrastructure (PKI) by listing certificates that have been revoked before their scheduled expiration date.
+
+## Key Files
+
+1. `CaCrlsSection.tsx`:
+   - Main container component for the CRL section.
+   - Renders the section title and includes the `CaCrlsTable` component.
+   - Takes a `caId` prop to identify the specific Certificate Authority.
+
+2. `CaCrlsTable.tsx`:
+   - Core component that fetches and displays CRL data.
+   - Uses the `useGetCaCrls` hook to retrieve CRL information.
+   - Renders a table with Distribution Point URLs and download buttons for each CRL.
+   - Handles loading and empty states.
+   - Implements the `downloadTxtFile` function for downloading CRL content.
+
+3. `index.tsx`:
+   - Re-export file that simplifies the import of the `CaCrlsSection` component in other parts of the application.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: The core library for building the user interface components.
+2. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: Used for rendering icons in the UI.
+3. file-saver: Enables the functionality to download CRL content as text files.
+4. @app/components/v2: Provides custom UI components for the table and other elements.
+5. @app/hooks/api: Contains the `useGetCaCrls` hook for fetching CRL data from the API.
+
+## Configuration
+While there are no explicit configuration files in this directory, the components are designed to work with a specific API structure and data format. The `useGetCaCrls` hook is likely configured elsewhere in the application to interact with the appropriate API endpoints.
+
+Additionally, there are commented-out imports and code sections in `CaCrlsTable.tsx` related to `@peculiar/x509` and `date-fns`. These suggest potential future enhancements for parsing and formatting CRL dates, which may require additional configuration if implemented.
+
+## Code Examples
+
+Here's a simplified example of how the `CaCrlsSection` component is structured:
+
+```jsx
+import React from 'react';
+import { CaCrlsTable } from './CaCrlsTable';
+
+export const CaCrlsSection: React.FC&lt;{ caId: string }&gt; = ({ caId }) =&gt; {
+  return (
+    &lt;div className="container"&gt;
+      &lt;h2&gt;CA Certificate Revocation Lists (CRLs)&lt;/h2&gt;
+      &lt;CaCrlsTable caId={caId} /&gt;
+    &lt;/div&gt;
+  );
+};
+```
+
+And here's a snippet from the `CaCrlsTable` component showing how it handles different states:
+
+```jsx
+const CaCrlsTable: React.FC&lt;{ caId: string }&gt; = ({ caId }) =&gt; {
+  const { data: crls, isLoading } = useGetCaCrls(caId);
+
+  if (isLoading) {
+    return &lt;SkeletonLoader /&gt;; // Show loading state
+  }
+
+  if (!crls || crls.length === 0) {
+    return &lt;EmptyState message="No CRLs available" /&gt;; // Show empty state
+  }
+
+  return (
+    &lt;Table&gt;
+      &lt;TableHeader&gt;
+        &lt;TableRow&gt;
+          &lt;TableHeaderCell&gt;Distribution Point URL&lt;/TableHeaderCell&gt;
+          &lt;TableHeaderCell&gt;Actions&lt;/TableHeaderCell&gt;
+        &lt;/TableRow&gt;
+      &lt;/TableHeader&gt;
+      &lt;TableBody&gt;
+        {crls.map((crl) =&gt; (
+          &lt;TableRow key={crl.id}&gt;
+            &lt;TableCell&gt;{crl.distributionPointUrl}&lt;/TableCell&gt;
+            &lt;TableCell&gt;
+              &lt;Button onClick={() =&gt; downloadTxtFile(crl.filename, crl.content)}&gt;
+                Download
+              &lt;/Button&gt;
+            &lt;/TableCell&gt;
+          &lt;/TableRow&gt;
+        ))}
+      &lt;/TableBody&gt;
+    &lt;/Table&gt;
+  );
+};
+```
+
+These examples demonstrate the structure and functionality of the components, showing how they work together to display and manage CRL data in a user-friendly interface.

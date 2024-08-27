@@ -1,0 +1,66 @@
+---
+title: "20240708100026_external-kms.ts"
+---
+
+## High-level description
+This TypeScript file contains a database migration script written for Knex.js. It aims to restructure the existing KMS (Key Management System) related tables to support both internal and external KMS providers. The script defines an `up` function to apply the migration and a `down` function to revert it.
+
+## Code Structure
+The code is structured around two main functions: `up` and `down`. Both functions perform a series of database operations to either apply or revert the migration. These operations involve checking for the existence of tables and columns, creating new tables, renaming existing ones, adding and dropping columns, and backfilling data.
+
+## References
+This migration script references several table names defined in the `TableName` enum from the `../schemas` module. These table names are used throughout the script to perform schema changes and data manipulation.
+
+## Symbols
+
+### `up`
+#### Description
+This function applies the migration to restructure the KMS-related tables.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration is complete. |
+
+#### Internal Logic
+1. **Create Internal KMS Table:** Creates the `internal_kms` table if it doesn't exist and backfills it with data from the existing `kms_keys` table.
+2. **Rename KMS Key Version Table:** Renames the `kms_key_versions` table to `internal_kms_key_version` and updates its foreign key reference.
+3. **Modify KMS Key Table:** Removes unnecessary fields from the `kms_keys` table, adds required fields, backfills data, and updates constraints.
+4. **Create External KMS Table:** Creates the `external_kms` table to store information about external KMS providers.
+5. **Add KMS Key References:** Adds `kmsDefaultKeyId` and `kmsSecretManagerKeyId` columns to the `organizations` and `projects` tables respectively, referencing the `kms_keys` table.
+
+### `down`
+#### Description
+This function reverts the changes made by the `up` function, restoring the KMS-related tables to their previous state.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration rollback is complete. |
+
+#### Internal Logic
+1. **Remove KMS Key References:** Drops the `kmsDefaultKeyId` and `kmsSecretManagerKeyId` columns from the `organizations` and `projects` tables.
+2. **Rename Internal KMS Key Version Table:** Renames the `internal_kms_key_version` table back to `kms_key_versions` and updates its foreign key reference.
+3. **Restore KMS Key Table:** Adds back the removed fields to the `kms_keys` table, removes added fields, and updates constraints.
+4. **Backfill KMS Key Data:** Backfills the `kms_keys` table with data from the `internal_kms` table.
+5. **Drop Internal and External KMS Tables:** Drops the `internal_kms` and `external_kms` tables.
+
+## Dependencies
+This code depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| "@sindresorhus/slugify" | Used for generating URL-friendly slugs. |
+| "knex" | Provides the Knex.js library for database interactions. |
+| "@app/lib/nanoid" | Used for generating unique identifiers. |
+| "../schemas" | Provides access to the database schema definitions, including the `TableName` enum. |

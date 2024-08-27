@@ -1,0 +1,73 @@
+---
+title: "integration-list.ts"
+---
+
+## High-level description
+This code defines an integration authentication service for managing various third-party integrations. It provides functionality for OAuth token exchange, retrieving access tokens, and fetching integration-specific data such as apps, teams, and environments.
+
+## Code Structure
+The code is structured as a factory function `integrationAuthServiceFactory` that returns an object with multiple methods for handling different aspects of integration authentication and data retrieval. It uses dependency injection to receive necessary services and data access layers.
+
+## Symbols
+
+### `integrationAuthServiceFactory`
+#### Description
+This is the main factory function that creates and returns the integration authentication service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for checking user permissions |
+| integrationAuthDAL | TIntegrationAuthDALFactory | Data access layer for integration authentication |
+| integrationDAL | Pick&lt;TIntegrationDALFactory, "delete"&gt; | Data access layer for integrations |
+| projectBotService | Pick&lt;TProjectBotServiceFactory, "getBotKey"&gt; | Service for retrieving project bot keys |
+| kmsService | Pick&lt;TKmsServiceFactory, "createCipherPairWithDataKey"&gt; | Service for encryption operations |
+
+#### Outputs
+Returns an object containing various methods for integration authentication and data retrieval.
+
+#### Internal Logic
+The factory function creates and returns an object with multiple methods, each handling a specific aspect of integration authentication or data retrieval. These methods include:
+
+1. `listIntegrationAuthByProjectId`: Lists integration authorizations for a project
+2. `getIntegrationAuth`: Retrieves a specific integration authorization
+3. `oauthExchange`: Handles OAuth token exchange
+4. `saveIntegrationToken`: Saves integration tokens
+5. `getIntegrationApps`: Retrieves apps for an integration
+6. `getIntegrationAuthTeams`: Retrieves teams for an integration
+7. Various methods for retrieving integration-specific data (e.g., Vercel branches, GitHub organizations, Qovery projects, etc.)
+
+### `getIntegrationAccessToken` (helper function)
+#### Description
+This helper function retrieves the access token for a given integration authorization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integrationAuth | TIntegrationAuths | The integration authorization object |
+| shouldUseSecretV2Bridge | boolean | Flag indicating whether to use the new secret management system |
+| botKey | string | (optional) The bot key for decryption |
+
+#### Outputs
+Returns an object containing the `accessToken` and `accessId`.
+
+#### Internal Logic
+1. Checks if the integration is AWS Secret Manager with IAM role
+2. Decrypts the access token using either the new secret management system or the old bot key method
+3. Handles token refresh if necessary
+4. Returns the decrypted access token and access ID
+
+## Dependencies
+The code relies on several external libraries and modules:
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permissions |
+| @octokit/rest | For GitHub API interactions |
+| AWS | For AWS SDK operations |
+| request | For making HTTP requests |
+
+## Error Handling
+The code uses custom error classes like `BadRequestError` and `ForbiddenError` for handling and throwing specific error types.
+
+## Performance Considerations
+The code includes caching mechanisms for bot keys and uses efficient encryption/decryption methods. However, the performance may be affected by the number of external API calls made to various integration services.

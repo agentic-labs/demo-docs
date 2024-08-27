@@ -1,0 +1,98 @@
+---
+title: "project-membership-service.ts"
+---
+
+## High-level description
+The `project-membership-service.ts` file defines the `TProjectMembershipServiceFactory`, which provides methods for managing project memberships. This includes adding users, updating roles, deleting memberships, and retrieving membership details.
+
+## Code Structure
+The main symbol in this code is the `projectMembershipServiceFactory`. It takes various DALs (Data Access Layer) and services as dependencies and returns an object containing functions for managing project memberships. These functions utilize the injected dependencies to interact with the database and perform actions like adding users, updating roles, and deleting memberships.
+
+## References
+This code references the following symbols:
+- `ProjectMembershipRole`, `ProjectVersion`, `TableName` (from `@app/db/schemas`)
+- `TPermissionServiceFactory` (from `@app/ee/services/permission/permission-service`)
+- `ProjectPermissionActions`, `ProjectPermissionSub` (from `@app/ee/services/permission/project-permission`)
+- `TLicenseServiceFactory` (from `@app/ee/services/license/license-service`)
+- `TProjectUserAdditionalPrivilegeDALFactory` (from `@app/ee/services/project-user-additional-privilege/project-user-additional-privilege-dal`)
+- `TUserGroupMembershipDALFactory` (from `../../ee/services/group/user-group-membership-dal`)
+- `ActorType` (from `../auth/auth-type`)
+- `TGroupProjectDALFactory` (from `../group-project/group-project-dal`)
+- `TOrgDALFactory` (from `../org/org-dal`)
+- `TProjectDALFactory` (from `../project/project-dal`)
+- `TProjectBotDALFactory` (from `../project-bot/project-bot-dal`)
+- `TProjectKeyDALFactory` (from `../project-key/project-key-dal`)
+- `TProjectRoleDALFactory` (from `../project-role/project-role-dal`)
+- `SmtpTemplates`, `TSmtpService` (from `../smtp/smtp-service`)
+- `TUserDALFactory` (from `../user/user-dal`)
+- `TProjectMembershipDALFactory` (from `./project-membership-dal`)
+- `addMembersToProject` (from `./project-membership-fns`)
+- `ProjectUserMembershipTemporaryMode`, `TAddUsersToWorkspaceDTO`, `TAddUsersToWorkspaceNonE2EEDTO`, `TDeleteProjectMembershipOldDTO`, `TDeleteProjectMembershipsDTO`, `TGetProjectMembershipByUsernameDTO`, `TGetProjectMembershipDTO`, `TLeaveProjectDTO`, `TUpdateProjectMembershipDTO` (from `./project-membership-types`)
+- `TProjectUserMembershipRoleDALFactory` (from `./project-user-membership-role-dal`)
+
+## Symbols
+
+### `projectMembershipServiceFactory`
+#### Description
+This factory function creates and returns a service object for managing project memberships. It handles tasks like adding users to projects, updating their roles, deleting memberships, and retrieving membership information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for managing project permissions. |
+| smtpService | TSmtpService | Service for sending emails. |
+| projectBotDAL | TProjectBotDALFactory | Data access layer for project bots. |
+| projectMembershipDAL | TProjectMembershipDALFactory | Data access layer for project memberships. |
+| projectUserMembershipRoleDAL | Pick&lt;TProjectUserMembershipRoleDALFactory, "insertMany" | "find" | "delete"&gt; | Data access layer for project user membership roles. |
+| userDAL | Pick&lt;TUserDALFactory, "findById" | "findOne" | "findUserByProjectMembershipId" | "find"&gt; | Data access layer for users. |
+| userGroupMembershipDAL | TUserGroupMembershipDALFactory | Data access layer for user group memberships. |
+| projectRoleDAL | Pick&lt;TProjectRoleDALFactory, "find"&gt; | Data access layer for project roles. |
+| orgDAL | Pick&lt;TOrgDALFactory, "findMembership" | "findOrgMembersByUsername"&gt; | Data access layer for organizations. |
+| projectDAL | Pick&lt;TProjectDALFactory, "findById" | "findProjectGhostUser" | "transaction" | "findProjectById"&gt; | Data access layer for projects. |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "findLatestProjectKey" | "delete" | "insertMany"&gt; | Data access layer for project keys. |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for managing licenses. |
+| projectUserAdditionalPrivilegeDAL | Pick&lt;TProjectUserAdditionalPrivilegeDALFactory, "delete"&gt; | Data access layer for project user additional privileges. |
+| groupProjectDAL | TGroupProjectDALFactory | Data access layer for group projects. |
+
+#### Outputs
+Returns a `TProjectMembershipServiceFactory` object with the following methods:
+- `getProjectMemberships`: Retrieves project memberships.
+- `getProjectMembershipByUsername`: Retrieves a project membership by username.
+- `addUsersToProject`: Adds users to a project.
+- `addUsersToProjectNonE2EE`: Adds users to a non-E2EE project.
+- `updateProjectMembership`: Updates a project membership.
+- `deleteProjectMembership`: Deletes a project membership.
+- `deleteProjectMemberships`: Deletes multiple project memberships.
+- `leaveProject`: Removes a user from a project.
+
+#### Internal Logic
+The factory function initializes and returns an object containing various functions for managing project memberships. Each function performs a specific task related to project memberships, such as:
+
+- **`getProjectMemberships`**: Retrieves project memberships for a given project ID, optionally including group members. It enforces authorization by checking if the actor has read permissions for project members.
+- **`getProjectMembershipByUsername`**: Retrieves a specific project membership by username and project ID. It also enforces authorization for reading project members.
+- **`addUsersToProject`**: Adds users to a project based on their organization membership IDs. It checks for existing memberships, enforces authorization for creating project members, and optionally sends invitation emails.
+- **`addUsersToProjectNonE2EE`**: Adds users to a non-E2EE project based on their emails or usernames. It utilizes the `addMembersToProject` function from `project-membership-fns` to handle the addition process.
+- **`updateProjectMembership`**: Updates a project membership's roles, including custom roles. It validates custom roles against the organization's license plan and updates the database accordingly.
+- **`deleteProjectMembership`**: Deletes a specific project membership by ID. It enforces authorization for deleting project members and performs the deletion within a database transaction.
+- **`deleteProjectMemberships`**: Deletes multiple project memberships based on user emails or usernames. It handles cases where a user is part of multiple groups within the project and prevents users from removing themselves.
+- **`leaveProject`**: Allows a user to leave a project. It checks for admin privileges and ensures there are other members or admins before removing the user from the project.
+
+## Dependencies
+This code depends on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Authorization library for enforcing access control. |
+| ms | Utility library for working with milliseconds. |
+| @app/db/schemas | Database schema definitions. |
+| @app/ee/services/license/license-service | Service for managing licenses. |
+| @app/ee/services/permission/permission-service | Service for managing permissions. |
+| @app/ee/services/permission/project-permission | Constants for project permissions. |
+| @app/ee/services/project-user-additional-privilege/project-user-additional-privilege-dal | Data access layer for project user additional privileges. |
+| @app/lib/config/env | Configuration loader. |
+| @app/lib/errors | Custom error classes. |
+| @app/lib/fn | Utility functions. |
+| ... | Other internal dependencies. |
+
+## TODOs
+- `deleteProjectMembership`: Remove this function in the future as it's deprecated.
+

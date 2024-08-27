@@ -1,0 +1,69 @@
+---
+title: "telemetry-queue.ts"
+---
+
+## High-level description
+This code defines a telemetry queue service for collecting and sending instance statistics to PostHog. It sets up a queue job that periodically gathers telemetry data about secret operations and other instance-specific metrics, then sends this data to PostHog for analysis.
+
+## Code Structure
+The main function `telemetryQueueServiceFactory` creates and returns an object with a `startTelemetryCheck` method. This factory function sets up a queue job for collecting and sending telemetry data, and also configures error handling for the queue.
+
+## Symbols
+
+### `telemetryQueueServiceFactory`
+#### Description
+This factory function creates a telemetry queue service that manages the collection and sending of instance statistics to PostHog.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| queueService | TQueueServiceFactory | Service for managing queue operations |
+| keyStore | Pick&lt;TKeyStoreFactory, "getItem" \| "deleteItem"&gt; | Service for storing and retrieving key-value pairs |
+| telemetryDAL | TTelemetryDALFactory | Data access layer for telemetry operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| startTelemetryCheck | Function | Function to start the telemetry check process |
+
+#### Internal Logic
+1. Initializes PostHog client if telemetry is enabled in production mode.
+2. Sets up a queue job to collect and send instance statistics.
+3. Defines a function to start the telemetry check process.
+4. Configures error handling for the telemetry queue.
+
+### `startTelemetryCheck`
+#### Description
+This function starts the telemetry check process by setting up a repeatable job to collect and send instance statistics.
+
+#### Internal Logic
+1. Checks if the application is running in cloud mode.
+2. Stops any existing repeatable job for telemetry instance stats.
+3. If PostHog is configured, sets up a new repeatable job to run daily at midnight UTC.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| PostHog | For sending telemetry data to PostHog analytics |
+| @app/keystore/keystore | For storing and retrieving key-value pairs |
+| @app/lib/config/env | For accessing application configuration |
+| @app/lib/logger | For logging errors |
+| @app/queue | For managing queue operations |
+| ../super-admin/super-admin-service | For getting server configuration |
+| ./telemetry-dal | For accessing telemetry data |
+| ./telemetry-service | For constants related to telemetry |
+| ./telemetry-types | For PostHog event types |
+
+## Configuration
+The telemetry service uses the following configuration options:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| TELEMETRY_ENABLED | boolean | true | Enables or disables telemetry collection |
+| POSTHOG_PROJECT_API_KEY | string | - | API key for PostHog project |
+| POSTHOG_HOST | string | https://app.posthog.com | Host URL for PostHog |
+
+## Error Handling
+The code implements error logging for failed telemetry queue jobs using the `logger.error` method.
+
+## Logging
+The code uses the `logger` module to log errors that occur during the execution of telemetry queue jobs.

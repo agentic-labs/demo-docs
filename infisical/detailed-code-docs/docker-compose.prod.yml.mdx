@@ -1,0 +1,87 @@
+---
+title: "docker-compose.prod.yml"
+---
+
+## High-level description
+This Docker Compose file defines the production environment for the Infisical application. It sets up four services: a database migration service, a backend service, a Redis cache, and a PostgreSQL database. The file orchestrates these services to work together, ensuring proper startup order and network connectivity.
+
+## Code Structure
+The file is structured as a standard Docker Compose file (version 3) with four main services: `db-migration`, `backend`, `redis`, and `db`. It also defines volumes for persistent data storage and a custom network for inter-service communication.
+
+## Symbols
+
+### `db-migration`
+#### Description
+This service is responsible for running database migrations before the main application starts.
+
+#### Internal Logic
+- Depends on the `db` service being healthy
+- Uses the latest Infisical image with PostgreSQL support
+- Runs the `npm run migration:latest` command
+- Always pulls the latest image
+
+### `backend`
+#### Description
+The main backend service for the Infisical application.
+
+#### Internal Logic
+- Depends on `db` being healthy, `redis` being started, and `db-migration` completing successfully
+- Uses the latest Infisical image with PostgreSQL support
+- Exposes port 80 (mapped to container port 8080)
+- Sets the `NODE_ENV` to production
+
+### `redis`
+#### Description
+A Redis cache service used by the application.
+
+#### Internal Logic
+- Uses the official Redis image
+- Allows empty password for simplicity (not recommended for actual production use)
+- Exposes port 6379
+- Uses a named volume for data persistence
+
+### `db`
+#### Description
+The PostgreSQL database service for the application.
+
+#### Internal Logic
+- Uses PostgreSQL 14 Alpine image
+- Implements a healthcheck to ensure the database is ready before other services depend on it
+- Uses a named volume for data persistence
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| infisical/infisical:latest-postgres | Main application image for backend and migration |
+| redis | Caching service |
+| postgres:14-alpine | Database service |
+
+## Configuration
+The configuration is primarily done through environment variables, which are loaded from a `.env` file for each service. Key configuration options include:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| POSTGRES_USER | string | (from .env) | PostgreSQL username |
+| NODE_ENV | string | production | Node.js environment for the backend service |
+| ALLOW_EMPTY_PASSWORD | string | yes | Allows Redis to run without a password (for development) |
+
+## Volumes
+Two named volumes are defined for data persistence:
+- `pg_data`: For PostgreSQL data
+- `redis_data`: For Redis data
+
+## Networks
+A custom network named `infisical` is defined for all services to communicate with each other.
+
+## Performance Considerations
+- The `db` service includes a healthcheck to ensure it's fully operational before dependent services start, which helps prevent startup issues.
+- Using named volumes for both PostgreSQL and Redis ensures data persistence across container restarts or updates.
+
+## Error Handling
+The compose file implements basic error handling through service dependencies and health checks:
+- The `backend` service waits for the database to be healthy and for migrations to complete successfully before starting.
+- The database has a health check that verifies both the PostgreSQL server and the specific user database are ready.
+
+## TODOs
+- The Redis service allows empty passwords, which is not secure for production environments. This should be addressed in a real production setup.
+- Consider adding health checks for the Redis and backend services to improve overall system reliability.

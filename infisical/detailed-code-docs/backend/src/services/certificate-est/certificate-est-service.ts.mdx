@@ -1,0 +1,58 @@
+---
+title: "certificate-est-service.ts"
+---
+
+## High-level description
+The `certificate-est-service.ts` file defines a factory function `certificateEstServiceFactory` that creates an object providing methods for handling Simple Certificate Enrollment Protocol (SCEP) requests, specifically simple enrollment and re-enrollment. These methods verify client certificates, sign certificates using a Certificate Authority, and return the signed certificates in PKCS#7 format.
+
+## Code Structure
+The `certificateEstServiceFactory` depends on several other services and data access layers (DALs) to perform its functions. It utilizes these dependencies to retrieve configuration, validate certificates, sign certificates, and manage database transactions.
+
+## References
+- `TCertificateAuthorityServiceFactory`
+- `TCertificateTemplateServiceFactory`
+- `TCertificateTemplateDALFactory`
+- `TCertificateAuthorityCertDALFactory`
+- `TCertificateAuthorityDALFactory`
+- `TProjectDALFactory`
+- `TKmsServiceFactory`
+
+## Symbols
+
+### `certificateEstServiceFactory`
+#### Description
+This factory function initializes and returns an object containing functions for handling SCEP requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certificateAuthorityService | Pick&lt;TCertificateAuthorityServiceFactory, "signCertFromCa"&gt; | Service for signing certificates using a CA. |
+| certificateTemplateService | Pick&lt;TCertificateTemplateServiceFactory, "getEstConfiguration"&gt; | Service for retrieving EST configuration. |
+| certificateTemplateDAL | Pick&lt;TCertificateTemplateDALFactory, "findById"&gt; | Data access layer for certificate templates. |
+| certificateAuthorityCertDAL | Pick&lt;TCertificateAuthorityCertDALFactory, "find" \| "findById"&gt; | Data access layer for certificate authority certificates. |
+| certificateAuthorityDAL | Pick&lt;TCertificateAuthorityDALFactory, "findById"&gt; | Data access layer for certificate authorities. |
+| projectDAL | Pick&lt;TProjectDALFactory, "findOne" \| "updateById" \| "transaction"&gt; | Data access layer for projects. |
+| kmsService | Pick&lt;TKmsServiceFactory, "decryptWithKmsKey" \| "generateKmsKey"&gt; | Service for interacting with the Key Management Service (KMS). |
+
+#### Outputs
+Returns an object with the following methods:
+- `simpleEnroll`: Handles simple enrollment requests.
+- `simpleReenroll`: Handles simple re-enrollment requests.
+- `getCaCerts`: Returns the CA certificate and certificate chain for a given certificate template ID.
+
+#### Internal Logic
+The factory function initializes three asynchronous functions:
+
+1.  **`simpleReenroll`**: This function handles simple re-enrollment requests. It first retrieves the EST configuration and verifies if EST is enabled. It then retrieves the certificate template and extracts the leaf certificate from the client certificate. The function then verifies if the client certificate can be traced back to the Root CA. It also ensures that the Subject and Subject Alternative Names of the CSR and the existing certificate are the same. Finally, it signs the CSR using the CA and returns the signed certificate in PKCS#7 format.
+
+2.  **`simpleEnroll`**: This function handles simple enrollment requests. It retrieves the EST configuration and verifies if EST is enabled. It then extracts the CA certificates from the configuration and verifies if the client certificate can be traced back to the CA chain. Finally, it signs the CSR using the CA and returns the signed certificate in PKCS#7 format.
+
+3.  **`getCaCerts`**: This function retrieves the CA certificate and certificate chain for a given certificate template ID. It retrieves the certificate template, the corresponding CA, and then the CA certificate chain. Finally, it returns the CA certificate and certificate chain in PKCS#7 format.
+
+## Dependencies
+- `@peculiar/x509`: Used for handling X.509 certificates and certificate signing requests (CSRs).
+- `@app/lib/errors`: Provides custom error classes for handling various error scenarios.
+- Several internal modules providing data access layers (DALs) and services related to certificates, certificate authorities, projects, and KMS.
+
+## Error Handling
+The code utilizes custom error classes from `@app/lib/errors` to handle different error scenarios, such as `BadRequestError`, `NotFoundError`, and `UnauthorizedError`. These errors are thrown in case of invalid input, missing resources, or unauthorized access.

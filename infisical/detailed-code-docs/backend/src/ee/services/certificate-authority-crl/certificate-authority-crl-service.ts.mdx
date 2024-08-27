@@ -1,0 +1,77 @@
+---
+title: "certificate-authority-crl-service.ts"
+---
+
+## High-level description
+This code defines a service for managing Certificate Authority Certificate Revocation Lists (CRLs) in an enterprise environment. It provides functionality to retrieve CRLs for a given Certificate Authority (CA) and to get individual CRLs by their ID. The service handles encryption and decryption of CRLs using a Key Management System (KMS).
+
+## Code Structure
+The main function `certificateAuthorityCrlServiceFactory` creates and returns an object with two methods: `getCrlById` and `getCaCrls`. These methods interact with various data access layers (DALs) and services to perform their operations.
+
+## Symbols
+
+### `certificateAuthorityCrlServiceFactory`
+#### Description
+This is the main factory function that creates the Certificate Authority CRL service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certificateAuthorityDAL | Pick&lt;TCertificateAuthorityDALFactory, "findById"&gt; | Data access layer for certificate authorities |
+| certificateAuthorityCrlDAL | Pick&lt;TCertificateAuthorityCrlDALFactory, "find" \| "findById"&gt; | Data access layer for certificate authority CRLs |
+| projectDAL | Pick&lt;TProjectDALFactory, "findOne" \| "updateById" \| "transaction"&gt; | Data access layer for projects |
+| kmsService | Pick&lt;TKmsServiceFactory, "decryptWithKmsKey" \| "generateKmsKey"&gt; | Key Management Service |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for handling permissions |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| getCrlById | Function | Function to get a CRL by its ID |
+| getCaCrls | Function | Function to get CRLs for a specific CA |
+
+### `getCrlById`
+#### Description
+Retrieves a specific CRL by its ID, decrypts it, and returns it along with associated CA information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| crlId | TGetCrlById | ID of the CRL to retrieve |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ca | Object | Certificate Authority information |
+| caCrl | Object | CRL metadata |
+| crl | Buffer | Raw CRL data |
+
+### `getCaCrls`
+#### Description
+Retrieves all CRLs for a specific Certificate Authority, checks permissions, and returns the decrypted CRLs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the Certificate Authority |
+| actorId | string | ID of the actor requesting the CRLs |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actor | ActorType | Type of actor (e.g., USER, SERVICE) |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ca | Object | Certificate Authority information |
+| crls | Array | Array of decrypted CRLs with their IDs |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permissions and authorization |
+| @peculiar/x509 | For working with X.509 certificates and CRLs |
+
+## Error Handling
+The service uses custom error classes like `BadRequestError`, `NotFoundError`, and `ForbiddenError` to handle various error scenarios. These errors are thrown when appropriate conditions are not met, such as when a CRL is not found or when the user doesn't have the required permissions.
+
+## Performance Considerations
+The service uses KMS for encryption and decryption operations, which may have performance implications for large numbers of CRLs or frequent access. Caching strategies might be considered for optimization if needed.

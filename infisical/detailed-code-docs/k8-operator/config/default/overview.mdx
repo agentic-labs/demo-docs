@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains Kubernetes configuration files for deploying and managing the Infisical Operator in a Kubernetes environment. It uses Kustomize for configuration management and includes patches for enhancing security and functionality of the operator.
+
+## What does it do?
+
+The configuration in this directory sets up the Infisical Operator in a Kubernetes cluster. It defines the namespace, resource naming, and includes various components such as Custom Resource Definitions (CRDs), Role-Based Access Control (RBAC), and manager components. The configuration also provides options for additional features like webhooks, cert-manager integration, and Prometheus monitoring.
+
+The main components include:
+
+1. A Kustomize configuration that ties everything together and allows for easy customization.
+2. A patch that adds a kube-rbac-proxy sidecar container to the controller-manager deployment for enhanced security.
+3. A patch for the manager container configuration within the controller-manager deployment.
+
+These configurations work together to deploy the Infisical Operator securely and with the necessary permissions and components to function in a Kubernetes environment.
+
+## Key Files
+
+1. `kustomization.yaml`: This is the main Kustomize configuration file that defines the overall structure of the deployment. It specifies the namespace, resource naming prefix, and includes various base configurations. It also provides options for enabling additional features through commented-out sections.
+
+   Example of enabling the webhook feature:
+   ```yaml
+   # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
+   # patches here are for enabling the conversion webhook for each CRD
+   - patches/webhook_in_infisicals.yaml
+   ```
+
+2. `manager_auth_proxy_patch.yaml`: This file defines a patch for the controller-manager deployment, adding a kube-rbac-proxy sidecar container. This container acts as an HTTP proxy, performing RBAC authorization against the Kubernetes API using SubjectAccessReviews.
+
+   Key configuration for the kube-rbac-proxy:
+   ```yaml
+   - name: kube-rbac-proxy
+     image: gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
+     args:
+     - "--secure-listen-address=0.0.0.0:8443"
+     - "--upstream=http://127.0.0.1:8080/"
+     - "--logtostderr=true"
+     - "--v=0"
+   ```
+
+3. `manager_config_patch.yaml`: This file provides a patch for the manager container within the controller-manager deployment. While the provided content is minimal, it's likely used to modify or add specific configuration to the manager container.
+
+## Configuration
+
+The `kustomization.yaml` file allows for various configuration options:
+
+1. Namespace: Set via the `namespace` field (default: infisical-operator-system).
+2. Resource naming: Controlled by the `namePrefix` field (default: infisical-operator-).
+3. Additional features: Can be enabled by uncommenting relevant sections:
+   - Webhooks
+   - Cert-manager integration
+   - Prometheus monitoring
+
+The `manager_auth_proxy_patch.yaml` file configures the kube-rbac-proxy sidecar:
+
+1. Secure listen address: 0.0.0.0:8443
+2. Upstream server: http://127.0.0.1:8080/
+3. Resource limits and requests for CPU and memory
+
+## Dependencies
+
+The configuration relies on the following external dependencies:
+
+1. Kustomize: Used for configuration management and patching.
+2. kube-rbac-proxy: Version v0.15.0 is used as a sidecar container for RBAC authorization.
+
+These configurations provide a flexible and secure setup for deploying the Infisical Operator in a Kubernetes environment, allowing for easy customization and extension of functionality as needed.

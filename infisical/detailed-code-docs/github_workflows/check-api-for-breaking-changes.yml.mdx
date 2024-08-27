@@ -1,0 +1,93 @@
+---
+title: "check-api-for-breaking-changes.yml"
+---
+
+## High-level description
+This GitHub Actions workflow, named "Check API For Breaking Changes", is designed to automatically check for breaking changes in the API when pull requests are opened or synchronized. It specifically targets changes in the backend routes and uses OpenAPI specification comparison to detect potential breaking changes.
+
+## Code Structure
+The workflow consists of a single job named "check-be-api-changes" with multiple steps that set up the environment, build and run the API, and then compare the OpenAPI specifications.
+
+## Symbols
+
+### `check-be-api-changes` (job)
+#### Description
+This job runs the entire process of checking for API breaking changes.
+
+#### Internal Logic
+1. Checks out the source code
+2. Sets up Docker Compose (for local simulations)
+3. Builds the latest Docker image for the API
+4. Starts PostgreSQL and Redis
+5. Starts the API server
+6. Sets up Go environment
+7. Waits for the container to be stable
+8. Installs and runs the OpenAPI diff tool
+9. Cleans up the environment
+
+### `Checkout source` (step)
+#### Description
+Checks out the source code of the repository.
+
+### `Install docker compose for local simulations` (step)
+#### Description
+Installs Docker Compose for local simulations using the `act` tool.
+
+### `📦Build the latest image` (step)
+#### Description
+Builds the Docker image for the Infisical API.
+
+### `Start postgres and redis` (step)
+#### Description
+Starts PostgreSQL and Redis services using Docker Compose.
+
+### `Start the server` (step)
+#### Description
+Starts the Infisical API server in a Docker container with necessary environment variables.
+
+### `Wait for container to be stable and check logs` (step)
+#### Description
+Waits for the API container to become healthy and checks its logs.
+
+### `Install openapi-diff` (step)
+#### Description
+Installs the `oasdiff` tool for comparing OpenAPI specifications.
+
+### `Running OpenAPI Spec diff action` (step)
+#### Description
+Runs the `oasdiff` tool to compare the OpenAPI specifications between the production API and the local instance.
+
+### `cleanup` (step)
+#### Description
+Cleans up the Docker containers and resources used during the workflow.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v3 | Checking out the source code |
+| KengoTODA/actions-setup-docker-compose@v1 | Setting up Docker Compose for local simulations |
+| actions/setup-go@v5 | Setting up Go environment |
+| oasdiff | Comparing OpenAPI specifications |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| SECRET_SCANNING_GIT_APP_ID | string | 793712 | Git app ID for secret scanning |
+| SECRET_SCANNING_PRIVATE_KEY | string | some-random | Private key for secret scanning |
+| SECRET_SCANNING_WEBHOOK_SECRET | string | some-random | Webhook secret for secret scanning |
+| REDIS_URL | string | redis://172.17.0.1:6379 | Redis connection URL |
+| DB_CONNECTION_URI | string | postgres://infisical:infisical@172.17.0.1:5432/infisical?sslmode=disable | Database connection URI |
+| JWT_AUTH_SECRET | string | something-random | JWT authentication secret |
+| ENCRYPTION_KEY | string | 4bnfe4e407b8921c104518903515b218 | Encryption key |
+
+## Error Handling
+The workflow includes error handling in the "Wait for container to be stable and check logs" step, where it checks if the container becomes healthy within a 60-second timeout. If not, it exits with an error.
+
+## TODOs
+There is a commented-out step for setting up Node 20, which might be needed in the future:
+```yaml
+# - name: Setup Node 20
+#   uses: actions/setup-node@v3
+#   with:
+#     node-version: "20"
+```

@@ -1,0 +1,149 @@
+---
+title: "certificate-service.ts"
+---
+
+## High-level description
+This code defines a certificate service factory that creates methods for managing certificates within a project. It includes functionality for retrieving, deleting, revoking certificates, and fetching certificate bodies along with their certificate chains.
+
+## Code Structure
+The `certificateServiceFactory` function takes various data access layers (DALs) and services as dependencies and returns an object with four main methods: `getCert`, `deleteCert`, `revokeCert`, and `getCertBody`. These methods interact with the provided DALs and services to perform certificate-related operations.
+
+## References
+This code references several other parts of the codebase, including:
+- Certificate-related DALs (e.g., `certificateDAL`, `certificateBodyDAL`)
+- Certificate Authority DALs (e.g., `certificateAuthorityDAL`, `certificateAuthorityCertDAL`)
+- Project DAL
+- KMS service
+- Permission service
+
+## Symbols
+
+### `certificateServiceFactory`
+#### Description
+This function creates and returns an object with methods for managing certificates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dependencies | Object | An object containing various DALs and services required for certificate operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certificateService | Object | An object containing methods for certificate management |
+
+#### Internal Logic
+The factory function initializes the certificate service with the provided dependencies and defines four main methods: `getCert`, `deleteCert`, `revokeCert`, and `getCertBody`.
+
+### `getCert`
+#### Description
+Retrieves details for a certificate with the given serial number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialNumber | string | The serial number of the certificate |
+| actorId | string | The ID of the actor performing the operation |
+| actorAuthMethod | string | The authentication method of the actor |
+| actor | Object | The actor object |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | An object containing the certificate and its CA details |
+
+#### Internal Logic
+1. Finds the certificate using the provided serial number
+2. Retrieves the associated Certificate Authority (CA)
+3. Checks the actor's permission to read certificates
+4. Returns the certificate and CA details
+
+### `deleteCert`
+#### Description
+Deletes a certificate with the given serial number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialNumber | string | The serial number of the certificate to delete |
+| actorId | string | The ID of the actor performing the operation |
+| actorAuthMethod | string | The authentication method of the actor |
+| actor | Object | The actor object |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | An object containing the deleted certificate and its CA details |
+
+#### Internal Logic
+1. Finds the certificate using the provided serial number
+2. Retrieves the associated Certificate Authority (CA)
+3. Checks the actor's permission to delete certificates
+4. Deletes the certificate
+5. Returns the deleted certificate and CA details
+
+### `revokeCert`
+#### Description
+Revokes a certificate with the given serial number and updates the Certificate Revocation List (CRL).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialNumber | string | The serial number of the certificate to revoke |
+| revocationReason | string | The reason for revoking the certificate |
+| actorId | string | The ID of the actor performing the operation |
+| actorAuthMethod | string | The authentication method of the actor |
+| actor | Object | The actor object |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | An object containing the revocation date, revoked certificate, and CA details |
+
+#### Internal Logic
+1. Finds the certificate using the provided serial number
+2. Retrieves the associated Certificate Authority (CA)
+3. Checks the actor's permission to delete (revoke) certificates
+4. Checks if the certificate is already revoked
+5. Updates the certificate status to revoked
+6. Rebuilds the CA's Certificate Revocation List (CRL)
+7. Returns the revocation date, revoked certificate, and CA details
+
+### `getCertBody`
+#### Description
+Retrieves the certificate body and certificate chain for a certificate with the given serial number.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialNumber | string | The serial number of the certificate |
+| actorId | string | The ID of the actor performing the operation |
+| actorAuthMethod | string | The authentication method of the actor |
+| actor | Object | The actor object |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | An object containing the certificate, certificate chain, serial number, and related details |
+
+#### Internal Logic
+1. Finds the certificate using the provided serial number
+2. Retrieves the associated Certificate Authority (CA)
+3. Checks the actor's permission to read certificates
+4. Retrieves the certificate body
+5. Decrypts the certificate using the project's KMS key
+6. Retrieves the CA certificate chain
+7. Returns the certificate, certificate chain, serial number, and related details
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permission checks |
+| @peculiar/x509 | For working with X.509 certificates |
+
+## Error Handling
+The code uses `ForbiddenError` from the `@casl/ability` library to handle permission-related errors. It also includes basic error checking, such as verifying if a certificate is already revoked before attempting to revoke it again.

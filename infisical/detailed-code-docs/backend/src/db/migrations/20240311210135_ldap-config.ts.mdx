@@ -1,0 +1,67 @@
+---
+title: "20240311210135_ldap-config.ts"
+---
+
+## High-level description
+This migration script sets up the database for LDAP integration. It creates two tables: `LdapConfig` to store LDAP configuration per organization and `UserAliases` to store external user aliases. It also modifies the `Users` table to enforce unique usernames and allow nullable emails.
+
+## Code Structure
+The code defines two asynchronous functions: `up` for applying the migration and `down` for reverting it. Both functions interact with the database schema using Knex.js.
+
+## References
+- `TableName`: An enum or object defining table names.
+- `createOnUpdateTrigger`: A utility function to create an "on update" trigger for a table.
+- `dropOnUpdateTrigger`: A utility function to drop an "on update" trigger for a table.
+
+## Symbols
+
+### `up`
+#### Description
+Applies the migration to the database. It creates the `LdapConfig` and `UserAliases` tables if they don't exist, adds "on update" triggers to them, and modifies the `Users` table to enforce unique usernames and allow nullable emails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `LdapConfig` table exists. If not, creates it with columns for storing LDAP configuration.
+2. Creates an "on update" trigger for the `LdapConfig` table.
+3. Checks if the `UserAliases` table exists. If not, creates it with columns for storing user aliases.
+4. Creates an "on update" trigger for the `UserAliases` table.
+5. Alters the `Users` table:
+    - Adds a unique constraint to the `username` column.
+    - Makes the `email` column nullable and removes its unique constraint.
+6. Updates the `username` column in the `Users` table with the value of the `email` column.
+7. Alters the `Users` table again to make the `username` column not nullable.
+
+### `down`
+#### Description
+Reverts the migration by dropping the `LdapConfig` and `UserAliases` tables and reverting the changes made to the `Users` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Drops the `LdapConfig` and `UserAliases` tables if they exist.
+2. Alters the `Users` table:
+    - Drops the `username` column.
+    - **Note:** The commented-out line suggests that the `email` column was intended to be made not nullable again, but this change is not applied in the current code.
+3. Drops the "on update" triggers for the `LdapConfig` table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex       | Provides database interaction capabilities using Knex.js. |

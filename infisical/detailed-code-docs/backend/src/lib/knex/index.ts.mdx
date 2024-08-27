@@ -1,0 +1,81 @@
+---
+title: "index.ts"
+---
+
+## High-level description
+This code defines a set of utility functions for interacting with a PostgreSQL database using Knex.js. It provides functions for building queries, managing transactions, and performing common database operations like find, create, update, and delete.
+
+## Code Structure
+The code defines several utility functions and a main function `ormify`. The `ormify` function takes a database connection and a table name as input and returns an object containing a set of common database operations for that table. These operations use the utility functions like `buildFindFilter` and `withTransaction` to construct and execute queries.
+
+## References
+This code references the following symbols from other parts of the codebase:
+- `DatabaseError` from `"../errors"`
+- `Tables` from `"knex/types/tables"`
+
+## Symbols
+
+### `withTransaction`
+#### Description
+This function is a higher-order function that takes a Knex database instance and a data access layer (DAL) object, and returns a new object with the same DAL functions but wrapped in a transaction. This ensures that all database operations within a single call to a DAL function are executed atomically.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | Knex | A Knex database instance. |
+| dal | object | A data access layer object containing database operation functions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object |  | A new object with the same DAL functions wrapped in a transaction. |
+
+#### Internal Logic
+The function uses the `db.transaction` method to create a transaction. It then wraps each DAL function in an async function that executes the original function within the transaction. The result of the DAL function is returned after the transaction is committed.
+
+### `buildFindFilter`
+#### Description
+This function takes a filter object as input and returns a function that can be used to build a Knex query with the specified filter conditions. The filter object supports equality checks, `$in` operator for checking if a value is in an array, and `$search` operator for case-insensitive string matching.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | TFindFilter | An object containing filter conditions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| function | (bd: Knex.QueryBuilder) =&gt; Knex.QueryBuilder | A function that takes a Knex query builder and applies the filter conditions to it. |
+
+#### Internal Logic
+The function iterates over the filter object and uses the `where`, `whereIn`, or `whereILike` methods of the Knex query builder to add the corresponding filter conditions.
+
+### `ormify`
+#### Description
+This function is a factory function that takes a Knex database instance, a table name, and an optional DAL object, and returns a new object containing a set of common database operations for that table. This allows for a more concise and reusable way to interact with the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | Knex | A Knex database instance. |
+| tableName | string | The name of the table to perform operations on. |
+| dal | object | An optional object containing custom database operation functions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object |  | An object containing a set of common database operations for the specified table. |
+
+#### Internal Logic
+The function defines a set of common database operations like `findById`, `findOne`, `find`, `create`, `update`, `delete`, etc. These operations use the `db` instance and `tableName` to construct and execute Knex queries. The function also includes any custom DAL functions provided in the `dal` argument.
+
+## Error Handling
+The code uses the `DatabaseError` class from `"../errors"` to wrap any errors encountered during database operations. This provides a consistent way to handle and propagate errors throughout the application.
+
+## Dependencies
+This code depends on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Database query builder |
+| ioredis | Redis client |
+

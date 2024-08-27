@@ -1,0 +1,591 @@
+---
+title: "csharp.mdx"
+---
+
+---
+title: "Infisical .NET SDK"
+sidebarTitle: ".NET"
+icon: "bars"
+---
+
+If you're working with C#, the official [Infisical C# SDK](https://github.com/Infisical/sdk/tree/main/languages/csharp) package is the easiest way to fetch and work with secrets for your application.
+
+- [Nuget Package](https://www.nuget.org/packages/Infisical.Sdk)
+- [Github Repository](https://github.com/Infisical/sdk/tree/main/languages/csharp)
+
+## Basic Usage
+
+```cs
+using Infisical.Sdk;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+
+          ClientSettings settings = new ClientSettings
+          {
+            Auth = new AuthenticationOptions
+            {
+              UniversalAuth = new UniversalAuthMethod
+              {
+                ClientId = "your-client-id",
+                ClientSecret = "your-client-secret"
+              }
+            }
+          };
+
+
+          var infisicalClient = new InfisicalClient(settings);
+
+            var getSecretOptions = new GetSecretOptions
+            {
+                SecretName = "TEST",
+                ProjectId = "PROJECT_ID",
+                Environment = "dev",
+            };
+            var secret = infisical.GetSecret(getSecretOptions);
+
+
+            Console.WriteLine($"The value of secret '{secret.SecretKey}', is: {secret.SecretValue}");
+        }
+    }
+}
+```
+
+This example demonstrates how to use the Infisical C# SDK in a C# application. The application retrieves a secret named `TEST` from the `dev` environment of the `PROJECT_ID` project.
+
+&lt;Warning&gt;
+    We do not recommend hardcoding your [Machine Identity Tokens](/platform/identities/overview). Setting it as an environment variable would be best.
+&lt;/Warning&gt;
+
+# Installation
+
+```console
+$ dotnet add package Infisical.Sdk
+```
+# Configuration
+
+Import the SDK and create a client instance with your [Machine Identity](/platform/identities/universal-auth).
+
+```cs
+using Infisical.Sdk;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+          ClientSettings settings = new ClientSettings
+          {
+            Auth = new AuthenticationOptions
+            {
+              UniversalAuth = new UniversalAuthMethod
+              {
+                ClientId = "your-client-id",
+                ClientSecret = "your-client-secret"
+              }
+            }
+          };
+
+
+          var infisicalClient = new InfisicalClient(settings); // &lt;-- Your SDK client is now ready to use
+        }
+    }
+}
+```
+
+### ClientSettings methods
+
+&lt;ParamField query="options" type="object"&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="ClientId" deprecated type="string" optional&gt;
+            Your machine identity client ID.
+        &lt;/ParamField&gt;
+          &lt;ParamField query="ClientSecret" deprecated type="string" optional&gt;
+            Your machine identity client secret.
+        &lt;/ParamField&gt;
+
+         &lt;ParamField query="AccessToken" deprecated type="string" optional&gt;
+            An access token obtained from the machine identity login endpoint.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="CacheTtl" type="number" default="300" optional&gt;
+            Time-to-live (in seconds) for refreshing cached secrets.
+            If manually set to 0, caching will be disabled, this is not recommended.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="SiteUrl" type="string" default="https://app.infisical.com" optional&gt;
+            Your self-hosted absolute site URL including the protocol (e.g. `https://app.infisical.com`)
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="SslCertificatePath" optional&gt;
+          Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `INFISICAL_SSL_CERTIFICATE` environment variable to the contents of the certificate.
+        &lt;/ParamField&gt;
+        
+        &lt;ParamField query="Auth" type="AuthenticationOptions"&gt;
+          The authentication object to use for the client. This is required unless you're using environment variables.
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+
+&lt;/ParamField&gt;
+
+### Authentication
+
+The SDK supports a variety of authentication methods. The most common authentication method is Universal Auth, which uses a client ID and client secret to authenticate.
+
+#### Universal Auth
+
+**Using environment variables**
+- `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
+- `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
+
+**Using the SDK directly**
+```csharp
+    ClientSettings settings = new ClientSettings
+    {
+      Auth = new AuthenticationOptions
+      {
+        UniversalAuth = new UniversalAuthMethod
+        {
+          ClientId = "your-client-id",
+          ClientSecret = "your-client-secret"
+        }
+      }
+    };
+
+    var infisicalClient = new InfisicalClient(settings);
+```
+
+#### GCP ID Token Auth
+&lt;Info&gt;
+  Please note that this authentication method will only work if you're running your application on Google Cloud Platform.
+  Please [read more](/documentation/platform/identities/gcp-auth) about this authentication method.
+&lt;/Info&gt;
+
+**Using environment variables**
+- `INFISICAL_GCP_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+
+**Using the SDK directly**
+```csharp
+  ClientSettings settings = new ClientSettings
+  {
+    Auth = new AuthenticationOptions
+    {
+      GcpIdToken = new GcpIdTokenAuthMethod
+      {
+        IdentityId = "your-machine-identity-id",
+      }
+    }
+  };
+
+
+  var infisicalClient = new InfisicalClient(settings);
+```
+
+#### GCP IAM Auth
+
+**Using environment variables**
+- `INFISICAL_GCP_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `INFISICAL_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
+
+**Using the SDK directly**
+```csharp
+  ClientSettings settings = new ClientSettings
+  {
+    Auth = new AuthenticationOptions
+    {
+      GcpIam = new GcpIamAuthMethod
+      {
+        IdentityId = "your-machine-identity-id",
+        ServiceAccountKeyFilePath = "./path/to/your/service-account-key.json"
+      }
+    }
+  };
+
+
+  var infisicalClient = new InfisicalClient(settings);
+```
+
+#### AWS IAM Auth
+&lt;Info&gt;
+  Please note that this authentication method will only work if you're running your application on AWS.
+  Please [read more](/documentation/platform/identities/aws-auth) about this authentication method.
+&lt;/Info&gt;
+
+**Using environment variables**
+- `INFISICAL_AWS_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+
+**Using the SDK directly**
+```csharp
+  ClientSettings settings = new ClientSettings
+  {
+    Auth = new AuthenticationOptions
+    {
+      AwsIam = new AwsIamAuthMethod
+      {
+        IdentityId = "your-machine-identity-id",
+      }
+    }
+  };
+
+
+  var infisicalClient = new InfisicalClient(settings);
+```
+
+
+#### Azure Auth
+&lt;Info&gt;
+  Please note that this authentication method will only work if you're running your application on Azure.
+  Please [read more](/documentation/platform/identities/azure-auth) about this authentication method.
+&lt;/Info&gt;
+
+**Using environment variables**
+- `INFISICAL_AZURE_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+
+**Using the SDK directly**
+```csharp
+  ClientSettings settings = new ClientSettings
+  {
+    Auth = new AuthenticationOptions
+    {
+      Azure = new AzureAuthMethod
+      {
+        IdentityId = "YOUR_IDENTITY_ID",
+      }
+    }
+  };
+
+  var infisicalClient = new InfisicalClient(settings);
+```
+
+#### Kubernetes Auth
+&lt;Info&gt;
+  Please note that this authentication method will only work if you're running your application on Kubernetes.
+  Please [read more](/documentation/platform/identities/kubernetes-auth) about this authentication method.
+&lt;/Info&gt;
+
+**Using environment variables**
+- `INFISICAL_KUBERNETES_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `INFISICAL_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+
+**Using the SDK directly**
+```csharp
+  ClientSettings settings = new ClientSettings
+  {
+    Auth = new AuthenticationOptions
+    {
+      Kubernetes = new KubernetesAuthMethod
+      {
+        ServiceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token", // Optional
+        IdentityId = "YOUR_IDENTITY_ID",
+      }
+    }
+  };
+
+  var infisicalClient = new InfisicalClient(settings);
+```
+
+
+
+### Caching
+
+To reduce the number of API requests, the SDK temporarily stores secrets it retrieves. By default, a secret remains cached for 5 minutes after it's first fetched. Each time it's fetched again, this 5-minute timer resets. You can adjust this caching duration by setting the "cacheTTL" option when creating the client.
+
+## Working with Secrets
+
+### client.ListSecrets(options)
+
+```cs
+var options = new ListSecretsOptions
+{
+    ProjectId = "PROJECT_ID",
+    Environment = "dev",
+    Path = "/foo/bar",
+    AttachToProcessEnv = false,
+};
+
+var secrets = infisical.ListSecrets(options);
+```
+
+Retrieve all secrets within the Infisical project and environment that client is connected to
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object"&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="Environment" type="string" required&gt;
+            The slug name (dev, prod, etc) of the environment from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="ProjectId" type="string"&gt;
+            The project ID where the secret lives in.
+        &lt;/ParamField&gt;
+
+         &lt;ParamField query="Path" type="string" optional&gt;
+            The path from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="AttachToProcessEnv" type="boolean" default="false" optional&gt;
+             Whether or not to set the fetched secrets to the process environment. If true, you can access the secrets like so `System.getenv("SECRET_NAME")`.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="IncludeImports" type="boolean" default="false" optional&gt;
+             Whether or not to include imported secrets from the current path. Read about [secret import](/documentation/platform/secret-reference)
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="Recursive" type="boolean" default="false" optional&gt;
+            Whether or not to fetch secrets recursively from the specified path. Please note that there's a 20-depth limit for recursive fetching.
+        &lt;/ParamField&gt;
+
+        &lt;ParamField query="ExpandSecretReferences" type="boolean" default="true" optional&gt;
+            Whether or not to expand secret references in the fetched secrets. Read about [secret reference](/documentation/platform/secret-reference)
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+
+&lt;/ParamField&gt;
+
+### client.GetSecret(options)
+
+```cs
+var options = new GetSecretOptions
+    {
+        SecretName = "AAAA",
+        ProjectId = "659c781eb2d4fe3e307b77bd",
+        Environment = "dev",
+    };
+var secret = infisical.GetSecret(options);
+```
+
+Retrieve a secret from Infisical.
+
+By default, `GetSecret()` fetches and returns a shared secret.
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object" optional&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="SecretName" type="string" required&gt;
+            The key of the secret to retrieve.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="ProjectId" type="string" required&gt;
+            The project ID where the secret lives in.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Environment" type="string" required&gt;
+            The slug name (dev, prod, etc) of the environment from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Path" type="string" optional&gt;
+            The path from where secret should be fetched from.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Type" type="string" optional&gt;
+            The type of the secret. Valid options are "shared" or "personal". If not specified, the default value is "shared".
+        &lt;/ParamField&gt;
+        &lt;ParamField query="IncludeImports" type="boolean" optional&gt;
+          Whether or not to include imported secrets from the current path. Read about [secret import](/documentation/platform/secret-reference)
+        &lt;/ParamField&gt;
+        &lt;ParamField query="ExpandSecretReferences" type="boolean" optional&gt;
+          Whether or not to expand secret references in the fetched secrets. Read about [secret reference](/documentation/platform/secret-reference)
+        &lt;/ParamField&gt;
+        
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+### client.CreateSecret(options)
+
+```cs
+var options = new CreateSecretOptions {
+    Environment = "dev",
+    ProjectId = "PROJECT_ID",
+
+    SecretName = "NEW_SECRET",
+    SecretValue = "NEW_SECRET_VALUE",
+    SecretComment = "This is a new secret",
+};
+
+var newSecret = infisical.CreateSecret(options);
+```
+
+Create a new secret in Infisical.
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object" optional&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="SecretName" type="string" required&gt;
+            The key of the secret to create.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="SecretValue" type="string" required&gt;
+            The value of the secret.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="ProjectId" type="string" required&gt;
+            The project ID where the secret lives in.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Environment" type="string" required&gt;
+            The slug name (dev, prod, etc) of the environment from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Path" type="string" optional&gt;
+            The path from where secret should be created.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Type" type="string" optional&gt;
+            The type of the secret. Valid options are "shared" or "personal". If not specified, the default value is "shared".
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+### client.UpdateSecret(options)
+
+```cs
+var options = new UpdateSecretOptions {
+    Environment = "dev",
+    ProjectId = "PROJECT_ID",
+
+    SecretName = "SECRET_TO_UPDATE",
+    SecretValue = "NEW VALUE"
+};
+
+var updatedSecret = infisical.UpdateSecret(options);
+```
+
+Update an existing secret in Infisical.
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object" optional&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="SecretName" type="string" required&gt;
+            The key of the secret to update.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="SecretValue" type="string" required&gt;
+            The new value of the secret.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="ProjectId" type="string" required&gt;
+            The project ID where the secret lives in.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Environment" type="string" required&gt;
+            The slug name (dev, prod, etc) of the environment from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Path" type="string" optional&gt;
+            The path from where secret should be updated.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Type" type="string" optional&gt;
+            The type of the secret. Valid options are "shared" or "personal". If not specified, the default value is "shared".
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+### client.DeleteSecret(options)
+
+```cs
+var options = new DeleteSecretOptions
+{
+    Environment = "dev",
+    ProjectId = "PROJECT_ID",
+    SecretName = "NEW_SECRET",
+};
+
+var deletedSecret = infisical.DeleteSecret(options);
+```
+
+Delete a secret in Infisical.
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object" optional&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="SecretName" type="string"&gt;
+            The key of the secret to update.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="ProjectId" type="string" required&gt;
+            The project ID where the secret lives in.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Environment" type="string" required&gt;
+            The slug name (dev, prod, etc) of the environment from where secrets should be fetched from.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Path" type="string" optional&gt;
+            The path from where secret should be deleted.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Type" type="string" optional&gt;
+            The type of the secret. Valid options are "shared" or "personal". If not specified, the default value is "shared".
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+## Cryptography
+
+### Create a symmetric key
+
+Create a base64-encoded, 256-bit symmetric key to be used for encryption/decryption.
+
+```cs
+var key = infisical.CreateSymmetricKey();
+```
+
+#### Returns (string)
+`key` (string): A base64-encoded, 256-bit symmetric key, that can be used for encryption/decryption purposes.
+
+### Encrypt symmetric
+```cs
+var options = new EncryptSymmetricOptions
+{
+    Plaintext = "Infisical is awesome!",
+    Key = key,
+};
+
+var encryptedData = infisical.EncryptSymmetric(options);
+```
+
+#### Parameters
+
+&lt;ParamField query="Parameters" type="object" required&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="Plaintext" type="string"&gt;
+            The plaintext you want to encrypt.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Key" type="string" required&gt;
+            The symmetric key to use for encryption.
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+#### Returns (object)
+`Tag` (string): A base64-encoded, 128-bit authentication tag.
+`Iv` (string): A base64-encoded, 96-bit initialization vector.
+`CipherText` (string): A base64-encoded, encrypted ciphertext.
+
+### Decrypt symmetric
+```cs
+var decryptOptions = new DecryptSymmetricOptions
+{
+    Key = key,
+    Ciphertext = encryptedData.Ciphertext,
+    Iv = encryptedData.Iv,
+    Tag = encryptedData.Tag,
+};
+
+var decryptedPlaintext = infisical.DecryptSymmetric(decryptOptions);
+```
+
+#### Parameters
+&lt;ParamField query="Parameters" type="object" required&gt;
+    &lt;Expandable title="properties"&gt;
+        &lt;ParamField query="Ciphertext" type="string"&gt;
+            The ciphertext you want to decrypt.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Key" type="string" required&gt;
+            The symmetric key to use for encryption.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Iv" type="string" required&gt;
+            The initialization vector to use for decryption.
+        &lt;/ParamField&gt;
+        &lt;ParamField query="Tag" type="string" required&gt;
+            The authentication tag to use for decryption.
+        &lt;/ParamField&gt;
+    &lt;/Expandable&gt;
+&lt;/ParamField&gt;
+
+#### Returns (string)
+`Plaintext` (string): The decrypted plaintext.
+

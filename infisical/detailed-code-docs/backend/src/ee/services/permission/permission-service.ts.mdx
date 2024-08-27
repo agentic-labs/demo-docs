@@ -1,0 +1,227 @@
+---
+title: "permission-service.ts"
+---
+
+## High-level description
+The `permission-service.ts` file defines a factory function `permissionServiceFactory` that creates a service for managing permissions in the application. This service provides methods for retrieving and building permissions for users, identities, and service tokens within organizations and projects.
+
+## Code Structure
+The `permissionServiceFactory` function returns an object containing several methods for managing permissions. These methods include `getUserOrgPermission`, `getIdentityOrgPermission`, `getOrgPermission`, `getOrgPermissionByRole`, `getUserProjectPermission`, `getIdentityProjectPermission`, `getServiceTokenProjectPermission`, `getProjectPermission`, and `getProjectPermissionByRole`. Each method is responsible for retrieving or building permissions for a specific actor type (user, identity, or service token) within an organization or project.
+
+## References
+This code references several other parts of the codebase, including:
+
+* **Database Schemas:** `OrgMembershipRole`, `ProjectMembershipRole`, `ServiceTokenScopes`, `TIdentityProjectMemberships`, `TProjectMemberships`
+* **CASL Library:** `createMongoAbility`, `MongoAbility`, `RawRuleOf`, `PackRule`, `unpackRules`, `conditionsMatcher`
+* **Error Handling:** `BadRequestError`, `UnauthorizedError`
+* **Authentication:** `ActorAuthMethod`, `ActorType`
+* **Data Access Layer (DAL) Factories:** `TOrgRoleDALFactory`, `TProjectDALFactory`, `TProjectRoleDALFactory`, `TServiceTokenDALFactory`, `TPermissionDALFactory`
+* **Permission Definitions:** `orgAdminPermissions`, `orgMemberPermissions`, `orgNoAccessPermissions`, `OrgPermissionSet`, `buildServiceTokenProjectPermission`, `projectAdminPermissions`, `projectMemberPermissions`, `projectNoAccessPermissions`, `ProjectPermissionSet`, `projectViewerPermission`
+
+## Symbols
+
+### `permissionServiceFactory`
+#### Description
+This factory function creates a service for managing permissions in the application. It takes an object containing several DAL factories as input and returns an object containing methods for retrieving and building permissions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissionDAL | `TPermissionDALFactory` | Data access layer for permissions |
+| orgRoleDAL | `Pick&lt;TOrgRoleDALFactory, "findOne"&gt;` | Data access layer for organization roles |
+| projectRoleDAL | `Pick&lt;TProjectRoleDALFactory, "findOne"&gt;` | Data access layer for project roles |
+| serviceTokenDAL | `Pick&lt;TServiceTokenDALFactory, "findById"&gt;` | Data access layer for service tokens |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findById"&gt;` | Data access layer for projects |
+
+#### Outputs
+An object containing methods for retrieving and building permissions.
+
+#### Internal Logic
+The factory function defines several helper functions for building organization and project permissions based on roles and custom permissions. It then defines methods for retrieving permissions for users, identities, and service tokens within organizations and projects. These methods use the DAL factories to retrieve membership information and then use the helper functions to build the appropriate permissions.
+
+### `buildOrgPermission`
+#### Description
+This function builds an organization permission object based on the provided role and optional custom permissions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| role | `string` | The organization membership role |
+| permission | `unknown` | Optional custom permissions |
+
+#### Outputs
+A `MongoAbility` object representing the organization permission.
+
+#### Internal Logic
+The function uses a switch statement to determine the appropriate permission set based on the provided role. For custom roles, it uses the `createMongoAbility` function from the CASL library to create a permission object from the provided custom permissions.
+
+### `buildProjectPermission`
+#### Description
+This function builds a project permission object based on the provided project user roles.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectUserRoles | `TBuildProjectPermissionDTO` | An array of objects containing the role and optional custom permissions for each project membership |
+
+#### Outputs
+A `MongoAbility` object representing the project permission.
+
+#### Internal Logic
+The function iterates through the provided project user roles and builds a list of rules based on the role and custom permissions. It then uses the `createMongoAbility` function from the CASL library to create a permission object from the combined rules.
+
+### `getUserOrgPermission`
+#### Description
+This function retrieves the organization permission for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The user ID |
+| orgId | `string` | The organization ID |
+| authMethod | `ActorAuthMethod` | The authentication method used by the user |
+| userOrgId | `string` | Optional organization ID from the user's token (for scoped tokens) |
+
+#### Outputs
+An object containing the organization permission and membership information.
+
+#### Internal Logic
+The function retrieves the user's organization membership using the `permissionDAL`. It then validates the membership based on the provided `userOrgId` and authentication method. Finally, it uses the `buildOrgPermission` function to build the organization permission object.
+
+### `getIdentityOrgPermission`
+#### Description
+This function retrieves the organization permission for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | `string` | The identity ID |
+| orgId | `string` | The organization ID |
+
+#### Outputs
+An object containing the organization permission and membership information.
+
+#### Internal Logic
+The function retrieves the identity's organization membership using the `permissionDAL`. It then uses the `buildOrgPermission` function to build the organization permission object.
+
+### `getOrgPermission`
+#### Description
+This function retrieves the organization permission for a user or identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| type | `ActorType` | The actor type (user or identity) |
+| id | `string` | The user or identity ID |
+| orgId | `string` | The organization ID |
+| authMethod | `ActorAuthMethod` | The authentication method used by the user (if applicable) |
+| actorOrgId | `string` | Optional organization ID from the user's token (for scoped tokens) |
+
+#### Outputs
+An object containing the organization permission and membership information.
+
+#### Internal Logic
+The function uses a switch statement to determine the appropriate function to call based on the provided actor type. It then calls the corresponding function to retrieve the organization permission.
+
+### `getOrgPermissionByRole`
+#### Description
+This function retrieves the organization permission for a specific role.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| role | `string` | The role slug |
+| orgId | `string` | The organization ID |
+
+#### Outputs
+An object containing the organization permission and role information.
+
+#### Internal Logic
+The function checks if the provided role is a custom role. If it is, it retrieves the role information from the `orgRoleDAL` and uses the `buildOrgPermission` function to build the permission object. Otherwise, it uses the `buildOrgPermission` function directly with the provided role.
+
+### `getUserProjectPermission`
+#### Description
+This function retrieves the project permission for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | The user ID |
+| projectId | `string` | The project ID |
+| authMethod | `ActorAuthMethod` | The authentication method used by the user |
+| userOrgId | `string` | Optional organization ID from the user's token (for scoped tokens) |
+
+#### Outputs
+An object containing the project permission, membership information, and a `hasRole` function.
+
+#### Internal Logic
+The function retrieves the user's project membership using the `permissionDAL`. It then validates the membership based on the provided `userOrgId` and authentication method. Finally, it combines the role permissions and additional privileges from the membership and uses the `buildProjectPermission` function to build the project permission object.
+
+### `getIdentityProjectPermission`
+#### Description
+This function retrieves the project permission for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | `string` | The identity ID |
+| projectId | `string` | The project ID |
+| identityOrgId | `string` | Optional organization ID from the identity's token (for scoped tokens) |
+
+#### Outputs
+An object containing the project permission, membership information, and a `hasRole` function.
+
+#### Internal Logic
+The function retrieves the identity's project membership using the `permissionDAL`. It then validates the membership based on the provided `identityOrgId`. Finally, it combines the role permissions and additional privileges from the membership and uses the `buildProjectPermission` function to build the project permission object.
+
+### `getServiceTokenProjectPermission`
+#### Description
+This function retrieves the project permission for a service token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serviceTokenId | `string` | The service token ID |
+| projectId | `string` | The project ID |
+| actorOrgId | `string` | Optional organization ID from the service token's token (for scoped tokens) |
+
+#### Outputs
+An object containing the project permission and membership information.
+
+#### Internal Logic
+The function retrieves the service token using the `serviceTokenDAL` and the project using the `projectDAL`. It then validates the project based on the provided `actorOrgId`. Finally, it uses the `buildServiceTokenProjectPermission` function to build the project permission object based on the service token's scopes and permissions.
+
+### `getProjectPermission`
+#### Description
+This function retrieves the project permission for a user, identity, or service token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| type | `ActorType` | The actor type (user, identity, or service) |
+| id | `string` | The user, identity, or service token ID |
+| projectId | `string` | The project ID |
+| actorAuthMethod | `ActorAuthMethod` | The authentication method used by the user (if applicable) |
+| actorOrgId | `string` | Optional organization ID from the actor's token (for scoped tokens) |
+
+#### Outputs
+An object containing the project permission, membership information, and a `hasRole` function.
+
+#### Internal Logic
+The function uses a switch statement to determine the appropriate function to call based on the provided actor type. It then calls the corresponding function to retrieve the project permission.
+
+### `getProjectPermissionByRole`
+#### Description
+This function retrieves the project permission for a specific role.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| role | `string` | The role slug |
+| projectId | `string` | The project ID |
+
+#### Outputs
+An object containing the project permission and role information.
+
+#### Internal Logic
+The function checks if the provided role is a custom role. If it is, it retrieves the role information from the `projectRoleDAL` and uses the `buildProjectPermission` function to build the permission object. Otherwise, it uses the `buildProjectPermission` function directly with the provided role.

@@ -1,0 +1,73 @@
+---
+title: "20240312162549_temp-roles.ts"
+---
+
+## High-level description
+This migration script creates a new table `ProjectUserMembershipRole` to store temporary roles for project members. It also migrates existing role data from the `ProjectMembership` table to the new table.
+
+## Code Structure
+The code defines two asynchronous functions, `up` and `down`, representing the migration's forward and backward actions. The `up` function creates the `ProjectUserMembershipRole` table and migrates data from `ProjectMembership`. The `down` function reverts these changes by dropping the `ProjectUserMembershipRole` table.
+
+## References
+- `TableName`: An enum or object defining table names used in the database schema.
+- `createOnUpdateTrigger`: A utility function to create an "on update" trigger for a table.
+- `dropOnUpdateTrigger`: A utility function to drop an "on update" trigger for a table.
+
+## Symbols
+### `up`
+#### Description
+This asynchronous function defines the actions to perform when applying the migration. It creates the `ProjectUserMembershipRole` table if it doesn't exist and migrates role data from the `ProjectMembership` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Checks if the `ProjectUserMembershipRole` table already exists.
+2. If the table doesn't exist, it creates the table with the following columns:
+    - `id`: UUID primary key, auto-generated.
+    - `role`: String, not nullable.
+    - `projectMembershipId`: UUID, foreign key referencing `ProjectMembership.id`, on delete cascade.
+    - `customRoleId`: UUID, foreign key referencing `ProjectRoles.id`.
+    - `isTemporary`: Boolean, not nullable, defaults to false.
+    - `temporaryMode`: String.
+    - `temporaryRange`: String, representing cron expression or relative time.
+    - `temporaryAccessStartTime`: Datetime.
+    - `temporaryAccessEndTime`: Datetime.
+    - `createdAt`, `updatedAt`, `deletedAt`: Timestamps for tracking creation, updates, and deletion.
+3. Creates an "on update" trigger for the `ProjectUserMembershipRole` table using the `createOnUpdateTrigger` utility function.
+4. Selects relevant data (`id`, `role`, `createdAt`, `updatedAt`, `roleId` as `customRoleId`) from the `ProjectMembership` table.
+5. Inserts the selected data into the `ProjectUserMembershipRole` table, associating each role with its corresponding project membership.
+6. Comments out the code that would drop the `roleId` and `role` columns from the `ProjectMembership` table. This suggests that the migration of these columns will happen in a later stage.
+
+### `down`
+#### Description
+This asynchronous function defines the actions to perform when reverting the migration. It drops the `ProjectUserMembershipRole` table and its associated "on update" trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance for interacting with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. Drops the `ProjectUserMembershipRole` table if it exists.
+2. Drops the "on update" trigger associated with the `ProjectUserMembershipRole` table using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex       | Provides a connection to the database and methods for schema manipulation and data operations. |
+
+## TODOs
+- The code comments out the part that drops the `roleId` and `role` columns from the `ProjectMembership` table. This needs to be addressed in a future migration or the comment should be updated to explain why it's not necessary. 

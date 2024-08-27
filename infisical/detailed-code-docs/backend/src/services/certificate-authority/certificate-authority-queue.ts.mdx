@@ -1,0 +1,76 @@
+---
+title: "certificate-authority-queue.ts"
+---
+
+## High-level description
+This code defines a factory function `certificateAuthorityQueueFactory` that creates a queue service for managing Certificate Authority (CA) operations, specifically for rotating Certificate Revocation Lists (CRLs). It sets up a queue for periodic CRL rotation and handles the rotation process.
+
+## Code Structure
+The main function `certificateAuthorityQueueFactory` takes various dependencies as input and returns an object with a method `setCaCrlRotationInterval`. This method is used to set up the periodic CRL rotation for a specific CA. The factory also sets up a queue processor that handles the actual CRL rotation logic.
+
+## Symbols
+
+### `certificateAuthorityQueueFactory`
+#### Description
+This is the main factory function that creates the Certificate Authority queue service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certificateAuthorityCrlDAL | TCertificateAuthorityCrlDALFactory | Data access layer for CA CRL operations |
+| certificateAuthorityDAL | TCertificateAuthorityDALFactory | Data access layer for CA operations |
+| certificateAuthoritySecretDAL | TCertificateAuthoritySecretDALFactory | Data access layer for CA secret operations |
+| certificateDAL | TCertificateDALFactory | Data access layer for certificate operations |
+| projectDAL | Pick&lt;TProjectDALFactory, ...&gt; | Data access layer for project operations |
+| kmsService | Pick&lt;TKmsServiceFactory, ...&gt; | Service for key management operations |
+| queueService | TQueueServiceFactory | Service for managing queues |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| setCaCrlRotationInterval | Function | Function to set up CRL rotation interval for a CA |
+
+#### Internal Logic
+1. Defines `setCaCrlRotationInterval` function to set up periodic CRL rotation.
+2. Sets up a queue processor for CRL rotation using `queueService.start`.
+3. Implements the CRL rotation logic within the queue processor.
+4. Sets up an error listener for the queue.
+
+### `setCaCrlRotationInterval`
+#### Description
+Sets up a periodic CRL rotation for a specific CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the Certificate Authority |
+| rotationIntervalDays | number | Interval in days for CRL rotation |
+
+#### Internal Logic
+1. Retrieves application configuration.
+2. Queues a job for CRL rotation with specified interval and immediate execution.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @peculiar/x509 | For X.509 certificate operations |
+| crypto | For cryptographic operations |
+| @app/lib/config/env | For retrieving application configuration |
+| @app/lib/dates | For date-related utility functions |
+| @app/lib/errors | For custom error types |
+| @app/lib/logger | For logging |
+| @app/queue | For queue-related types and constants |
+| @app/services/project/project-fns | For project-related utility functions |
+
+## Error Handling
+The code implements basic error handling by throwing a `BadRequestError` if the CA is not found. It also sets up an error listener for the queue to log any failures during CRL rotation.
+
+## Logging
+The code uses a logger to log information about the CRL rotation process and any errors that occur during queue processing.
+
+## TODOs
+1. Implement auto-periodic rotation
+2. Implement manual rotation
+3. Clarify queue and job naming
+
+The code provides a robust framework for managing CRL rotations for Certificate Authorities, with potential for further improvements and features as indicated by the TODOs.

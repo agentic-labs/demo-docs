@@ -1,0 +1,61 @@
+---
+title: "audit-log.ts"
+---
+
+## High-level description
+The code defines a Fastify plugin `injectAuditLogInfo` that intercepts incoming requests and injects audit log information into the request object. This information includes details about the actor (user, service, or identity) making the request, their IP address, and user agent details.
+
+## Code Structure
+The `getUserAgentType` function is used by the `injectAuditLogInfo` plugin. The plugin decorates the request object with `auditLogInfo` and uses a hook to populate it on each request.
+
+## Symbols
+### `getUserAgentType`
+#### Description
+This function determines the type of user agent from a given user agent string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userAgent | string \| undefined | The user agent string to analyze. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| UserAgentType | enum | The determined user agent type (e.g., WEB, CLI, NODE_SDK). |
+
+#### Internal Logic
+The function uses a series of conditional checks against the provided `userAgent` string to determine its type. It checks for specific strings like "CLI", "K8_OPERATOR", "TERRAFORM", "mozilla", "NodeSDK", and "PythonSDK". If none of these match, it defaults to `UserAgentType.OTHER`.
+
+### `injectAuditLogInfo`
+#### Description
+This is a Fastify plugin that injects audit log information into the request object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The Fastify server instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| void | - | The function modifies the Fastify server instance. |
+
+#### Internal Logic
+1. **Decorate Request:** It decorates the request object with an `auditLogInfo` property, initially set to `null`.
+2. **Add Hook:** It adds an `onRequest` hook to the server, which executes for every incoming request.
+3. **Extract Information:** Inside the hook, it extracts the IP address (`req.realIp`) and user agent (`req.headers["user-agent"]`) from the request.
+4. **Determine Actor:** Based on the `req.auth.actor` type, it constructs an `actor` object containing relevant metadata like email, username, service name, identity name, etc.
+5. **Populate auditLogInfo:** It populates the `req.auditLogInfo` object with the extracted information, including the actor details, IP address, user agent, and user agent type determined using `getUserAgentType`.
+
+## References
+- `UserAgentType` enum (from "@app/ee/services/audit-log/audit-log-types")
+- `BadRequestError` (from "@app/lib/errors")
+- `ActorType` enum (from "@app/services/auth/auth-type")
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fastify-plugin | Used to create a Fastify plugin. |
+
+## Error Handling
+The code throws a `BadRequestError` if the `req.auth.actor` type doesn't match any of the defined `ActorType` cases.

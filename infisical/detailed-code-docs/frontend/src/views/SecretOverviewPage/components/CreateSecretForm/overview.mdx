@@ -1,0 +1,133 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the `CreateSecretForm` component, which is a crucial part of the secret management functionality in the application. The component provides a user interface for creating and updating secrets across multiple environments within a workspace.
+
+## What does it do?
+The `CreateSecretForm` component presents a modal form to users, allowing them to:
+
+1. Create new secrets or update existing ones
+2. Specify the secret's key, value, and description
+3. Choose which environments the secret should be applied to
+4. Create necessary folder structures for organizing secrets
+5. Handle permissions and validations for secret operations
+
+The form is designed to be user-friendly, with features like clipboard paste detection for auto-filling fields and real-time validation of inputs. It integrates with the application's permission system to ensure users have the necessary rights to perform secret operations.
+
+## Key Files
+
+1. `CreateSecretForm.tsx`: This is the main file containing the implementation of the `CreateSecretForm` component. It includes the form logic, API interactions, and rendering of the user interface.
+
+2. `index.tsx`: This file serves as the entry point for the `CreateSecretForm` component, exporting it for use in other parts of the application.
+
+## Dependencies
+The `CreateSecretForm` component relies on several external libraries and internal modules:
+
+1. React Hook Form (version not specified): Used for efficient form state management and validation.
+2. Zod (version not specified): Employed for schema validation of form inputs.
+3. @casl/ability (version not specified): Utilized for permission checking within the application.
+4. @fortawesome (version not specified): Provides icons used in the user interface.
+5. Internal modules:
+   - `@app/components`: Custom UI components and notification system.
+   - `@app/context`: Provides access to project permissions and workspace data.
+   - `@app/hooks/api`: Custom hooks for API interactions.
+
+These dependencies were likely chosen to provide a robust, efficient, and user-friendly form experience while integrating seamlessly with the application's existing architecture and permission system.
+
+## Configuration
+The `CreateSecretForm` component doesn't appear to use any external configuration files. However, it does accept several props that configure its behavior:
+
+- `secretPath`: Specifies the path where the secret will be created (default: "/").
+- `getSecretByKey`: A function to retrieve an existing secret by its key.
+- `isOpen`: Controls the visibility of the modal.
+- `onClose`: A callback function to close the modal.
+- `onTogglePopUp`: A callback function to toggle the modal's visibility.
+
+These props allow the parent component to control the behavior and initial state of the `CreateSecretForm`.
+
+Here's an example of how the `CreateSecretForm` might be used in a parent component:
+
+```tsx
+import { CreateSecretForm } from './components/CreateSecretForm';
+
+function SecretManagementPage() {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [secretPath, setSecretPath] = useState('/');
+
+  const handleGetSecretByKey = async (key) =&gt; {
+    // Implementation to fetch a secret by key
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;button onClick={() =&gt; setIsFormOpen(true)}&gt;Create New Secret&lt;/button&gt;
+      &lt;CreateSecretForm
+        isOpen={isFormOpen}
+        onClose={() =&gt; setIsFormOpen(false)}
+        onTogglePopUp={() =&gt; setIsFormOpen(!isFormOpen)}
+        secretPath={secretPath}
+        getSecretByKey={handleGetSecretByKey}
+      /&gt;
+    &lt;/div&gt;
+  );
+}
+```
+
+The component handles form submission by performing the following steps:
+
+1. Validates the selected environments.
+2. Creates necessary folders if they don't exist.
+3. Creates or updates secrets in the selected environments.
+
+Here's a simplified example of the form submission logic:
+
+```tsx
+const onSubmit = async (data: FormData) =&gt; {
+  try {
+    // Validate environments
+    if (selectedEnvironments.length === 0) {
+      setError('environments', { message: 'Select at least one environment' });
+      return;
+    }
+
+    // Create folders if necessary
+    if (secretPath !== '/') {
+      await createFolder({ path: secretPath });
+    }
+
+    // Create or update secrets
+    for (const envId of selectedEnvironments) {
+      if (isEditMode) {
+        await updateSecret({
+          environment: envId,
+          secretPath: secretPath,
+          key: data.key,
+          value: data.value,
+          description: data.description,
+        });
+      } else {
+        await createSecret({
+          environment: envId,
+          secretPath: secretPath,
+          key: data.key,
+          value: data.value,
+          description: data.description,
+        });
+      }
+    }
+
+    // Show success notification and close form
+    showNotification({ text: 'Secret created successfully', type: 'success' });
+    onClose();
+  } catch (error) {
+    // Handle and display error
+    showNotification({ text: 'Failed to create secret', type: 'error' });
+  }
+};
+```
+
+This implementation showcases the component's ability to handle complex operations while providing a smooth user experience with appropriate feedback and error handling.
+
+In conclusion, the `CreateSecretForm` component is a well-structured and feature-rich implementation that handles the creation and updating of secrets in a multi-environment setup. It leverages modern React practices and integrates with the application's existing systems to provide a robust secret management interface.

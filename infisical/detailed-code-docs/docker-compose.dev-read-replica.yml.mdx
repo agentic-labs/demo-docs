@@ -1,0 +1,178 @@
+---
+title: "docker-compose.dev-read-replica.yml"
+---
+
+## High-level description
+This Docker Compose file defines a development environment for the Infisical project, including a read replica setup for the database. It orchestrates multiple services such as nginx, PostgreSQL (master and slave), Redis, backend, frontend, and various supporting services for development and testing purposes.
+
+## Code Structure
+The file defines multiple services under the `services` section, each representing a container. These services are interconnected and some depend on others. The file also defines volumes at the end for persistent data storage.
+
+## Symbols
+
+### `version`
+#### Description
+Specifies the version of the Docker Compose file format.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| version | string | The version number of the Compose file format |
+
+### `services`
+#### Description
+Defines the various services (containers) that make up the application.
+
+#### Internal Logic
+Each service is defined with its configuration, including image, build context, environment variables, volumes, ports, and dependencies.
+
+### `nginx`
+#### Description
+Configures the Nginx web server as a reverse proxy for the application.
+
+#### Internal Logic
+- Uses the official Nginx image
+- Maps port 8080 on the host to port 80 in the container
+- Mounts a custom configuration file
+- Depends on the backend and frontend services
+
+### `db`
+#### Description
+Configures the master PostgreSQL database for the application.
+
+#### Internal Logic
+- Uses Bitnami's PostgreSQL 14 image
+- Sets up replication as the master node
+- Exposes port 5432
+- Configures database credentials and replication settings
+
+### `db-slave`
+#### Description
+Configures a slave PostgreSQL database that replicates from the master.
+
+#### Internal Logic
+- Uses the same Bitnami PostgreSQL 14 image
+- Sets up replication as a slave node
+- Exposes port 5433
+- Configures to connect to the master database for replication
+
+### `redis`
+#### Description
+Sets up a Redis server for caching or message queuing.
+
+#### Internal Logic
+- Uses the official Redis image
+- Allows empty password for development
+- Exposes port 6379
+- Mounts a volume for data persistence
+
+### `redis-commander`
+#### Description
+Provides a web interface for Redis management.
+
+#### Internal Logic
+- Depends on the Redis service
+- Exposes port 8085 for web access
+
+### `db-test`
+#### Description
+Configures a separate PostgreSQL database for testing purposes.
+
+#### Internal Logic
+- Uses PostgreSQL 14 Alpine image
+- Exposes port 5430
+- Sets up test database credentials
+
+### `db-migration`
+#### Description
+Runs database migrations for the application.
+
+#### Internal Logic
+- Builds from the backend Dockerfile
+- Depends on the main database
+- Runs the migration command
+
+### `backend`
+#### Description
+Configures the backend service for the application.
+
+#### Internal Logic
+- Builds from the backend Dockerfile
+- Depends on database, Redis, and migration services
+- Mounts the source code for development
+- Configures environment variables
+
+### `frontend`
+#### Description
+Configures the frontend service for the application.
+
+#### Internal Logic
+- Builds from the frontend Dockerfile
+- Depends on the backend service
+- Mounts source code and public directory for development
+- Configures environment variables
+
+### `pgadmin`
+#### Description
+Provides a web interface for PostgreSQL management.
+
+#### Internal Logic
+- Uses the official pgAdmin image
+- Exposes port 5050 for web access
+- Depends on the main database service
+
+### `smtp-server`
+#### Description
+Sets up a development SMTP server using MailHog.
+
+#### Internal Logic
+- Exposes ports for SMTP (1025) and web UI (8025)
+- Disables logging
+
+### `openldap`
+#### Description
+Configures an OpenLDAP server for development and testing.
+
+#### Internal Logic
+- Uses osixia/openldap image
+- Sets up basic LDAP configuration
+- Exposes LDAP ports
+- Uses a profile to allow optional inclusion
+
+### `phpldapadmin`
+#### Description
+Provides a web interface for LDAP management.
+
+#### Internal Logic
+- Depends on the OpenLDAP service
+- Exposes port 6433 for web access
+- Uses a profile to allow optional inclusion
+
+### `volumes`
+#### Description
+Defines named volumes for persistent data storage.
+
+#### Internal Logic
+Specifies volumes for PostgreSQL data, Redis data, and LDAP data and configuration.
+
+## Dependencies
+The file uses various Docker images as dependencies:
+| Dependency | Purpose |
+|:-----------|:--------|
+| nginx | Web server and reverse proxy |
+| bitnami/postgresql:14 | PostgreSQL database |
+| redis | In-memory data structure store |
+| rediscommander/redis-commander | Redis management UI |
+| postgres:14-alpine | PostgreSQL for testing |
+| dpage/pgadmin4 | PostgreSQL management UI |
+| lytrax/mailhog | SMTP testing server |
+| osixia/openldap | LDAP server |
+| osixia/phpldapadmin | LDAP management UI |
+
+## Configuration
+The file defines various configuration options through environment variables for each service. These are typically loaded from a `.env` file or set directly in the compose file.
+
+## Performance Considerations
+The use of a master-slave PostgreSQL setup allows for read scaling, potentially improving performance for read-heavy workloads.
+
+This Docker Compose file sets up a comprehensive development environment for the Infisical project, including databases, caching, frontend, backend, and various management tools. It's designed to be easily run and modified for development purposes.

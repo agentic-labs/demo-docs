@@ -1,0 +1,44 @@
+---
+title: "inject-permission.ts"
+---
+
+## High-level description
+This code injects permission information into the Fastify request object (`req`) based on the authenticated actor type (user, identity, service, or SCIM client). This information is used for authorization purposes in downstream route handlers.
+
+## Code Structure
+The code defines a single symbol, `injectPermission`, which is a Fastify plugin. This plugin uses Fastify hooks to modify the request object.
+
+## Symbols
+### `injectPermission`
+#### Description
+This function is a Fastify plugin that injects permission information into the request object based on the authenticated actor. It first decorates the request object with a `permission` property set to `null`. Then, it adds an `onRequest` hook that intercepts incoming requests and populates the `permission` property based on the `req.auth` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyInstance | The Fastify server instance. |
+
+#### Outputs
+This function does not have explicit outputs. It modifies the Fastify server instance by adding a plugin.
+
+#### Internal Logic
+1. **Decorate Request:** The plugin first decorates the request object with a `permission` property, initializing it to `null`.
+2. **onRequest Hook:** It adds an `onRequest` hook that executes for every incoming request.
+3. **Check Authentication:** Inside the hook, it checks if the request is authenticated (`req.auth`). If not, it returns without modifying the `permission` property.
+4. **Determine Actor Type:** If the request is authenticated, it determines the actor type from `req.auth.actor` (USER, IDENTITY, SERVICE, or SCIM_CLIENT).
+5. **Populate Permission Object:** Based on the actor type, it populates the `req.permission` object with the relevant information:
+    - `type`: The actor type.
+    - `id`: The ID of the user, identity, service token, or SCIM token.
+    - `orgId`: The organization ID.
+    - `authMethod`: The authentication method used (if applicable).
+6. **Log Permission Injection:** It logs the injected permission information for debugging and auditing purposes.
+
+## Side Effects
+- **Modifies Request Object:** This plugin modifies the Fastify request object by adding a `permission` property. This property is used by downstream route handlers for authorization.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fastify-plugin | Used to create a Fastify plugin. |
+| @app/lib/logger | Provides logging functionality. |
+| @app/services/auth/auth-type | Defines the different actor types used for authentication. |

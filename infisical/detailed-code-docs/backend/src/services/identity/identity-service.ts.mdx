@@ -1,0 +1,121 @@
+---
+title: "identity-service.ts"
+---
+
+## High-level description
+This code defines the `identityServiceFactory`, which creates and returns an object with methods for managing identities within an organization. It handles operations such as creating, updating, deleting, and retrieving identities, while enforcing permissions and license constraints.
+
+## Code Structure
+The `identityServiceFactory` function takes dependencies as input and returns an object with methods for identity management. These methods interact with various data access layers (DALs) and services to perform operations on identities, while checking permissions and enforcing business rules.
+
+## Symbols
+
+### `identityServiceFactory`
+#### Description
+This function creates and returns an object with methods for managing identities within an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityDAL | TIdentityDALFactory | Data access layer for identity operations |
+| identityOrgMembershipDAL | TIdentityOrgDALFactory | Data access layer for identity-organization membership operations |
+| identityProjectDAL | Pick&lt;TIdentityProjectDALFactory, "findByIdentityId"&gt; | Data access layer for identity-project operations |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission" \| "getOrgPermissionByRole"&gt; | Service for handling permissions |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan" \| "updateSubscriptionOrgMemberCount"&gt; | Service for handling license-related operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TIdentityServiceFactory | An object containing methods for identity management |
+
+#### Internal Logic
+1. Defines several methods for identity management (createIdentity, updateIdentity, deleteIdentity, etc.).
+2. Each method checks permissions and enforces business rules before performing the requested operation.
+3. Uses transactions where necessary to ensure data consistency.
+4. Interacts with the license service to enforce identity limits and update subscription counts.
+
+### `createIdentity`
+#### Description
+Creates a new identity within an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | string | The name of the identity |
+| role | string | The role of the identity |
+| actor | ActorType | The type of actor creating the identity |
+| orgId | string | The ID of the organization |
+| actorId | string | The ID of the actor creating the identity |
+| actorAuthMethod | string | The authentication method of the actor |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Internal Logic
+1. Checks if the actor has permission to create an identity.
+2. Verifies that the actor has the required privileges to create an identity with the given role.
+3. Checks if the organization has reached its identity limit based on the license plan.
+4. Creates the identity and its organization membership in a transaction.
+5. Updates the subscription organization member count.
+
+### `updateIdentity`
+#### Description
+Updates an existing identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | string | The ID of the identity to update |
+| role | string (optional) | The new role of the identity |
+| name | string (optional) | The new name of the identity |
+| actor | ActorType | The type of actor updating the identity |
+| actorId | string | The ID of the actor updating the identity |
+| actorAuthMethod | string | The authentication method of the actor |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Internal Logic
+1. Retrieves the identity's organization membership.
+2. Checks if the actor has permission to edit the identity.
+3. Verifies that the actor has the required privileges to update the identity.
+4. If a new role is provided, checks if the actor has the required privileges for the new role.
+5. Updates the identity and its organization membership in a transaction.
+
+### `deleteIdentity`
+#### Description
+Deletes an existing identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | string | The ID of the identity to delete |
+| actor | ActorType | The type of actor deleting the identity |
+| actorId | string | The ID of the actor deleting the identity |
+| actorAuthMethod | string | The authentication method of the actor |
+| actorOrgId | string | The organization ID of the actor |
+
+#### Internal Logic
+1. Retrieves the identity's organization membership.
+2. Checks if the actor has permission to delete the identity.
+3. Verifies that the actor has the required privileges to delete the identity.
+4. Deletes the identity.
+5. Updates the subscription organization member count.
+
+### `listOrgIdentities`, `getIdentityById`, `listProjectIdentitiesByIdentityId`
+These methods retrieve identity information, checking permissions before returning the requested data.
+
+## Dependencies
+The code relies on several external modules and types, including:
+- `@casl/ability` for permission checking
+- `@app/db/schemas` for database schema types
+- `@app/ee/services/license/license-service` for license-related operations
+- `@app/ee/services/permission/org-permission` for organization permission constants
+- `@app/ee/services/permission/permission-service` for permission-related operations
+- `@app/lib/casl` for permission comparison
+- `@app/lib/errors` for custom error types
+- `@app/lib/types` for common type definitions
+- `@app/services/identity-project/identity-project-dal` for identity-project data access
+- `../auth/auth-type` for authentication-related types
+
+## Error Handling
+The code uses custom error types (BadRequestError, ForbiddenRequestError, NotFoundError) to handle various error scenarios. It also uses the ForbiddenError from the @casl/ability package for permission-related errors.
+
+## Performance Considerations
+The code uses database transactions for operations that involve multiple updates, ensuring data consistency and potentially improving performance by reducing the number of database round-trips.

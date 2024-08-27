@@ -1,0 +1,85 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/views/Signup/components` directory contains components related to the user signup process. It includes three main components: BackupPDFStep, EmailConfirmationStep, and UserInfoSSOStep. These components represent different stages of the signup flow, handling tasks such as backup key generation, email verification, and user information collection for Single Sign-On (SSO) users.
+
+## What does it do?
+This directory implements crucial steps in the user signup process:
+
+1. BackupPDFStep: Allows users to download a backup key as a PDF file. This step is essential for account recovery and security.
+
+2. EmailConfirmationStep: Handles email verification by allowing users to enter a confirmation code sent to their email address. It supports different authentication types (SAML, LDAP, OIDC) and manages the verification process.
+
+3. UserInfoSSOStep: Manages the final step of the SSO signup flow. It collects additional user information, generates necessary cryptographic keys, and completes the account creation process for SSO users.
+
+The workflow typically follows this order:
+1. User enters initial signup information.
+2. Email confirmation is requested and verified.
+3. For SSO users, additional information is collected.
+4. A backup PDF is generated for the user to download.
+5. The user is then directed to the appropriate next step or page.
+
+## Key Files
+
+1. BackupPDFStep.tsx:
+   - Renders a warning message and a download button for the backup PDF.
+   - Utilizes the `issueBackupKey` utility to generate the backup key.
+   - Redirects the user to the organization overview page after download.
+
+2. EmailConfirmationStep.tsx:
+   - Provides a UI for entering the email verification code.
+   - Handles code verification and resending.
+   - Manages different authentication types and routes users accordingly.
+
+3. UserInfoSSOStep.tsx:
+   - Collects additional user information for SSO signups.
+   - Generates cryptographic keys and security tokens.
+   - Interacts with backend APIs to finalize account creation.
+   - Sets up the initial user environment (project and organization).
+
+4. index.tsx:
+   - Serves as a re-export module for the three main components.
+
+## Dependencies
+The components rely on several external libraries and internal utilities:
+
+1. React and Next.js: For component structure, state management, and routing.
+2. react-i18next: For internationalization support.
+3. jsrp: Implements the Secure Remote Password (SRP) protocol.
+4. tweetnacl and tweetnacl-util: For cryptographic operations.
+5. react-code-input: Provides the code input field UI in EmailConfirmationStep.
+6. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: For icon rendering.
+7. Various internal utilities and hooks for API calls, cryptography, and UI components.
+
+## Configuration
+While there are no explicit configuration files, the components use various configuration options:
+
+1. BackupPDFStep:
+   - Accepts props for email, password, and name to generate the backup key.
+
+2. EmailConfirmationStep:
+   - Uses constant objects (`props` and `propsPhone`) to define styling for code input fields.
+   - Accepts props for authType, username, email, organizationSlug, and setStep.
+
+3. UserInfoSSOStep:
+   - Relies on environment variables and settings defined elsewhere in the application.
+   - Uses specific cryptographic algorithms and key sizes (e.g., AES-256-GCM).
+
+Example of cryptographic configuration in UserInfoSSOStep:
+
+```typescript
+const keyPair = nacl.box.keyPair();
+const publicKey = naclUtil.encodeBase64(keyPair.publicKey);
+const privateKey = naclUtil.encodeBase64(keyPair.secretKey);
+
+const derivedKey = await argon2.hash({
+  pass: password,
+  salt: naclUtil.decodeBase64(publicKey),
+  type: argon2.ArgonType.Argon2id,
+  hashLen: 32,
+});
+```
+
+These components play critical roles in the user onboarding process, ensuring secure account creation, verification, and backup procedures. The implementation demonstrates a strong focus on security, particularly in the cryptographic operations performed during the SSO signup process.

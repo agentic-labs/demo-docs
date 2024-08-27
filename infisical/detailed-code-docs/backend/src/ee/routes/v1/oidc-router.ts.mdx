@@ -1,0 +1,117 @@
+---
+title: "oidc-router.ts"
+---
+
+## High-level description
+This code defines an OIDC (OpenID Connect) router for a Fastify server. It handles authentication, configuration, and management of OIDC settings for an organization. The router includes endpoints for login, callback, error handling, and CRUD operations for OIDC configurations.
+
+## Code Structure
+The main function `registerOidcRouter` sets up the OIDC routes and configurations. It initializes Redis for session storage, configures Passport for authentication, and defines several routes for OIDC-related operations.
+
+## Symbols
+
+### `registerOidcRouter`
+#### Description
+This is the main function that sets up the OIDC router. It configures Redis for session storage, initializes Passport for authentication, and defines various routes for OIDC operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The Fastify server instance |
+
+#### Internal Logic
+1. Initializes Redis and Passport
+2. Configures session management with Redis
+3. Registers Passport middleware
+4. Defines routes for login, callback, error handling, and OIDC configuration management
+
+### Routes
+
+#### `/login` (GET)
+##### Description
+Initiates the OIDC login process by redirecting to the Identity Provider (IDP).
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgSlug | string | Organization slug |
+| callbackPort | string (optional) | Callback port |
+
+##### Internal Logic
+1. Regenerates the session
+2. Stores organization slug and callback port in the session
+3. Retrieves the OIDC strategy for the organization
+4. Authenticates using Passport with the OIDC strategy
+
+#### `/callback` (GET)
+##### Description
+Handles the callback from the IDP after successful authentication.
+
+##### Internal Logic
+1. Retrieves the OIDC strategy from the session
+2. Authenticates using Passport
+3. Destroys the session
+4. Redirects to the appropriate URL based on whether the user is completing signup or logging in
+
+#### `/login/error` (GET)
+##### Description
+Handles authentication errors.
+
+##### Internal Logic
+1. Destroys the session
+2. Returns a 500 status with error details
+
+#### `/config` (GET)
+##### Description
+Retrieves the OIDC configuration for an organization.
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgSlug | string | Organization slug |
+
+##### Internal Logic
+Calls the OIDC service to get the configuration for the specified organization
+
+#### `/config` (PATCH)
+##### Description
+Updates the OIDC configuration for an organization.
+
+##### Inputs
+Various OIDC configuration parameters (partial update)
+
+##### Internal Logic
+Calls the OIDC service to update the configuration with the provided parameters
+
+#### `/config` (POST)
+##### Description
+Creates a new OIDC configuration for an organization.
+
+##### Inputs
+Various OIDC configuration parameters
+
+##### Internal Logic
+1. Validates input based on the configuration type (custom or discovery URL)
+2. Calls the OIDC service to create a new configuration with the provided parameters
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @fastify/passport | Authentication middleware |
+| @fastify/session | Session management |
+| connect-redis | Redis session store |
+| ioredis | Redis client |
+| zod | Schema validation |
+
+## Configuration
+The code uses environment variables for configuration, accessed through the `getConfig()` function.
+
+## Error Handling
+Error handling is primarily managed through Zod schema validation and Fastify's built-in error handling mechanisms.
+
+## Logging
+No explicit logging is implemented in this file.
+
+## TODOs
+- The code comments mention that the current Redis usage is not ideal and will need to be refactored in the future.
+- There are multiple ESLint disable comments at the beginning of the file, indicating that type safety could be improved, especially regarding Passport and Fastify integration.

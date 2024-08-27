@@ -1,0 +1,203 @@
+---
+title: "external-kms-service.ts"
+---
+
+## High-level description
+This code defines an external KMS (Key Management Service) service factory that provides functionality for creating, updating, deleting, and retrieving external KMS configurations. It supports AWS KMS as a provider and includes permission checks, encryption/decryption of provider inputs, and integration with other services like licensing and organization permissions.
+
+## Code Structure
+The main function `externalKmsServiceFactory` returns an object with methods for managing external KMS configurations. These methods interact with various dependencies like `externalKmsDAL`, `permissionService`, `licenseService`, `kmsService`, and `kmsDAL` to perform their operations.
+
+## Symbols
+
+### `externalKmsServiceFactory`
+#### Description
+This factory function creates and returns an object with methods for managing external KMS configurations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| externalKmsDAL | TExternalKmsDALFactory | Data Access Layer for external KMS |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Service for checking permissions |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for retrieving license plans |
+| kmsService | Pick&lt;TKmsServiceFactory, "getOrgKmsKeyId" \| "createCipherPairWithDataKey"&gt; | Service for KMS operations |
+| kmsDAL | Pick&lt;TKmsKeyDALFactory, "create" \| "updateById" \| "findById" \| "deleteById" \| "findOne"&gt; | Data Access Layer for KMS |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { create, updateById, deleteById, list, findById, findBySlug } | An object containing methods for managing external KMS |
+
+#### Internal Logic
+The factory function defines several methods:
+1. `create`: Creates a new external KMS configuration
+2. `updateById`: Updates an existing external KMS configuration
+3. `deleteById`: Deletes an external KMS configuration
+4. `list`: Lists all external KMS configurations for an organization
+5. `findById`: Retrieves an external KMS configuration by ID
+6. `findBySlug`: Retrieves an external KMS configuration by slug
+
+Each method includes permission checks, plan validation, and interaction with the KMS provider (currently only AWS).
+
+### `create`
+#### Description
+Creates a new external KMS configuration after checking permissions and plan eligibility.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | Object | KMS provider details |
+| description | string | Description of the KMS configuration |
+| actor | Object | Actor performing the action |
+| slug | string | Unique identifier for the KMS configuration |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ExternalKMS | Created external KMS configuration |
+
+#### Internal Logic
+1. Checks permissions and plan eligibility
+2. Generates a slug if not provided
+3. Validates and sanitizes provider input
+4. Encrypts provider inputs
+5. Creates KMS and external KMS configurations in a transaction
+
+### `updateById`
+#### Description
+Updates an existing external KMS configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | Object | Updated KMS provider details |
+| description | string | Updated description |
+| actor | Object | Actor performing the action |
+| id | string | ID of the KMS configuration to update |
+| slug | string | Updated slug |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ExternalKMS | Updated external KMS configuration |
+
+#### Internal Logic
+1. Checks permissions and plan eligibility
+2. Decrypts existing provider inputs
+3. Validates and updates provider inputs if provided
+4. Encrypts updated provider inputs
+5. Updates KMS and external KMS configurations in a transaction
+
+### `deleteById`
+#### Description
+Deletes an external KMS configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | Object | Actor performing the action |
+| id | string | ID of the KMS configuration to delete |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ExternalKMS | Deleted external KMS configuration |
+
+#### Internal Logic
+1. Checks permissions
+2. Deletes KMS configuration in a transaction
+
+### `list`
+#### Description
+Lists all external KMS configurations for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | Object | Actor performing the action |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Array | ExternalKMS[] | List of external KMS configurations |
+
+#### Internal Logic
+1. Checks permissions
+2. Retrieves all external KMS configurations for the organization
+
+### `findById`
+#### Description
+Retrieves an external KMS configuration by ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | Object | Actor performing the action |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| id | string | ID of the KMS configuration to retrieve |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ExternalKMS | Retrieved external KMS configuration with decrypted provider inputs |
+
+#### Internal Logic
+1. Checks permissions
+2. Retrieves KMS and external KMS configurations
+3. Decrypts provider inputs
+4. Returns combined configuration with decrypted provider inputs
+
+### `findBySlug`
+#### Description
+Retrieves an external KMS configuration by slug.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | Object | Actor performing the action |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| slug | string | Slug of the KMS configuration to retrieve |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ExternalKMS | Retrieved external KMS configuration with decrypted provider inputs |
+
+#### Internal Logic
+1. Checks permissions
+2. Retrieves KMS and external KMS configurations by slug
+3. Decrypts provider inputs
+4. Returns combined configuration with decrypted provider inputs
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permission checks |
+| @sindresorhus/slugify | For generating slugs |
+| @app/lib/errors | For custom error types |
+| @app/lib/nanoid | For generating unique identifiers |
+| @app/services/kms/kms-key-dal | For KMS data access |
+| @app/services/kms/kms-service | For KMS operations |
+| @app/services/kms/kms-types | For KMS type definitions |
+
+## Error Handling
+The code uses custom error types like `BadRequestError` and `ForbiddenError` for specific error scenarios. It also uses `ForbiddenError.from(permission).throwUnlessCan()` for permission-based error handling.
+
+## Encryption
+The service uses the `kmsService` to create cipher pairs for encrypting and decrypting provider inputs. This ensures that sensitive provider information is stored securely.

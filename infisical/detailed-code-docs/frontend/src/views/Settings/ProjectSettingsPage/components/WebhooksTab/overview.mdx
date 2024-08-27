@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains components related to the WebhooksTab, which is part of the project settings page in the frontend application. The main purpose of this directory is to provide functionality for managing webhooks, including creating, viewing, testing, enabling/disabling, and deleting webhooks.
+
+## What does it do?
+The WebhooksTab allows users to manage webhooks for their project. Here's a breakdown of its functionality:
+
+1. Display a list of existing webhooks in a table format, showing details such as the webhook type, URL, environment, and status.
+2. Provide a form for creating new webhooks, allowing users to specify the webhook type (General or Slack), environment, URL, and secret key.
+3. Enable users to test existing webhooks to ensure they're working correctly.
+4. Allow users to enable or disable webhooks as needed.
+5. Provide the ability to delete webhooks that are no longer required.
+6. Implement permission checks to ensure users have the necessary rights to perform these actions.
+
+The component handles all these operations through API calls and provides appropriate feedback to the user through notifications.
+
+## Key Files
+
+### WebhooksTab.tsx
+This is the main component file that orchestrates the webhook management functionality. It includes:
+- A table display of existing webhooks
+- Buttons for various actions (create, test, enable/disable, delete)
+- API call handlers for webhook operations
+- Permission checks for different actions
+
+### AddWebhookForm.tsx
+This file contains the form component for creating new webhooks. It features:
+- A dynamic form that changes based on the selected webhook type (General or Slack)
+- Form validation using Zod and react-hook-form
+- Custom UI components for form inputs
+
+### index.tsx
+This is a barrel file that re-exports the WebhooksTab component, simplifying imports in other parts of the application.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React and react-hook-form for component structure and form management
+2. Zod for form validation
+3. date-fns for date formatting
+4. @fortawesome for icons
+5. Internal UI components from @app/components/v2
+6. Custom hooks from @app/hooks, including API hooks
+7. Permission components from @app/components/permissions
+8. Notification system from @app/components/notifications
+
+## Configuration
+The components in this directory don't directly use configuration files or environment variables. However, they do rely on the workspace context and project permissions, which may be configured elsewhere in the application.
+
+The AddWebhookForm component uses a form schema defined with Zod, which acts as a configuration for the form fields and their validation rules. This schema includes specific validation for Slack webhook URLs.
+
+```typescript
+const formSchema = z.object({
+  environment: z.string(),
+  webhookUrl: z.string().url(),
+  secretPath: z.string(),
+  type: z.enum(["general", "slack"]),
+  webhookSecretKey: z.string().optional(),
+}).refine((data) =&gt; {
+  if (data.type === "slack" && !data.webhookUrl.startsWith("https://hooks.slack.com/")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Invalid Slack webhook URL",
+  path: ["webhookUrl"],
+});
+```
+
+This schema ensures that the webhook form collects and validates all necessary information before submission, providing a robust user experience and data integrity.

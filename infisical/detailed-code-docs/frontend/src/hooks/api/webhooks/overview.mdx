@@ -1,0 +1,82 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and TypeScript types for managing webhooks in the application. It provides a set of custom hooks for creating, deleting, testing, updating, and retrieving webhooks, as well as type definitions for webhook-related data structures.
+
+## What does it do?
+The code in this directory enables the application to interact with a webhook API. It allows developers to:
+
+1. Create new webhooks
+2. Delete existing webhooks
+3. Test webhooks
+4. Update webhook settings
+5. Retrieve a list of webhooks for a specific workspace
+
+These operations are implemented as React hooks, which can be easily integrated into components. The hooks use React Query for efficient data fetching, caching, and state management. This approach ensures that the application maintains consistent and up-to-date webhook data across different components.
+
+## Key Files
+
+1. `index.tsx`: This file serves as the main entry point for the webhook hooks. It re-exports all the custom hooks from other files, providing a centralized import location for consumers.
+
+2. `mutation.tsx`: Contains custom hooks for webhook mutations (create, delete, test, update). These hooks use React Query's `useMutation` to handle API requests and manage mutation states.
+
+3. `query.tsx`: Defines a custom hook for fetching webhooks data. It uses React Query's `useQuery` to manage the retrieval and caching of webhook information.
+
+4. `types.ts`: Contains TypeScript type definitions for webhooks and related data transfer objects (DTOs). This ensures type safety and consistency across the application when working with webhook data.
+
+## Dependencies
+The main external dependency used in this directory is `@tanstack/react-query`. This library is crucial for managing API state, handling mutations, and caching query results. It provides hooks like `useMutation` and `useQuery` that are extensively used in the custom hooks.
+
+Other dependencies include:
+- `@app/config/request`: A custom utility for making API requests.
+
+## Configuration
+While there are no explicit configuration files in this directory, the API endpoints for webhook operations are hardcoded in the mutation and query hooks. For example:
+
+- Create webhook: `/api/v1/webhooks`
+- Test webhook: `/api/v1/webhooks/${webhookId}/test`
+- Update webhook: `/api/v1/webhooks/${dto.webhookId}`
+- Delete webhook: `/api/v1/webhooks/${dto.webhookId}`
+- Get webhooks: `/api/v1/webhooks`
+
+These endpoints could potentially be moved to a configuration file for easier management and flexibility.
+
+## Code Snippets
+
+Here's an example of how the `useCreateWebhook` hook is implemented:
+
+```typescript
+export const useCreateWebhook = () =&gt; {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dto: TCreateWebhookDto) =&gt;
+      apiRequest.post("/api/v1/webhooks", dto),
+    onSuccess: (_, variables) =&gt; {
+      queryClient.invalidateQueries(
+        queryKeys.getWebhooks(variables.workspaceId)
+      );
+    },
+  });
+};
+```
+
+This hook uses React Query's `useMutation` to handle the API request for creating a webhook. On successful creation, it invalidates the relevant query to ensure the webhook list is updated.
+
+The `useGetWebhooks` hook is implemented as follows:
+
+```typescript
+export const useGetWebhooks = (workspaceId: string) =&gt; {
+  return useQuery({
+    queryKey: queryKeys.getWebhooks(workspaceId),
+    queryFn: () =&gt; fetchWebhooks(workspaceId),
+    enabled: !!workspaceId,
+  });
+};
+```
+
+This hook uses React Query's `useQuery` to manage the fetching and caching of webhooks data for a specific workspace.
+
+These custom hooks provide a clean and efficient way to manage webhook-related operations in the application, leveraging React Query for optimal performance and state management.

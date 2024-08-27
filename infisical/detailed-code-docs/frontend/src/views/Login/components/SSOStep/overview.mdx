@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Single Sign-On (SSO) step component for the login process in a React application. It consists of two files: `SSOStep.tsx`, which contains the main component implementation, and `index.tsx`, which serves as a re-export file for easier importing.
+
+## What does it do?
+The `SSOStep` component provides a user interface for initiating Single Sign-On authentication. It allows users to enter their organization slug (also referred to as SSO identifier) and then redirects them to the appropriate SSO authentication flow, either SAML or OIDC, depending on the configuration.
+
+The workflow is as follows:
+1. The user is presented with a form containing an input field for their organization slug.
+2. Upon submitting the form, the component constructs the appropriate SSO URL based on the authentication type (SAML or OIDC).
+3. A new browser window is opened with the SSO URL, initiating the authentication process.
+4. The current window is closed, leaving the user to complete the SSO process in the new window.
+
+The component also provides a way to navigate back to the previous step in the authentication process, offering flexibility in the user flow.
+
+## Key Files
+
+### SSOStep.tsx
+This file contains the main `SSOStep` component implementation. It uses React hooks for state management and rendering, and includes the following key features:
+
+- State management for the SSO identifier input
+- Form submission handling
+- URL construction for SAML and OIDC authentication
+- Rendering of the SSO form with input and button components
+
+Here's a snippet of the core functionality:
+
+```typescript
+const handleSubmit = (e: React.FormEvent) =&gt; {
+  e.preventDefault();
+  const callbackPort = searchParams.get("callback_port");
+  const ssoUrl =
+    type === "SAML"
+      ? `/api/v1/sso/redirect/saml2/organizations/${ssoIdentifier}${
+          callbackPort ? `?callback_port=${callbackPort}` : ""
+        }`
+      : `/api/v1/sso/oidc/login?orgSlug=${ssoIdentifier}${
+          callbackPort ? `&callbackPort=${callbackPort}` : ""
+        }`;
+  window.open(ssoUrl, "_blank");
+  window.close();
+};
+```
+
+This code snippet demonstrates how the component handles form submission, constructs the SSO URL based on the authentication type, and manages the window behavior for the SSO process.
+
+### index.tsx
+This file serves as a re-export for the `SSOStep` component, simplifying the import process for other parts of the application. It contains a single line:
+
+```typescript
+export { default as SSOStep } from "./SSOStep";
+```
+
+This pattern allows other components to import `SSOStep` directly from the `components/SSOStep` directory without needing to know the exact file name.
+
+## Dependencies
+The `SSOStep` component relies on the following external libraries and internal components:
+
+1. React: For component structure and hooks (useState)
+2. react-i18next: For internationalization support
+3. @app/components/v2: For UI components (Button and Input)
+
+## Configuration
+The `SSOStep` component accepts two props for configuration:
+
+1. `setStep`: A function to set the current step in the authentication process
+2. `type`: A string specifying the SSO type, either "SAML" or "OIDC"
+
+These props allow the component to be integrated into a larger authentication flow and to adapt its behavior based on the required SSO type.
+
+The component also reads the `callback_port` query parameter from the URL, which is used in constructing the SSO redirect URL. This allows for flexible configuration of the callback mechanism in different environments or scenarios.
+
+In summary, this directory provides a modular and reusable SSO step component that can be easily integrated into a larger authentication flow. It handles the complexities of initiating different types of SSO processes while providing a simple and consistent user interface.

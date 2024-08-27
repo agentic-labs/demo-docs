@@ -1,0 +1,98 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and TypeScript types for managing secret imports in a project management system. It provides functionality for creating, updating, deleting, and querying secret imports across different environments. The code is structured around React Query for efficient data fetching and state management.
+
+## What does it do?
+The code in this directory enables developers to:
+1. Fetch secret imports for specific projects, environments, and paths.
+2. Create new secret imports.
+3. Update existing secret imports.
+4. Delete secret imports.
+5. Resync secret replications.
+6. Retrieve imported secrets for single or multiple environments.
+7. Get imported folders by environment.
+
+These operations are implemented as custom React hooks, which can be easily integrated into components to manage secret import-related data and operations.
+
+## Entry points
+The main entry point for this functionality is the `index.ts` file, which exports all the custom hooks:
+
+1. Mutation hooks (from `mutation.tsx`):
+   - `useCreateSecretImport`
+   - `useUpdateSecretImport`
+   - `useResyncSecretReplication`
+   - `useDeleteSecretImport`
+
+2. Query hooks (from `queries.tsx`):
+   - `useGetSecretImports`
+   - `useGetImportedSecretsSingleEnv`
+   - `useGetImportedSecretsAllEnvs`
+   - `useGetImportedFoldersByEnv`
+
+The data flow typically starts with these hooks being used in React components. They interact with the API using the `apiRequest` object from `@app/config/request` and manage state using React Query.
+
+## Key Files
+1. `mutation.tsx`: Contains hooks for modifying secret import data (create, update, delete, resync).
+2. `queries.tsx`: Provides hooks for fetching secret import data and related information.
+3. `types.ts`: Defines TypeScript types and interfaces used throughout the secret import functionality.
+
+## Dependencies
+The code relies on the following main dependencies:
+1. React: For building user interface components.
+2. @tanstack/react-query (v4.29.5 or compatible): Used for efficient data fetching, caching, and state management.
+3. @app/config/request: A custom module for making API requests.
+
+## Configuration
+While there are no explicit configuration files, the code uses environment-specific API endpoints and project IDs. These are likely configured elsewhere in the application and passed to the hooks as parameters.
+
+Key configurable aspects include:
+- Project ID
+- Environment names
+- API endpoints (e.g., "/api/v1/secret-imports")
+
+Here's an example of how one might use these hooks in a React component:
+
+```tsx
+import React from 'react';
+import { useGetSecretImports, useCreateSecretImport } from './path/to/hooks/api/secretImports';
+
+const SecretImportsComponent = ({ projectId, environment }) =&gt; {
+  const { data: secretImports, isLoading, error } = useGetSecretImports({
+    projectId,
+    environment,
+    path: '/'
+  });
+
+  const createSecretImport = useCreateSecretImport();
+
+  const handleCreateImport = () =&gt; {
+    createSecretImport.mutate({
+      projectId,
+      environment,
+      import: { environment: 'production', path: '/new-secret' }
+    });
+  };
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Error: {error.message}&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;Secret Imports&lt;/h2&gt;
+      &lt;ul&gt;
+        {secretImports.map(import =&gt; (
+          &lt;li key={import.id}&gt;{import.importPath}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+      &lt;button onClick={handleCreateImport}&gt;Create New Import&lt;/button&gt;
+    &lt;/div&gt;
+  );
+};
+
+export default SecretImportsComponent;
+```
+
+This example demonstrates how to fetch secret imports for a specific project and environment, display them, and provide functionality to create a new secret import. The hooks handle the complexities of API interactions and state management, allowing the component to focus on rendering and user interactions.

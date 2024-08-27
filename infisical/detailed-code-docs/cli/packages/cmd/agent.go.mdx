@@ -1,0 +1,98 @@
+---
+title: "agent.go"
+---
+
+## High-level description
+This code implements the "agent" command for the Infisical CLI, which launches a client daemon to manage authentication, secret retrieval, and template rendering processes in various environments. It handles token lifecycle management, secret monitoring, and template processing based on a provided configuration file.
+
+## Code Structure
+The main components of this code are:
+1. `AgentManager`: Manages the overall agent functionality, including token lifecycle and template processing.
+2. `DynamicSecretLeaseManager`: Handles dynamic secret leases.
+3. Various authentication methods (Universal, Kubernetes, Azure, GCP, AWS).
+4. Template processing functions.
+5. The `agentCmd` Cobra command that initializes and runs the agent.
+
+## Symbols
+
+### `AgentManager`
+#### Description
+Manages the agent's core functionality, including token lifecycle, secret monitoring, and template processing.
+
+#### Internal Logic
+- Manages access token lifecycle (fetching, refreshing, and expiration)
+- Processes templates and writes them to files
+- Monitors secret changes and updates templates accordingly
+
+### `DynamicSecretLeaseManager`
+#### Description
+Manages dynamic secret leases, including pruning expired leases and registering new ones.
+
+#### Internal Logic
+- Prunes expired leases
+- Appends new leases
+- Retrieves leases based on project, environment, and secret path
+
+### `ParseAgentConfig`
+#### Description
+Parses the agent configuration file and sets default values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| configFile | []byte | The contents of the agent configuration file |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | *Config | Parsed configuration structure |
+| error | error | Any error encountered during parsing |
+
+### `ProcessTemplate`
+#### Description
+Processes a template file using the provided data and custom template functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| templateId | int | Identifier for the template |
+| templatePath | string | Path to the template file |
+| data | interface{} | Data to be used in template rendering |
+| accessToken | string | Access token for authentication |
+| existingEtag | string | Existing ETag for caching |
+| currentEtag | *string | Pointer to store the current ETag |
+| dynamicSecretManager | *DynamicSecretLeaseManager | Manager for dynamic secrets |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *bytes.Buffer | *bytes.Buffer | Processed template content |
+| error | error | Any error encountered during processing |
+
+### `agentCmd`
+#### Description
+Cobra command that initializes and runs the Infisical agent.
+
+#### Internal Logic
+1. Parses the agent configuration file
+2. Sets up the AgentManager and DynamicSecretLeaseManager
+3. Starts token lifecycle management
+4. Monitors secret changes for each template
+5. Handles graceful shutdown on receiving termination signals
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/infisical/go-sdk | Infisical SDK for authentication and secret management |
+| github.com/spf13/cobra | Command-line interface framework |
+| gopkg.in/yaml.v2 | YAML parsing for configuration files |
+| github.com/go-resty/resty/v2 | HTTP client for API requests |
+
+## Configuration
+The agent configuration is defined in the `Config` struct, which includes settings for Infisical, authentication, sinks, and templates.
+
+## Error Handling
+The code uses the `log` package to log errors and warnings. Critical errors are handled by printing error messages and exiting the program.
+
+## Logging
+The code uses the `zerolog` package for structured logging, with various log levels (Info, Error) used throughout the code.

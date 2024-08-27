@@ -1,0 +1,92 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/context/OrganizationContext` directory contains the implementation of a React context for managing organization-related data and functionality. It provides a centralized way to handle organization information across the application, including fetching organization data, managing the current organization, and providing access to this data for child components.
+
+## What does it do?
+This context manages organization-related information for the application. It fetches a list of organizations, keeps track of the current organization, and provides this data to other parts of the application. Here's a breakdown of its functionality:
+
+1. It retrieves a list of organizations from an API.
+2. It identifies the current organization based on an ID stored in local storage.
+3. It provides this information (list of organizations, current organization, and loading state) to any component that needs it.
+4. It offers a way for components to easily access this information through a custom hook.
+
+This setup allows different parts of the application to work with consistent organization data without having to fetch or manage this information individually.
+
+## Key Files
+
+### OrganizationContext.tsx
+This is the main file that implements the organization context. It contains:
+
+1. `OrgContext`: A React context for organization data.
+2. `OrgProvider`: A component that fetches organization data and provides it to its children.
+3. `useOrganization`: A custom hook for accessing the organization context.
+
+The `OrgProvider` component is responsible for fetching the organization data using the `useGetOrganizations` hook. It also retrieves the current organization ID from local storage. The component then computes the context value, which includes:
+
+- The list of organizations
+- The current organization
+- The loading state
+
+This value is memoized using `useMemo` to optimize performance and prevent unnecessary re-renders.
+
+The `useOrganization` hook provides a convenient way for other components to access the organization context. It includes error handling to ensure it's only used within the context provider.
+
+### index.tsx
+This file serves as the entry point for the OrganizationContext module. It re-exports the `OrgProvider` and `useOrganization` from the `OrganizationContext.tsx` file. This structure allows for cleaner imports in other parts of the application.
+
+## Dependencies
+The OrganizationContext relies on the following external dependencies:
+
+1. React: For creating the context and components.
+2. `@app/hooks/api`: Provides the `useGetOrganizations` hook for fetching organization data.
+3. `@app/hooks/api/types`: Provides the `Organization` type definition.
+
+## Configuration
+The context uses local storage to persist the current organization ID. This allows the application to remember the user's selected organization across sessions.
+
+Key configuration aspects include:
+
+1. The local storage key for the organization ID: `"organizationId"`
+2. The structure of the organization data, which includes:
+   - `id`: A unique identifier for the organization
+   - `name`: The name of the organization
+   - Other properties as defined in the `Organization` type
+
+## Code Snippets
+
+Here's a simplified example of how the `OrgProvider` is implemented:
+
+```typescript
+export const OrgProvider = ({ children }: { children: ReactNode }) =&gt; {
+  const { data: orgs, isLoading } = useGetOrganizations();
+  const orgId = localStorage.getItem("organizationId");
+
+  const value = useMemo(
+    () =&gt; ({
+      orgs,
+      currentOrg: orgs?.find((org) =&gt; org.id === orgId),
+      isLoading,
+    }),
+    [orgs, orgId, isLoading]
+  );
+
+  return &lt;OrgContext.Provider value={value}&gt;{children}&lt;/OrgContext.Provider&gt;;
+};
+```
+
+And here's how the `useOrganization` hook is implemented:
+
+```typescript
+export const useOrganization = () =&gt; {
+  const context = useContext(OrgContext);
+  if (context === null) {
+    throw new Error("useOrganization must be used within an OrgProvider");
+  }
+  return context;
+};
+```
+
+These implementations work together to provide a robust and efficient way of managing organization data throughout the application.

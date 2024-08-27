@@ -1,0 +1,136 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of Google Cloud Platform (GCP) authentication services for an identity management system. It provides functionality for validating GCP tokens, managing GCP authentication for identities, and handling data access operations related to GCP authentication.
+
+## What does it do?
+The code in this directory enables the following workflows:
+
+1. Validation of GCP ID tokens from Compute Engine instances and signed JWT tokens from GCP service accounts.
+2. Authentication of GCP identities and generation of access tokens.
+3. Attaching, updating, and revoking GCP authentication for identities.
+4. Retrieving GCP authentication details for identities.
+5. Managing access control and permissions for GCP-authenticated identities.
+
+These processes allow the system to securely integrate with GCP services, providing authentication and authorization mechanisms for users and services running on Google Cloud Platform.
+
+## Key Files
+
+1. `identity-gcp-auth-dal.ts`:
+   - Defines a data access layer (DAL) factory for GCP authentication.
+   - Creates an Object-Relational Mapping (ORM) interface for the `IdentityGcpAuth` table.
+
+2. `identity-gcp-auth-fns.ts`:
+   - Provides functions for validating GCP authentication tokens.
+   - Includes `validateIdTokenIdentity` for Compute Engine instances and `validateIamIdentity` for GCP service accounts.
+
+3. `identity-gcp-auth-service.ts`:
+   - Implements the main service factory `identityGcpAuthServiceFactory`.
+   - Provides methods for login, attaching GCP auth, updating settings, retrieving auth details, and revoking auth.
+
+4. `identity-gcp-auth-types.ts`:
+   - Defines TypeScript types and interfaces for GCP authentication.
+   - Includes types for login, attaching auth, updating auth, and retrieving auth information.
+
+5. `identity-gcp-auth-validators.ts`:
+   - Defines a Zod validator for GCP authentication fields.
+   - Processes and formats input strings containing comma-separated IDs.
+
+## Dependencies
+The codebase relies on several external libraries and internal modules:
+
+1. `google-auth-library`: Used for token verification in GCP authentication.
+2. `jsonwebtoken`: Employed for JWT decoding and verification.
+3. `axios`: Utilized for making HTTP requests to retrieve public keys.
+4. `zod`: Used for creating and defining validation schemas.
+5. `@casl/ability`: Implements permission handling within the service.
+6. Internal modules:
+   - `@app/db`: Provides database client types and schemas.
+   - `@app/lib/knex`: Offers the `ormify` function for creating ORM instances.
+   - `@app/lib/errors`: Supplies custom error classes for error handling.
+
+## Configuration
+The code uses various configuration settings, including:
+
+1. Access token settings:
+   - Time-to-live (TTL)
+   - Maximum TTL
+   - Usage limits
+   - Trusted IP addresses
+
+2. GCP-specific configurations:
+   - Allowed service accounts
+   - Allowed projects
+   - Allowed zones
+
+These settings are typically provided when attaching or updating GCP authentication for an identity.
+
+## Code Snippets
+
+Here's an example of how the `validateIdTokenIdentity` function works:
+
+```typescript
+async function validateIdTokenIdentity({
+  identityId,
+  jwt,
+}: {
+  identityId: string;
+  jwt: string;
+}): Promise&lt;{ email: string; computeEngineDetails: TComputeEngineDetails }&gt; {
+  const client = new OAuth2Client();
+  const ticket = await client.verifyIdToken({
+    idToken: jwt,
+    audience: identityId,
+  });
+  const payload = ticket.getPayload();
+  if (!payload) {
+    throw new UnauthorizedError('Invalid token payload');
+  }
+  // ... (additional validation logic)
+  return {
+    email: payload.email,
+    computeEngineDetails: {
+      instance_creation_timestamp: payload.google.compute_engine.instance_creation_timestamp,
+      instance_id: payload.google.compute_engine.instance_id,
+      instance_name: payload.google.compute_engine.instance_name,
+      project_id: payload.google.compute_engine.project_id,
+      project_number: payload.google.compute_engine.project_number,
+      zone: payload.google.compute_engine.zone,
+    },
+  };
+}
+```
+
+This function validates a GCP ID token, verifies its audience, and extracts relevant information from the payload.
+
+The `identityGcpAuthServiceFactory` creates a service object with methods for various GCP auth operations. Here's a simplified example of the `login` method:
+
+```typescript
+async function login({ identityId, jwt }: TLoginGcpAuthDTO) {
+  const gcpAuth = await identityGcpAuthDAL.findOne({ identityId });
+  if (!gcpAuth) {
+    throw new UnauthorizedError('GCP auth not found for this identity');
+  }
+
+  let gcpIdentityDetails: TGcpIdentityDetails;
+  if (gcpAuth.type === 'gce') {
+    gcpIdentityDetails = await validateIdTokenIdentity({ identityId, jwt });
+  } else {
+    gcpIdentityDetails = await validateIamIdentity({ identityId, jwt });
+  }
+
+  // ... (additional validation and token generation logic)
+
+  return {
+    accessToken,
+    accessTokenExpiresAt,
+    gcpIdentityDetails,
+  };
+}
+```
+
+This method authenticates a GCP identity, validates the provided JWT, and generates an access token for the authenticated identity.
+
+In summary, this directory provides a comprehensive solution for integrating GCP authentication into an identity management system, offering secure and flexible mechanisms for managing GCP-based identities and their access to resources.

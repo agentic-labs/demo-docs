@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a service for managing additional privileges for project users in an enterprise environment. It includes a Data Access Layer (DAL), a service layer, and type definitions for handling project user additional privileges.
+
+## What does it do?
+The code in this directory provides functionality to create, update, delete, retrieve, and list additional privileges for users within a project context. These privileges can be either permanent or temporary, with temporary privileges having a specific duration and start time. The service ensures that appropriate permissions are enforced and handles the logic for managing these privileges, including:
+
+1. Creating new privileges with specific permissions and optional temporary settings.
+2. Updating existing privileges, including changing their temporary status or duration.
+3. Deleting privileges when they are no longer needed.
+4. Retrieving details of specific privileges.
+5. Listing all privileges associated with a project membership.
+
+The service also integrates with a permission system to ensure that only authorized users can perform these operations.
+
+## Key Files
+
+1. `project-user-additional-privilege-dal.ts`:
+   - Defines a Data Access Layer factory for interacting with the `ProjectUserAdditionalPrivilege` table in the database.
+   - Uses an ORM (Object-Relational Mapping) approach to provide a clean interface for database operations.
+
+2. `project-user-additional-privilege-service.ts`:
+   - Implements the core business logic for managing project user additional privileges.
+   - Provides methods for creating, updating, deleting, retrieving, and listing privileges.
+   - Enforces permission checks and handles temporary privilege logic.
+
+3. `project-user-additional-privilege-types.ts`:
+   - Defines TypeScript types and enums used throughout the service.
+   - Includes definitions for DTOs (Data Transfer Objects) used in various operations.
+   - Defines the structure for both permanent and temporary privileges.
+
+## Dependencies
+The code relies on several external libraries and internal modules:
+
+1. `@casl/ability`: Used for handling permission-related errors (ForbiddenError).
+2. `ms`: A utility for parsing time strings into milliseconds, used for handling temporary privilege durations.
+3. `@app/db`: Provides database client types and table name enums.
+4. `@app/lib/knex`: Offers the `ormify` function for creating ORM interfaces.
+5. `@app/lib/errors`: Provides custom error types like `BadRequestError`.
+6. `@app/lib/types`: Imports the `TProjectPermission` type for consistent permission handling.
+
+## Configuration
+The code doesn't explicitly use configuration files or environment variables. However, it relies on the configuration of the database client and other services (like the permission service) that are injected into the factory functions.
+
+## Code Snippets
+
+Here's an example of how the service creates a new privilege:
+
+```typescript
+async create(dto: TCreateUserPrivilegeDTO) {
+  const { projectMembershipId, permissions, slug, isTemporary, temporaryMode, temporaryRange, temporaryAccessStartTime } = dto;
+
+  const membership = await this.projectMembershipDAL.findById(projectMembershipId);
+  if (!membership) {
+    throw new BadRequestError('Project membership not found');
+  }
+
+  await this.permissionService.getProjectPermission(membership.projectId).ensurePermission('manage', 'project-user-additional-privilege');
+
+  const existingPrivilege = await this.projectUserAdditionalPrivilegeDAL.findOne({ slug, projectMembershipId });
+  if (existingPrivilege) {
+    throw new BadRequestError('Privilege with this slug already exists');
+  }
+
+  let endTime: Date | null = null;
+  if (isTemporary) {
+    if (temporaryMode !== ProjectUserAdditionalPrivilegeTemporaryMode.Relative) {
+      throw new BadRequestError('Invalid temporary mode');
+    }
+    const durationMs = ms(temporaryRange);
+    if (typeof durationMs !== 'number') {
+      throw new BadRequestError('Invalid temporary range');
+    }
+    const startTime = temporaryAccessStartTime ? new Date(temporaryAccessStartTime) : new Date();
+    endTime = new Date(startTime.getTime() + durationMs);
+  }
+
+  const additionalPrivilege = await this.projectUserAdditionalPrivilegeDAL.create({
+    projectMembershipId,
+    permissions,
+    slug,
+    isTemporary,
+    temporaryMode: isTemporary ? temporaryMode : null,
+    temporaryRange: isTemporary ? temporaryRange : null,
+    temporaryAccessStartTime: isTemporary ? temporaryAccessStartTime : null,
+    temporaryAccessEndTime: endTime,
+  });
+
+  return additionalPrivilege;
+}
+```
+
+This snippet demonstrates how the service handles the creation of both permanent and temporary privileges, including permission checks and data validation.

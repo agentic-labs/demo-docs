@@ -1,0 +1,76 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for a Node.js application using Next.js. It creates a production-ready Docker image with optimized dependencies, build artifacts, and runtime configuration. The final image is designed to run a Next.js application with specific environment variables and security considerations.
+
+## Code Structure
+The Dockerfile is structured into four main stages: deps, builder, runner, and the final stage. Each stage builds upon the previous one, optimizing the build process and minimizing the final image size.
+
+## Symbols
+
+### Stage: deps
+#### Description
+This stage installs the production dependencies for the application.
+
+#### Internal Logic
+1. Uses node:16-alpine as the base image
+2. Sets the working directory to /app
+3. Copies package.json, package-lock.json, and next.config.js
+4. Runs npm ci to install production dependencies
+
+### Stage: builder
+#### Description
+This stage builds the Next.js application.
+
+#### Internal Logic
+1. Uses node:16-alpine as the base image
+2. Copies dependencies from the deps stage
+3. Copies all application files
+4. Sets environment variables for production build
+5. Runs npm run build to build the application
+
+### Stage: runner
+#### Description
+This is the final stage that creates the production image.
+
+#### Internal Logic
+1. Uses node:16-alpine as the base image
+2. Creates a non-root user (nextjs) and group (nodejs)
+3. Sets up a volume for Next.js image cache
+4. Copies built artifacts from the builder stage
+5. Sets environment variables for runtime configuration
+6. Configures file permissions and ownership
+7. Sets up a healthcheck
+8. Specifies the start command
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| node:16-alpine | Base image for all stages |
+| Next.js | Web application framework |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| POSTHOG_HOST | string | https://app.posthog.com | PostHog host URL |
+| POSTHOG_API_KEY | string | posthog-api-key | PostHog API key |
+| INTERCOM_ID | string | intercom-id | Intercom ID |
+| NEXT_INFISICAL_PLATFORM_VERSION | string | next-infisical-platform-version | Infisical platform version |
+| CAPTCHA_SITE_KEY | string | captcha-site-key | CAPTCHA site key |
+
+## Error Handling
+The Dockerfile includes a healthcheck command that runs every 10 seconds, which can help detect and recover from application failures.
+
+## Performance Considerations
+1. Multi-stage build process optimizes the final image size
+2. Production dependencies are installed separately to leverage Docker layer caching
+3. Only necessary files are copied to the final image
+
+## Side Effects
+1. Creates a volume for Next.js image cache at /app/.next/cache/images
+2. Exposes port 3000 for the application
+
+## Logging
+No specific logging mechanisms are implemented in the Dockerfile. Logging would be handled by the application itself.

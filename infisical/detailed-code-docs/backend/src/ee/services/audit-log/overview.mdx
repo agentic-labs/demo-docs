@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of an audit log service for an enterprise application. It provides functionality to create, manage, and query audit logs, as well as handle the processing and streaming of audit log entries. The service is designed to work with a database, a queue system, and potentially external streaming endpoints.
+
+## What does it do?
+The audit log service performs several key functions:
+
+1. Creates audit log entries for various events in the system, such as user actions, secret management, and certificate authority operations.
+2. Stores audit log entries in a database with configurable retention periods based on the organization's license plan.
+3. Provides a way to query and retrieve audit logs for specific projects, with filtering and pagination options.
+4. Processes audit log entries asynchronously using a queue system to ensure performance and reliability.
+5. Optionally streams audit log data to external endpoints for integration with other systems or analytics tools.
+6. Implements permission checks to ensure users have the appropriate access rights when querying audit logs.
+7. Offers a mechanism to prune expired audit logs from the database to manage storage efficiently.
+
+## Entry points
+The main entry point for the audit log service is the `auditLogServiceFactory` function in `audit-log-service.ts`. This factory function creates an instance of the audit log service with two primary methods:
+
+1. `createAuditLog`: Used to create new audit log entries.
+2. `listProjectAuditLogs`: Used to retrieve and format audit logs for a specific project.
+
+The service relies on several other components:
+
+- `audit-log-dal.ts`: Provides data access layer functions for interacting with the audit log database.
+- `audit-log-queue.ts`: Manages the queueing and processing of audit log entries.
+- `audit-log-types.ts`: Defines TypeScript types and enums used throughout the audit log service.
+
+## Key Files
+
+### audit-log-service.ts
+This file contains the main service factory and implements the core functionality of creating and listing audit logs. It handles permission checks and interacts with the data access layer and queue service.
+
+### audit-log-dal.ts
+This file defines the data access layer for audit logs. It provides methods to find audit logs based on various criteria and to prune expired logs from the database. It uses the `ormify` function to create basic CRUD operations and extends them with custom methods.
+
+### audit-log-queue.ts
+This file implements the queue processing logic for audit logs. It handles the creation of audit log entries, calculates retention periods, and manages the streaming of log data to external endpoints.
+
+### audit-log-types.ts
+This file contains TypeScript type definitions and enums used throughout the audit log service. It defines structures for various events, actor types, and data transfer objects (DTOs) used in the service.
+
+## Dependencies
+The audit log service relies on several external libraries and internal modules:
+
+- knex: SQL query builder used in the data access layer.
+- axios: Used for making HTTP requests to stream endpoints.
+- @casl/ability: Used for permission checks.
+- @app/lib/config/env: For accessing application configuration.
+- @app/lib/errors: For custom error types.
+- @app/lib/crypto/encryption: Used for decrypting stream headers.
+- Various internal types and services from the application's codebase.
+
+## Configuration
+The audit log service uses several configuration options:
+
+- `DISABLE_AUDIT_LOG_GENERATION`: If set to true, prevents the creation of new audit logs.
+- `AUDIT_LOG_STREAM_TIMEOUT`: Timeout for audit log stream requests in milliseconds (default: 5000).
+
+Additionally, the service relies on license plans to determine audit log retention periods for different organizations.
+
+## Error Handling
+The service implements error handling in various ways:
+
+1. Custom error types (`ForbiddenError` and `BadRequestError`) are used for handling permission issues and invalid input data.
+2. Try-catch blocks are used to handle database errors, with `DatabaseError` being thrown when necessary.
+3. The queue processing logic uses `Promise.allSettled` to handle potential failures when streaming to external endpoints, allowing the process to continue even if some stream requests fail.
+
+In conclusion, this audit log service provides a comprehensive solution for tracking and managing system events in an enterprise application. It offers flexibility in terms of storage, processing, and integration with external systems while maintaining performance and security considerations.

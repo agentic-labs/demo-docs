@@ -1,0 +1,70 @@
+---
+title: "certificate-est-router.ts"
+---
+
+## High-level description
+This code defines an Express.js router that handles endpoints related to certificate enrollment and certificate authority (CA) certificates retrieval using the Simple Certificate Enrollment Protocol (SCEP). It includes routes for simple enrollment, re-enrollment, and fetching CA certificates. The router also implements authentication using Basic Authentication with a passphrase to secure the endpoints.
+
+## Code Structure
+The code defines a single function `registerCertificateEstRouter` which takes a FastifyZodProvider instance as input. This function sets up routes for certificate enrollment and retrieval, adds a content type parser for CSR bodies, and adds an authentication hook to secure the endpoints.
+
+## References
+- `getConfig`: A function to retrieve application configuration.
+- `BadRequestError`, `UnauthorizedError`: Custom error classes for HTTP errors.
+- `readLimit`, `writeLimit`: Rate limiting configurations for read and write operations.
+- `server.services.certificateTemplate.getEstConfiguration`: A service method to retrieve EST configuration for a certificate template.
+- `server.services.certificateEst.simpleEnroll`, `server.services.certificateEst.simpleReenroll`, `server.services.certificateEst.getCaCerts`: Service methods to handle certificate enrollment, re-enrollment, and CA certificate retrieval.
+
+## Symbols
+### `registerCertificateEstRouter`
+#### Description
+This function registers routes for certificate enrollment and CA certificate retrieval using SCEP. It also sets up authentication and content parsing for CSR bodies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of FastifyZodProvider |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+1. **Content Type Parser:** Adds a custom content type parser for "application/pkcs10" to handle CSR bodies in both PEM and base64 formats.
+2. **Authentication Hook:** Adds an "onRequest" hook to authenticate requests to all routes except "/:certificateTemplateId/cacerts".
+    - Retrieves EST configuration for the requested certificate template.
+    - Extracts and validates the passphrase from the "Authorization" header.
+    - Compares the provided passphrase with the stored hash.
+    - Throws an `UnauthorizedError` if authentication fails.
+3. **Routes:**
+    - **POST /:certificateTemplateId/simpleenroll:** Handles simple certificate enrollment requests.
+        - Expects a CSR in the request body.
+        - Calls `server.services.certificateEst.simpleEnroll` to process the enrollment.
+        - Returns the enrolled certificate in PKCS#7 format.
+    - **POST /:certificateTemplateId/simplereenroll:** Handles simple certificate re-enrollment requests.
+        - Expects a CSR in the request body.
+        - Calls `server.services.certificateEst.simpleReenroll` to process the re-enrollment.
+        - Returns the re-enrolled certificate in PKCS#7 format.
+    - **GET /:certificateTemplateId/cacerts:** Handles requests for CA certificates.
+        - Calls `server.services.certificateEst.getCaCerts` to retrieve the CA certificates.
+        - Returns the CA certificates in PKCS#7 format.
+
+## Dependencies
+- `bcrypt`: For password hashing and comparison.
+- `zod`: For request validation.
+- `@app/lib/config/env`: For retrieving application configuration.
+- `@app/lib/errors`: For custom error classes.
+- `@app/server/config/rateLimiter`: For rate limiting configurations.
+
+## Error Handling
+The code uses custom error classes (`BadRequestError`, `UnauthorizedError`) to handle invalid requests and authentication failures. These errors are likely handled by a global error handler in the application.
+
+## API/Interface Reference
+This code defines the following API endpoints:
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /:certificateTemplateId/simpleenroll | POST | CSR (string) | Enrolled certificate (string, PKCS#7) | Enrolls a new certificate based on the provided CSR. |
+| /:certificateTemplateId/simplereenroll | POST | CSR (string) | Re-enrolled certificate (string, PKCS#7) | Re-enrolls an existing certificate based on the provided CSR. |
+| /:certificateTemplateId/cacerts | GET | None | CA certificates (string, PKCS#7) | Retrieves the CA certificates for the specified certificate template. |
+
+All endpoints require Basic Authentication using a passphrase configured for the specific certificate template.

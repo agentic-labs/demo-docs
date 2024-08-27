@@ -1,0 +1,69 @@
+---
+title: "20240423023203_ldap-config-groups.ts"
+---
+
+## High-level description
+This migration script manages database schema changes related to mapping LDAP groups to application groups. It creates a new table `LdapGroupMap` to store these mappings and adds two new columns to the `LdapConfig` table for group search configuration.
+
+## Code Structure
+The code defines two asynchronous functions, `up` and `down`, which are responsible for applying and reverting the migration, respectively. Both functions interact with the database schema using Knex.js.
+
+## References
+- `TableName`: An enum-like object (likely defined in `db/schemas.ts`) holding the names of database tables.
+- `createOnUpdateTrigger` and `dropOnUpdateTrigger`: Utility functions (likely defined in `db/utils.ts`) for managing database triggers.
+
+## Symbols
+
+### `up`
+#### Description
+Applies the migration by creating the `LdapGroupMap` table and adding columns to the `LdapConfig` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (implicit) | Promise\&lt;void\&gt; | A promise that resolves when the migration is applied. |
+
+#### Internal Logic
+1. Checks if the `LdapGroupMap` table already exists. If not, it creates the table with the following columns:
+    - `id`: UUID primary key, automatically generated.
+    - `ldapConfigId`: UUID foreign key referencing the `LdapConfig` table, ensuring that each mapping is associated with a specific LDAP configuration.
+    - `ldapGroupCN`: String representing the LDAP group's Common Name, used for identifying the group within the LDAP directory.
+    - `groupId`: UUID foreign key referencing the `Groups` table, linking the LDAP group to an application group.
+    - A unique constraint on `ldapGroupCN`, `groupId`, and `ldapConfigId` to prevent duplicate mappings.
+2. Creates an `onUpdate` trigger on the `LdapGroupMap` table using the `createOnUpdateTrigger` utility function. This trigger likely updates a timestamp or other relevant data when a mapping is modified.
+3. Alters the `LdapConfig` table by adding two new columns:
+    - `groupSearchBase`: String representing the base DN for searching LDAP groups, defaulting to an empty string.
+    - `groupSearchFilter`: String representing the LDAP filter used when searching for groups, defaulting to an empty string.
+
+### `down`
+#### Description
+Reverts the migration by dropping the `LdapGroupMap` table and removing columns from the `LdapConfig` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (implicit) | Promise\&lt;void\&gt; | A promise that resolves when the migration is reverted. |
+
+#### Internal Logic
+1. Drops the `LdapGroupMap` table if it exists.
+2. Drops the `onUpdate` trigger on the `LdapGroupMap` table using the `dropOnUpdateTrigger` utility function.
+3. Alters the `LdapConfig` table by dropping the `groupSearchBase` and `groupSearchFilter` columns.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides database interaction capabilities for managing the schema. |
+
+## Side Effects
+- Modifies the database schema by creating/dropping tables and adding/removing columns.
+- Creates/drops database triggers.

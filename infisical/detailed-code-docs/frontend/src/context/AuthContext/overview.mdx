@@ -1,0 +1,85 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/context/AuthContext` directory contains the implementation of an authentication context for a React application. It provides a way to manage and share authentication state across the application, as well as handle route protection for non-public routes.
+
+## What does it do?
+This directory implements an authentication system that:
+1. Checks if a user is logged in when they access different routes in the application.
+2. Protects non-public routes by redirecting unauthenticated users to the login page.
+3. Provides a loading state while checking authentication status.
+4. Allows public routes to be accessed without authentication.
+
+The system works by wrapping the main application components with an `AuthProvider` component. This provider checks the user's authentication status and current route, then decides whether to allow access, redirect to login, or show a loading indicator.
+
+## Key Files
+1. `AuthContext.tsx`: This is the main file that implements the `AuthProvider` component. It contains the logic for checking authentication status, handling route protection, and managing the loading state.
+
+2. `index.tsx`: This file serves as a re-export module for the `AuthProvider` component, simplifying imports in other parts of the application.
+
+## Dependencies
+The `AuthContext` relies on several external libraries and internal modules:
+
+1. React: Used for creating the context and components.
+2. Next.js (next/router): Used for routing functionality and accessing the current route.
+3. Custom hooks:
+   - `useToggle`: Likely used for managing boolean states.
+   - `useGetAuthToken`: Used to retrieve the authentication token.
+4. Internal modules:
+   - `@app/const`: Provides the `publicPaths` array for identifying public routes.
+   - `@app/reactQuery`: Provides the `isLoggedIn` function to check authentication status.
+
+## Configuration
+The authentication system uses a `publicPaths` array from `@app/const` to define routes that do not require authentication. This allows for easy configuration of which routes should be accessible without logging in.
+
+## Code Examples
+
+Here's a simplified version of how the `AuthProvider` works:
+
+```typescript
+const AuthProvider: React.FC&lt;{ children: ReactNode }&gt; = ({ children }) =&gt; {
+  const router = useRouter();
+  const { data: token } = useGetAuthToken();
+  const [ready, toggleReady] = useToggle(false);
+
+  useEffect(() =&gt; {
+    const checkAuth = async () =&gt; {
+      if (publicPaths.includes(router.pathname) || await isLoggedIn()) {
+        toggleReady(true);
+      } else {
+        router.push(`/login?redirect=${router.asPath}`);
+      }
+    };
+
+    checkAuth();
+  }, [router, token]);
+
+  if (!ready) {
+    return &lt;LoadingIndicator /&gt;;
+  }
+
+  return &lt;&gt;{children}&lt;/&gt;;
+};
+```
+
+This component checks if the current path is public or if the user is logged in. If neither condition is met, it redirects to the login page. While checking, it displays a loading indicator.
+
+To use this `AuthProvider` in the main application, you would wrap your components like this:
+
+```typescript
+import { AuthProvider } from 'context/AuthContext';
+
+function MyApp({ Component, pageProps }) {
+  return (
+    &lt;AuthProvider&gt;
+      &lt;Component {...pageProps} /&gt;
+    &lt;/AuthProvider&gt;
+  );
+}
+```
+
+This setup ensures that all routes are protected by default, except for those specified in the `publicPaths` array.
+
+The authentication context provides a robust and flexible way to manage authentication state and route protection in a React application, particularly one built with Next.js. It centralizes authentication logic, making it easier to maintain and modify as needed.

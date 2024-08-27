@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains custom hooks and utility functions for managing roles and permissions in an organization and project context. It provides a comprehensive set of tools for creating, updating, deleting, and querying roles, as well as retrieving user permissions for both organizations and projects. The code is structured to work with React Query for efficient data fetching and caching, and uses CASL for flexible permission checking.
+
+## What does it do?
+The code in this directory enables developers to:
+1. Create, update, and delete roles for both organizations and projects.
+2. Retrieve roles and permissions for organizations and projects.
+3. Fetch and manage user permissions within organizations and projects.
+4. Implement custom ability checks using CASL library.
+5. Efficiently cache and invalidate role and permission data using React Query.
+
+These functionalities allow for a robust role-based access control system within a project management application, enabling fine-grained control over user permissions and access rights.
+
+## Key Files
+1. `index.tsx`: Exports all the custom hooks for external use.
+2. `mutation.tsx`: Contains hooks for creating, updating, and deleting roles.
+3. `queries.tsx`: Provides hooks for querying roles and permissions data.
+4. `types.ts`: Defines TypeScript types and interfaces for roles and permissions.
+
+## Dependencies
+The code relies on several external libraries:
+
+1. @casl/ability (version not specified): Used for creating and managing permission abilities.
+   - Chosen for its flexible and powerful permission system.
+
+2. @tanstack/react-query (version not specified): Manages server state and caching in React applications.
+   - Provides efficient data fetching, caching, and synchronization.
+
+3. @ucast/mongo2js (version not specified): Helps with MongoDB-like query parsing.
+   - Useful for interpreting complex permission conditions.
+
+4. picomatch (version not specified): Used for glob matching in permission conditions.
+   - Enables flexible pattern matching for permission rules.
+
+## Configuration
+The code uses a custom configuration for permission matching:
+
+```typescript
+const $glob = Symbol.for('$glob');
+const glob = createMongoOperator($glob, (value, pattern) =&gt; picomatch(pattern)(value));
+```
+
+This configuration allows for glob pattern matching in permission conditions, enhancing the flexibility of the permission system.
+
+The code also defines query keys for React Query, which are used to manage caching and invalidation of role and permission data:
+
+```typescript
+const roleQueryKeys = {
+  all: ['roles'] as const,
+  projectRoles: (projectSlug: string) =&gt; [...roleQueryKeys.all, 'project', projectSlug] as const,
+  projectRole: (projectSlug: string, roleSlug: string) =&gt; [...roleQueryKeys.projectRoles(projectSlug), roleSlug] as const,
+  orgRoles: (orgId: string) =&gt; [...roleQueryKeys.all, 'org', orgId] as const,
+  orgRole: (orgId: string, roleId: string) =&gt; [...roleQueryKeys.orgRoles(orgId), roleId] as const,
+  userOrgPermissions: (orgId: string) =&gt; [...roleQueryKeys.all, 'org', orgId, 'permissions'] as const,
+  userProjectPermissions: (projectId: string) =&gt; [...roleQueryKeys.all, 'project', projectId, 'permissions'] as const,
+};
+```
+
+These query keys are used throughout the code to ensure proper caching and invalidation of data fetched from the API.

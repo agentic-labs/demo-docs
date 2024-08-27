@@ -1,0 +1,79 @@
+---
+title: "20231130072734_auth-token-session.ts"
+---
+
+## High-level description
+This code defines a database migration for creating an `AuthTokenSession` table using Knex.js. It establishes a structure for storing authentication token session information, including user-related data and session metadata. The migration also sets up an update trigger for the table.
+
+## Code Structure
+The file exports two main functions: `up` for applying the migration and `down` for reverting it. These functions use Knex.js to interact with the database schema.
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function creates the `AuthTokenSession` table if it doesn't exist and sets up an update trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;void&gt; | Promise | Resolves when the migration is complete |
+
+#### Internal Logic
+1. Checks if the `AuthTokenSession` table already exists.
+2. If not, creates the table with specified columns and constraints.
+3. Sets up a foreign key relationship with the `Users` table.
+4. Creates an update trigger for the table.
+
+### `down`
+#### Description
+This asynchronous function reverts the migration by dropping the `AuthTokenSession` table and its update trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;void&gt; | Promise | Resolves when the migration is reverted |
+
+#### Internal Logic
+1. Drops the `AuthTokenSession` table if it exists.
+2. Drops the update trigger associated with the table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Used for database schema manipulation and query building |
+| ../schemas | Imports `TableName` enum for consistent table naming |
+| ../utils | Imports utility functions for creating and dropping update triggers |
+
+## Configuration
+The `AuthTokenSession` table schema is defined with the following columns:
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| id | uuid | Primary Key, Default: UUID | Unique identifier for the session |
+| ip | string | Not Null | IP address associated with the session |
+| userAgent | string | - | User agent string of the client |
+| refreshVersion | integer | Not Null, Default: 1 | Version of the refresh token |
+| accessVersion | integer | Not Null, Default: 1 | Version of the access token |
+| lastUsed | datetime | Not Null | Timestamp of last session usage |
+| created_at | timestamp | Default: Current timestamp | Record creation time |
+| updated_at | timestamp | Default: Current timestamp | Record update time |
+| userId | uuid | Not Null, Foreign Key | Reference to the Users table |
+
+## Error Handling
+The code doesn't implement explicit error handling. Errors from Knex operations will propagate up the call stack.
+
+## Notes
+- The `createOnUpdateTrigger` function is called after table creation, suggesting that it sets up a trigger to automatically update the `updated_at` column.
+- The comment "does not need update trigger we will do it manually" for the `timestamps` column suggests that the `lastUsed` column will be updated manually in the application code.
+- The `down` function ensures clean removal of both the table and its associated trigger, allowing for easy rollback of the migration.

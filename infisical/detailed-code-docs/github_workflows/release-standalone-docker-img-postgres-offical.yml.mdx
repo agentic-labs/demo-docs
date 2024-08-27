@@ -1,0 +1,70 @@
+---
+title: "release-standalone-docker-img-postgres-offical.yml"
+---
+
+## High-level description
+This GitHub Actions workflow is designed to build and release a standalone Docker image for Infisical with PostgreSQL support. It is triggered when a tag matching the pattern "infisical/v*.*.*-postgres" is pushed. The workflow runs tests, builds the Docker image, and pushes it to Docker Hub with appropriate tags.
+
+## Code Structure
+The workflow consists of two main jobs: `infisical-tests` and `infisical-standalone`. The `infisical-standalone` job depends on the successful completion of `infisical-tests`. The `infisical-standalone` job contains multiple steps to extract the version, checkout the code, install dependencies, build the Docker image, and push it to Docker Hub.
+
+## Symbols
+
+### `infisical-tests`
+#### Description
+This job runs tests before deployment by reusing another workflow.
+
+#### Internal Logic
+Uses the `./.github/workflows/run-backend-tests.yml` workflow file to execute the tests.
+
+### `infisical-standalone`
+#### Description
+This job builds the Infisical standalone image with PostgreSQL support.
+
+#### Internal Logic
+1. Extracts the version from the tag
+2. Checks out the source code
+3. Installs dependencies
+4. Outputs version information
+5. Saves commit hashes for the tag
+6. Sets up Docker Buildx
+7. Logs in to Docker Hub
+8. Sets up Depot CLI
+9. Builds the backend and exports it to Docker
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| GITHUB_REF_NAME | string | The tag that triggered the workflow |
+| DOCKERHUB_USERNAME | secret | Docker Hub username for authentication |
+| DOCKERHUB_TOKEN | secret | Docker Hub token for authentication |
+| DEPOT_PROJECT_TOKEN | secret | Depot project token for authentication |
+| PUBLIC_POSTHOG_API_KEY | secret | PostHog API key for analytics |
+
+#### Outputs
+The job produces a Docker image pushed to Docker Hub with the following tags:
+- `infisical/infisical:latest-postgres`
+- `infisical/infisical:&lt;short-commit-hash&gt;`
+- `infisical/infisical:&lt;version&gt;`
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v3 | Checking out the source code |
+| pr-mpt/actions-commit-hash@v2 | Saving commit hashes for the tag |
+| docker/setup-buildx-action@v2 | Setting up Docker Buildx |
+| docker/login-action@v2 | Logging in to Docker Hub |
+| depot/setup-action@v1 | Setting up Depot CLI |
+| depot/build-push-action@v1 | Building and pushing the Docker image |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| POSTHOG_API_KEY | string | N/A | PostHog API key for analytics |
+| INFISICAL_PLATFORM_VERSION | string | N/A | Version of the Infisical platform |
+
+## Error Handling
+The workflow does not implement specific error handling mechanisms beyond the default behavior of GitHub Actions. If any step fails, the workflow will stop and report the error.
+
+## Performance Considerations
+The workflow uses Depot's build-push-action, which can potentially improve build performance compared to standard Docker builds. It also builds for multiple platforms (linux/amd64 and linux/arm64) in a single job, which can be more efficient than separate builds for each platform.

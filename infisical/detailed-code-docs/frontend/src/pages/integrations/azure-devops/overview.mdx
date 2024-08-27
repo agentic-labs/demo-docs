@@ -1,0 +1,120 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for integrating Azure DevOps with Infisical, a secrets management platform. It provides functionality for authorizing the integration and creating a new integration between Infisical and Azure DevOps projects.
+
+## What does it do?
+The code in this directory enables users to:
+
+1. Authorize Infisical to access their Azure DevOps account by providing an API token and organization name.
+2. Create a new integration between Infisical and Azure DevOps by:
+   - Selecting a source environment from Infisical
+   - Specifying a secrets path
+   - Choosing a target Azure DevOps project to sync secrets with
+
+This allows users to securely sync secrets from Infisical to their Azure DevOps projects, streamlining the process of managing sensitive information across different platforms.
+
+## Entry points
+The directory contains two main entry points:
+
+1. `authorize.tsx`: Handles the authorization process for the Azure DevOps integration.
+2. `create.tsx`: Manages the creation of a new integration between Infisical and Azure DevOps.
+
+The workflow typically starts with the authorization page, where users provide their Azure DevOps credentials. Once authorized, users are redirected to the creation page to set up the specific integration details.
+
+## Key Files
+
+### authorize.tsx
+This file contains the `AzureDevopsCreateIntegrationPage` component, which renders the authorization form. Key features include:
+
+- Input fields for Azure DevOps API token and organization name
+- Validation of the API token
+- Saving the organization name to local storage
+- Saving the integration access token to the backend
+- Redirecting to the integration creation page upon successful authorization
+
+Example code snippet for handling the authorization:
+
+```javascript
+const handleButtonClick = async () =&gt; {
+  if (apiKey.trim() === "") {
+    setErrorText("API key cannot be blank");
+    return;
+  }
+  
+  localStorage.setItem("azure-devops-org-name", orgName);
+  
+  try {
+    await mutateAsync({
+      workspaceId: localStorage.getItem("projectData.id") as string,
+      integrationAuthId: router.query.integrationAuthId as string,
+      accessToken: apiKey
+    });
+    
+    router.push(`/integrations/azure-devops/create?integrationAuthId=${router.query.integrationAuthId}`);
+  } catch (error) {
+    console.error(error);
+  }
+};
+```
+
+### create.tsx
+This file contains the `AzureDevopsCreateIntegrationPage` component, which handles the creation of a new integration. Key features include:
+
+- Fetching workspace data, integration auth data, and Azure DevOps projects
+- Form for selecting source environment, secrets path, and target Azure DevOps project
+- Creating the integration using the provided information
+- Redirecting to the integrations page upon successful creation
+
+Example code snippet for creating the integration:
+
+```javascript
+const handleButtonClick = async () =&gt; {
+  try {
+    await mutateAsync({
+      integrationAuthId: router.query.integrationAuthId as string,
+      workspaceId: workspace?.id ?? "",
+      environment: selectedSourceEnvironment?.slug ?? "",
+      secretPath: secretPath,
+      targetProjectId: targetApp?.id ?? "",
+      targetProjectName: targetApp?.name ?? "",
+      appDataResidency: workspace?.organization?.slug ?? "us",
+      azureDevOpsOrgName: localStorage.getItem("azure-devops-org-name") ?? ""
+    });
+    
+    router.push("/integrations");
+  } catch (error) {
+    console.error(error);
+  }
+};
+```
+
+## Dependencies
+The code relies on several external libraries and frameworks:
+
+1. React (v18.2.0): Core library for building the user interface
+2. Next.js (v13.4.1): React framework for server-side rendering and routing
+3. @fortawesome/react-fontawesome (v0.2.0): For rendering Font Awesome icons
+4. query-string (v8.1.0): For parsing query strings in the URL
+
+These dependencies were chosen to provide a robust foundation for building a modern, server-rendered React application with efficient routing and UI components.
+
+## Configuration
+The integration relies on several configuration items stored in localStorage:
+
+1. `projectData.id`: Used to fetch workspace data
+2. `azure-devops-org-name`: Stores the Azure DevOps organization name for API calls and form submission
+
+Environment variables or configuration files are not directly used in these components, but they may be utilized in the custom hooks that handle API interactions.
+
+The `authorize.tsx` file includes a configuration option:
+
+```javascript
+AzureDevopsCreateIntegrationPage.requireAuth = true;
+```
+
+This indicates that the page requires user authentication to access.
+
+In conclusion, this directory provides a comprehensive solution for integrating Azure DevOps with Infisical, handling both the authorization process and the creation of specific integrations between the two platforms.

@@ -1,0 +1,81 @@
+---
+title: "audit-log-queue.ts"
+---
+
+## High-level description
+This code defines the `auditLogQueueServiceFactory`, which creates a service for handling audit log queues. It manages the creation and processing of audit log entries, including their retention and streaming to external services.
+
+## Code Structure
+The main function `auditLogQueueServiceFactory` takes dependencies as input and returns an object with a `pushToLog` method. It also sets up a queue processor for audit log entries.
+
+## References
+This code references several other parts of the codebase, including:
+- Queue services
+- Database access layers (DALs) for audit logs, projects, and organizations
+- License service
+- Encryption utilities
+
+## Symbols
+
+### `auditLogQueueServiceFactory`
+#### Description
+Creates a service for managing audit log queues.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auditLogDAL | TAuditLogDALFactory | Data access layer for audit logs |
+| queueService | TQueueServiceFactory | Queue service for managing jobs |
+| projectDAL | Pick&lt;TProjectDALFactory, "findById"&gt; | Data access layer for projects |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for license-related operations |
+| auditLogStreamDAL | Pick&lt;TAuditLogStreamDALFactory, "find"&gt; | Data access layer for audit log streams |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pushToLog | Function | Function to push audit log entries to the queue |
+
+#### Internal Logic
+1. Defines a `pushToLog` function to add audit log entries to the queue.
+2. Sets up a queue processor for the AuditLog queue.
+3. In the queue processor:
+   - Retrieves organization and project information.
+   - Checks the license plan for audit log retention.
+   - Calculates the TTL for the audit log entry.
+   - Creates the audit log entry in the database.
+   - Retrieves and processes audit log streams.
+   - Sends the audit log entry to configured stream endpoints.
+
+### `pushToLog`
+#### Description
+Pushes an audit log entry to the queue for processing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | TCreateAuditLogDTO | Audit log entry data |
+
+#### Internal Logic
+Adds the audit log entry to the AuditLog queue with specific options for failure and completion handling.
+
+## Side Effects
+- Creates entries in the audit log database.
+- Sends audit log data to configured external stream endpoints.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| axios | Used for making HTTP requests to stream endpoints |
+| @app/lib/config/request | Provides a configured request object |
+| @app/lib/crypto/encryption | Used for decrypting stream headers |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| AUDIT_LOG_STREAM_TIMEOUT | number | 5000 | Timeout for audit log stream requests in milliseconds |
+
+## Error Handling
+The code uses `Promise.allSettled` when processing stream endpoints, which allows it to continue processing even if some stream requests fail.
+
+## Performance Considerations
+The code includes a note about keeping the timeout short (5 seconds) to ensure the queue processes quickly, as the audit log queue is expected to be heavily used.

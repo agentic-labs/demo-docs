@@ -1,0 +1,62 @@
+---
+title: "20240614154212_certificate-mgmt.ts"
+---
+
+## High-level description
+This migration script manages database schema changes related to certificate management. It creates tables for storing certificate authorities, certificates, and related information like private keys, certificate revocation lists (CRLs), and certificate chains. It also adds a foreign key reference to a KMS key in the Project table.
+
+## Code Structure
+The `up` function creates new tables and columns, while the `down` function reverts those changes. Both functions use the `knex` library to interact with the database. The `createOnUpdateTrigger` and `dropOnUpdateTrigger` functions are utility functions likely defined in another file (`../utils`) to manage database triggers.
+
+## References
+- `TableName`: An enum or object defining table names, likely imported from `../schemas`.
+- `createOnUpdateTrigger`: A utility function to create an "UPDATE" trigger on a table.
+- `dropOnUpdateTrigger`: A utility function to drop an "UPDATE" trigger from a table.
+
+## Symbols
+### `up`
+#### Description
+This function applies the migration to the database, creating tables and columns for certificate management.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex client instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration is complete. |
+
+#### Internal Logic
+1. Checks if the `Project` table exists and adds a `kmsCertificateKeyId` column if it doesn't already exist.
+2. Creates tables for `CertificateAuthority`, `CertificateAuthorityCert`, `CertificateAuthoritySecret`, `CertificateAuthorityCrl`, `Certificate`, and `CertificateBody` if they don't exist.
+3. Defines columns and constraints for each table, including primary keys, foreign keys, data types, and nullability.
+4. Creates "UPDATE" triggers on all newly created tables using the `createOnUpdateTrigger` utility function.
+
+### `down`
+#### Description
+This function reverts the migration, dropping tables and columns related to certificate management.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex client instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration rollback is complete. |
+
+#### Internal Logic
+1. Checks if the `Project` table exists and drops the `kmsCertificateKeyId` column if it exists.
+2. Drops tables related to certificate management in reverse order of creation to handle foreign key constraints.
+3. Drops "UPDATE" triggers from all dropped tables using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides a connection to the database and methods for schema manipulation. |
+
+## Error Handling
+The code does not implement specific error handling beyond what Knex provides. Any errors during the migration process will likely be thrown as exceptions.

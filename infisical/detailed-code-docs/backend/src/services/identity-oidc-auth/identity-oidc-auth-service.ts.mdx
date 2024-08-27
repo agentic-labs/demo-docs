@@ -1,0 +1,86 @@
+---
+title: "identity-oidc-auth-service.ts"
+---
+
+## High-level description
+The `identityOidcAuthServiceFactory` is a factory function that creates and returns an object containing methods for managing OIDC authentication for identities. These methods include attaching, updating, retrieving, and revoking OIDC authentication, as well as logging in with OIDC.
+
+## Code Structure
+The `identityOidcAuthServiceFactory` depends on several DAL factories and services, including `identityOidcAuthDAL`, `identityOrgMembershipDAL`, `identityDAL`, `permissionService`, `licenseService`, `identityAccessTokenDAL`, and `orgBotDAL`. It uses these dependencies to interact with the database, manage permissions, and perform other related tasks.
+
+## References
+This code references the following symbols:
+- `IdentityAuthMethod`, `SecretKeyEncoding`, `TIdentityOidcAuthsUpdate` from `@app/db/schemas`
+- `TLicenseServiceFactory` from `@app/ee/services/license/license-service`
+- `OrgPermissionActions`, `OrgPermissionSubjects` from `@app/ee/services/permission/org-permission`
+- `TPermissionServiceFactory` from `@app/ee/services/permission/permission-service`
+- `isAtLeastAsPrivileged` from `@app/lib/casl`
+- `getConfig` from `@app/lib/config/env`
+- `generateAsymmetricKeyPair` from `@app/lib/crypto`
+- `decryptSymmetric`, `encryptSymmetric`, `generateSymmetricKey`, `infisicalSymmetricDecrypt`, `infisicalSymmetricEncypt` from `@app/lib/crypto/encryption`
+- `BadRequestError`, `ForbiddenRequestError`, `UnauthorizedError` from `@app/lib/errors`
+- `extractIPDetails`, `isValidIpOrCidr` from `@app/lib/ip`
+- `ActorType`, `AuthTokenType` from `../auth/auth-type`
+- `TIdentityDALFactory` from `../identity/identity-dal`
+- `TIdentityOrgDALFactory` from `../identity/identity-org-dal`
+- `TIdentityAccessTokenDALFactory` from `../identity-access-token/identity-access-token-dal`
+- `TIdentityAccessTokenJwtPayload` from `../identity-access-token/identity-access-token-types`
+- `TOrgBotDALFactory` from `../org/org-bot-dal`
+- `TIdentityOidcAuthDALFactory` from `./identity-oidc-auth-dal`
+- `TAttachOidcAuthDTO`, `TGetOidcAuthDTO`, `TLoginOidcAuthDTO`, `TRevokeOidcAuthDTO`, `TUpdateOidcAuthDTO` from `./identity-oidc-auth-types`
+
+## Symbols
+
+### `identityOidcAuthServiceFactory`
+#### Description
+This factory function creates and returns an object containing methods for managing OIDC authentication for identities.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityOidcAuthDAL | TIdentityOidcAuthDALFactory | Data access layer for OIDC authentication |
+| identityOrgMembershipDAL | Pick&lt;TIdentityOrgDALFactory, "findOne"&gt; | Data access layer for identity organization membership |
+| identityDAL | Pick&lt;TIdentityDALFactory, "updateById"&gt; | Data access layer for identities |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Service for managing permissions |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for managing licenses |
+| identityAccessTokenDAL | Pick&lt;TIdentityAccessTokenDALFactory, "create"&gt; | Data access layer for identity access tokens |
+| orgBotDAL | Pick&lt;TOrgBotDALFactory, "findOne" \| "transaction" \| "create"&gt; | Data access layer for organization bots |
+
+#### Outputs
+Returns an object containing the following methods:
+- `attachOidcAuth`: Attaches OIDC authentication to an identity.
+- `updateOidcAuth`: Updates the OIDC authentication settings for an identity.
+- `getOidcAuth`: Retrieves the OIDC authentication settings for an identity.
+- `revokeOidcAuth`: Revokes OIDC authentication for an identity.
+- `login`: Logs in an identity using OIDC.
+
+#### Internal Logic
+This factory function initializes and returns an object containing five methods:
+
+- `login`: Verifies the provided OIDC JWT, checks for bound issuer, audience, subject and claims, generates and returns an access token.
+- `attachOidcAuth`: Checks permissions, encrypts the provided CA certificate, creates an organization bot if one doesn't exist, and persists the OIDC authentication settings for the identity.
+- `updateOidcAuth`: Checks permissions, updates the OIDC authentication settings for the identity, and re-encrypts the CA certificate if provided.
+- `getOidcAuth`: Checks permissions, retrieves and decrypts the OIDC authentication settings for the identity.
+- `revokeOidcAuth`: Checks permissions, deletes the OIDC authentication settings for the identity, and sets the identity's authentication method to null.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Authorization library |
+| axios | HTTP client |
+| https | HTTPS module |
+| jsonwebtoken | JWT library |
+| jwks-rsa | Library for retrieving RSA signing keys from a JWKS endpoint |
+| @app/db/schemas | Database schemas |
+| @app/ee/services/license/license-service | License service |
+| @app/ee/services/permission/org-permission | Organization permission constants |
+| @app/ee/services/permission/permission-service | Permission service |
+| @app/lib/casl | CASL helper functions |
+| @app/lib/config/env | Configuration loader |
+| @app/lib/crypto | Cryptographic functions |
+| @app/lib/crypto/encryption | Encryption functions |
+| @app/lib/errors | Error classes |
+| @app/lib/ip | IP address utility functions |
+
+## Error Handling
+The code throws specific error objects for different error scenarios, such as `UnauthorizedError`, `BadRequestError`, and `ForbiddenRequestError`. 

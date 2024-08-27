@@ -1,0 +1,160 @@
+---
+title: "project-service.ts"
+---
+
+## High-level description
+This file defines the `projectServiceFactory`, which creates and returns a set of functions for managing projects within the application. It handles operations like creating, deleting, updating, and retrieving projects, as well as managing project-related settings and permissions.
+
+## Code Structure
+The `projectServiceFactory` takes a large number of dependencies, mostly data access layers (DALs) and other services. It returns an object with methods for various project-related operations. These methods typically involve permission checks, data manipulation, and sometimes interaction with other services like licensing or KMS.
+
+## Symbols
+
+### `projectServiceFactory`
+#### Description
+This is the main factory function that creates the project service. It initializes all the project-related operations using the provided dependencies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dependencies | TProjectServiceFactoryDep | An object containing all the necessary dependencies for the project service |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectService | Object | An object containing all the project-related operations |
+
+#### Internal Logic
+1. Initializes various project-related operations using the provided dependencies.
+2. Each operation typically involves permission checks, data manipulation, and interaction with other services.
+
+### `createProject`
+#### Description
+Creates a new project (workspace) and sets up initial configurations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | ActorType | The type of actor creating the project |
+| actorId | string | The ID of the actor |
+| actorOrgId | string | The organization ID of the actor |
+| actorAuthMethod | string | The authentication method of the actor |
+| workspaceName | string | The name of the new workspace |
+| projectSlug | string | Optional slug for the project |
+| kmsKeyId | string | Optional KMS key ID |
+
+#### Internal Logic
+1. Checks organization permissions and plan limits.
+2. Creates the project within a database transaction.
+3. Sets up default environments and folders.
+4. Creates and assigns project keys.
+5. Adds the creator as an admin if the actor is a user.
+
+### `deleteProject`
+#### Description
+Deletes a project and associated resources.
+
+#### Internal Logic
+1. Checks permissions for project deletion.
+2. Deletes the project and associated resources within a transaction.
+3. Deletes KMS keys if present.
+
+### `getProjects`
+#### Description
+Retrieves a list of projects for the actor.
+
+#### Internal Logic
+1. Fetches projects from the database.
+2. Optionally includes role information if requested and permitted.
+
+### `updateProject`
+#### Description
+Updates project details such as name and auto-capitalization setting.
+
+#### Internal Logic
+1. Checks permissions for project editing.
+2. Updates the project in the database.
+
+### `toggleAutoCapitalization`
+#### Description
+Toggles the auto-capitalization setting for a project.
+
+#### Internal Logic
+1. Checks permissions for project settings editing.
+2. Updates the auto-capitalization setting in the database.
+
+### `updateVersionLimit`
+#### Description
+Updates the version limit for a project.
+
+#### Internal Logic
+1. Checks if the actor has admin permissions.
+2. Updates the version limit in the database.
+
+### `updateAuditLogsRetention`
+#### Description
+Updates the audit logs retention period for a project.
+
+#### Internal Logic
+1. Checks if the actor has admin permissions.
+2. Verifies the new retention period against the plan limits.
+3. Updates the retention period in the database.
+
+### `updateName`
+#### Description
+Updates the name of a project.
+
+#### Internal Logic
+1. Checks permissions for project settings editing.
+2. Updates the project name in the database.
+
+### `upgradeProject`
+#### Description
+Initiates a project upgrade process.
+
+#### Internal Logic
+1. Checks for admin permissions.
+2. Encrypts the user's private key.
+3. Queues the project upgrade process.
+
+### `getProjectUpgradeStatus`
+#### Description
+Retrieves the upgrade status of a project.
+
+#### Internal Logic
+1. Checks permissions for reading project secrets.
+2. Fetches and returns the project's upgrade status.
+
+### `listProjectCas`, `listProjectCertificates`, `listProjectAlerts`, `listProjectPkiCollections`, `listProjectCertificateTemplates`
+#### Description
+These methods list various project-related items such as Certificate Authorities, certificates, alerts, PKI collections, and certificate templates.
+
+#### Internal Logic
+1. Check permissions for the specific resource type.
+2. Fetch and return the requested items from the database.
+
+### `updateProjectKmsKey`, `getProjectKmsBackup`, `loadProjectKmsBackup`, `getProjectKmsKeys`
+#### Description
+These methods handle KMS (Key Management Service) related operations for projects.
+
+#### Internal Logic
+1. Check permissions for KMS operations.
+2. Perform the requested KMS operation (update, backup, load, or retrieve).
+3. Some operations may have additional checks, such as verifying the license plan for certain features.
+
+## Dependencies
+The project service depends on numerous other services and DALs, including but not limited to:
+- Permission service
+- License service
+- KMS service
+- Various DALs (project, user, organization, etc.)
+- Queue services
+
+## Configuration
+The project service uses configuration from the license service to determine feature availability and limits.
+
+## Error Handling
+The service uses custom error classes like `BadRequestError`, `ForbiddenRequestError`, and `NotFoundError` to handle various error scenarios.
+
+## Logging
+There's no explicit logging in this service, but it likely relies on the underlying DALs and services for any necessary logging.

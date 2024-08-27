@@ -1,0 +1,122 @@
+---
+title: "index.ts"
+---
+
+## High-level description
+This code provides utility functions for working with IP addresses and CIDR blocks. It includes functions for validating IP addresses, CIDR blocks, and checking if an IP address is within a list of trusted IPs.
+
+## Code Structure
+The code defines several functions related to IP address validation and checking: `extractIPDetails`, `isValidCidr`, `isValidIpOrCidr`, and `checkIPAgainstBlocklist`. 
+
+- `extractIPDetails` is used by `checkIPAgainstBlocklist` to determine the IP address type.
+- `isValidCidr` and `isValidIpOrCidr` are independent validation functions.
+- `checkIPAgainstBlocklist` uses the `net.BlockList` class from the `node:net` module and relies on `extractIPDetails` for IP address information.
+
+## References
+This code references the `net` module from Node.js (`node:net`) for network-related operations.
+
+## Symbols
+
+### `IPType`
+#### Description
+An enum defining the possible IP address types: IPv4 and IPv6.
+
+### `extractIPDetails`
+#### Description
+This function takes an IP address string as input and returns an object containing the IP address, its type (IPv4 or IPv6), and the prefix length if the input is a CIDR block.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ip | string | The IP address string to extract details from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { ipAddress, type, prefix } | object | An object containing the IP address, its type, and the prefix length (if applicable). |
+
+#### Internal Logic
+1. Checks if the input is a valid IPv4 or IPv6 address using `net.isIPv4` and `net.isIPv6`.
+2. If it's a specific IP, returns the IP address and its type.
+3. If it's a subnet (contains '/'), splits the string into the network address and prefix.
+4. Determines the IP type of the network address.
+5. Returns the network address, type, and parsed prefix length.
+
+### `isValidCidr`
+#### Description
+This function checks if a given string is a valid CIDR block.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cidr | string | The string to be checked for CIDR validity. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| boolean |  | Returns `true` if the input is a valid CIDR block, `false` otherwise. |
+
+#### Internal Logic
+1. Splits the input string into the IP address and prefix parts.
+2. Parses the prefix part as an integer.
+3. Checks if the prefix is within the valid range for IPv4 (0-32) or IPv6 (0-128).
+4. Checks if the IP address part is a valid IPv4 or IPv6 address.
+5. Returns `true` if all checks pass, indicating a valid CIDR block.
+
+### `isValidIpOrCidr`
+#### Description
+This function checks if a given string is a valid IPv4/IPv6 address or a valid CIDR block.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ip | string | The string to be checked for IP address or CIDR validity. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| boolean |  | Returns `true` if the input is a valid IP address or CIDR block, `false` otherwise. |
+
+#### Internal Logic
+1. Checks if the input string contains a slash ('/').
+2. If it does, it calls `isValidCidr` to validate it as a CIDR block.
+3. If it doesn't contain a slash, it checks if it's a valid IPv4 or IPv6 address using `net.isIPv4` and `net.isIPv6`.
+4. Returns `true` if either the CIDR check or the IP address check passes.
+
+### `TIp`
+#### Description
+A type alias representing an IP address object with properties for the IP address, type, and optional prefix.
+
+### `checkIPAgainstBlocklist`
+#### Description
+This function checks if a given IP address is allowed based on a list of trusted IPs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { ipAddress, trustedIps } | object | An object containing the IP address to check and an array of trusted IP objects. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| void |  | This function doesn't return a value. It throws an error if the IP address is not allowed. |
+
+#### Internal Logic
+1. Creates a new `net.BlockList` instance.
+2. Iterates through the `trustedIps` array.
+3. For each trusted IP, adds it to the `blockList` as either a subnet (if a prefix is defined) or a single address.
+4. Extracts the type of the input `ipAddress` using `extractIPDetails`.
+5. Uses the `blockList.check` method to determine if the input IP address is allowed based on the trusted IPs.
+6. Throws an `UnauthorizedError` if the IP address is not allowed.
+
+## Side Effects
+- The `checkIPAgainstBlocklist` function throws an `UnauthorizedError` if the provided IP address is not found within the provided list of trusted IPs.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| node:net | Used for network-related operations, specifically the `net.BlockList` class for managing allowed IP addresses and subnets. |
+
+## Error Handling
+- The `extractIPDetails` function throws an error if it cannot determine the IP type.
+- The `checkIPAgainstBlocklist` function throws an `UnauthorizedError` if the provided IP address is not found within the provided list of trusted IPs.

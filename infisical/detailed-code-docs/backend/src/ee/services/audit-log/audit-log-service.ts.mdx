@@ -1,0 +1,85 @@
+---
+title: "audit-log-service.ts"
+---
+
+## High-level description
+This code defines an audit log service for an enterprise application. It provides functionality to create audit logs and list project audit logs, with proper permission checks and configuration options.
+
+## Code Structure
+The main function `auditLogServiceFactory` creates and returns an object with two methods: `createAuditLog` and `listProjectAuditLogs`. These methods interact with the provided dependencies (DALs, permission service, and queue service) to perform their respective operations.
+
+## Symbols
+
+### `auditLogServiceFactory`
+#### Description
+This function creates and returns an audit log service with methods to create and list audit logs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auditLogDAL | TAuditLogDALFactory | Data access layer for audit logs |
+| auditLogQueue | TAuditLogQueueServiceFactory | Queue service for audit logs |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for handling permissions |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auditLogService | Object | An object containing methods for creating and listing audit logs |
+
+#### Internal Logic
+The factory function creates two methods:
+1. `listProjectAuditLogs`: Retrieves and formats audit logs for a project.
+2. `createAuditLog`: Creates a new audit log entry.
+
+### `listProjectAuditLogs`
+#### Description
+This method retrieves and formats audit logs for a specific project, with permission checks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TListProjectAuditLogDTO | Object | Contains various parameters for filtering and pagination |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| formattedAuditLogs | Array | An array of formatted audit log entries |
+
+#### Internal Logic
+1. Checks user permissions for the project.
+2. Retrieves audit logs based on the provided filters.
+3. Formats the retrieved logs.
+
+### `createAuditLog`
+#### Description
+This method creates a new audit log entry, with configuration checks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | TCreateAuditLogDTO | The data for the new audit log entry |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Promise&lt;void&gt; | A promise that resolves when the log is created |
+
+#### Internal Logic
+1. Checks if audit log generation is disabled in the configuration.
+2. Validates that either a project ID or organization ID is provided (except for specific event types).
+3. Pushes the log data to the audit log queue.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Used for permission checks |
+| @app/lib/config/env | For accessing application configuration |
+| @app/lib/errors | For custom error types |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DISABLE_AUDIT_LOG_GENERATION | boolean | undefined | If true, prevents the creation of new audit logs |
+
+## Error Handling
+The code uses custom error types (`ForbiddenError` and `BadRequestError`) for handling permission issues and invalid input data.

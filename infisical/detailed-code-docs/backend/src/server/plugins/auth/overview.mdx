@@ -1,0 +1,64 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains plugins and middleware for authentication and authorization in a Fastify-based server application. The code implements various authentication strategies, including JWT, API keys, service tokens, identity access tokens, and SCIM tokens. It also provides functionality for injecting identity and permission information into requests, verifying super admin status, and validating authentication for specific routes.
+
+## What does it do?
+The code in this directory performs several key functions related to authentication and authorization:
+
+1. Authenticates incoming requests using various token types (JWT, API keys, service tokens, etc.).
+2. Injects authenticated identity information into the request object for use in downstream handlers.
+3. Adds permission information to requests based on the authenticated actor type (user, identity, service, or SCIM client).
+4. Provides a middleware for verifying if a user has super admin privileges.
+5. Offers a configurable middleware for verifying authentication on specific routes, allowing for fine-grained control over which authentication methods are accepted.
+
+These components work together to create a robust authentication and authorization system for the application, ensuring that only authorized users can access protected resources and that the appropriate context is available for making authorization decisions throughout the request lifecycle.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `inject-identity.ts`: This file contains the `injectIdentity` plugin, which is responsible for authenticating incoming requests and decorating the request object with the authenticated identity.
+
+2. `inject-permission.ts`: This file defines the `injectPermission` plugin, which adds permission information to the request object based on the authenticated actor type.
+
+3. `verify-auth.ts`: This file provides the `verifyAuth` middleware, which can be used to validate authentication for specific routes.
+
+The flow of control typically starts with `injectIdentity`, which authenticates the request. Then, `injectPermission` adds permission information based on the authenticated identity. Finally, `verifyAuth` can be used on individual routes to ensure that the request has the appropriate authentication for that specific endpoint.
+
+## Key Files
+1. `inject-identity.ts`: Implements the core authentication logic, supporting multiple authentication strategies.
+
+2. `inject-permission.ts`: Adds permission information to requests based on the authenticated identity.
+
+3. `verify-auth.ts`: Provides a configurable middleware for verifying authentication on specific routes.
+
+4. `superAdmin.ts`: Contains a middleware for verifying super admin status.
+
+## Dependencies
+The code relies on several external libraries and internal modules:
+
+1. Fastify: The server framework used throughout the application.
+2. `jsonwebtoken`: Used for verifying JWT tokens.
+3. `@app/lib/config/env`: Used to retrieve application configuration.
+4. `@app/lib/errors`: Provides custom error classes like `UnauthorizedError`.
+5. `@app/services`: Various service factories used for validating different types of authentication tokens.
+6. `@app/lib/logger`: Provides logging functionality.
+
+## Configuration
+The authentication system uses configuration from the application's environment, accessed through the `getConfig` function. This likely includes settings such as JWT secret keys, token expiration times, and other authentication-related parameters.
+
+The `verifyAuth` middleware is configurable, allowing developers to specify which authentication strategies are allowed for each route and whether an organization ID is required.
+
+Example usage of `verifyAuth`:
+
+```typescript
+fastify.get('/protected-route', {
+  preHandler: verifyAuth([AuthMode.JWT, AuthMode.API_KEY], { requireOrg: true })
+}, (req, reply) =&gt; {
+  // Route handler
+});
+```
+
+This configuration ensures that the '/protected-route' endpoint only accepts JWT or API key authentication, and requires an organization ID to be present in the request.

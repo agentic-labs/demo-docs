@@ -1,0 +1,127 @@
+---
+title: "webhook-fns.ts"
+---
+
+## High-level description
+The `webhook-fns.ts` file provides utility functions for managing and triggering webhooks in the Infisical application. It includes functions for decrypting webhook details, triggering webhook requests, and retrieving webhook payloads based on specific events.
+
+## Code Structure
+The code defines several independent utility functions related to webhooks: `decryptWebhookDetails`, `triggerWebhookRequest`, `getWebhookPayload`, and `fnTriggerWebhook`. The `fnTriggerWebhook` function utilizes the other three functions to implement its logic.
+
+## Symbols
+
+### `decryptWebhookDetails`
+#### Description
+This function decrypts the secret key and URL of a webhook stored in the database. It uses the Infisical symmetric decryption function (`infisicalSymmetricDecrypt`) with the provided key encoding, initialization vector (IV), and tag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| webhook | `TWebhooks` | An object representing a webhook record from the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `{ secretKey, url }` | `{ secretKey: string, url: string }` | An object containing the decrypted secret key and URL of the webhook. |
+
+#### Internal Logic
+1. Extracts the relevant encryption details (key encoding, IV, tag, ciphertext) from the `webhook` object.
+2. Decrypts the `secretKey` and `url` if their encrypted versions are present in the `webhook` object.
+3. Returns the decrypted `secretKey` and `url`.
+
+### `triggerWebhookRequest`
+#### Description
+This function triggers a webhook request by sending a POST request to the specified webhook URL with the provided data payload. It also handles the addition of a signature header if a secret key is provided.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| webhook | `TWebhooks` | An object representing a webhook record from the database. |
+| data | `Record&lt;string, unknown&gt;` | The data payload to be sent in the webhook request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `req` | `Promise&lt;AxiosResponse&lt;any&gt;&gt;` | A promise that resolves to the Axios response object of the webhook request. |
+
+#### Internal Logic
+1. Decrypts the webhook's secret key and URL using `decryptWebhookDetails`.
+2. Constructs the payload object by adding a timestamp to the provided `data`.
+3. If a `secretKey` is present, calculates a signature using HMAC-SHA256 and adds it to the headers.
+4. Sends a POST request to the webhook URL with the payload and headers.
+5. Returns the Axios response object.
+
+### `getWebhookPayload`
+#### Description
+This function constructs the payload for a webhook request based on the event name and details. It supports different payload formats based on the webhook type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| eventName | `string` | The name of the event that triggered the webhook. |
+| details | `{ workspaceName: string; workspaceId: string; environment: string; secretPath?: string; type?: string | null; }` | An object containing details about the event, such as workspace name, environment, and secret path. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `payload` | `Record&lt;string, unknown&gt;` | The constructed payload object for the webhook request. |
+
+#### Internal Logic
+1. Determines the webhook type from the `details.type` property.
+2. Constructs the payload based on the webhook type:
+    - For `WebhookType.SLACK`, creates a Slack-formatted message with attachments.
+    - For `WebhookType.GENERAL` (or default), creates a generic payload with event name and project details.
+3. Returns the constructed payload.
+
+### `fnTriggerWebhook`
+#### Description
+This function triggers webhooks for a specific project, environment, and secret path. It retrieves matching webhooks from the database, triggers webhook requests, and updates the webhook status based on the request outcome.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { environment, secretPath, projectId, webhookDAL, projectEnvDAL, projectDAL } | `TFnTriggerWebhookDTO` | An object containing the environment, secret path, project ID, and data access layer instances for webhooks, project environments, and projects. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | | This function does not return a value, but it has side effects on the database. |
+
+#### Internal Logic
+1. Retrieves all webhooks for the specified project and environment.
+2. Filters the webhooks to include only those that are enabled and match the provided `secretPath` using `picomatch`.
+3. If there are no matching webhooks, exits early.
+4. Retrieves the project name from the database using the `projectDAL`.
+5. Iterates through the matching webhooks and triggers a webhook request for each using `triggerWebhookRequest` and `getWebhookPayload`.
+6. Collects the results of the webhook requests (fulfilled or rejected).
+7. Updates the `lastStatus` and `lastRunErrorMessage` fields of the webhooks in the database based on the request outcomes.
+8. Uses a database transaction to ensure atomicity of the webhook status updates.
+
+## Side Effects
+- Sends HTTP POST requests to webhook URLs.
+- Updates the `lastStatus` and `lastRunErrorMessage` fields of webhook records in the database.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `crypto` | Used for creating HMAC signatures for webhook requests. |
+| `axios` | Used for making HTTP requests to trigger webhooks. |
+| `picomatch` | Used for matching secret paths with webhook patterns. |
+| `@app/db/schemas` | Provides TypeScript types for database schemas, including webhooks. |
+| `@app/lib/config/request` | Provides a configured Axios instance for making HTTP requests. |
+| `@app/lib/crypto/encryption` | Provides encryption and decryption functions, including `infisicalSymmetricDecrypt`. |
+| `@app/lib/errors` | Provides custom error classes, including `BadRequestError`. |
+| `@app/lib/logger` | Provides logging functionality. |
+| `../project/project-dal` | Provides data access layer functions for projects. |
+| `../project-env/project-env-dal` | Provides data access layer functions for project environments. |
+| `./webhook-dal` | Provides data access layer functions for webhooks. |
+| `./webhook-types` | Provides TypeScript types for webhooks, including `WebhookType`. |
+
+## Error Handling
+- Uses custom error classes from `@app/lib/errors` to handle specific error scenarios, such as `BadRequestError` for invalid input.
+- Catches and re-throws database errors as `DatabaseError` to provide more context.
+- Logs errors using the `@app/lib/logger`.
+
+## Logging
+- Logs information messages before and after triggering webhooks using the `@app/lib/logger`.
+- Logs the outcome of each webhook request (success or failure).

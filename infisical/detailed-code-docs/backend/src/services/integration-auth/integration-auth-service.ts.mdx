@@ -1,0 +1,152 @@
+---
+title: "integration-auth-service.ts"
+---
+
+## High-level description
+This file defines the `integrationAuthServiceFactory`, which creates a service for managing integration authentications. It provides functionality for listing, creating, updating, and deleting integration authentications, as well as retrieving various integration-specific data such as apps, teams, and environments.
+
+## Code Structure
+The `integrationAuthServiceFactory` function takes dependencies as input and returns an object with methods for interacting with integration authentications. These methods utilize the provided dependencies to perform database operations, handle permissions, and interact with external APIs for various integrations.
+
+## Symbols
+
+### integrationAuthServiceFactory
+#### Description
+This function creates and returns an object with methods for managing integration authentications. It encapsulates the logic for interacting with integration auths, handling permissions, and communicating with external APIs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissionService | TPermissionServiceFactory | Service for handling permissions |
+| integrationAuthDAL | TIntegrationAuthDALFactory | Data access layer for integration auths |
+| integrationDAL | Pick&lt;TIntegrationDALFactory, "delete"&gt; | Data access layer for integrations |
+| projectBotService | Pick&lt;TProjectBotServiceFactory, "getBotKey"&gt; | Service for project bot operations |
+| kmsService | Pick&lt;TKmsServiceFactory, "createCipherPairWithDataKey"&gt; | Service for key management operations |
+
+#### Outputs
+| Name | Type | Description |
+| TIntegrationAuthServiceFactory | Object | An object containing methods for managing integration authentications |
+
+#### Internal Logic
+The factory function creates various methods for managing integration authentications, including:
+- Listing integration auths by project ID
+- Getting a specific integration auth
+- Exchanging OAuth tokens
+- Saving integration tokens
+- Retrieving integration-specific data (apps, teams, environments, etc.)
+- Deleting integration auths
+
+Each method typically involves permission checks, data retrieval or manipulation using the DAL, and in some cases, communication with external APIs.
+
+### listIntegrationAuthByProjectId
+#### Description
+Retrieves a list of integration authentications for a given project ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actorId | string | ID of the actor performing the action |
+| actor | ActorType | Type of actor (e.g., user, service) |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | ActorAuthMethod | Authentication method used by the actor |
+| projectId | string | ID of the project to list integrations for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| authorizations | TIntegrationAuths[] | Array of integration authentications |
+
+#### Internal Logic
+1. Checks if the actor has permission to read integrations for the project
+2. Retrieves the integrations from the database using the DAL
+3. Returns the list of integrations
+
+### oauthExchange
+#### Description
+Exchanges an OAuth code for access and refresh tokens, and saves the integration authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | ID of the project |
+| actorId | string | ID of the actor performing the action |
+| actor | ActorType | Type of actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | ActorAuthMethod | Authentication method used by the actor |
+| integration | string | Name of the integration |
+| url | string | OAuth redirect URL |
+| code | string | OAuth code to exchange |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integrationAuth | TIntegrationAuths | Created or updated integration authentication |
+
+#### Internal Logic
+1. Validates the integration
+2. Checks permissions
+3. Exchanges the OAuth code for tokens
+4. Prepares the integration auth data
+5. Encrypts the tokens using the project bot key or KMS
+6. Creates or updates the integration auth in the database
+
+### getIntegrationAccessToken
+#### Description
+Helper function to retrieve and potentially refresh the access token for an integration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integrationAuth | TIntegrationAuths | Integration authentication object |
+| shouldUseSecretV2Bridge | boolean | Flag indicating whether to use the v2 secret bridge |
+| botKey | string | (optional) Bot key for decryption |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessToken | string | The current access token |
+| accessId | string | (optional) The access ID, if applicable |
+
+#### Internal Logic
+1. Decrypts the stored access token
+2. If the token is expired and a refresh token is available, refreshes the access token
+3. Updates the stored tokens if refreshed
+4. Returns the current access token and access ID
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permissions |
+| @octokit/rest | For interacting with GitHub API |
+| aws-sdk | For AWS-related operations |
+| axios | For making HTTP requests |
+
+## Error Handling
+The code uses custom error classes like `BadRequestError` and `ForbiddenError` to handle and throw specific errors. It also uses try-catch blocks to catch and handle potential errors from external API calls and database operations.
+
+## API/Interface Reference
+The service provides methods for various integration-related operations, including:
+- `listIntegrationAuthByProjectId`: List integrations for a project
+- `getIntegrationAuth`: Get a specific integration auth
+- `oauthExchange`: Exchange OAuth code for tokens
+- `saveIntegrationToken`: Save integration tokens
+- `getIntegrationApps`: Get apps for an integration
+- `getIntegrationAuthTeams`: Get teams for an integration
+- `getVercelBranches`: Get branches for Vercel integration
+- `getChecklyGroups`: Get groups for Checkly integration
+- `getGithubOrgs`: Get organizations for GitHub integration
+- `getGithubEnvs`: Get environments for GitHub integration
+- `getQoveryOrgs`: Get organizations for Qovery integration
+- `getAwsKmsKeys`: Get KMS keys for AWS integration
+- `getQoveryProjects`: Get projects for Qovery integration
+- `getQoveryEnvs`: Get environments for Qovery integration
+- `getHerokuPipelines`: Get pipelines for Heroku integration
+- `getRailwayEnvironments`: Get environments for Railway integration
+- `getRailwayServices`: Get services for Railway integration
+- `getBitbucketWorkspaces`: Get workspaces for Bitbucket integration
+- `getNorthFlankSecretGroups`: Get secret groups for Northflank integration
+- `getTeamcityBuildConfigs`: Get build configurations for TeamCity integration
+- `deleteIntegrationAuths`: Delete integration auths for a project
+- `deleteIntegrationAuthById`: Delete a specific integration auth
+
+Each method typically requires appropriate permissions and may involve communication with external APIs specific to the integration.

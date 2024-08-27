@@ -1,0 +1,155 @@
+---
+title: "aws-iam.mdx"
+---
+
+---
+title: "AWS IAM"
+description: "How to dynamically generate AWS IAM Users."
+---
+
+The Infisical AWS IAM dynamic secret allows you to generate AWS IAM Users on demand based on configured AWS policy.
+
+## Prerequisite
+
+Infisical needs an initial AWS IAM user with the required permissions to create sub IAM users. This IAM user will be responsible for managing the lifecycle of new IAM users.
+
+&lt;Accordion title="Managing AWS IAM User minimum permission policy"&gt;
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachUserPolicy",
+        "iam:CreateAccessKey",
+        "iam:CreateUser",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser",
+        "iam:DeleteUserPolicy",
+        "iam:DetachUserPolicy",
+        "iam:GetUser",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
+        "iam:ListGroupsForUser",
+        "iam:ListUserPolicies",
+        "iam:PutUserPolicy",
+        "iam:AddUserToGroup",
+        "iam:RemoveUserFromGroup"
+      ],
+      "Resource": ["*"]
+    }
+  ]
+}
+```
+
+To minimize managing user access you can attach a resource in format 
+
+&gt; arn:aws:iam::\&lt;account-id\&gt;:user/\&lt;aws-scope-path\&gt;
+
+Replace **\&lt;account id\&gt;** with your AWS account id and **\&lt;aws-scope-path\&gt;** with a path to minimize managing user access.
+
+&lt;/Accordion&gt;
+
+## Set up Dynamic Secrets with AWS IAM
+
+&lt;Steps&gt;
+  &lt;Step title="Secret Overview Dashboard"&gt;
+	Navigate to the Secret Overview dashboard and select the environment in which you would like to add a dynamic secret to.
+  &lt;/Step&gt;
+  &lt;Step title="Click on the 'Add Dynamic Secret' button"&gt;
+	![Add Dynamic Secret Button](../../../images/platform/dynamic-secrets/add-dynamic-secret-button.png)
+  &lt;/Step&gt;
+  &lt;Step title="Select AWS IAM"&gt;
+	![Dynamic Secret Modal](../../../images/platform/dynamic-secrets/dynamic-secret-modal-aws-iam.png)
+  &lt;/Step&gt;
+  &lt;Step title="Provide the inputs for dynamic secret parameters"&gt;
+	&lt;ParamField path="Secret Name" type="string" required&gt;
+		Name by which you want the secret to be referenced
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Default TTL" type="string" required&gt;
+		Default time-to-live for a generated secret (it is possible to modify this value when a secret is generate)
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Max TTL" type="string" required&gt;
+		Maximum time-to-live for a generated secret
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="AWS Access Key" type="string" required&gt;
+				The managing AWS IAM User Access Key
+  &lt;/ParamField&gt;
+
+	&lt;ParamField path="AWS Secret Key" type="string" required&gt;
+				The managing AWS IAM User Secret Key
+  &lt;/ParamField&gt;
+
+	&lt;ParamField path="AWS IAM Path" type="string"&gt;
+				[IAM AWS Path](https://aws.amazon.com/blogs/security/optimize-aws-administration-with-iam-paths/) to scope created IAM User resource access.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="AWS Region" type="string" required&gt;
+				The AWS data center region.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="IAM User Permission Boundary" type="string" required&gt;
+				The IAM Policy ARN of the [AWS Permissions Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html) to attach to IAM users created in the role.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="AWS IAM Groups" type="string"&gt;
+	The AWS IAM groups that should be assigned to the created users. Multiple values can be provided by separating them with commas	
+&lt;/ParamField&gt;
+ 
+	&lt;ParamField path="AWS Policy ARNs" type="string"&gt;
+	The AWS IAM managed policies that should be attached to the created users. Multiple values can be provided by separating them with commas	
+&lt;/ParamField&gt;
+
+&lt;ParamField path="AWS IAM Policy Document" type="string"&gt;
+	The AWS IAM inline policy that should be attached to the created users. Multiple values can be provided by separating them with commas	
+&lt;/ParamField&gt;
+
+	![Dynamic Secret Setup Modal](../../../images/platform/dynamic-secrets/dynamic-secret-setup-modal-aws-iam.png)
+
+  &lt;/Step&gt;
+  &lt;Step title="Click 'Submit'"&gt;
+  	After submitting the form, you will see a dynamic secret created in the dashboard. 
+
+	![Dynamic Secret](../../../images/platform/dynamic-secrets/dynamic-secret.png)
+  &lt;/Step&gt;
+  &lt;Step title="Generate dynamic secrets"&gt;
+	Once you've successfully configured the dynamic secret, you're ready to generate on-demand credentials. 
+	To do this, simply click on the 'Generate' button which appears when hovering over the dynamic secret item. 
+	Alternatively, you can initiate the creation of a new lease by selecting 'New Lease' from the dynamic secret lease list section.
+
+	![Dynamic Secret](/images/platform/dynamic-secrets/dynamic-secret-generate.png)
+	![Dynamic Secret](/images/platform/dynamic-secrets/dynamic-secret-lease-empty.png)
+
+	When generating these secrets, it's important to specify a Time-to-Live (TTL) duration. This will dictate how long the credentials are valid for.
+
+	![Provision Lease](/images/platform/dynamic-secrets/provision-lease.png)
+
+	&lt;Tip&gt;
+		Ensure that the TTL for the lease fall within the maximum TTL defined when configuring the dynamic secret in step 4.
+	&lt;/Tip&gt;
+
+
+	Once you click the `Submit` button, a new secret lease will be generated and the credentials for it will be shown to you. 
+
+	![Provision Lease](/images/platform/dynamic-secrets/lease-values-aws-iam.png)
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## Audit or Revoke Leases
+Once you have created one or more leases, you will be able to access them by clicking on the respective dynamic secret item on the dashboard. 
+This will allow you see the lease details  and delete the lease ahead of its expiration time.
+
+![Provision Lease](/images/platform/dynamic-secrets/lease-data.png)
+
+## Renew Leases
+To extend the life of the generated dynamic secret lease past its initial time to live, simply click on the **Renew** as illustrated below.
+![Provision Lease](/images/platform/dynamic-secrets/dynamic-secret-lease-renew.png)
+
+&lt;Warning&gt;
+	Lease renewals cannot exceed the maximum TTL set when configuring the dynamic secret
+&lt;/Warning&gt;

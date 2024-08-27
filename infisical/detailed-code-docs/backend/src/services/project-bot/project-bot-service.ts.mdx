@@ -1,0 +1,72 @@
+---
+title: "project-bot-service.ts"
+---
+
+## High-level description
+The `project-bot-service.ts` file defines the `projectBotServiceFactory`, which provides functionality related to managing Infisical bots within projects. These bots are used for automated tasks like secret rotation in upgraded projects (v2 and v3).
+
+## Code Structure
+The `projectBotServiceFactory` depends on the `projectBotDAL`, `projectDAL`, and `permissionService`. It uses these dependencies to implement functions for finding, creating, and updating bot records, as well as managing their active state and associated keys.
+
+## References
+- `@app/db/schemas`: Provides the `ProjectVersion` enum.
+- `@app/ee/services/permission/permission-service`: Provides the `TPermissionServiceFactory` type and its `getProjectPermission` method.
+- `@app/ee/services/permission/project-permission`: Provides the `ProjectPermissionActions` and `ProjectPermissionSub` enums.
+- `@app/lib/crypto`: Provides cryptographic functions like `generateAsymmetricKeyPair` and `infisicalSymmetricEncypt`.
+- `@app/lib/errors`: Provides the `BadRequestError` class.
+- `./project-bot-dal`: Provides the `TProjectBotDALFactory` type.
+- `./project-bot-fns`: Provides the `getBotKeyFnFactory` and `getBotPrivateKey` functions.
+- `./project-bot-types`: Provides the `TFindBotByProjectIdDTO` and `TSetActiveStateDTO` types.
+
+## Symbols
+
+### `projectBotServiceFactory`
+#### Description
+This factory function creates and returns a `TProjectBotServiceFactory` object, which encapsulates various operations related to project bots.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectBotDAL | TProjectBotDALFactory | Data Access Layer for interacting with project bot records. |
+| projectDAL | Pick&lt;TProjectDALFactory, "findById"&gt; | Data Access Layer for interacting with project records, specifically the `findById` method. |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for managing project permissions, specifically the `getProjectPermission` method. |
+
+#### Outputs
+A `TProjectBotServiceFactory` object with the following methods:
+- `findBotByProjectId`: Finds a bot associated with a given project ID.
+- `setBotActiveState`: Sets the active state of a bot.
+- `getBotPrivateKey`: Retrieves the private key of a bot.
+- `findProjectByBotId`: Finds a project associated with a given bot ID.
+- `getBotKey`: Retrieves the key associated with a bot.
+
+#### Internal Logic
+The factory initializes a `getBotKeyFn` using the provided dependencies. It then defines the following methods:
+
+- `getBotKey`: Retrieves the bot key using the initialized `getBotKeyFn`.
+- `findBotByProjectId`: 
+    - Checks for read permissions on project integrations.
+    - Attempts to find an existing bot record for the project.
+    - If no bot exists, generates keys, encrypts the private key, and creates a new bot record.
+    - Returns the found or created bot record.
+- `findProjectByBotId`: 
+    - Attempts to find a project associated with the given bot ID.
+    - Throws a `BadRequestError` if the project is not found.
+- `setBotActiveState`: 
+    - Checks for edit permissions on project integrations.
+    - Retrieves the bot and associated project.
+    - Validates the request based on the project version and provided bot key.
+    - Updates the bot's active state and associated keys in the database.
+    - Throws a `BadRequestError` if any step fails.
+
+## Error Handling
+The service utilizes `BadRequestError` to signal issues like invalid input, missing data, or unauthorized operations.
+
+## Dependencies
+- `@casl/ability`: For permission management.
+- `@app/db/schemas`: For database schema definitions.
+- `@app/lib/crypto`: For cryptographic operations.
+- `@app/lib/errors`: For custom error classes.
+- `@app/services/project/project-dal`: For project data access.
+- `./project-bot-dal`: For project bot data access.
+- `./project-bot-fns`: For bot-related utility functions.
+- `./project-bot-types`: For type definitions.

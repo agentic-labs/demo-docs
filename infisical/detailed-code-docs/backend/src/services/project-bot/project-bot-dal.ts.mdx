@@ -1,0 +1,109 @@
+---
+title: "project-bot-dal.ts"
+---
+
+## High-level description
+The `project-bot-dal.ts` file defines the data access layer (DAL) for project bots. It provides functions to interact with the `ProjectBot` table in the database, including finding bots, retrieving associated project information, and fetching encryption keys.
+
+## Code Structure
+The `projectBotDALFactory` function takes a database client as input and returns an object containing various DAL functions. These functions utilize the provided database client to interact with the `ProjectBot` table and related tables like `Users`, `UserEncryptionKey`, and `Project`.
+
+## References
+- `@app/db/schemas`: Used for importing table and column names, as well as type definitions for database entities.
+- `@app/lib/errors`: Imports the `DatabaseError` class for handling database-related errors.
+- `@app/lib/knex`: Imports utility functions like `ormify` and `selectAllTableCols` for simplifying database interactions.
+
+## Symbols
+### `projectBotDALFactory`
+#### Description
+This factory function initializes and returns an object containing data access methods for interacting with project bot data in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `TDbClient` | An instance of the database client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `TProjectBotDALFactory` | Object | An object containing various DAL functions for project bots. |
+
+#### Internal Logic
+1. Initializes an ORM instance for the `ProjectBot` table using `ormify`.
+2. Defines the following DAL functions:
+    - `findOne`: Finds a single project bot based on the provided filter.
+    - `findProjectByBotId`: Retrieves the project associated with a given bot ID.
+    - `findProjectUserWorkspaceKey`: Fetches the workspace key for a project user.
+
+### `findOne`
+#### Description
+This function attempts to find a single project bot record in the database that matches the provided filter. It joins the `ProjectBot` table with the `Users` and `UserEncryptionKey` tables to retrieve the sender's public key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | `Partial&lt;TProjectBots&gt;` | An object containing filter properties to query the `ProjectBot` table. |
+| tx | `Knex` | Optional. A Knex transaction object. If provided, the query will be executed within the transaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;TProjectBots | null&gt;` | Promise | A promise that resolves to the found project bot object or `null` if no match is found. |
+
+#### Internal Logic
+1. Executes a query on the `ProjectBot` table using the provided `filter`.
+2. Left joins the `Users` table on the `senderId` column.
+3. Left joins the `UserEncryptionKey` table on the `userId` column of the `Users` table.
+4. Selects all columns from the `ProjectBot` table and the `senderPubKey` (public key) from the `UserEncryptionKey` table.
+5. Fetches the first matching record.
+6. If a record is found, it extracts the `senderPubKey` and constructs a new object with the sender information.
+7. Returns the found project bot object or `null` if no match is found.
+8. If an error occurs during the database operation, it throws a `DatabaseError`.
+
+### `findProjectByBotId`
+#### Description
+This function attempts to find a project record associated with a given bot ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| botId | `string` | The ID of the bot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;TProjects | null&gt;` | Promise | A promise that resolves to the found project object or `null` if no match is found. |
+
+#### Internal Logic
+1. Executes a query on the `ProjectBot` table using the provided `botId`.
+2. Joins the `Project` table on the `projectId` column.
+3. Selects all columns from the `Project` table.
+4. Fetches the first matching record.
+5. Returns the found project object or `null` if no match is found.
+6. If an error occurs during the database operation, it throws a `DatabaseError`.
+
+### `findProjectUserWorkspaceKey`
+#### Description
+This function attempts to find and return the workspace key for a project user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `Promise&lt;any&gt;` | Promise | A promise that resolves to the found workspace key document or `null` if no match is found. |
+
+#### Internal Logic
+1. Executes a query on the `ProjectMembership` table using the provided `projectId`.
+2. Performs a series of joins with `Users`, `ProjectKeys`, and `UserEncryptionKey` tables to retrieve necessary information.
+3. Filters for non-ghost users and checks for non-null encryption key properties.
+4. Selects specific columns related to encryption keys and user ID.
+5. Fetches the first matching record.
+6. Returns the found workspace key document.
+7. If an error occurs during the database operation, it throws a `DatabaseError`.
+
+## Error Handling
+The DAL functions in this file utilize a try-catch block to handle potential database errors. If an error occurs during a database operation, a `DatabaseError` is thrown, providing context about the error.

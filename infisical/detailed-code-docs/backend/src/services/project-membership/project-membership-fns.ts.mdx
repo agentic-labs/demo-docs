@@ -1,0 +1,80 @@
+---
+title: "project-membership-fns.ts"
+---
+
+## High-level description
+The code defines a set of functions related to managing project memberships in a system where users can collaborate within projects. It handles adding members to non-end-to-end encrypted (E2EE) projects, including assigning workspace keys and optionally sending invitation emails.
+
+## Code Structure
+The `addMembersToProject` function is the main entry point, taking a collection of data access layer (DAL) factories and an SMTP service as dependencies. It returns an object containing the `addMembersToNonE2EEProject` function, which handles the logic for adding members to a project.
+
+## Symbols
+
+### `addMembersToProject`
+#### Description
+This function initializes and returns a set of functions related to project membership management. It takes various DAL factories and an SMTP service as dependencies, injecting them into the returned functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgDAL | `Pick&lt;TOrgDALFactory, "findMembership" \| "findOrgMembersByUsername"&gt;` | Provides access to organization-related data. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findProjectById" \| "findProjectGhostUser"&gt;` | Provides access to project-related data. |
+| projectMembershipDAL | `Pick&lt;TProjectMembershipDALFactory, "find" \| "transaction" \| "insertMany"&gt;` | Provides access to project membership data. |
+| projectKeyDAL | `Pick&lt;TProjectKeyDALFactory, "findLatestProjectKey" \| "insertMany"&gt;` | Provides access to project key data. |
+| projectBotDAL | `Pick&lt;TProjectBotDALFactory, "findOne"&gt;` | Provides access to project bot data. |
+| userGroupMembershipDAL | `Pick&lt;TUserGroupMembershipDALFactory, "findUserGroupMembershipsInProject"&gt;` | Provides access to user group membership data. |
+| projectUserMembershipRoleDAL | `Pick&lt;TProjectUserMembershipRoleDALFactory, "insertMany"&gt;` | Provides access to project user membership role data. |
+| smtpService | `Pick&lt;TSmtpService, "sendMail"&gt;` | Provides functionality to send emails. |
+
+#### Outputs
+Returns an object containing the `addMembersToNonE2EEProject` function.
+
+### `addMembersToNonE2EEProject`
+#### Description
+This function adds members to a non-E2EE project. It retrieves project and user information, checks for existing memberships, assigns workspace keys, creates project memberships, and optionally sends invitation emails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { emails, usernames, projectId, projectMembershipRole, sendEmails } | `AddMembersToNonE2EEProjectDTO` | An object containing details about the members to add, the project ID, the desired membership role, and whether to send invitation emails. |
+| options | `AddMembersToNonE2EEProjectOptions` | Optional parameters for the function, including a database transaction object and a flag indicating whether to throw an error if the project is not found. |
+
+#### Outputs
+Returns a Promise that resolves to an array of `TProjectMemberships` representing the newly created memberships.
+
+#### Internal Logic
+1. **Retrieve Project and User Information:** Fetches the project details using the provided `projectId`. Retrieves organization members based on the provided emails and usernames.
+2. **Check for Existing Memberships:** Ensures that none of the provided users are already members of the project.
+3. **Retrieve Ghost User and Key:** Fetches the project's ghost user and its latest encryption key.
+4. **Retrieve Project Bot:** Fetches the project's bot and its private key.
+5. **Assign Workspace Keys:** Generates and assigns workspace encryption keys for each new member using the ghost user's key and the bot's private key.
+6. **Create Project Memberships:** Creates project membership records for each new member, associating them with the project and their respective roles.
+7. **Insert Project Keys:** Inserts encrypted workspace keys for each new member into the database.
+8. **Send Invitation Emails (Optional):** If `sendEmails` is true, sends invitation emails to the new members' email addresses.
+9. **Return Created Memberships:** Returns an array of the newly created project membership objects.
+
+## Side Effects
+- Modifies the database by creating new project memberships, project keys, and project user membership roles.
+- Sends emails to the new members if the `sendEmails` option is enabled.
+
+## References
+- `TProjectMemberships` from "@app/db/schemas"
+- `SecretKeyEncoding` from "@app/db/schemas"
+- `BadRequestError` from "@app/lib/errors"
+- `groupBy` from "@app/lib/fn"
+- `infisicalSymmetricDecrypt` from "@app/lib/crypto/encryption"
+- `assignWorkspaceKeysToMembers` from "./project-fns"
+- `SmtpTemplates` from "../smtp/smtp-service"
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @app/db/schemas | Provides database schema definitions. |
+| @app/ee/services/group/user-group-membership-dal | Provides data access for user group memberships. |
+| @app/lib/config/env | Provides access to environment configuration. |
+| @app/lib/crypto/encryption | Provides encryption and decryption utilities. |
+| @app/lib/errors | Provides custom error classes. |
+| @app/lib/fn | Provides utility functions. |
+| ../smtp/smtp-service | Provides email sending functionality. |
+| ./project-fns | Provides project-related utility functions. |
+

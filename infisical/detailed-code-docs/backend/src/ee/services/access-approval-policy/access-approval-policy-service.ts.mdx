@@ -1,0 +1,125 @@
+---
+title: "access-approval-policy-service.ts"
+---
+
+## High-level description
+This code defines a service factory for managing access approval policies in a project-based system. It provides functionality for creating, updating, deleting, and retrieving access approval policies, as well as checking policy counts for specific environments.
+
+## Code Structure
+The main function `accessApprovalPolicyServiceFactory` takes dependencies as input and returns an object with methods for managing access approval policies. These methods interact with various data access layers (DALs) and utilize a permission service to enforce access control.
+
+## Symbols
+
+### `accessApprovalPolicyServiceFactory`
+#### Description
+This factory function creates and returns an object with methods for managing access approval policies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessApprovalPolicyDAL | TAccessApprovalPolicyDALFactory | Data access layer for access approval policies |
+| accessApprovalPolicyApproverDAL | TAccessApprovalPolicyApproverDALFactory | Data access layer for policy approvers |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for checking permissions |
+| projectEnvDAL | Pick&lt;TProjectEnvDALFactory, "find" \| "findOne"&gt; | Data access layer for project environments |
+| projectDAL | TProjectDALFactory | Data access layer for projects |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { createAccessApprovalPolicy, deleteAccessApprovalPolicy, updateAccessApprovalPolicy, getAccessApprovalPolicyByProjectSlug, getAccessPolicyCountByEnvSlug } | An object containing methods for managing access approval policies |
+
+#### Internal Logic
+The factory function creates and returns an object with the following methods:
+1. `createAccessApprovalPolicy`: Creates a new access approval policy
+2. `getAccessApprovalPolicyByProjectSlug`: Retrieves access approval policies for a project
+3. `updateAccessApprovalPolicy`: Updates an existing access approval policy
+4. `deleteAccessApprovalPolicy`: Deletes an access approval policy
+5. `getAccessPolicyCountByEnvSlug`: Retrieves the count of access policies for a specific environment
+
+Each method implements its own logic for permission checking, data validation, and interaction with the database through the provided DALs.
+
+### `createAccessApprovalPolicy`
+#### Description
+Creates a new access approval policy for a project environment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TCreateAccessApprovalPolicy | Object | Contains details for creating the policy, including name, actor information, secret path, approvals, approver user IDs, project slug, environment, and enforcement level |
+
+#### Internal Logic
+1. Finds the project using the provided slug
+2. Checks if the number of approvals is valid
+3. Verifies the actor's permission to create a secret approval policy
+4. Finds the specified environment
+5. Verifies the approvers
+6. Creates the policy and inserts approvers in a transaction
+
+### `getAccessApprovalPolicyByProjectSlug`
+#### Description
+Retrieves access approval policies for a given project slug.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TListAccessApprovalPoliciesDTO | Object | Contains actor information and project slug |
+
+#### Internal Logic
+1. Finds the project using the provided slug
+2. Verifies the actor's permission to access the project
+3. Retrieves and returns the access approval policies for the project
+
+### `updateAccessApprovalPolicy`
+#### Description
+Updates an existing access approval policy.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TUpdateAccessApprovalPolicy | Object | Contains policy ID, updated information, and actor details |
+
+#### Internal Logic
+1. Finds the existing policy
+2. Verifies the actor's permission to edit the policy
+3. Updates the policy details
+4. If approver user IDs are provided, verifies and updates the approvers
+
+### `deleteAccessApprovalPolicy`
+#### Description
+Deletes an access approval policy.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TDeleteAccessApprovalPolicy | Object | Contains policy ID and actor information |
+
+#### Internal Logic
+1. Finds the policy to be deleted
+2. Verifies the actor's permission to delete the policy
+3. Deletes the policy
+
+### `getAccessPolicyCountByEnvSlug`
+#### Description
+Retrieves the count of access policies for a specific environment in a project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TGetAccessPolicyCountByEnvironmentDTO | Object | Contains project slug, environment slug, and actor information |
+
+#### Internal Logic
+1. Finds the project and verifies the actor's membership
+2. Finds the specified environment
+3. Retrieves and counts the policies for the environment
+
+## Error Handling
+The code uses custom error classes like `BadRequestError` and `ForbiddenError` to handle and throw specific errors for various scenarios, such as invalid inputs or permission issues.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Used for permission checking (ForbiddenError) |
+| @app/lib/errors | Custom error classes |
+| @app/services/* | Various data access layers and service factories |
+
+This service relies heavily on other parts of the application, such as project, environment, and permission services, to perform its operations securely and consistently.

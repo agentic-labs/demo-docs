@@ -1,0 +1,100 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of an API key service for a backend application. It provides functionality for managing API keys, including creation, retrieval, deletion, and validation. The service is designed to work with a database and uses cryptographic functions to ensure secure handling of API keys.
+
+## What does it do?
+The API key service allows users to:
+1. Create new API keys with custom names and expiration times
+2. Retrieve a list of their existing API keys
+3. Delete specific API keys
+4. Validate API keys for authentication purposes
+
+The service generates secure API keys using cryptographic functions, stores them in a database, and provides methods for managing and validating these keys. This enables secure authentication for API access without requiring users to provide their main account credentials for every request.
+
+## Key Files
+
+### api-key-dal.ts
+This file defines a Data Access Layer (DAL) factory for API keys. It uses the `ormify` function from the Knex library to create a standardized interface for database operations related to API keys.
+
+Key features:
+- Exports `apiKeyDALFactory` function that creates an API key DAL
+- Uses `ormify` to generate common database operations (find, findOne, update, delete, create)
+- Works with the `ApiKey` table in the database
+
+### api-key-service.ts
+This file contains the main implementation of the API key service. It defines a factory function that creates an object with methods for managing API keys.
+
+Key features:
+- Exports `apiKeyServiceFactory` function that returns an object with API key management methods
+- Implements `getMyApiKeys`, `createApiKey`, `deleteApiKey`, and `fnValidateApiKey` methods
+- Uses cryptographic functions (from `node:crypto` and `bcrypt`) for secure API key generation and validation
+- Interacts with both API key and user data access layers
+
+## Dependencies
+The API key service relies on several external libraries and internal modules:
+
+1. Knex: Used for database operations and ORM-like functionality
+   - Purpose: Simplifies database interactions and provides a query builder
+
+2. bcrypt (version not specified)
+   - Purpose: Hashing and comparing API key secrets securely
+
+3. node:crypto (built-in Node.js module)
+   - Purpose: Generating random bytes for API key secrets
+
+4. Internal modules:
+   - `@app/db`: Provides database client types
+   - `@app/db/schemas`: Defines database schema types and table names
+   - `@app/lib/knex`: Provides the `ormify` function for creating DAL objects
+   - `@app/lib/config/env`: Provides configuration settings
+   - `@app/lib/errors`: Defines custom error types for the application
+
+## Configuration
+The service uses configuration settings from the `getConfig` function imported from `@app/lib/config/env`. While the specific configuration options are not detailed in the provided code, it's likely that this function provides necessary settings such as:
+
+- Database connection details
+- API key length or format specifications
+- Default expiration times for API keys
+
+## Code Examples
+
+1. Creating a new API key:
+
+```typescript
+const { apiKey, apiKeyData } = await createApiKey(userId, "My API Key", 3600);
+console.log(`New API key created: ${apiKey}`);
+```
+
+2. Validating an API key:
+
+```typescript
+try {
+  const user = await fnValidateApiKey("ak.someId.someSecret");
+  console.log(`API key is valid for user: ${user.id}`);
+} catch (error) {
+  console.error("Invalid or expired API key");
+}
+```
+
+3. Retrieving a user's API keys:
+
+```typescript
+const apiKeys = await getMyApiKeys(userId);
+console.log(`User has ${apiKeys.length} API keys`);
+```
+
+4. Deleting an API key:
+
+```typescript
+try {
+  const deletedKey = await deleteApiKey(userId, apiKeyId);
+  console.log(`Deleted API key: ${deletedKey.id}`);
+} catch (error) {
+  console.error("Failed to delete API key");
+}
+```
+
+These examples demonstrate the main functionalities provided by the API key service, showcasing how it can be used to manage API keys for users of the application.

@@ -1,0 +1,158 @@
+---
+title: "service-token-service.ts"
+---
+
+## High-level description
+This code defines a service factory for managing service tokens in a backend application. It provides functionality for creating, deleting, retrieving, and validating service tokens, which are likely used for authentication and authorization purposes within the system.
+
+## Code Structure
+The `serviceTokenServiceFactory` function creates and returns an object with methods for various service token operations. These methods interact with different data access layers (DALs) and services to perform their tasks, such as permission checks, database operations, and token validation.
+
+## Symbols
+
+### `serviceTokenServiceFactory`
+#### Description
+This function creates and returns an object containing methods for managing service tokens. It takes various dependencies as input and uses them to implement the service token operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serviceTokenDAL | TServiceTokenDALFactory | Data access layer for service tokens |
+| userDAL | TUserDALFactory | Data access layer for users |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission"&gt; | Service for handling permissions |
+| projectEnvDAL | Pick&lt;TProjectEnvDALFactory, "findBySlugs"&gt; | Data access layer for project environments |
+| projectDAL | Pick&lt;TProjectDALFactory, "findById"&gt; | Data access layer for projects |
+| accessTokenQueue | Pick&lt;TAccessTokenQueueServiceFactory, "updateServiceTokenStatus"&gt; | Service for updating access token status |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TServiceTokenServiceFactory | An object containing methods for managing service tokens |
+
+#### Internal Logic
+The factory function creates and returns an object with the following methods:
+1. `createServiceToken`: Creates a new service token
+2. `deleteServiceToken`: Deletes an existing service token
+3. `getServiceToken`: Retrieves information about a service token
+4. `getProjectServiceTokens`: Retrieves all service tokens for a project
+5. `fnValidateServiceToken`: Validates a given service token
+
+### `createServiceToken`
+#### Description
+Creates a new service token with the given parameters, performing necessary permission checks and data validations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TCreateServiceTokenDTO | Object | DTO containing service token creation parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { token: string, serviceToken: Object } | The created token string and service token object |
+
+#### Internal Logic
+1. Checks permissions for creating service tokens and secrets
+2. Validates environment slugs
+3. Generates a secret and hash
+4. Creates the service token in the database
+5. Returns the token string and service token object
+
+### `deleteServiceToken`
+#### Description
+Deletes a service token with the given ID after performing permission checks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TDeleteServiceTokenDTO | Object | DTO containing service token deletion parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | DeletedServiceToken | The deleted service token object |
+
+#### Internal Logic
+1. Finds the service token by ID
+2. Checks permissions for deleting service tokens
+3. Deletes the service token from the database
+4. Returns the deleted service token object
+
+### `getServiceToken`
+#### Description
+Retrieves information about a service token, including the associated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TGetServiceTokenInfoDTO | Object | DTO containing parameters for retrieving service token info |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { serviceToken: Object, user: Object } | The service token and associated user objects |
+
+#### Internal Logic
+1. Verifies that the actor is a service
+2. Retrieves the service token and associated user from the database
+3. Returns the service token and user objects
+
+### `getProjectServiceTokens`
+#### Description
+Retrieves all service tokens for a given project after performing permission checks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TProjectServiceTokensDTO | Object | DTO containing parameters for retrieving project service tokens |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Array | ServiceToken[] | An array of service token objects for the project |
+
+#### Internal Logic
+1. Checks permissions for reading service tokens
+2. Retrieves all service tokens for the project from the database
+3. Returns the array of service tokens
+
+### `fnValidateServiceToken`
+#### Description
+Validates a given service token string, checking its existence, expiration, and secret.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The service token string to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | ValidatedServiceToken | The validated service token object with additional information |
+
+#### Internal Logic
+1. Parses the token string to extract the identifier and secret
+2. Retrieves the service token from the database
+3. Checks if the token has expired
+4. Validates the token secret using bcrypt
+5. Updates the token's last used status
+6. Returns the validated service token object with additional information
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto | For generating random bytes |
+| @casl/ability | For handling permissions |
+| bcrypt | For hashing and comparing secrets |
+| @app/lib/config/env | For accessing application configuration |
+| @app/lib/errors | For custom error types |
+
+## Error Handling
+The code uses custom error types such as `BadRequestError` and `UnauthorizedError` for specific error scenarios. It also uses `ForbiddenError` from the `@casl/ability` library for permission-related errors.
+
+## Performance Considerations
+The code uses bcrypt for hashing and comparing secrets, which is intentionally slow for security reasons. This might impact performance for high-volume token validation operations.
+
+---
+
+This service token management system provides a comprehensive set of operations for creating, deleting, retrieving, and validating service tokens, with proper permission checks and error handling throughout the implementation.

@@ -1,0 +1,62 @@
+---
+title: "project-membership-router.ts"
+---
+
+## High-level description
+This code defines two API routes for managing project memberships: one for inviting members to a project and another for removing members from a project. Both routes handle authentication and authorization, process requests, interact with the project membership service, and log the actions performed.
+
+## Code Structure
+The code registers two routes on a Fastify server instance using `server.route()`. Each route definition includes HTTP method, URL, schema, authentication middleware (`verifyAuth`), and a request handler. The handlers interact with the `projectMembership` and `auditLog` services to modify memberships and record the actions.
+
+## References
+- `ProjectMembershipsSchema`: Defines the schema for project memberships.
+- `EventType`: An enum defining various audit log event types.
+- `PROJECT_USERS`: Contains descriptions for API documentation.
+- `writeLimit`: Rate limit configuration for write operations.
+- `verifyAuth`: Authentication middleware.
+- `AuthMode`: An enum defining authentication modes.
+
+## Symbols
+### `registerProjectMembershipRouter`
+#### Description
+This function registers two routes on a Fastify server instance to handle project membership management.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of a Fastify server with Zod type provider. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+1. **Inviting members to a project:**
+    - Defines a POST route at `/projectId/memberships`.
+    - Uses Zod schemas to validate request parameters and body.
+    - Requires authentication using JWT, API key, or identity access token.
+    - Calls `server.services.projectMembership.addUsersToProjectNonE2EE` to add users to the project.
+    - Logs the action using `server.services.auditLog.createAuditLog` with `EventType.ADD_BATCH_WORKSPACE_MEMBER`.
+    - Returns the updated memberships in the response.
+2. **Removing members from a project:**
+    - Defines a DELETE route at `/projectId/memberships`.
+    - Uses Zod schemas to validate request parameters and body.
+    - Requires authentication using JWT, API key, or identity access token.
+    - Calls `server.services.projectMembership.deleteProjectMemberships` to remove users from the project.
+    - For each removed membership, logs the action using `server.services.auditLog.createAuditLog` with `EventType.REMOVE_WORKSPACE_MEMBER`.
+    - Returns the removed memberships in the response.
+
+## Side Effects
+- Modifies the project memberships in the database.
+- Creates audit logs for each membership addition or removal.
+
+## Dependencies
+- `fastify`: For creating the server and defining routes.
+- `zod`: For request validation and schema definition.
+- `@app/db/schemas`: For accessing the `ProjectMembershipsSchema`.
+- `@app/ee/services/audit-log/audit-log-types`: For accessing the `EventType` enum.
+- `@app/lib/api-docs`: For accessing API documentation descriptions.
+- `@app/server/config/rateLimiter`: For rate limiting configuration.
+- `@app/server/plugins/auth/verify-auth`: For authentication middleware.
+- `@app/services/auth/auth-type`: For accessing the `AuthMode` enum.
+- `server.services.projectMembership`: For interacting with the project membership service.
+- `server.services.auditLog`: For creating audit logs.

@@ -1,0 +1,102 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of SCIM (System for Cross-domain Identity Management) services for the backend of an application. It provides functionality for managing SCIM tokens, users, and groups, as well as handling SCIM-related operations such as filtering and data transformation.
+
+## What does it do?
+The SCIM services in this directory enable the application to:
+
+1. Create, list, and delete SCIM tokens for authentication and authorization.
+2. Manage SCIM users, including creating, listing, updating, and deleting user accounts.
+3. Handle SCIM groups, allowing creation, listing, updating, and deletion of group entities.
+4. Parse and process SCIM filters for querying users and groups.
+5. Transform application-specific user and group data into SCIM-compliant formats.
+6. Validate SCIM tokens and enforce access controls.
+
+These services allow the application to integrate with external identity management systems that support the SCIM protocol, facilitating user provisioning and synchronization across different platforms.
+
+## Key Files
+
+1. `scim-dal.ts`: Defines a Data Access Layer (DAL) factory for SCIM tokens, providing an ORM interface for interacting with the SCIM token table in the database.
+
+2. `scim-fns.ts`: Contains utility functions for handling SCIM operations, such as building SCIM user and group lists, parsing SCIM filters, and constructing SCIM user and group objects.
+
+3. `scim-service.ts`: Implements the core SCIM service, providing methods for creating, reading, updating, and deleting SCIM users and groups, as well as managing SCIM tokens.
+
+4. `scim-types.ts`: Defines TypeScript types and interfaces for SCIM operations, including structures for SCIM tokens, users, groups, and various request/response objects.
+
+## Dependencies
+The SCIM services rely on several external dependencies and internal modules:
+
+1. Database client (`TDbClient`) from `@app/db`
+2. Custom ORM layer (`ormify`) from `@app/lib/knex`
+3. Various data access layers (DALs) for users, organizations, projects, and groups
+4. License and permission services
+5. SMTP service for sending email invitations
+6. Configuration module for retrieving application settings
+
+## Configuration
+The SCIM services use configuration settings provided by the `getConfig()` function, which includes:
+
+- `AUTH_SECRET`: Used for JWT signing when creating SCIM tokens
+
+## Code Snippets
+
+Here's an example of how the SCIM service creates a new user:
+
+```typescript
+async function createScimUser({ orgId, scimUser }: TCreateScimUserDTO): Promise&lt;TScimUser&gt; {
+  await verifyScimEnabled(orgId);
+
+  const existingUser = await findExistingUser(orgId, scimUser);
+  if (existingUser) {
+    return updateExistingUser(orgId, existingUser, scimUser);
+  }
+
+  const newUser = await createNewUser(orgId, scimUser);
+  await createOrUpdateOrgMembership(orgId, newUser.id, scimUser);
+  await sendEmailInvitation(orgId, newUser);
+
+  return buildScimUser(/* ... */);
+}
+```
+
+This function demonstrates the process of creating a SCIM user, including checking for existing users, creating or updating user records, managing organization memberships, and sending email invitations.
+
+The SCIM services make extensive use of TypeScript to ensure type safety and provide clear interfaces for SCIM-related operations. For example, the `TScimUser` type defines the structure of a SCIM user object:
+
+```typescript
+interface TScimUser {
+  schemas: string[];
+  id: string;
+  userName: string;
+  displayName: string;
+  name: {
+    givenName: string;
+    middleName?: string;
+    familyName: string;
+  };
+  emails: Array&lt;{
+    value: string;
+    type: string;
+    primary: boolean;
+  }&gt;;
+  active: boolean;
+  groups: Array&lt;{
+    value: string;
+    $ref: string;
+    display: string;
+  }&gt;;
+  meta: {
+    resourceType: string;
+    created: string;
+    lastModified: string;
+  };
+}
+```
+
+This type ensures that SCIM user objects conform to the expected structure throughout the application.
+
+In conclusion, the SCIM services directory provides a comprehensive implementation of SCIM functionality, enabling the application to integrate with external identity management systems and maintain consistent user and group data across platforms.

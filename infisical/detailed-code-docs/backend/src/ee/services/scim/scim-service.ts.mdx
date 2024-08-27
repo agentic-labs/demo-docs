@@ -1,0 +1,156 @@
+---
+title: "scim-service.ts"
+---
+
+## High-level description
+This file defines the SCIM (System for Cross-domain Identity Management) service for managing users and groups in an organization. It provides functionality for creating, reading, updating, and deleting SCIM users and groups, as well as handling SCIM tokens for authentication.
+
+## Code Structure
+The `scimServiceFactory` function creates and returns an object with methods for SCIM operations. It depends on various data access layers (DALs) and services, which are injected as dependencies. The service methods interact with these dependencies to perform SCIM-related operations.
+
+## Symbols
+
+### scimServiceFactory
+#### Description
+A factory function that creates and returns the SCIM service object with various methods for SCIM operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dependencies | TScimServiceFactoryDep | An object containing various DALs and services required for SCIM operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scimService | Object | An object containing methods for SCIM operations |
+
+#### Internal Logic
+1. Initializes various SCIM-related methods using the provided dependencies.
+2. Implements methods for creating, listing, and deleting SCIM tokens.
+3. Implements methods for listing, creating, updating, and deleting SCIM users.
+4. Implements methods for listing, creating, updating, and deleting SCIM groups.
+5. Implements a method for validating SCIM tokens.
+
+### createScimToken
+#### Description
+Creates a new SCIM token for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| createScimTokenDTO | TCreateScimTokenDTO | DTO containing information for creating a SCIM token |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scimToken | string | The created SCIM token |
+
+#### Internal Logic
+1. Checks user permissions for creating SCIM tokens.
+2. Verifies if the organization's plan allows SCIM token creation.
+3. Creates a new SCIM token in the database.
+4. Signs the token using JWT.
+
+### listScimUsers
+#### Description
+Lists SCIM users for an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| listScimUsersDTO | TListScimUsersDTO | DTO containing parameters for listing SCIM users |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scimUsers | TListScimUsers | Object containing the list of SCIM users and metadata |
+
+#### Internal Logic
+1. Verifies if SCIM is enabled for the organization.
+2. Retrieves users from the database based on the provided filters.
+3. Transforms the users into SCIM user objects.
+4. Returns the list of SCIM users with metadata.
+
+### createScimUser
+#### Description
+Creates a new SCIM user in an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| createScimUserDTO | TCreateScimUserDTO | DTO containing information for creating a SCIM user |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scimUser | TScimUser | The created SCIM user object |
+
+#### Internal Logic
+1. Verifies if SCIM is enabled for the organization.
+2. Checks if the user already exists (by email or external ID).
+3. Creates a new user or updates an existing one in the database.
+4. Creates or updates the user's organization membership.
+5. Sends an email invitation if applicable.
+6. Returns the created SCIM user object.
+
+### updateScimGroupNamePatch
+#### Description
+Updates a SCIM group's name or membership using PATCH operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updateScimGroupNamePatchDTO | TUpdateScimGroupNamePatchDTO | DTO containing patch operations for updating a SCIM group |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scimGroup | TScimGroup | The updated SCIM group object |
+
+#### Internal Logic
+1. Verifies if SCIM is enabled for the organization.
+2. Processes each patch operation (replace, add, or remove) to update the group's name or membership.
+3. Updates the group in the database.
+4. Returns the updated SCIM group object.
+
+### fnValidateScimToken
+#### Description
+Validates a SCIM token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | TScimTokenJwtPayload | The SCIM token payload to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| validationResult | Object | Object containing the validated SCIM token ID and organization ID |
+
+#### Internal Logic
+1. Retrieves the SCIM token from the database.
+2. Checks if the token has expired based on its TTL.
+3. Returns the token ID and organization ID if valid.
+
+## Dependencies
+The service depends on various DALs and services, including:
+- License service
+- Permission service
+- User DAL
+- Organization DAL
+- Project DAL
+- Group DAL
+- SMTP service
+- and others
+
+## Error Handling
+The service uses custom error classes like `BadRequestError`, `ScimRequestError`, and `UnauthorizedError` to handle and throw specific errors related to SCIM operations.
+
+## Logging
+The service does not implement direct logging. Logging is likely handled at a higher level in the application.
+
+## Configuration
+The service relies on configuration provided by the `getConfig()` function, which includes settings like `AUTH_SECRET` for JWT signing.
+
+## TODOs
+- There is a TODO comment suggesting to change the `updateScimGroupNamePatch` method to support normalized data instead of the current implementation.

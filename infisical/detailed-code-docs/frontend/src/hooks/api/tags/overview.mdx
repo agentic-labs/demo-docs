@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains custom React hooks and TypeScript types for managing workspace tags in a frontend application. The hooks provide functionality for fetching, creating, and deleting workspace tags using API requests and React Query for efficient state management.
+
+## What does it do?
+The code in this directory enables the application to:
+1. Fetch workspace tags for a specific workspace
+2. Create new workspace tags with custom colors and slugs
+3. Delete existing workspace tags
+4. Manage the state of these operations using React Query, which provides caching, automatic refetching, and optimistic updates
+
+These operations allow users to organize and categorize items within their workspace efficiently. The hooks abstract away the complexity of API calls and state management, providing a simple interface for components to interact with workspace tags.
+
+## Key Files
+1. `index.tsx`: This file serves as the entry point for the hooks, re-exporting the hooks defined in `queries.tsx`. This structure allows for easier imports and better organization of the codebase.
+
+2. `queries.tsx`: This file contains the main implementation of the custom hooks:
+   - `useGetWsTags`: Fetches workspace tags for a given workspace ID
+   - `useCreateWsTag`: Creates a new workspace tag
+   - `useDeleteWsTag`: Deletes an existing workspace tag
+
+3. `types.ts`: This file defines TypeScript types and interfaces used throughout the tag management system, including:
+   - `UserWsTags`: Represents a collection of user workspace tags
+   - `WsTag`: Defines the structure of a workspace tag
+   - `CreateTagDTO`: Data transfer object for creating a new tag
+   - `DeleteTagDTO`: Data transfer object for deleting a tag
+
+## Dependencies
+The code relies on the following main dependencies:
+1. `@tanstack/react-query` (version not specified): Used for managing server state, providing hooks for data fetching and mutations. It offers features like caching, automatic refetching, and optimistic updates.
+
+2. `@app/config/request`: A custom module that provides the `apiRequest` object for making API calls. This abstraction likely handles authentication and other common request configurations.
+
+These dependencies were chosen to provide a robust and efficient way of managing server state and API interactions in a React application.
+
+## Configuration
+The code doesn't explicitly use configuration files or environment variables. However, it does rely on API endpoints for tag operations:
+
+1. GET `/api/v1/workspace/:workspaceID/tags`: Fetch workspace tags
+2. POST `/api/v1/workspace/:workspaceID/tags`: Create a new workspace tag
+3. DELETE `/api/v1/workspace/:projectId/tags/:tagID`: Delete a workspace tag
+
+These endpoints suggest that the API is versioned (v1) and follows RESTful conventions.
+
+## Code Snippets and Examples
+
+Here's an example of how the `useGetWsTags` hook is implemented:
+
+```typescript
+export const useGetWsTags = (workspaceID: string) =&gt; {
+  return useQuery({
+    queryKey: workspaceTags.getWsTags(workspaceID),
+    queryFn: () =&gt; fetchWsTag(workspaceID),
+    enabled: !!workspaceID
+  });
+};
+```
+
+This hook uses React Query's `useQuery` to fetch workspace tags. It's only enabled when a valid `workspaceID` is provided.
+
+The `useCreateWsTag` hook demonstrates how mutations are handled:
+
+```typescript
+export const useCreateWsTag = () =&gt; {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ workspaceID, tagColor, tagSlug }: CreateTagDTO) =&gt;
+      apiRequest.post(`/api/v1/workspace/${workspaceID}/tags`, {
+        color: tagColor,
+        slug: tagSlug
+      }),
+    onSuccess: (_, { workspaceID }) =&gt; {
+      queryClient.invalidateQueries(workspaceTags.getWsTags(workspaceID));
+    }
+  });
+};
+```
+
+This hook uses React Query's `useMutation` to create a new tag. On success, it invalidates the query for workspace tags, triggering a refetch to ensure the UI displays the most up-to-date data.
+
+The TypeScript types in `types.ts` provide strong typing for the tag-related data structures:
+
+```typescript
+export interface WsTag {
+  id: string;
+  slug: string;
+  color?: string;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export type UserWsTags = WsTag[];
+
+export type CreateTagDTO = {
+  workspaceID: string;
+  tagSlug: string;
+  tagColor: string;
+};
+```
+
+These types ensure type safety when working with tag data throughout the application.
+
+In summary, this directory provides a well-structured and type-safe approach to managing workspace tags in a React application, leveraging React Query for efficient state management and API interactions.

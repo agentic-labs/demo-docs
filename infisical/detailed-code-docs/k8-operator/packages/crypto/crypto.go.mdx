@@ -1,0 +1,89 @@
+---
+title: "crypto.go"
+---
+
+## High-level description
+This Go package, named "crypto", provides cryptographic functions for symmetric and asymmetric decryption, as well as a function to compute an ETag (Entity Tag) for data. It utilizes the AES-GCM algorithm for symmetric decryption and the NaCl box for asymmetric decryption.
+
+## Symbols
+
+### `DecryptSymmetric`
+#### Description
+This function performs symmetric decryption using the AES-GCM (Galois/Counter Mode) algorithm.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | []byte | The symmetric key used for decryption |
+| encryptedPrivateKey | []byte | The encrypted data to be decrypted |
+| tag | []byte | The authentication tag |
+| IV | []byte | The initialization vector |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []byte | []byte | The decrypted plaintext |
+| error | error | An error if decryption fails |
+
+#### Internal Logic
+1. Creates a new AES cipher block using the provided key.
+2. Initializes a new GCM (Galois/Counter Mode) instance with the cipher block and IV length.
+3. Combines the encrypted private key and tag into a single ciphertext.
+4. Decrypts the ciphertext using the GCM instance, IV (as nonce), and ciphertext.
+5. Returns the decrypted plaintext or an error if any step fails.
+
+### `DecryptAsymmetric`
+#### Description
+This function performs asymmetric decryption using the NaCl box algorithm.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | []byte | The encrypted data to be decrypted |
+| nonce | []byte | The nonce used for encryption |
+| publicKey | []byte | The public key of the sender |
+| privateKey | []byte | The private key of the recipient |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plainText | []byte | The decrypted plaintext |
+
+#### Internal Logic
+1. Uses the `box.Open` function from the `golang.org/x/crypto/nacl/box` package to decrypt the ciphertext.
+2. Converts the byte slices to fixed-size arrays as required by the `box.Open` function.
+3. Returns the decrypted plaintext, ignoring any potential error.
+
+### `ComputeEtag`
+#### Description
+This function computes an ETag (Entity Tag) for the given data using CRC32 checksum.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | []byte | The data for which to compute the ETag |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The computed ETag as a string |
+
+#### Internal Logic
+1. Calculates the CRC32 checksum of the input data using the IEEE polynomial.
+2. Formats the ETag string using the data length and the computed CRC32 checksum.
+3. Returns the formatted ETag string.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto/aes | Provides AES encryption functionality |
+| crypto/cipher | Provides block cipher modes of operation |
+| fmt | Used for string formatting |
+| hash/crc32 | Provides CRC32 checksum calculation |
+| golang.org/x/crypto/nacl/box | Provides NaCl box encryption functionality |
+
+## Error Handling
+The `DecryptSymmetric` function returns errors for failed cipher creation or decryption operations. The `DecryptAsymmetric` function ignores potential errors from the `box.Open` function, which could lead to silent failures in case of decryption errors.
+
+## Performance Considerations
+The `ComputeEtag` function uses CRC32, which is computationally efficient but may not be suitable for cryptographic purposes due to its lack of collision resistance.

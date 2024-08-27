@@ -1,0 +1,72 @@
+---
+title: "20240312162556_temp-role-identity.ts"
+---
+
+## High-level description
+This migration script creates a new table `IdentityProjectMembershipRole` to store temporary role assignments for project members. It also migrates existing role data from `IdentityProjectMembership` and sets up an update trigger for the new table.
+
+## Code Structure
+The code defines two asynchronous functions, `up` and `down`, which represent the migration actions to be performed. The `up` function creates the `IdentityProjectMembershipRole` table and migrates data from `IdentityProjectMembership`. The `down` function reverts these changes by dropping the table and its trigger.
+
+## References
+- `TableName`: An enum or object defining table names used in the database schema.
+- `createOnUpdateTrigger`: A utility function to create an update trigger on a table.
+- `dropOnUpdateTrigger`: A utility function to drop an update trigger from a table.
+
+## Symbols
+
+### `up`
+#### Description
+This function creates the `IdentityProjectMembershipRole` table if it doesn't exist and migrates data from the `IdentityProjectMembership` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex query builder. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. **Check for table existence:** It first checks if the `IdentityProjectMembershipRole` table already exists.
+2. **Create table:** If the table doesn't exist, it creates the `IdentityProjectMembershipRole` table with the following columns:
+    - `id`: UUID primary key, automatically generated.
+    - `role`: String, not nullable, representing the role name.
+    - `projectMembershipId`: UUID, not nullable, foreign key referencing `IdentityProjectMembership`.
+    - `customRoleId`: UUID, foreign key referencing `ProjectRoles`.
+    - `isTemporary`: Boolean, not nullable, defaulting to false, indicating if the role is temporary.
+    - `temporaryMode`: String, representing the mode of temporary access.
+    - `temporaryRange`: String, representing the duration of temporary access.
+    - `temporaryAccessStartTime`: Datetime, representing the start time of temporary access.
+    - `temporaryAccessEndTime`: Datetime, representing the end time of temporary access.
+    - `createdAt`, `updatedAt`: Timestamps for tracking creation and updates.
+3. **Create trigger:** It creates an update trigger on the `IdentityProjectMembershipRole` table using the `createOnUpdateTrigger` utility function.
+4. **Migrate data:** It retrieves data from the `IdentityProjectMembership` table, including `id`, `role`, `createdAt`, `updatedAt`, and `roleId` (renamed to `customRoleId`).
+5. **Insert data:** It inserts the retrieved data into the `IdentityProjectMembershipRole` table, mapping `id` from `IdentityProjectMembership` to `projectMembershipId`.
+6. **(Commented out):** There is commented-out code that suggests dropping the `roleId` and `role` columns from the `IdentityProjectMembership` table. This might be a planned future change.
+
+### `down`
+#### Description
+This function reverts the changes made by the `up` function. It drops the `IdentityProjectMembershipRole` table and its associated update trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex query builder. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. **Drop table:** It attempts to drop the `IdentityProjectMembershipRole` table if it exists.
+2. **Drop trigger:** It drops the update trigger associated with the `IdentityProjectMembershipRole` table using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+- `knex`: A SQL query builder for Node.js.
+
+## TODOs
+- The code includes commented-out lines related to dropping columns from the `IdentityProjectMembership` table. This might need to be revisited and potentially implemented in a future migration.

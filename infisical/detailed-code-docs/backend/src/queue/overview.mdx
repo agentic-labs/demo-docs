@@ -1,0 +1,68 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a queue service for asynchronous task processing in the application. It utilizes the BullMQ library to manage queues and workers, with Redis as the underlying storage mechanism. The code is organized into two main files: an index file that exports the necessary types and functions, and a queue service file that contains the core implementation.
+
+## What does it do?
+The queue service allows the application to handle tasks asynchronously, which is particularly useful for time-consuming operations or tasks that need to be processed in the background. Here's a simplified explanation of how it works:
+
+1. The application can create different queues for various types of tasks (e.g., email sending, data processing).
+2. When a task needs to be performed, the application adds it to the appropriate queue.
+3. Worker processes continuously monitor these queues and pick up tasks as they become available.
+4. The workers execute the tasks and handle any associated logic.
+5. The queue service provides methods to manage these queues and workers, such as starting them, adding jobs, stopping repeatable jobs, and clearing queues.
+
+This setup allows the main application to offload time-consuming tasks, improving responsiveness and scalability.
+
+## Key Files
+
+### index.ts
+This file serves as the main entry point for the queue service. It exports the necessary types, enums, and the queue service factory function. The exports include:
+
+- `QueueName`: An enum defining the names of different queues.
+- `QueueJobs`: An enum defining the types of jobs that can be added to queues.
+- `TQueueJobTypes`: A type alias defining the payload structure for each queue job.
+- `queueServiceFactory`: The main factory function for creating a queue service instance.
+
+### queue-service.ts
+This file contains the core implementation of the queue service. It defines the `queueServiceFactory` function, which creates and returns an object with methods for managing queues and workers. Key features include:
+
+- Initialization of Redis connection
+- Creation and management of queues and workers
+- Methods for starting queues, listening to worker events, adding jobs to queues
+- Functions for stopping repeatable jobs, clearing queues, and shutting down workers
+
+## Dependencies
+The queue service relies on two main external libraries:
+
+1. **bullmq** (version not specified): This library provides the core functionality for creating and managing queues and workers. It's built on top of Redis and offers a robust, scalable solution for job queuing in Node.js applications.
+
+2. **ioredis** (version not specified): This is a high-performance Redis client for Node.js. It's used to establish and manage the connection to the Redis server.
+
+These dependencies were likely chosen for their reliability, performance, and feature set that aligns well with the needs of a robust queue system.
+
+## Configuration
+The queue service is configured primarily through the `queueServiceFactory` function, which takes a `redisUrl` as its parameter. This URL is used to establish the connection to the Redis server. The function returns an object with various methods that can be used to configure and manage the queues and workers.
+
+Key configurable aspects include:
+
+- Queue names (defined in the `QueueName` enum)
+- Job types (defined in the `QueueJobs` enum)
+- Queue and worker settings (can be passed when starting a queue)
+
+Example of starting a queue with custom settings:
+
+```typescript
+const queueService = queueServiceFactory(redisUrl);
+queueService.start(QueueName.EMAIL, emailJobProcessor, {
+  concurrency: 5,
+  removeOnComplete: { count: 1000 },
+  removeOnFail: { count: 5000 }
+});
+```
+
+In this example, the EMAIL queue is started with a concurrency of 5, and settings for removing completed and failed jobs.
+
+The queue service provides a flexible and powerful way to handle asynchronous tasks in the application, with the ability to fine-tune its behavior through various configuration options and methods.

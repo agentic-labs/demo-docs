@@ -1,0 +1,202 @@
+---
+title: "sql-database.ts"
+---
+
+## High-level description
+This code implements a dynamic secret provider for SQL databases. It provides functionality to create, revoke, and renew database credentials dynamically, supporting various SQL providers. The module includes methods for validating connections, generating secure usernames and passwords, and executing SQL statements for credential management.
+
+## Code Structure
+The main function `SqlDatabaseProvider` returns an object with methods for managing dynamic secrets. These methods interact with the database using the Knex.js library and utilize Handlebars for templating SQL statements. The code also includes utility functions for generating usernames and passwords.
+
+## Symbols
+
+### `generatePassword`
+#### Description
+Generates a secure password for database users.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | SqlProviders | The SQL provider type |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | string | Generated password |
+
+#### Internal Logic
+- Determines password length based on the provider (30 for Oracle, 48 for others)
+- Uses a custom alphabet for password generation
+- Utilizes `customAlphabet` from nanoid for secure random string generation
+
+### `generateUsername`
+#### Description
+Generates a username for database users.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | SqlProviders | The SQL provider type |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| username | string | Generated username |
+
+#### Internal Logic
+- For Oracle, generates an uppercase alphanumeric string
+- For other providers, generates a standard alphanumeric string
+- Uses `alphaNumericNanoId` for secure random string generation
+
+### `SqlDatabaseProvider`
+#### Description
+Main function that returns an object with methods for managing dynamic SQL database secrets.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | TDynamicProviderFns | Object containing provider functions |
+
+#### Internal Logic
+Returns an object with the following methods:
+- `validateProviderInputs`
+- `validateConnection`
+- `create`
+- `revoke`
+- `renew`
+
+### `validateProviderInputs`
+#### Description
+Validates and sanitizes the provider inputs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | Raw provider inputs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| providerInputs | z.infer&lt;typeof DynamicSecretSqlDBSchema&gt; | Validated provider inputs |
+
+#### Internal Logic
+- Parses inputs using `DynamicSecretSqlDBSchema`
+- Checks for invalid database hosts (localhost, internal IPs, etc.)
+- Throws `BadRequestError` for invalid inputs
+
+### `getClient`
+#### Description
+Creates a Knex database client based on the provider inputs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| providerInputs | z.infer&lt;typeof DynamicSecretSqlDBSchema&gt; | Validated provider inputs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | Knex | Knex database client |
+
+#### Internal Logic
+- Configures SSL if CA is provided
+- Sets up connection pool and timeout
+- Returns a configured Knex client
+
+### `validateConnection`
+#### Description
+Validates the database connection using the provided inputs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | Raw provider inputs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isConnected | boolean | Whether the connection is valid |
+
+#### Internal Logic
+- Validates inputs and gets a database client
+- Executes a test SQL statement
+- Returns true if the connection is successful
+
+### `create`
+#### Description
+Creates a new database user with dynamic credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | Raw provider inputs |
+| expireAt | number | Expiration timestamp |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { entityId: string, data: { DB_USERNAME: string, DB_PASSWORD: string } } | Created user details |
+
+#### Internal Logic
+- Generates username and password
+- Compiles and executes creation SQL statements using Handlebars
+- Returns the created user's credentials
+
+### `revoke`
+#### Description
+Revokes access for a previously created database user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | Raw provider inputs |
+| entityId | string | User identifier to revoke |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { entityId: string } | Revoked user details |
+
+#### Internal Logic
+- Compiles and executes revocation SQL statements using Handlebars
+- Returns the revoked user's identifier
+
+### `renew`
+#### Description
+Renews access for an existing database user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| inputs | unknown | Raw provider inputs |
+| entityId | string | User identifier to renew |
+| expireAt | number | New expiration timestamp |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { entityId: string } | Renewed user details |
+
+#### Internal Logic
+- Compiles and executes renewal SQL statements using Handlebars (if provided)
+- Returns the renewed user's identifier
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| handlebars | Templating SQL statements |
+| knex | Database query builder and connection management |
+| nanoid | Generating secure random strings |
+| zod | Input validation and parsing |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| EXTERNAL_REQUEST_TIMEOUT | number | 10000 | Timeout for external database requests (in milliseconds) |
+
+## Error Handling
+The code uses `BadRequestError` for invalid inputs and relies on Knex.js for database-related error handling.
+
+## Performance Considerations
+- The code uses connection pooling with a minimum of 0 and maximum of 1 connection to optimize resource usage.
+- Transactions are used for executing multiple SQL statements to ensure atomicity.

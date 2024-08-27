@@ -1,0 +1,129 @@
+---
+title: "access-token-queue.ts"
+---
+
+## High-level description
+This code defines a service responsible for managing the update of access token usage information (last used timestamp and number of uses) for both identity and service tokens. It leverages a queue to handle updates asynchronously and a key-value store for caching.
+
+## Code Structure
+The `accessTokenQueueServiceFactory` is the main symbol, responsible for creating the service. It depends on several other symbols: `queueService` for queue management, `keyStore` for caching, `identityAccessTokenDAL` for updating identity access tokens, and `serviceTokenDAL` for updating service tokens. The service listens for queue events to process updates and uses helper functions to interact with the cache and data access layers.
+
+## References
+- `@app/keystore/keystore`: Provides utilities for interacting with the key-value store.
+- `@app/lib/dates`: Offers date and time manipulation functions.
+- `@app/lib/logger`: Provides logging functionality.
+- `@app/queue`: Offers queue management utilities.
+- `../identity-access-token/identity-access-token-dal`: Provides data access for identity access tokens.
+- `../service-token/service-token-dal`: Provides data access for service tokens.
+
+## Symbols
+
+### `accessTokenQueueServiceFactory`
+#### Description
+This factory function creates and returns an object containing functions for managing access token status updates. It initializes a queue listener to process update jobs and provides methods for queuing updates for both identity and service tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| queueService | `TQueueServiceFactory` | A factory for creating queue service instances. |
+| keyStore | `Pick&lt;TKeyStoreFactory, "getItem" | "setItemWithExpiry"&gt;` | An object providing methods for interacting with the key-value store. |
+| identityAccessTokenDAL | `Pick&lt;TIdentityAccessTokenDALFactory, "updateById"&gt;` | An object providing methods for updating identity access tokens. |
+| serviceTokenDAL | `Pick&lt;TServiceTokenDALFactory, "updateById"&gt;` | An object providing methods for updating service tokens. |
+
+#### Outputs
+An object containing the following functions:
+- `updateIdentityAccessTokenStatus`: Queues an update for an identity access token's status.
+- `updateServiceTokenStatus`: Queues an update for a service token's status.
+- `getIdentityTokenDetailsInCache`: Retrieves cached details for an identity access token.
+
+#### Internal Logic
+1. **Queue Listener Initialization:**
+   - Starts listening to the `AccessTokenStatusUpdate` queue.
+   - For each job in the queue:
+     - Determines the token type (identity or service) based on the job name.
+     - Retrieves relevant data from the job payload.
+     - Fetches cached token details (if any).
+     - Updates the token's status in the database using the appropriate DAL.
+2. **`updateIdentityAccessTokenStatus` Function:**
+   - Caches the updated token details in the key-value store.
+   - Queues an `IdentityAccessTokenStatusUpdate` job with the token ID and number of uses.
+3. **`updateServiceTokenStatus` Function:**
+   - Caches the update timestamp in the key-value store.
+   - Queues a `ServiceTokenStatusUpdate` job with the token ID.
+4. **`getIdentityTokenDetailsInCache` Function:**
+   - Attempts to retrieve cached token details from the key-value store.
+   - If found, parses and returns the cached data.
+
+### `getIdentityTokenDetailsInCache`
+#### Description
+This function retrieves cached details for an identity access token from the key-value store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAccessTokenId | `string` | The ID of the identity access token. |
+
+#### Outputs
+A `Promise` that resolves to the cached token details (if found), or `undefined` if not found.
+
+#### Internal Logic
+1. Constructs the cache key using `KeyStorePrefixes.IdentityAccessTokenStatusUpdate` and the token ID.
+2. Attempts to retrieve the value associated with the key from the key-value store.
+3. If a value is found:
+   - Parses the value as JSON.
+   - Validates the parsed data against the `AccessTokenStatusSchema`.
+   - Returns the validated data.
+4. If no value is found, returns `undefined`.
+
+### `updateServiceTokenStatus`
+#### Description
+This function updates the status of a service token by queuing a job to update the last used timestamp.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serviceTokenId | `string` | The ID of the service token. |
+
+#### Outputs
+A `Promise` that resolves when the update job has been queued.
+
+#### Internal Logic
+1. Stores the current timestamp in the key-value store with an expiry using `KeyStorePrefixes.ServiceTokenStatusUpdate` and the token ID.
+2. Queues a `ServiceTokenStatusUpdate` job with the token ID and a delay.
+
+### `updateIdentityAccessTokenStatus`
+#### Description
+This function updates the status of an identity access token by queuing a job to update the last used timestamp and number of uses.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAccessTokenId | `string` | The ID of the identity access token. |
+| numberOfUses | `number` | The updated number of times the token has been used. |
+
+#### Outputs
+A `Promise` that resolves when the update job has been queued.
+
+#### Internal Logic
+1. Stores the current timestamp and number of uses in the key-value store with an expiry using `KeyStorePrefixes.IdentityAccessTokenStatusUpdate` and the token ID.
+2. Queues an `IdentityAccessTokenStatusUpdate` job with the token ID, number of uses, and a delay.
+
+## Side Effects
+- Updates the `accessTokenLastUsedAt` and `accessTokenNumUses` fields of identity access tokens in the database.
+- Updates the `lastUsed` field of service tokens in the database.
+- Sets and updates keys in the key-value store for caching token status information.
+
+## Dependencies
+- `zod`: Used for schema validation.
+- `@app/keystore/keystore`: Provides utilities for interacting with the key-value store.
+- `@app/lib/dates`: Offers date and time manipulation functions.
+- `@app/lib/logger`: Provides logging functionality.
+- `@app/queue`: Offers queue management utilities.
+- `../identity-access-token/identity-access-token-dal`: Provides data access for identity access tokens.
+- `../service-token/service-token-dal`: Provides data access for service tokens.
+
+## Error Handling
+The code includes a basic error listener for the `AccessTokenStatusUpdate` queue, logging any errors that occur during job processing.
+
+## Logging
+The code uses a logger from `@app/lib/logger` to log errors encountered during access token status updates.

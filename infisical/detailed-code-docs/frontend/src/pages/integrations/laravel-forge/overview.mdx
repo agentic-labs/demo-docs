@@ -1,0 +1,111 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for integrating Laravel Forge with the application. It provides functionality for authorizing and creating Laravel Forge integrations, allowing users to connect their Laravel Forge accounts and select specific sites for integration.
+
+## What does it do?
+The code in this directory enables users to:
+
+1. Authorize their Laravel Forge account by providing an access token and server ID.
+2. Create a new integration by selecting a project environment, specifying a secrets path, and choosing a Laravel Forge site to integrate with.
+
+These components handle user input, validate form data, interact with backend APIs, and manage the integration creation process. They provide a user-friendly interface for setting up Laravel Forge integrations within the application.
+
+## Key Files
+
+### authorize.tsx
+This file contains the `LaravelForgeCreateIntegrationPage` component, which handles the initial authorization step for Laravel Forge integration. It allows users to input their Laravel Forge Access Token and Server ID.
+
+Key features:
+- Form for entering Laravel Forge Access Token and Server ID
+- Input validation
+- API interaction to save integration access token
+- Navigation to the next step upon successful authorization
+
+### create.tsx
+This file contains another `LaravelForgeCreateIntegrationPage` component, which handles the creation of the Laravel Forge integration after authorization. It allows users to select a project environment, specify a secrets path, and choose a Laravel Forge site to integrate with.
+
+Key features:
+- Fetches workspace data, integration auth, and integration auth apps
+- Form for selecting project environment, secrets path, and Laravel Forge site
+- Handles integration creation through API interaction
+- Navigation to a new page upon successful integration creation
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: Core library for building user interfaces
+2. Next.js: React framework for server-side rendering and routing
+3. query-string: For parsing query parameters
+4. Custom hooks from `@app/hooks/api`: For API interactions and data fetching
+5. UI components from `../../../components/v2`: For consistent UI elements
+
+## Configuration
+The components use local storage for storing and retrieving certain data:
+
+- `workspaceId`: Stored in localStorage for identifying the current workspace
+- `projectId`: Stored in localStorage for identifying the current project
+
+Environment variables or configuration files are not explicitly used in these components, but they may be utilized in the custom hooks for API interactions.
+
+## Code Examples
+
+1. Authorization form submission in `authorize.tsx`:
+
+```javascript
+const handleButtonClick = async () =&gt; {
+  if (!apiKey) {
+    setApiKeyError("API Key is required");
+    return;
+  }
+  if (!serverId) {
+    setServerIdError("Server ID is required");
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    await mutateAsync({
+      workspaceId: localStorage.getItem("workspaceId") as string,
+      integration: "laravel-forge",
+      accessId: serverId,
+      accessToken: apiKey,
+    });
+
+    router.push(
+      `/integrations/laravel-forge/create?accessId=${serverId}&accessToken=${apiKey}`
+    );
+  } catch (error) {
+    console.error(error);
+    setIsLoading(false);
+  }
+};
+```
+
+2. Integration creation in `create.tsx`:
+
+```javascript
+const handleCreateIntegration = async () =&gt; {
+  try {
+    const { data } = await createIntegration({
+      projectId: localStorage.getItem("projectId") as string,
+      workspaceId: workspace?.id as string,
+      environment: selectedEnvironment,
+      integration: "laravel-forge",
+      app: targetApp,
+      secretPath: secretPath,
+    });
+
+    router.push(`/project/${data.projectId}/settings/integrations`);
+  } catch (error) {
+    console.error(error);
+  }
+};
+```
+
+These code snippets demonstrate the core functionality of the Laravel Forge integration process, including form handling, API interactions, and navigation between steps.
+
+The components in this directory work together to provide a seamless experience for users setting up Laravel Forge integrations within the application. They handle user input, perform necessary validations, interact with backend APIs, and manage the overall flow of the integration process.

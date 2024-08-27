@@ -1,0 +1,106 @@
+---
+title: "mysql.mdx"
+---
+
+---
+title: "MySQL/MariaDB"
+description: "Learn how to automatically rotate MySQL/MariaDB user passwords."
+---
+
+The Infisical MySQL secret rotation allows you to automatically rotate your MySQL database user's password at a predefined interval.
+
+
+## Prerequisite
+
+1. Create two users with the required permission in your MySQL instance. We'll refer to them as `user-a` and `user-b`.
+2. Create another MySQL user with just the permission to update the passwords of `user-a` and `user-b`. We'll refer to this user as the `admin` user.
+
+To learn more about MySQL permission system, please visit this [documentation](https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html).
+
+## How it works 
+
+1. Infisical connects to your database using the provided `admin` user account.
+2. A random value is generated and the password for `user-a` is updated with the new value.
+3. The new password is then tested by logging into the database
+4. If test is success, it's saved to the output secret mappings so that rest of the system gets the newly rotated value(s).
+5. The process is then repeated for `user-b` on the next rotation.
+6. The cycle repeats until secret rotation is deleted/stopped.
+
+## Rotation Configuration
+
+&lt;Steps&gt;
+  &lt;Step title="Open Secret Rotation Page"&gt;
+	Head over to Secret Rotation configuration page of your project by clicking on `Secret Rotation` in the left side bar 
+  &lt;/Step&gt;
+  &lt;Step title="Click on MySQL card" /&gt;
+  &lt;Step title="Provide the inputs"&gt;
+	&lt;ParamField path="Admin Username" type="string" required&gt;
+		Rotator admin username
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Admin password" type="string" required&gt;
+		Rotator admin password
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Host" type="string" required&gt;
+		Database host url
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Port" type="number" required&gt;
+		Database port number
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Username1" type="string" required&gt;
+		The first username of two to rotate - `user-a`
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Username2" type="string" required&gt;
+		The second username of two to rotate - `user-b`
+	&lt;/ParamField&gt;
+ 
+	&lt;ParamField path="CA" type="string"&gt;
+		Optional database certificate to connect with database
+	&lt;/ParamField&gt;
+
+  &lt;/Step&gt;
+  &lt;Step title="Configure the output secret mapping"&gt;
+  	When a secret rotation is successful, the updated values needs to be saved to an existing key(s) in your project. 
+
+	&lt;ParamField path="Environment" type="string" required&gt;
+		The environment where the rotated credentials should be mapped to.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Secret Path" type="string" required&gt;
+		The secret path where the rotated credentials should be mapped to.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="Interval" type="number" required&gt;
+		What interval should the credentials be rotated in days.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="DB USERNAME" type="string" required&gt;
+		Select an existing secret key where the rotated database username value should be saved to.
+	&lt;/ParamField&gt;
+
+	&lt;ParamField path="DB PASSWORD" type="string" required&gt;
+		Select an existing select key where the rotated database password value should be saved to.
+	&lt;/ParamField&gt;
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+## FAQ
+
+&lt;AccordionGroup&gt;
+  &lt;Accordion title="Why can't we delete the other user when rotating?"&gt;
+  	When a system has multiple nodes by horizontal scaling, redeployment doesn't happen instantly.
+
+	This means that when the secrets are rotated, and the redeployment is triggered, the existing system will still be using the old credentials until the change rolls out. 
+
+	To avoid causing failure for them, the old credentials are not removed. Instead, in the next rotation, the previous user's credentials are updated.
+  &lt;/Accordion&gt;
+  &lt;Accordion title="Why do you need root user account?"&gt;
+	The admin account is used by Infisical to update the credentials for `user-a` and `user-b`. 
+
+	You don't need to grant all permission for your admin account but rather just the permissions to update both of the user's passwords.
+  &lt;/Accordion&gt;
+&lt;/AccordionGroup&gt;

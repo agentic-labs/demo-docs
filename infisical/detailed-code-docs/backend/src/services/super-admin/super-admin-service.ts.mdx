@@ -1,0 +1,171 @@
+---
+title: "super-admin-service.ts"
+---
+
+## High-level description
+The `superAdminServiceFactory` creates a service for managing super admin operations, including server configuration, admin sign-up, user management, and license checks. It interacts with various DALs (Data Access Layers) and services to perform these operations.
+
+## Code Structure
+The `superAdminServiceFactory` is a factory function that takes in dependencies like DALs and other services. It initializes a `getServerCfg` function to retrieve server configuration and exposes functions for updating server configuration, admin sign-up, user retrieval, and user deletion.
+
+## References
+- `TSuperAdmin`, `TSuperAdminUpdate` from `@app/db/schemas`
+- `TLicenseServiceFactory` from `@app/ee/services/license/license-service`
+- `TKeyStoreFactory` from `@app/keystore/keystore`
+- `getConfig` from `@app/lib/config/env`
+- `infisicalSymmetricEncypt` from `@app/lib/crypto/encryption`
+- `getUserPrivateKey` from `@app/lib/crypto/srp`
+- `BadRequestError` from `@app/lib/errors`
+- `TAuthLoginFactory` from `../auth/auth-login-service`
+- `AuthMethod` from `../auth/auth-type`
+- `TOrgServiceFactory` from `../org/org-service`
+- `TUserDALFactory` from `../user/user-dal`
+- `TSuperAdminDALFactory` from `./super-admin-dal`
+- `LoginMethod`, `TAdminGetUsersDTO`, `TAdminSignUpDTO` from `./super-admin-types`
+
+## Symbols
+
+### `superAdminServiceFactory`
+#### Description
+This factory function initializes and returns a service object for managing super admin operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serverCfgDAL | `TSuperAdminDALFactory` | Data access layer for server configuration |
+| userDAL | `TUserDALFactory` | Data access layer for users |
+| authService | `Pick&lt;TAuthLoginFactory, "generateUserTokens"&gt;` | Authentication service for generating user tokens |
+| orgService | `Pick&lt;TOrgServiceFactory, "createOrganization"&gt;` | Organization service for creating organizations |
+| keyStore | `Pick&lt;TKeyStoreFactory, "getItem" | "setItemWithExpiry" | "deleteItem"&gt;` | Key-value store for caching |
+| licenseService | `Pick&lt;TLicenseServiceFactory, "onPremFeatures"&gt;` | License service for checking plan features |
+
+#### Outputs
+An object containing the following functions:
+- `initServerCfg`: Initializes the server configuration.
+- `updateServerCfg`: Updates the server configuration.
+- `adminSignUp`: Handles the sign-up process for a new admin user.
+- `getUsers`: Retrieves a list of users.
+- `deleteUser`: Deletes a user.
+
+#### Internal Logic
+The factory function initializes a `getServerCfg` function that retrieves server configuration from either the cache or the database. It then defines functions for:
+- `initServerCfg`: Initializes server configuration in the database if it doesn't exist.
+- `updateServerCfg`: Updates server configuration in the database and cache.
+- `adminSignUp`: Creates a new admin user, organization, and generates user tokens.
+- `getUsers`: Retrieves users from the database based on provided filters.
+- `deleteUser`: Deletes a user from the database after performing a license check.
+
+### `getServerCfg`
+#### Description
+This function retrieves the server configuration.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serverCfg | `Promise&lt;TSuperAdmin & { defaultAuthOrgSlug: string \| null }&gt; ` | Server configuration object |
+
+#### Internal Logic
+The function first checks if the server configuration is cached. If not, it fetches it from the database, caches it, and returns it. If the configuration exists in the cache, it's parsed and returned.
+
+### `initServerCfg`
+#### Description
+This function initializes the server configuration in the database.
+
+#### Internal Logic
+The function first resets the server configuration in the cache. It then checks if the configuration exists in the database. If not, it creates a new configuration with default values.
+
+### `updateServerCfg`
+#### Description
+This function updates the server configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `TSuperAdminUpdate` | Updated server configuration data |
+| userId | `string` | ID of the user performing the update |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updatedServerCfg | `Promise&lt;TSuperAdmin&gt;` | Updated server configuration object |
+
+#### Internal Logic
+The function first checks if the updated configuration includes enabled login methods. If so, it ensures that the user performing the update has at least one of those login methods configured for their account. It then updates the configuration in the database and cache.
+
+### `adminSignUp`
+#### Description
+This function handles the sign-up process for a new admin user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `TAdminSignUpDTO` | Admin sign-up data |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;{ token: any; user: { user: any; enc: any; }; organization: any; }&gt;` | Object containing the generated user token, user information, and organization details |
+
+#### Internal Logic
+The function first checks if a user with the provided email already exists. It then generates a private key, hashes the password, encrypts the private key, and creates a new user, user encryption, and organization. Finally, it updates the server configuration to mark it as initialized, generates user tokens, and returns the token, user information, and organization details.
+
+### `getUsers`
+#### Description
+This function retrieves a list of users.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `TAdminGetUsersDTO` | User retrieval filter parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| users | `Promise&lt;any&gt;` | List of users retrieved from the database |
+
+#### Internal Logic
+The function retrieves users from the database based on the provided filter parameters, including offset, limit, and search term.
+
+### `deleteUser`
+#### Description
+This function deletes a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | `string` | ID of the user to be deleted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deletedUser | `Promise&lt;any&gt;` | Deleted user object |
+
+#### Internal Logic
+The function first checks if the current license allows instance user management. If not, it throws an error. Otherwise, it deletes the user from the database and returns the deleted user object.
+
+## Dependencies
+- bcrypt
+- @app/db/schemas
+- @app/ee/services/license/license-service
+- @app/keystore/keystore
+- @app/lib/config/env
+- @app/lib/crypto/encryption
+- @app/lib/crypto/srp
+- @app/lib/errors
+- ../auth/auth-login-service
+- ../auth/auth-type
+- ../org/org-service
+- ../user/user-dal
+- ./super-admin-dal
+- ./super-admin-types
+
+## Configuration
+- `ADMIN_CONFIG_KEY`: Key used for caching server configuration in the key-value store.
+- `ADMIN_CONFIG_KEY_EXP`: Expiration time for the cached server configuration (in seconds).
+- `ADMIN_CONFIG_DB_UUID`: Fixed UUID for the admin configuration in the database.
+
+## Error Handling
+The code utilizes `BadRequestError` to handle invalid requests or unauthorized operations.
+
+## Logging
+The code doesn't implement any specific logging mechanisms.

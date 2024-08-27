@@ -1,0 +1,68 @@
+---
+title: "20231228075023_identity-membership.ts"
+---
+
+## High-level description
+This code defines a database migration script using Knex.js to create two tables: `IdentityOrgMembership` and `IdentityProjectMembership`, representing relationships between users (identities) and organizations/projects. It also sets up triggers to update timestamps on these tables.
+
+## References
+- `TableName`: An enum or object defining table names used in the database schema.
+- `createOnUpdateTrigger`: A utility function to create a trigger that updates timestamps on table updates.
+- `dropOnUpdateTrigger`: A utility function to drop the update timestamp trigger.
+
+## Symbols
+
+### `up(knex)`
+#### Description
+This asynchronous function defines the actions to perform when applying the migration. It creates the `IdentityOrgMembership` and `IdentityProjectMembership` tables if they don't exist and sets up triggers for both tables to update timestamps on update.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Promise\&lt;void\&gt; | A promise that resolves when the migration is applied. |
+
+#### Internal Logic
+1. Checks if the `IdentityOrgMembership` table exists. If not, it creates the table with columns for:
+    - `id`: A UUID primary key.
+    - `role`: A string representing the user's role in the organization.
+    - `roleId`: A UUID foreign key referencing the `OrgRoles` table.
+    - `orgId`: A UUID foreign key referencing the `Organization` table with cascade delete.
+    - `identityId`: A UUID foreign key referencing the `Identity` table with cascade delete.
+    - Timestamps: `created_at`, `updated_at`, `deleted_at`.
+2. Creates an `onUpdate` trigger for the `IdentityOrgMembership` table using the `createOnUpdateTrigger` utility function.
+3. Checks if the `IdentityProjectMembership` table exists. If not, it creates the table with columns for:
+    - `id`: A UUID primary key.
+    - `role`: A string representing the user's role in the project.
+    - `roleId`: A UUID foreign key referencing the `ProjectRoles` table.
+    - `projectId`: A string foreign key referencing the `Project` table with cascade delete.
+    - `identityId`: A UUID foreign key referencing the `Identity` table with cascade delete.
+    - Timestamps: `created_at`, `updated_at`, `deleted_at`.
+4. Creates an `onUpdate` trigger for the `IdentityProjectMembership` table using the `createOnUpdateTrigger` utility function.
+
+### `down(knex)`
+#### Description
+This asynchronous function defines the actions to perform when reverting the migration. It drops the `IdentityOrgMembership` and `IdentityProjectMembership` tables and their corresponding update timestamp triggers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Promise\&lt;void\&gt; | A promise that resolves when the migration is reverted. |
+
+#### Internal Logic
+1. Drops the `IdentityOrgMembership` and `IdentityProjectMembership` tables if they exist.
+2. Drops the `onUpdate` triggers for both tables using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex       | Provides database query builder and migration functionality. |

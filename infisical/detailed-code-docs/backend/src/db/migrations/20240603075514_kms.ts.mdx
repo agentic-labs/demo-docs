@@ -1,0 +1,69 @@
+---
+title: "20240603075514_kms.ts"
+---
+
+## High-level description
+This code defines database migration scripts for managing tables related to Key Management Service (KMS). It includes creating tables for storing server root configuration, keys, and key versions, along with setting up triggers for updating timestamps.
+
+## Code Structure
+The code defines two main asynchronous functions: `up` and `down`. 
+- `up` is responsible for creating the necessary tables and triggers if they don't exist. 
+- `down` handles the rollback by dropping the tables and their corresponding triggers. 
+
+Both functions utilize the `knex` library for interacting with the database.
+
+## References
+- `TableName`: An enum-like object that likely defines string constants for table names used in the database schema.
+- `createOnUpdateTrigger`: A utility function that probably sets up a trigger to automatically update a timestamp column on table updates.
+- `dropOnUpdateTrigger`: A utility function that likely drops the previously created update trigger for a given table.
+
+## Symbols
+### `up`
+#### Description
+Creates the KMS-related tables and triggers in the database if they don't already exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex library for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the tables and triggers are created. |
+
+#### Internal Logic
+1. Checks if `KmsServerRootConfig` table exists. If not, creates it with columns for `id` and `encryptedRootKey`.
+2. Calls `createOnUpdateTrigger` to set up an update trigger for `KmsServerRootConfig`.
+3. Checks if `KmsKey` table exists. If not, creates it with columns for key details like `id`, `encryptedKey`, `encryptionAlgorithm`, `version`, `description`, `isDisabled`, `isReserved`, `projectId`, and `orgId`. Foreign keys are set up to `Project` and `Organization` tables.
+4. Calls `createOnUpdateTrigger` to set up an update trigger for `KmsKey`.
+5. Checks if `KmsKeyVersion` table exists. If not, creates it with columns for `id`, `encryptedKey`, `version`, and `kmsKeyId`. A foreign key is set up to `KmsKey` table.
+6. Calls `createOnUpdateTrigger` to set up an update trigger for `KmsKeyVersion`.
+
+### `down`
+#### Description
+Rolls back the migration by dropping the KMS-related tables and their corresponding triggers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | An instance of the Knex library for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the tables and triggers are dropped. |
+
+#### Internal Logic
+1. Drops the `KmsServerRootConfig` table if it exists.
+2. Calls `dropOnUpdateTrigger` to remove the update trigger for `KmsServerRootConfig`.
+3. Drops the `KmsKeyVersion` table if it exists.
+4. Calls `dropOnUpdateTrigger` to remove the update trigger for `KmsKeyVersion`.
+5. Drops the `KmsKey` table if it exists.
+6. Calls `dropOnUpdateTrigger` to remove the update trigger for `KmsKey`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex      | Provides a connection to the database and methods for schema building and migrations. |
+

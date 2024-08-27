@@ -1,0 +1,105 @@
+---
+title: "identity-access-token-service.ts"
+---
+
+## High-level description
+This file defines the `identityAccessTokenServiceFactory`, which creates a service for managing identity access tokens. It provides functionality for renewing, revoking, and validating access tokens, with various checks for token expiration, usage limits, and IP address restrictions.
+
+## Code Structure
+The main function `identityAccessTokenServiceFactory` takes dependencies as input and returns an object with three methods: `renewAccessToken`, `revokeAccessToken`, and `fnValidateIdentityAccessToken`. These methods interact with the provided DALs (Data Access Layers) and other services to perform their respective operations.
+
+## Symbols
+
+### `identityAccessTokenServiceFactory`
+#### Description
+This factory function creates and returns an object with methods for managing identity access tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAccessTokenDAL | TIdentityAccessTokenDALFactory | Data access layer for identity access tokens |
+| identityOrgMembershipDAL | TIdentityOrgDALFactory | Data access layer for identity organization memberships |
+| accessTokenQueue | Pick&lt;TAccessTokenQueueServiceFactory, "updateIdentityAccessTokenStatus" \| "getIdentityTokenDetailsInCache"&gt; | Queue service for managing access token status |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| renewAccessToken | Function | Renews an access token |
+| revokeAccessToken | Function | Revokes an access token |
+| fnValidateIdentityAccessToken | Function | Validates an identity access token |
+
+#### Internal Logic
+The factory creates several internal functions and then returns an object with the main public methods. The internal functions handle token expiration validation and other checks.
+
+### `validateAccessTokenExp`
+#### Description
+Validates the expiration of an access token based on its usage and time-to-live (TTL) settings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAccessToken | TIdentityAccessTokens | The access token to validate |
+
+#### Internal Logic
+- Checks if the token has reached its usage limit
+- Validates the token's TTL, considering both initial creation and last renewal
+
+### `renewAccessToken`
+#### Description
+Renews an existing access token, extending its validity period.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessToken | string | The access token to renew |
+
+#### Internal Logic
+- Decodes and verifies the token
+- Checks token expiration and usage limits
+- Validates against maximum TTL
+- Updates the token's last renewal timestamp
+
+### `revokeAccessToken`
+#### Description
+Revokes an access token, preventing its further use.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessToken | string | The access token to revoke |
+
+#### Internal Logic
+- Decodes and verifies the token
+- Marks the token as revoked in the database
+
+### `fnValidateIdentityAccessToken`
+#### Description
+Validates an identity access token for use.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | TIdentityAccessTokenJwtPayload | The token payload to validate |
+| ipAddress | string (optional) | The IP address to check against trusted IPs |
+
+#### Internal Logic
+- Retrieves the token from the database
+- Checks if the token is revoked
+- Validates the IP address against trusted IPs (if provided)
+- Checks the token's expiration and usage
+- Updates the token's usage count
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jwt | For decoding and verifying JWT tokens |
+| @app/db/schemas | For database schema types |
+| @app/lib/config/env | For accessing application configuration |
+| @app/lib/errors | For custom error types |
+| @app/lib/ip | For IP address validation |
+
+## Error Handling
+The code uses custom error types (`BadRequestError` and `UnauthorizedError`) to handle various error scenarios, such as token expiration, usage limit exceeded, and unauthorized access attempts.
+
+## Performance Considerations
+The service uses caching through the `accessTokenQueue` to optimize token status retrieval and updates, potentially reducing database load for frequently accessed tokens.

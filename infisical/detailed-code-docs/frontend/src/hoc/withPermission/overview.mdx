@@ -1,0 +1,88 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/hoc/withPermission` directory contains a Higher-Order Component (HOC) called `withPermission` that provides permission-based access control for React components. This HOC wraps other components and checks user permissions before rendering them, enhancing the application's security and access management.
+
+## What does it do?
+The `withPermission` HOC acts as a gatekeeper for React components. When a component is wrapped with `withPermission`, it adds an extra layer of security by checking if the user has the necessary permissions to access that component. Here's how it works:
+
+1. A developer wraps a component with `withPermission`, specifying the required permissions.
+2. When the application tries to render this wrapped component, `withPermission` first checks if the user has the specified permissions.
+3. If the user has the required permissions, the original component is rendered as normal.
+4. If the user doesn't have the permissions, instead of rendering the component, it displays an "Access Restricted" message with a lock icon.
+
+This process ensures that users can only access and interact with components they have permission for, adding a crucial layer of security and access control to the application.
+
+## Entry points
+The main entry point for this functionality is the `index.tsx` file, which exports the `withPermission` HOC. However, the actual implementation of the HOC is in the `withPermission.tsx` file. Here's how the code is organized:
+
+1. `index.tsx`: Acts as the public API for the `withPermission` HOC, making it easy for other parts of the application to import and use it.
+2. `withPermission.tsx`: Contains the core implementation of the `withPermission` HOC, including the permission checking logic and conditional rendering.
+
+The data flow in this HOC is as follows:
+1. The HOC receives a component and permission options as input.
+2. It uses the `useOrgPermission` hook to get the user's current permissions.
+3. It checks these permissions against the required permissions specified in the options.
+4. Based on this check, it either renders the original component or an access restricted message.
+
+## Dependencies
+The `withPermission` HOC relies on several external libraries and internal modules:
+
+1. React (version not specified): Used for component types and core functionality.
+2. @casl/ability (version not specified): Provides types for permission handling.
+3. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome (versions not specified): Used for rendering the lock icon in the access restricted message.
+4. tailwind-merge (version not specified): Utility for merging Tailwind CSS classes.
+5. @app/context (internal module): Provides the `useOrgPermission` hook for checking user permissions.
+
+These dependencies were likely chosen for the following reasons:
+- React: As the core framework for building the user interface.
+- CASL: A popular, isomorphic authorization library that provides a flexible way to manage permissions.
+- FontAwesome: A widely-used icon library that provides a lock icon for the access restricted message.
+- Tailwind CSS: A utility-first CSS framework that allows for easy styling and customization.
+
+## Configuration
+While there are no explicit configuration files for this HOC, it does accept configuration options when used. These options are passed as the second argument to the `withPermission` function:
+
+```typescript
+withPermission(Component, {
+  action: OrgPermissionActions.Read,
+  subject: OrgPermissionSubjects.Billing,
+  className: "optional-custom-class"
+})
+```
+
+The configurable fields are:
+- `action`: Specifies the type of action being performed (e.g., Read, Write, Delete).
+- `subject`: Specifies the resource or area of the application the action applies to.
+- `className`: An optional CSS class to apply to the access restricted message container.
+
+These options allow developers to fine-tune the permission requirements for each wrapped component and customize the appearance of the access restricted message.
+
+Here's an example of how the `withPermission` HOC is typically used in the application:
+
+```typescript
+import { withPermission } from "@app/hoc";
+
+const SettingsBilling = withPermission&lt;{}, TOrgPermission&gt;(
+  () =&gt; {
+    // Component implementation
+  },
+  { action: OrgPermissionActions.Read, subject: OrgPermissionSubjects.Billing }
+);
+```
+
+In this example, the `SettingsBilling` component is wrapped with `withPermission`, requiring read permission for the billing subject before it can be rendered.
+
+It's worth noting that there's a TypeScript issue mentioned in the code comments regarding CASL/React types. This is currently handled using a type assertion (`as any`) for the `action` parameter in the `permission.cannot()` call. This might need to be addressed in future updates to improve type safety.
+
+```typescript
+// akhilmhdh: Set as any due to casl/react ts type bug
+// REASON: casl due to its type checking can't seem to union even if union intersection is applied
+if (permission.cannot(options.action as any, options.subject)) {
+  // Render access restricted message
+}
+```
+
+This HOC provides a powerful and flexible way to implement permission-based access control in a React application, enhancing security and allowing for fine-grained control over component rendering based on user permissions.

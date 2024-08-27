@@ -1,0 +1,52 @@
+---
+title: "access-approval-policy-fns.ts"
+---
+
+## High-level description
+This code defines a function `verifyApprovers` that checks if a list of users have the necessary permissions to approve access to a specific secret path within a project environment. It's part of an access approval policy service, likely used in a secure environment management system.
+
+## Symbols
+
+### verifyApprovers
+#### Description
+This asynchronous function verifies if all provided user IDs have the required permissions to create secrets in a specified project environment and secret path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userIds | string[] | Array of user IDs to verify |
+| projectId | string | ID of the project |
+| orgId | string | ID of the organization |
+| envSlug | string | Slug of the environment |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| secretPath | string | Path of the secret |
+| permissionService | object | Service to check permissions |
+
+#### Internal Logic
+1. Iterates through each user ID in the `userIds` array.
+2. For each user:
+   - Retrieves the user's project permission using `permissionService.getProjectPermission`.
+   - Checks if the user has the 'Create' action permission for the specified secret path and environment using CASL's `ForbiddenError.from().throwUnlessCan()`.
+3. If any user lacks the required permission, throws a `BadRequestError`.
+
+#### Error Handling
+- Catches any errors during the permission check and throws a `BadRequestError` with a message indicating that one or more approvers don't have access to the specified secret path.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Used for permission checking with `ForbiddenError` and `subject` |
+| @app/lib/errors | Provides `BadRequestError` for error handling |
+| @app/services/auth/auth-type | Imports `ActorType` enum |
+
+## References
+- `ProjectPermissionActions` and `ProjectPermissionSub` from "../permission/project-permission"
+- `TVerifyApprovers` type from "./access-approval-policy-types"
+
+## Notes
+1. The function uses CASL for permission checking, which is a popular authorization library.
+2. The code assumes the existence of a `permissionService` with a `getProjectPermission` method.
+3. The `ActorType.USER` is used when retrieving project permissions, indicating this function is specifically for verifying user permissions.
+4. The function is designed to fail fast, throwing an error as soon as it encounters a user without the required permissions.
+
+This function plays a crucial role in ensuring that only users with the appropriate permissions can be designated as approvers for access to specific secret paths within a project environment.

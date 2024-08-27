@@ -1,0 +1,58 @@
+---
+title: "20240518142614_kubernetes-auth.ts"
+---
+
+## High-level description
+This code defines a database migration script for creating and deleting the `IdentityKubernetesAuth` table, which stores Kubernetes authentication configuration for identities. It also sets up triggers to update timestamps on table updates.
+
+## References
+- `TableName`: An enum or object defining table names, likely from `../schemas`.
+- `createOnUpdateTrigger`, `dropOnUpdateTrigger`: Utility functions from `../utils` for managing update triggers.
+
+## Symbols
+
+### `up`
+#### Description
+This function defines the steps to apply the migration, creating the `IdentityKubernetesAuth` table if it doesn't exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void |  |
+
+#### Internal Logic
+1. Checks if the `IdentityKubernetesAuth` table already exists.
+2. If not, creates the table with columns for:
+    - `id`: UUID primary key.
+    - `accessTokenTTL`, `accessTokenMaxTTL`, `accessTokenNumUsesLimit`: Token validity settings.
+    - `accessTokenTrustedIps`: JSONB array of trusted IP addresses.
+    - Timestamps: `createdAt`, `updatedAt`, `deletedAt`.
+    - `identityId`: Foreign key referencing the `Identity` table.
+    - `kubernetesHost`: Kubernetes cluster hostname.
+    - `encryptedCaCert`, `caCertIV`, `caCertTag`: Encrypted CA certificate data.
+    - `encryptedTokenReviewerJwt`, `tokenReviewerJwtIV`, `tokenReviewerJwtTag`: Encrypted token reviewer JWT data.
+    - `allowedNamespaces`, `allowedNames`, `allowedAudience`: Kubernetes RBAC settings.
+3. Creates an `onUpdate` trigger on the table using the `createOnUpdateTrigger` utility function.
+
+### `down`
+#### Description
+This function defines the steps to rollback the migration, deleting the `IdentityKubernetesAuth` table and its associated trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void |  |
+
+#### Internal Logic
+1. Drops the `IdentityKubernetesAuth` table if it exists.
+2. Drops the `onUpdate` trigger associated with the table using the `dropOnUpdateTrigger` utility function.

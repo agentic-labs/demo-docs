@@ -1,0 +1,64 @@
+---
+title: "integration-token.ts"
+---
+
+## High-level description
+This file contains functions for handling OAuth2 token exchanges and refreshes for various cloud service integrations. It provides methods to exchange authorization codes for access tokens and to refresh expired access tokens using refresh tokens for services like GCP, Azure, Heroku, Vercel, Netlify, GitHub, GitLab, and Bitbucket.
+
+## Code Structure
+The code is organized into two main parts: code exchange functions and token refresh functions. Each integration has its own specific implementation for both code exchange and token refresh. The `exchangeCode` and `exchangeRefresh` functions serve as entry points, delegating to the appropriate integration-specific function based on the provided integration name.
+
+## Symbols
+
+### `exchangeCode`
+#### Description
+This function serves as the main entry point for exchanging authorization codes for access tokens across different integrations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integration | string | The name of the integration service |
+| code | string | The authorization code to be exchanged |
+| url | string (optional) | The URL for the token exchange (used for GitLab) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TExchangeReturn | object | Contains accessToken, refreshToken, accessExpiresAt, and other integration-specific fields |
+
+#### Internal Logic
+The function uses a switch statement to delegate to the appropriate integration-specific exchange function based on the `integration` parameter. Each integration-specific function handles its own API call and response parsing.
+
+### `exchangeRefresh`
+#### Description
+This function serves as the main entry point for refreshing access tokens using refresh tokens across different integrations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integration | string | The name of the integration service |
+| refreshToken | string | The refresh token to be used |
+| url | string (optional) | The URL for the token refresh (used for GitLab) |
+| metadata | Record&lt;string, string&gt; (optional) | Additional metadata for the refresh process |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | { accessToken: string; refreshToken: string; accessExpiresAt: Date } | The new access token, refresh token, and expiration date |
+
+#### Internal Logic
+Similar to `exchangeCode`, this function uses a switch statement to delegate to the appropriate integration-specific refresh function based on the `integration` parameter. Each integration-specific function handles its own API call and response parsing.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jsonwebtoken | Used for JWT signing in GCP service account authentication |
+| @app/lib/config/env | Provides access to environment configuration |
+| @app/lib/config/request | Provides a configured HTTP client for making API requests |
+| @app/lib/errors | Provides custom error types |
+
+## Error Handling
+The code uses the `BadRequestError` from `@app/lib/errors` to handle cases where required configuration is missing or when an unknown integration is specified.
+
+## Performance Considerations
+The code makes extensive use of asynchronous operations for API calls, which helps in maintaining responsiveness when dealing with potentially slow network requests.

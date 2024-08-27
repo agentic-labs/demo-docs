@@ -1,0 +1,82 @@
+---
+title: "20240724101056_access-request-groups.ts"
+---
+
+## High-level description
+This migration file implements changes to the database schema to support access request groups. It modifies several tables to replace references to project memberships with direct references to user IDs, allowing for more flexible group-based access control.
+
+## Code Structure
+The file contains two main functions: `up` for applying the migration and `down` for reverting it. Each function performs alterations on multiple tables, including AccessApprovalPolicyApprover, AccessApprovalRequest, AccessApprovalRequestReviewer, and ProjectUserAdditionalPrivilege.
+
+## Symbols
+
+### `up(knex: Knex): Promise&lt;void&gt;`
+#### Description
+This function applies the migration, updating the database schema to support access request groups.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database operations |
+
+#### Internal Logic
+1. Modifies AccessApprovalPolicyApprover table:
+   - Adds `approverUserId` column
+   - Migrates data from `approverId` to `approverUserId`
+   - Drops `approverId` column
+
+2. Updates AccessApprovalRequest table:
+   - Adds `requestedByUserId` column
+   - Migrates data from `requestedBy` to `requestedByUserId`
+   - Makes `requestedBy` nullable
+
+3. Alters AccessApprovalRequestReviewer table:
+   - Adds `reviewerUserId` column
+   - Migrates data from `member` to `reviewerUserId`
+   - Makes `member` nullable
+
+4. Modifies ProjectUserAdditionalPrivilege table:
+   - Adds `userId` and `projectId` columns
+   - Migrates data from `projectMembershipId` to `userId` and `projectId`
+   - Makes `projectMembershipId` nullable
+
+### `down(knex: Knex): Promise&lt;void&gt;`
+#### Description
+This function reverts the migration, restoring the previous database schema.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database operations |
+
+#### Internal Logic
+1. Reverts changes to ProjectUserAdditionalPrivilege table:
+   - Adds back `projectMembershipId` column
+   - Migrates data from `userId` and `projectId` to `projectMembershipId`
+   - Removes `userId` and `projectId` columns
+
+2. Reverts changes to AccessApprovalPolicyApprover table:
+   - Adds back `approverId` column
+   - Migrates data from `approverUserId` to `approverId`
+   - Removes `approverUserId` column
+
+3. Reverts changes to AccessApprovalRequest table:
+   - Adds back `requestedBy` column
+   - Migrates data from `requestedByUserId` to `requestedBy`
+   - Removes `requestedByUserId` column
+
+4. Reverts changes to AccessApprovalRequestReviewer table:
+   - Adds back `member` column
+   - Migrates data from `reviewerUserId` to `member`
+   - Removes `reviewerUserId` column
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Used for database operations and schema modifications |
+
+## Error Handling
+The code uses Knex's built-in error handling. If any operation fails, it will throw an error, which should be caught and handled by the migration runner.
+
+## Performance Considerations
+The migration performs multiple table alterations and data migrations, which could be time-consuming for large datasets. It's recommended to run this migration during off-peak hours or maintenance windows.

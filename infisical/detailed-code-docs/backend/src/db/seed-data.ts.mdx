@@ -1,0 +1,182 @@
+---
+title: "seed-data.ts"
+---
+
+## High-level description
+This code defines constants and functions for seeding test data related to user authentication and encryption in the application. It includes a predefined user object (`seedData1`), functions for generating and managing user SRP keys, building and retrieving user project keys, and encrypting and decrypting secrets.
+
+## Code Structure
+The code defines several functions related to user authentication and data encryption. `generateUserSrpKeys` and `getUserPrivateKey` are used for generating and retrieving user SRP keys respectively. `buildUserProjectKey` and `getUserProjectKey` are used for managing user project keys. `encryptSecret` and `decryptSecret` are used for encrypting and decrypting secrets using symmetric encryption. The `seedData1` object holds predefined user data for testing.
+
+## References
+This code references types `TSecrets` and `TUserEncryptionKeys` from './schemas' file.
+
+## Symbols
+
+### `userPrivateKey`
+#### Description
+A variable intended to store a user's private key. It is initially undefined and is likely set during the execution of the seeding process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `userPublicKey`
+#### Description
+A variable intended to store a user's public key. It is initially undefined and is likely set during the execution of the seeding process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `seedData1`
+#### Description
+A constant object containing predefined data for a test user. This data is used for seeding the database during testing.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `generateUserSrpKeys`
+#### Description
+Asynchronously generates SRP (Secure Remote Password) keys for a user based on their password. It utilizes the `jsrp`, `argon2`, and `tweetnacl` libraries for key generation and encryption.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | string | The user's password. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | object | An object containing the generated SRP keys and related data, including protected key, public key, encrypted private key, salt, and verifier. |
+
+#### Internal Logic
+1. Generates a NaCl key pair.
+2. Initializes a jsrp client with username and password.
+3. Creates an SRP verifier using the jsrp client.
+4. Derives a key from the password using argon2.
+5. Generates a random symmetric key.
+6. Encrypts the private key with the symmetric key.
+7. Encrypts the symmetric key with the derived key.
+8. Returns an object containing the generated keys and related data.
+
+### `getUserPrivateKey`
+#### Description
+Asynchronously retrieves a user's private key based on their password and encrypted user keys. It uses argon2 for key derivation and decrypts the stored private key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | string | The user's password. |
+| user | TUserEncryptionKeys | An object containing the user's encrypted keys and related data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| privateKey | string | The decrypted private key of the user. |
+
+#### Internal Logic
+1. Derives a key from the password and user's salt using argon2.
+2. Decrypts the symmetric key using the derived key.
+3. Decrypts the private key using the decrypted symmetric key.
+4. Returns the decrypted private key.
+
+### `buildUserProjectKey`
+#### Description
+Generates a user project key by encrypting a random string with the user's public key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| privateKey | string | The user's private key. |
+| publicKey | string | The user's public key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | object | An object containing the nonce and ciphertext of the encrypted user project key. |
+
+#### Internal Logic
+1. Generates a random 16-byte string.
+2. Encrypts the random string using the user's public key and private key.
+3. Returns an object containing the nonce and ciphertext.
+
+### `getUserProjectKey`
+#### Description
+Decrypts and retrieves the user project key using the user's private key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| privateKey | string | The user's private key. |
+| ciphertext | string | The ciphertext of the encrypted user project key. |
+| nonce | string | The nonce used during encryption. |
+| publicKey | string | The public key used during encryption. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The decrypted user project key. |
+
+#### Internal Logic
+1. Decrypts the ciphertext using the user's private key, nonce, and public key.
+2. Returns the decrypted user project key.
+
+### `encryptSecret`
+#### Description
+Encrypts a secret (key, value, and optional comment) using a given encryption key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encKey | string | The encryption key. |
+| key | string | The secret key. |
+| value | string | The secret value. |
+| comment | string | An optional comment for the secret. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | object | An object containing the ciphertext, IV, and tag for the encrypted secret key, value, and comment. |
+
+#### Internal Logic
+1. Encrypts the secret key, value, and comment using the encryption key.
+2. Returns an object containing the ciphertext, IV, and tag for each encrypted element.
+
+### `decryptSecret`
+#### Description
+Decrypts an encrypted secret using a given decryption key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| decryptKey | string | The decryption key. |
+| encSecret | TSecrets | The encrypted secret object containing ciphertext, IV, and tag for key, value, and comment. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | object | An object containing the decrypted secret key, value, comment, and version. |
+
+#### Internal Logic
+1. Decrypts the secret key, value, and comment using the decryption key and the provided ciphertext, IV, and tag.
+2. Returns an object containing the decrypted secret key, value, comment, and version.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto | Node.js core module for cryptographic operations. |
+| argon2 | Password hashing library. |
+| jsrp | SRP (Secure Remote Password) protocol implementation. |
+| nacl | Networking and Cryptography library, used for its box key pair generation. |
+| tweetnacl | NaCl library for JavaScript. |
+| tweetnacl-util | Utility functions for tweetnacl. |
+| @app/lib/crypto | Custom library for cryptographic operations. |
+

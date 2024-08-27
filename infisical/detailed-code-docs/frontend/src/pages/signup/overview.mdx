@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the code for the signup process in a React-based web application. It includes a multi-step signup flow and a separate Single Sign-On (SSO) signup page. The main components handle user registration, email verification, team invitation, and SSO authentication, with conditional rendering based on the current step and server configuration.
+
+## What does it do?
+The signup process in this application guides users through several steps:
+
+1. Initial user registration: Users provide basic information to create an account.
+2. Email verification: If email service is configured, users verify their email address.
+3. Team invitation: Users can be invited to join existing teams.
+4. SSO authentication: A separate flow for users signing up through Single Sign-On providers.
+
+The application adapts the signup flow based on server configuration, such as skipping email verification if the email service is not set up. It also handles various scenarios like redirecting already authenticated users and managing different states of the signup process.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `index.tsx`: This file contains the primary `SignUp` component, which manages the multi-step signup process for regular user registration.
+2. `sso/index.tsx`: This file defines the `SignupSSOPage` component, which handles the Single Sign-On signup process.
+
+The regular signup flow (`index.tsx`) orchestrates the entire process, rendering different sub-components based on the current step and managing the state transitions between steps. The SSO signup page (`sso/index.tsx`) provides a dedicated interface for users authenticating through SSO providers.
+
+## Dependencies
+The signup process relies on several external libraries and internal components:
+
+1. React and Next.js: Core libraries for building the user interface and handling routing.
+2. react-i18next: Used for internationalization, allowing the application to support multiple languages.
+3. @app/components/signup/*: Custom components for different steps of the signup process.
+4. @app/components/utilities/SecurityClient: Handles security-related operations.
+5. @app/context: Provides access to server configuration.
+6. @app/hooks/api: Custom hooks for API-related functionality.
+7. @app/views/Signup: Contains the SSO signup component.
+
+These dependencies were likely chosen to provide a robust, scalable, and maintainable architecture for the signup process, with support for internationalization and security features.
+
+## Configuration
+The signup process is configurable based on server settings:
+
+1. Email service configuration: The application checks if email service is set up on the server and adjusts the signup flow accordingly, potentially skipping the email verification step.
+2. SSO provider configuration: The SSO signup page expects a `token` query parameter, which is used as the `providerAuthToken` for authentication.
+
+Environment variables or server-side configuration likely control these settings, allowing the application to adapt to different deployment scenarios.
+
+Here's an example of how the code checks for email service configuration:
+
+```javascript
+const { data: serverConfig } = useGetServerConfig();
+const isEmailConfigured = serverConfig?.emailConfigured;
+
+useEffect(() =&gt; {
+  if (!isEmailConfigured) {
+    setStep((prevStep) =&gt; (prevStep === 2 ? 3 : prevStep));
+  }
+}, [isEmailConfigured]);
+```
+
+This code snippet demonstrates how the application skips the email verification step (step 2) if email is not configured on the server.
+
+The signup process also includes error handling, particularly for email verification:
+
+```javascript
+const handleVerifyEmail = async () =&gt; {
+  try {
+    await verifyEmail({ email, code });
+    incrementStep();
+  } catch (error) {
+    console.error("Failed to verify email:", error);
+    setCodeError(true);
+  }
+};
+```
+
+This error handling ensures that users receive feedback if there are issues during the email verification process.
+
+In summary, this directory contains a comprehensive and adaptable signup system, supporting both regular and SSO authentication flows, with built-in configurability and error handling to ensure a smooth user experience across different deployment scenarios.

@@ -1,0 +1,139 @@
+---
+title: "auth-token-service.ts"
+---
+
+## High-level description
+This file, `auth-token-service.ts`, is a core component of the authentication system. It provides functionality for creating, validating, and managing various types of authentication tokens, including email confirmation, verification, MFA, organization invitations, password resets, and user unlocks. It also handles user token sessions and JWT identity validation.
+
+## Code Structure
+The main function `tokenServiceFactory` creates and returns an object with methods for token management. It depends on data access layers (DALs) for tokens, users, and organization memberships. The `getTokenConfig` function generates token configurations based on the token type.
+
+## Symbols
+
+### `getTokenConfig`
+#### Description
+Generates a token configuration based on the specified token type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tokenType | TokenType | The type of token to generate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tokenConfig | Object | Contains token, expiresAt, and optionally triesLeft |
+
+#### Internal Logic
+- Uses a switch statement to handle different token types
+- Generates random tokens (6-digit codes or hex strings) based on the token type
+- Sets expiration times and tries left (for some token types)
+
+### `tokenServiceFactory`
+#### Description
+Creates an object with methods for token management.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deps | TAuthTokenServiceFactoryDep | Object containing DALs for tokens, users, and org memberships |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tokenService | Object | Contains methods for token management |
+
+#### Internal Logic
+- Creates methods for creating, validating, and managing tokens and user sessions
+- Implements JWT identity validation for authentication
+
+### `createTokenForUser`
+#### Description
+Creates a new token for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | TCreateTokenForUserDTO | Contains type, userId, and optional orgId |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The generated token |
+
+#### Internal Logic
+- Generates a token configuration
+- Hashes the token
+- Deletes any existing tokens of the same type for the user
+- Creates a new token record in the database
+
+### `validateTokenForUser`
+#### Description
+Validates a token for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | TValidateTokenForUserDTO | Contains type, userId, code, and optional orgId |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | TAuthTokens \| undefined | The validated and deleted token |
+
+#### Internal Logic
+- Finds the token in the database
+- Checks if the token is expired
+- Validates the token using bcrypt
+- Handles token tries for certain token types
+- Deletes the token if valid
+
+### `getUserTokenSession`
+#### Description
+Gets or creates a user token session.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | TIssueAuthTokenDTO | Contains userId, ip, and userAgent |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| session | TAuthTokenSessions \| undefined | The user's token session |
+
+#### Internal Logic
+- Finds an existing session or creates a new one
+
+### `fnValidateJwtIdentity`
+#### Description
+Validates a JWT identity token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | AuthModeJwtTokenPayload | The JWT token payload |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | Contains user, tokenVersionId, and optional orgId |
+
+#### Internal Logic
+- Validates the token session
+- Checks if the user exists and is accepted
+- Validates organization membership if applicable
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| crypto | For generating random tokens |
+| bcrypt | For hashing and comparing tokens |
+| @app/db/schemas | For type definitions |
+| @app/lib/config/env | For configuration settings |
+| @app/lib/errors | For custom error types |
+
+## Error Handling
+The code uses custom error types like `ForbiddenRequestError` and `UnauthorizedError` for specific error scenarios. It also throws generic `Error` instances for other cases.
+
+Your response should not exceed 3000 words or 4000 tokens. Focus on providing clear, concise information that can be directly inferred from the code. Include optional sections only when they provide significant value for understanding the code.

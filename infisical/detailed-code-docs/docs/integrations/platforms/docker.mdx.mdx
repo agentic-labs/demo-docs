@@ -1,0 +1,124 @@
+---
+title: "docker.mdx"
+---
+
+---
+title: "Docker Entrypoint"
+description: "Learn how to use Infisical to inject environment variables into a Docker container."
+---
+
+This approach allows you to inject secrets from Infisical directly into your application.
+This is achieved by installing the Infisical CLI into your docker image and modifying your start command to execute with Infisical.
+
+## Add the Infisical CLI to your Dockerfile
+
+&lt;Tabs&gt;
+	 &lt;Tab title="Alpine"&gt;
+		```dockerfile
+    	RUN apk add --no-cache bash curl && curl -1sLf \
+      'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' | bash \
+      && apk add infisical
+    	```
+
+   &lt;/Tab&gt;
+	 &lt;Tab title="RedHat/CentOs/Amazon-linux"&gt;
+		```dockerfile
+    RUN curl -1sLf \
+    'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.rpm.sh' | sh \ 
+    && yum install -y infisical
+		```
+   &lt;/Tab&gt;
+	 &lt;Tab title="Debian/Ubuntu"&gt;
+		```dockerfile
+    RUN apt-get update && apt-get install -y bash curl && curl -1sLf \
+      'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash \
+      && apt-get update && apt-get install -y infisical
+		```
+   &lt;/Tab&gt;
+&lt;/Tabs&gt;
+####
+&lt;Tip&gt;
+  We recommend you to set the version of the CLI to a specific version. This will help keep your CLI version consistent across reinstalls. [View versions](https://cloudsmith.io/~infisical/repos/infisical-cli/packages/)
+&lt;/Tip&gt;
+
+## Modify the start command in your Dockerfile
+
+Starting your service with the Infisical CLI pulls your secrets from Infisical and injects them into your service.
+
+&lt;Tabs&gt;
+  &lt;Tab title="Machine Identity (Recommended)"&gt;
+    ```dockerfile
+  CMD ["infisical", "run", "--projectId", "&lt;your-project-id&gt;", "--", "[your service start command]"]
+
+# example with single single command
+
+CMD ["infisical", "run", "--projectId", "&lt;your-project-id&gt;", "--", "npm", "run", "start"]
+
+# example with multiple commands
+
+CMD ["infisical", "run", "--projectId", "&lt;your-project-id&gt;", "--command", "npm run start && ..."]
+
+````
+
+&lt;Steps&gt;
+  &lt;Step title="Generate a machine identity"&gt;
+    Generate a machine identity for your project by following the steps in the [Machine Identity](/documentation/platform/identities/machine-identities) guide. The machine identity will allow you to authenticate and fetch secrets from Infisical.
+  &lt;/Step&gt;
+  &lt;Step title="Obtain an access token for the machine identity"&gt;
+    Obtain an access token for the machine identity by running the following command:
+    ```bash
+    export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=&lt;your-client-id&gt; --client-secret=&lt;your-client-secret&gt; --plain --silent)
+    ```
+
+    &lt;Info&gt;
+     Please note that the access token has a limited lifespan. The `infisical token renew` command can be used to renew the token if needed.
+    &lt;/Info&gt;
+  &lt;/Step&gt;
+  &lt;Step title="Feed the access token to the docker container"&gt;
+    The last step is to give the Infisical CLI installed in your Docker container access to the access token. This will allow the CLI to fetch and inject the secrets into your application.
+
+    To feed the access token to the container, use the INFISICAL_TOKEN environment variable as shown below.
+
+    ```bash
+    docker run --env INFISICAL_TOKEN=$INFISICAL_TOKEN [DOCKER-IMAGE]...
+    ```
+  &lt;/Step&gt;
+&lt;/Steps&gt;
+
+&lt;/Tab&gt;
+&lt;Tab title="Service Token (Deprecated)"&gt;
+  &lt;Warning&gt;
+Service tokens are being deprecated in favor of [machine identities](/documentation/platform/identities/machine-identities).
+
+They will be removed in the future in accordance with the deprecation notice and timeline stated [here](https://infisical.com/blog/deprecating-api-keys).
+
+&lt;/Warning&gt;
+```dockerfile
+CMD ["infisical", "run", "--", "[your service start command]"]
+
+# example with single single command
+CMD ["infisical", "run", "--", "npm", "run", "start"]
+
+# example with multiple commands
+CMD ["infisical", "run", "--command", "npm run start && ..."]
+````
+
+  &lt;Steps&gt;
+    &lt;Step title="Generate a service token"&gt;
+      Head to your project settings in the Infisical dashboard to generate an [service token](/documentation/platform/token). 
+      This service token will allow you to authenticate and fetch secrets from Infisical. 
+      Once you have created a service token with the required permissions, you’ll need to feed the token to the CLI installed in your docker container.
+    &lt;/Step&gt;
+    &lt;Step title="Feed service token to docker container"&gt;
+      The last step is to give the Infisical CLI installed in your Docker container access to the service token. This will allow the CLI to fetch and inject the secrets into your application.
+
+      To feed the service token to the container, use the INFISICAL_TOKEN environment variable as shown below.
+
+      ```bash
+      docker run --env INFISICAL_TOKEN=[token] [DOCKER-IMAGE]...
+      ```
+    &lt;/Step&gt;
+
+  &lt;/Steps&gt;
+  &lt;/Tab&gt;
+&lt;/Tabs&gt;

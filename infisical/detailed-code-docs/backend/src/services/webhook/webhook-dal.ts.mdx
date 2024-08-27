@@ -1,0 +1,143 @@
+---
+title: "webhook-dal.ts"
+---
+
+## High-level description
+This code defines a Data Access Layer (DAL) for interacting with webhooks stored in a database. It provides functions for finding, creating, updating, and deleting webhook records, as well as specialized methods for managing webhook data related to specific use cases.
+
+## Code Structure
+The `webhookDALFactory` function returns an object containing several database operation functions. These functions utilize the `knex` library and a provided database client to interact with the webhook table. The `ormify` function is used to inject common CRUD operations into the returned object.
+
+## References
+- `@app/db/schemas`: Defines the `TWebhooks` and `TWebhooksUpdate` types, representing the structure of webhook data.
+- `@app/lib/knex`: Provides utility functions for working with `knex`, such as `ormify` and `selectAllTableCols`.
+
+## Symbols
+
+### `webhookDALFactory`
+#### Description
+This factory function creates and returns a DAL object for managing webhooks in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `TDbClient` | A database client instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `TWebhookDALFactory` | An object containing functions for interacting with webhook data. |
+
+#### Internal Logic
+1. Creates an ORM instance for the `Webhook` table using `ormify`.
+2. Defines several functions for specific webhook operations:
+    - `find`: Finds webhooks based on a filter and returns an array of matching records.
+    - `findOne`: Finds a single webhook based on a filter and returns the first match.
+    - `findById`: Finds a webhook by its ID and returns the record.
+    - `findAllWebhooks`: Retrieves all webhooks for a given project, optionally filtering by environment and secret path.
+    - `bulkUpdate`: Updates multiple webhook records in bulk.
+3. Returns an object containing the ORM instance and the defined webhook operation functions.
+
+### `find`
+#### Description
+Finds webhooks in the database based on the provided filter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | `Partial&lt;TWebhooks & { projectId: string }&gt; ` | An object specifying the filter criteria for the webhooks. |
+| tx | `Knex` | Optional. A Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;TWebhooks[]&gt;` | A promise that resolves to an array of matching webhooks. |
+
+#### Internal Logic
+1. Executes a query to select webhooks from the database based on the provided filter.
+2. Joins the `Webhook` table with the `Environment` table to retrieve environment details.
+3. Maps the query results to an array of `TWebhooks` objects, including environment information.
+
+### `findOne`
+#### Description
+Finds a single webhook in the database based on the provided filter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | `Partial&lt;TWebhooks&gt;` | An object specifying the filter criteria for the webhook. |
+| tx | `Knex` | Optional. A Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;TWebhooks | undefined&gt;` | A promise that resolves to the matching webhook or undefined if not found. |
+
+#### Internal Logic
+1. Executes a query to select a webhook from the database based on the provided filter.
+2. Joins the `Webhook` table with the `Environment` table to retrieve environment details.
+3. Returns the first matching webhook, including environment information, or undefined if no match is found.
+
+### `findById`
+#### Description
+Finds a webhook in the database by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the webhook to find. |
+| tx | `Knex` | Optional. A Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;TWebhooks | undefined&gt;` | A promise that resolves to the matching webhook or undefined if not found. |
+
+#### Internal Logic
+1. Executes a query to select a webhook from the database by its ID.
+2. Joins the `Webhook` table with the `Environment` table to retrieve environment details.
+3. Returns the matching webhook, including environment information, or undefined if no match is found.
+
+### `findAllWebhooks`
+#### Description
+Retrieves all webhooks for a given project, optionally filtering by environment and secret path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+| environment | `string` | Optional. The slug of the environment to filter by. |
+| secretPath | `string` | Optional. The secret path to filter by. |
+| tx | `Knex` | Optional. A Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;TWebhooks[]&gt;` | A promise that resolves to an array of matching webhooks. |
+
+#### Internal Logic
+1. Builds a query to select webhooks from the database based on the provided project ID, environment, and secret path filters.
+2. Joins the `Webhook` table with the `Environment` table to retrieve environment details.
+3. Orders the results by creation date in ascending order.
+4. Maps the query results to an array of `TWebhooks` objects, including environment information.
+
+### `bulkUpdate`
+#### Description
+Updates multiple webhook records in bulk.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `Array&lt;TWebhooksUpdate & { id: string }&gt;` | An array of webhook update objects, each containing the webhook ID and the fields to update. |
+| tx | `Knex` | Optional. A Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;number[]&gt;` | A promise that resolves to an array of numbers, each representing the number of rows affected by the corresponding update query. |
+
+#### Internal Logic
+1. Iterates over the provided array of webhook update objects.
+2. For each object, builds an update query using the webhook ID to identify the record to update.
+3. Executes the update queries concurrently using `Promise.all`.
+4. Returns an array of numbers, each representing the number of rows affected by the corresponding update query.

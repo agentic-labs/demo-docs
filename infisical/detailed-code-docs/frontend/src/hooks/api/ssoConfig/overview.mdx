@@ -1,0 +1,93 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks for managing Single Sign-On (SSO) configuration in a web application. It provides functionality to fetch, create, and update SSO configurations using React Query for state management and API interactions. The directory consists of two main files: an index file that serves as an export module, and a queries file that contains the implementation of the SSO configuration hooks.
+
+## What does it do?
+The code in this directory enables developers to easily interact with SSO configuration data in their React application. It provides three main functionalities:
+
+1. Fetching SSO configuration: Developers can retrieve the current SSO configuration for a specific organization.
+2. Creating SSO configuration: The code allows for the creation of new SSO configurations.
+3. Updating SSO configuration: Existing SSO configurations can be modified using the provided hooks.
+
+These hooks handle the complexities of API interactions, state management, and cache invalidation, making it simpler for developers to integrate SSO functionality into their application.
+
+## Key Files
+
+### index.tsx
+This file acts as a centralized export point for the SSO configuration-related hooks. It re-exports the three main hooks (`useCreateSSOConfig`, `useGetSSOConfig`, and `useUpdateSSOConfig`) from the `queries` module. This structure allows for easy importing of these hooks in other parts of the application.
+
+### queries.tsx
+This file contains the core implementation of the SSO configuration hooks. It defines three main hooks:
+
+1. `useGetSSOConfig`: Fetches the SSO configuration for a given organization.
+2. `useCreateSSOConfig`: Creates a new SSO configuration.
+3. `useUpdateSSOConfig`: Updates an existing SSO configuration.
+
+These hooks utilize React Query's `useQuery` and `useMutation` hooks to handle API requests and manage the related state efficiently.
+
+## Dependencies
+The code relies on the following external libraries and internal modules:
+
+1. @tanstack/react-query (version not specified): This library is used for fetching, caching, and updating asynchronous data. It provides the core functionality for the custom hooks.
+
+2. @app/config/request: This internal module exports an `apiRequest` object used for making API calls.
+
+3. @app/hooks/api/organization/queries: This internal module provides `organizationKeys` used for query invalidation.
+
+React Query was likely chosen for its powerful data synchronization capabilities and its ability to simplify complex data fetching scenarios in React applications.
+
+## Configuration
+The code uses a `ssoConfigKeys` object to define query keys for SSO configuration. These keys are used by React Query for caching and invalidation purposes. The object contains a method `getSSOConfig` that returns a tuple with the organization ID and a string identifier.
+
+```typescript
+const ssoConfigKeys = {
+  getSSOConfig: (organizationId: string) =&gt; [organizationId, "sso-config"],
+};
+```
+
+## API/Interface Reference
+The hooks interact with the following API endpoints:
+
+1. Fetch SSO configuration:
+   - Endpoint: `/api/v1/sso/config`
+   - Method: GET
+   - Query parameter: organizationId
+   - Response: SSO Config object
+
+2. Create SSO configuration:
+   - Endpoint: `/api/v1/sso/config`
+   - Method: POST
+   - Request body: SSO Config data
+   - Response: Created SSO Config object
+
+3. Update SSO configuration:
+   - Endpoint: `/api/v1/sso/config`
+   - Method: PATCH
+   - Request body: Updated SSO Config data
+   - Response: Updated SSO Config object
+
+Here's an example of how the `useGetSSOConfig` hook is implemented:
+
+```typescript
+export const useGetSSOConfig = (organizationId: string) =&gt; {
+  return useQuery({
+    queryKey: ssoConfigKeys.getSSOConfig(organizationId),
+    queryFn: () =&gt;
+      apiRequest.get(`/api/v1/sso/config`, {
+        params: { organizationId },
+      }),
+    select: (response) =&gt; response.data,
+    retry: false,
+    onError: () =&gt; null,
+  });
+};
+```
+
+This hook uses React Query's `useQuery` to fetch SSO configuration data from the API. If the request fails, it returns null.
+
+The `useCreateSSOConfig` and `useUpdateSSOConfig` hooks use React Query's `useMutation` to handle POST and PATCH requests, respectively. They also include logic to invalidate related queries after successful operations, ensuring that the application's state remains up-to-date.
+
+In summary, this directory provides a robust and efficient way to manage SSO configurations in a React application, leveraging React Query for optimal performance and developer experience.

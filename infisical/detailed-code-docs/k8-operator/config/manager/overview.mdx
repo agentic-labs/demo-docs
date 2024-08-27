@@ -1,0 +1,141 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration files for deploying and managing a Kubernetes operator, specifically the Infisical Kubernetes operator. The configuration is structured using Kustomize, a Kubernetes native configuration management tool. The directory includes definitions for the manager deployment and customization of the controller image.
+
+## What does it do?
+The configuration in this directory sets up the necessary resources to deploy and run the Infisical Kubernetes operator in a Kubernetes cluster. It does the following:
+
+1. Creates a dedicated namespace called "system" for the operator.
+2. Defines a Deployment for the controller manager, which is the core component of the operator.
+3. Specifies resource limits and requests for the controller manager to ensure proper allocation of cluster resources.
+4. Sets up security contexts and probes for the controller manager container.
+5. Customizes the container image used for the controller, pointing it to the Infisical Kubernetes operator image.
+
+This configuration allows for easy deployment and management of the Infisical Kubernetes operator, ensuring it runs in a controlled and isolated environment within the cluster.
+
+## Key Files
+
+### kustomization.yaml
+This file is the entry point for Kustomize configuration. It specifies:
+- The resources to be included (manager.yaml)
+- Image customization for the controller, setting it to use the Infisical Kubernetes operator image
+
+Example snippet:
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- manager.yaml
+images:
+- name: controller
+  newName: infisical/kubernetes-operator
+  newTag: latest
+```
+
+### manager.yaml
+This file defines the core Kubernetes resources for deploying the controller manager:
+1. A Namespace resource named "system"
+2. A Deployment resource for the controller manager
+
+Key aspects of the Deployment configuration include:
+- Single replica deployment
+- Security context settings
+- Container specifications including image, command, and arguments
+- Resource limits and requests
+- Liveness and readiness probes
+- Service account configuration
+
+Example snippet of the Deployment resource:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+  labels:
+    control-plane: controller-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - command:
+        - /manager
+        args:
+        - --leader-elect
+        image: controller:latest
+        name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+      serviceAccountName: controller-manager
+      terminationGracePeriodSeconds: 10
+```
+
+## Dependencies
+The configuration in this directory relies on the following:
+
+1. Kustomize: Used to customize and patch Kubernetes manifests. The `kustomization.yaml` file is specifically designed for use with Kustomize.
+
+2. Kubernetes: The resources defined are Kubernetes native resources (Namespace, Deployment) and require a Kubernetes cluster for deployment.
+
+3. Infisical Kubernetes Operator: The image customization in `kustomization.yaml` points to the Infisical Kubernetes operator image (`infisical/kubernetes-operator:latest`), indicating a dependency on this specific operator implementation.
+
+## Configuration
+The configuration options are spread across the two files:
+
+### kustomization.yaml
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| apiVersion | string | kustomize.config.k8s.io/v1beta1 | Specifies the API version of the Kustomization configuration |
+| kind | string | Kustomization | Defines the type of the configuration |
+| resources | list | [manager.yaml] | Specifies the Kubernetes resource files to be included |
+| images | list | - | Defines image customizations for the resources |
+
+### manager.yaml
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| replicas | integer | 1 | Number of replicas for the controller manager |
+| image | string | controller:latest | Container image for the manager |
+| resources.limits.cpu | string | 500m | CPU limit for the container |
+| resources.limits.memory | string | 128Mi | Memory limit for the container |
+| resources.requests.cpu | string | 10m | CPU request for the container |
+| resources.requests.memory | string | 64Mi | Memory request for the container |
+
+Additional configuration options in `manager.yaml` include security contexts, probes, and service account settings, which are crucial for the proper functioning and security of the operator in a Kubernetes environment.
+
+It's worth noting that there are some TODOs in the `manager.yaml` file:
+1. Uncommenting and configuring nodeAffinity expression for multi-architecture support
+2. Considering enabling seccompProfile for enhanced security on supported Kubernetes versions
+3. Adjusting resource configurations based on specific project requirements
+
+These TODOs suggest areas for potential future improvements or customizations of the operator deployment.

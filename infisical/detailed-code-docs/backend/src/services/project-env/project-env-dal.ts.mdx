@@ -1,0 +1,107 @@
+---
+title: "project-env-dal.ts"
+---
+
+## High-level description
+The `project-env-dal.ts` file defines a Data Access Layer (DAL) for interacting with the `Environment` table in the database. It provides functions for common operations like finding environments by slugs, finding the last environment position, and updating environment positions.
+
+## Code Structure
+The `projectEnvDALFactory` function takes a database client as input and returns an object containing various database operation functions. It utilizes the `ormify` function to inject common CRUD operations and defines additional functions specific to project environments.
+
+## References
+- `@app/db`: Provides the database client and table name enum.
+- `@app/lib/errors`: Provides the `DatabaseError` class for database-related errors.
+- `@app/lib/knex`: Provides the `ormify` function for injecting common database operations.
+
+## Symbols
+
+### `projectEnvDALFactory`
+#### Description
+This factory function creates and returns a DAL object for interacting with the `Environment` table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `TDbClient` | The database client used to interact with the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (unnamed) | `TProjectEnvDALFactory` | An object containing functions for interacting with the `Environment` table. |
+
+#### Internal Logic
+1. Creates an instance of `projectEnvOrm` using the `ormify` function, injecting common CRUD operations for the `Environment` table.
+2. Defines the following functions:
+    - `findBySlugs`: Finds environments by their slugs within a specific project.
+    - `findLastEnvPosition`: Finds the highest position value of environments within a project.
+    - `updateAllPosition`: Updates the positions of environments within a project based on a target position.
+3. Returns an object containing the `projectEnvOrm` and the defined functions.
+
+### `findBySlugs`
+#### Description
+This function retrieves environments associated with a specific project that match the provided slugs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+| env | `string[]` | An array of environment slugs to filter by. |
+| tx | `Knex` | Optional. An existing transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (unnamed) | `Promise&lt;Environment[]&gt;` | A promise that resolves to an array of found environments. |
+
+#### Internal Logic
+1. Executes a database query to select environments from the `Environment` table.
+2. Filters the query by `projectId` and `slug` using the provided values.
+3. Returns the retrieved environments.
+
+### `findLastEnvPosition`
+#### Description
+This function finds the highest position value among environments within a specific project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+| tx | `Knex` | Optional. An existing transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (unnamed) | `Promise&lt;number&gt;` | A promise that resolves to the highest position value or 0 if no environments are found. |
+
+#### Internal Logic
+1. Acquires an update lock on the `Environment` table for the specified project to ensure sequential execution of concurrent invocations.
+2. Executes a database query to find the maximum `position` value among environments within the specified project.
+3. Returns the maximum position value or 0 if no environments are found.
+
+### `updateAllPosition`
+#### Description
+This function updates the positions of environments within a specific project based on a target position.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project. |
+| pos | `number` | The current position of the environment being moved. |
+| targetPos | `number` | The target position to move the environment to. A value of -1 indicates deletion. |
+| tx | `Knex` | Optional. An existing transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (unnamed) | `Promise&lt;void&gt;` | A promise that resolves when the positions have been updated. |
+
+#### Internal Logic
+1. If `targetPos` is -1, decrements the position of all environments with a position greater than `pos` by 1, effectively deleting the environment at `pos`.
+2. If `targetPos` is greater than `pos`, decrements the position of all environments with a position between `pos` and `targetPos` by 1, shifting them down to make space for the moved environment.
+3. If `targetPos` is less than `pos`, increments the position of all environments with a position between `targetPos` and `pos` by 1, shifting them up to make space for the moved environment.
+
+## Dependencies
+- `knex`: Provides the query builder and transaction management.
+
+## Error Handling
+The functions in this file use a try-catch block to handle potential database errors. If an error occurs, a `DatabaseError` is thrown, providing context about the error.

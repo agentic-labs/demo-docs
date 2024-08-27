@@ -1,0 +1,156 @@
+---
+title: "changelog-generator.py"
+---
+
+## High-level description
+This Python script automates the generation of a changelog for the Infisical project. It fetches pull requests (PRs) between two release tags, extracts commit details, and uses OpenAI's GPT model to generate a formatted changelog. The script then posts the changelog to a Slack channel.
+
+## Code Structure
+The script is organized into several functions that handle different aspects of the changelog generation process, from fetching GitHub data to generating the changelog content and posting it to Slack.
+
+## Symbols
+
+### `set_multiline_output`
+#### Description
+Sets a multiline output in the GitHub Actions environment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the output variable |
+| value | str | The multiline value to be set |
+
+#### Internal Logic
+This function writes the multiline output to the `GITHUB_OUTPUT` file using a UUID as a delimiter.
+
+### `post_changelog_to_slack`
+#### Description
+Posts the generated changelog to a Slack channel using a webhook.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| changelog | str | The generated changelog content |
+| tag | str | The release tag associated with the changelog |
+
+#### Internal Logic
+Constructs a Slack message payload and sends a POST request to the Slack webhook URL.
+
+### `find_previous_release_tag`
+#### Description
+Finds the previous release tag given a current release tag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| release_tag | str | The current release tag |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| previous_tag | str | The previous release tag |
+
+#### Internal Logic
+Uses Git commands to find the previous tag, ensuring it starts with "infisical/".
+
+### `get_tag_creation_date`
+#### Description
+Retrieves the creation date of a given tag using the GitHub API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tag_name | str | The name of the tag |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| creation_date | datetime | The creation date of the tag |
+
+#### Internal Logic
+Makes API calls to GitHub to fetch the tag's commit information and extract the creation date.
+
+### `fetch_prs_between_tags`
+#### Description
+Fetches pull requests merged between two given tag dates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| previous_tag_date | datetime | The creation date of the previous tag |
+| release_tag_date | datetime | The creation date of the current release tag |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prs | list | A list of pull request objects |
+
+#### Internal Logic
+Uses the GitHub API to fetch closed and merged pull requests, then filters them based on the provided date range.
+
+### `extract_commit_details_from_prs`
+#### Description
+Extracts relevant details from the fetched pull requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prs | list | A list of pull request objects |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| commit_details | list | A list of dictionaries containing commit details |
+
+#### Internal Logic
+Parses each pull request to extract commit message, PR number, URL, and associated issue numbers (if any).
+
+### `generate_changelog_with_openai`
+#### Description
+Generates a formatted changelog using OpenAI's GPT model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| commit_details | list | A list of dictionaries containing commit details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| changelog | str | The generated changelog content |
+
+#### Internal Logic
+Constructs a prompt with commit details and instructions for the GPT model, then uses the OpenAI API to generate the changelog.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| os | Accessing environment variables |
+| requests | Making HTTP requests to GitHub API and Slack webhook |
+| re | Regular expression operations |
+| openai | Interacting with OpenAI API |
+| subprocess | Executing Git commands |
+| datetime | Handling date and time operations |
+| uuid | Generating unique identifiers |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| REPO_OWNER | str | "infisical" | The owner of the GitHub repository |
+| REPO_NAME | str | "infisical" | The name of the GitHub repository |
+| TOKEN | str | N/A | GitHub API token (from environment variable) |
+| SLACK_WEBHOOK_URL | str | N/A | Slack webhook URL (from environment variable) |
+| OPENAI_API_KEY | str | N/A | OpenAI API key (from environment variable) |
+| SLACK_MSG_COLOR | str | "#36a64f" | Color for Slack message attachment |
+
+## Error Handling
+The script uses try-except blocks to catch and print any exceptions that occur during execution.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /repos/{owner}/{repo}/pulls | GET | N/A | JSON | Fetches pull requests |
+| /repos/{owner}/{repo}/git/refs/tags/{tag} | GET | N/A | JSON | Fetches tag information |
+| /repos/{owner}/{repo}/commits/{sha} | GET | N/A | JSON | Fetches commit information |
+
+Note: These endpoints are part of the GitHub API used in the script.

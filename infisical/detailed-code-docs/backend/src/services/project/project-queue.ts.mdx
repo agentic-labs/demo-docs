@@ -1,0 +1,63 @@
+---
+title: "project-queue.ts"
+---
+
+## High-level description
+The `project-queue.ts` file defines a queue service responsible for upgrading projects from version 1 to version 2. This upgrade process involves creating a ghost user, migrating secrets and keys, and updating project metadata.
+
+## Code Structure
+The `projectQueueFactory` function initializes the queue service and defines the `upgradeProject` function, which adds an upgrade job to the queue. The queue service listens for `UpgradeProjectToGhost` jobs and executes the upgrade logic.
+
+## Symbols
+### `projectQueueFactory`
+#### Description
+Initializes the project queue service and defines the `upgradeProject` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| queueService | `TQueueServiceFactory` | Factory for interacting with the queue service. |
+| secretDAL | `Pick&lt;TSecretDALFactory, "find" | "bulkUpdateNoVersionIncrement"&gt;` | Data access layer for secrets. |
+| folderDAL | `Pick&lt;TSecretFolderDALFactory, "find"&gt;` | Data access layer for secret folders. |
+| userDAL | `Pick&lt;TUserDALFactory, "findUserEncKeyByUserId"&gt;` | Data access layer for users. |
+| secretVersionDAL | `Pick&lt;TSecretVersionDALFactory, "find" | "bulkUpdateNoVersionIncrement" | "delete"&gt;` | Data access layer for secret versions. |
+| integrationAuthDAL | `TIntegrationAuthDALFactory` | Data access layer for integration authorizations. |
+| secretApprovalRequestDAL | `Pick&lt;TSecretApprovalRequestDALFactory, "find"&gt;` | Data access layer for secret approval requests. |
+| secretApprovalSecretDAL | `Pick&lt;TSecretApprovalRequestSecretDALFactory, "find" | "bulkUpdateNoVersionIncrement"&gt;` | Data access layer for secret approval request secrets. |
+| projectKeyDAL | `Pick&lt;TProjectKeyDALFactory, "findLatestProjectKey" | "find" | "create" | "delete" | "insertMany"&gt;` | Data access layer for project keys. |
+| projectBotDAL | `Pick&lt;TProjectBotDALFactory, "findOne" | "delete" | "create"&gt;` | Data access layer for project bots. |
+| projectEnvDAL | `Pick&lt;TProjectEnvDALFactory, "find"&gt;` | Data access layer for project environments. |
+| orgDAL | `Pick&lt;TOrgDALFactory, "findMembership"&gt;` | Data access layer for organizations. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findOne" | "transaction" | "updateById" | "setProjectUpgradeStatus" | "find"&gt;` | Data access layer for projects. |
+| orgService | `Pick&lt;TOrgServiceFactory, "addGhostUser"&gt;` | Service for managing organizations. |
+| projectMembershipDAL | `Pick&lt;TProjectMembershipDALFactory, "create"&gt;` | Data access layer for project memberships. |
+| projectUserMembershipRoleDAL | `Pick&lt;TProjectUserMembershipRoleDALFactory, "create"&gt;` | Data access layer for project user membership roles. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `object` | `{ upgradeProject: (dto: TQueueJobTypes["upgrade-project-to-ghost"]["payload"]) =&gt; Promise&lt;void&gt;; }` | An object containing the `upgradeProject` function. |
+
+#### Internal Logic
+The factory function initializes the queue service for the `UpgradeProjectToGhost` job and defines the logic for handling this job. The job logic performs the following steps:
+1. **Retrieve project data:** Fetches the project to be upgraded, the old project key, environments, folders, secrets, secret versions, approval secrets, and integration authorizations.
+2. **Decrypt data:** Decrypts the retrieved secrets, secret versions, approval secrets, and integration authorizations using the user's private key and the old project key.
+3. **Create ghost user and keys:** Creates a ghost user, generates a new project key for the ghost user, and assigns workspace keys to existing project members using the ghost user's key.
+4. **Update project data:** Updates the project version, deletes the existing bot and project keys, creates a new bot associated with the ghost user, and encrypts all secrets and related data using the new bot's key.
+5. **Update database:** Updates the database with the modified project data, including secrets, secret versions, approval secrets, integration authorizations, and project keys.
+6. **Handle errors:** If any error occurs during the upgrade process, the project upgrade status is set to `Failed`, and the error is logged.
+
+### `upgradeProject`
+#### Description
+Adds an `upgrade-project-to-ghost` job to the queue.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dto | `TQueueJobTypes["upgrade-project-to-ghost"]["payload"]` | The payload for the upgrade job, containing the project ID, user ID, and encrypted private key. |
+
+#### Outputs
+This function does not return any value.
+
+#### Internal Logic
+The function adds an `upgrade-project-to-ghost` job to the queue with the provided payload. The job is configured with a maximum of one attempt and is removed from the queue upon completion or after five failed attempts.

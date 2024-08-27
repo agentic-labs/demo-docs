@@ -1,0 +1,63 @@
+---
+title: "20240208234120_scim-token.ts"
+---
+
+## High-level description
+This migration script manages database changes related to SCIM (System for Cross-domain Identity Management) token functionality. It creates a table for storing SCIM tokens and adds a 'scimEnabled' flag to the 'Organization' table.
+
+## References
+- `TableName`: An enum-like object defining table names, likely imported from '../schemas'.
+- `createOnUpdateTrigger`, `dropOnUpdateTrigger`: Utility functions for managing database triggers, imported from '../utils'.
+
+## Symbols
+### `up(knex: Knex): Promise&lt;void&gt;`
+#### Description
+This function defines the 'up' migration, executed when applying the migration. It creates the 'ScimToken' table and adds the 'scimEnabled' column to the 'Organization' table if they don't exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex client instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (implicit) | Promise\&lt;void\&gt; | A promise that resolves upon successful migration. |
+
+#### Internal Logic
+1. Checks if the 'ScimToken' table exists. If not, it creates the table with columns for:
+    - `id`: UUID primary key.
+    - `ttlDays`: Token Time-to-Live in days.
+    - `description`: Token description.
+    - `orgId`: Foreign key referencing the 'Organization' table.
+    - `created_at`, `updated_at`, `deleted_at`: Timestamps for tracking record changes.
+2. Alters the 'Organization' table to add a boolean column 'scimEnabled' with a default value of 'false'.
+3. Calls `createOnUpdateTrigger` to set up an 'UPDATE' trigger on the 'ScimToken' table.
+
+### `down(knex: Knex): Promise&lt;void&gt;`
+#### Description
+This function defines the 'down' migration, executed when reverting the migration. It drops the 'ScimToken' table and removes the 'scimEnabled' column from the 'Organization' table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex client instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (implicit) | Promise\&lt;void\&gt; | A promise that resolves upon successful migration rollback. |
+
+#### Internal Logic
+1. Drops the 'ScimToken' table if it exists.
+2. Calls `dropOnUpdateTrigger` to remove the 'UPDATE' trigger from the 'ScimToken' table.
+3. Alters the 'Organization' table to drop the 'scimEnabled' column.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex       | Provides database interaction capabilities. |
+
+## Side Effects
+- Modifies the database schema by creating/dropping tables and columns.
+- Sets up/removes database triggers. 

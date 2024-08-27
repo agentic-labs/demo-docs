@@ -1,0 +1,64 @@
+---
+title: "logger.ts"
+---
+
+## High-level description
+This code defines a singleton logger instance using the Pino logging library. It configures the logger to output logs to the console and optionally to AWS CloudWatch Logs based on environment variables. The logger also redacts sensitive keys from log messages.
+
+## Code Structure
+The code defines a global `logger` instance and an `initLogger` function to initialize it. The `loggerConfig` object schema defines the environment variables used for configuration. The `redactedKeys` array lists the keys to be redacted from log messages.
+
+## Symbols
+
+### `logger`
+#### Description
+A global, read-only instance of a Pino logger. It's initially undefined and is populated by the `initLogger` function.
+
+#### Internal Logic
+The logger is configured with a custom mixin to add a `severity` field to log messages based on the log level. It also formats log messages to include the process ID and hostname. Redaction is applied to sensitive keys listed in the `redactedKeys` array.
+
+### `initLogger`
+#### Description
+Initializes the global `logger` instance with the specified configuration.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | pino.Logger | The initialized Pino logger instance. |
+
+#### Internal Logic
+1. Parses environment variables using the `loggerConfig` schema.
+2. Defines an array of log transport targets, including the console and optionally AWS CloudWatch Logs based on the presence of AWS credentials in the environment variables.
+3. Creates a Pino logger instance with the configured transport, log level, formatters, and redaction rules.
+4. Assigns the created logger instance to the global `logger` variable.
+
+## Side Effects
+- Initializes the global `logger` instance.
+- May create log files on the filesystem if the file transport is enabled.
+- May send logs to AWS CloudWatch Logs if configured.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pino | Logging library used for creating the logger instance. |
+| zod |  Data validation library used for parsing and validating environment variables. |
+| @serdnam/pino-cloudwatch-transport | Pino transport for sending logs to AWS CloudWatch Logs. |
+
+### Configuration
+The logger is configured using the following environment variables:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `AWS_CLOUDWATCH_LOG_GROUP_NAME` | string | `infisical-log-stream` | The name of the CloudWatch log group. |
+| `AWS_CLOUDWATCH_LOG_REGION` | string | `us-east-1` | The AWS region for CloudWatch logs. |
+| `AWS_CLOUDWATCH_LOG_ACCESS_KEY_ID` | string | (optional) | The AWS access key ID for CloudWatch logs. |
+| `AWS_CLOUDWATCH_LOG_ACCESS_KEY_SECRET` | string | (optional) | The AWS secret access key for CloudWatch logs. |
+| `AWS_CLOUDWATCH_LOG_INTERVAL` | number | `1000` | The interval in milliseconds for sending logs to CloudWatch. |
+| `NODE_ENV` | enum | `production` | The environment for the application. |
+| `PINO_LOG_LEVEL` | string | `info` | The minimum log level to output. |
+
+## Error Handling
+The code does not implement specific error handling beyond basic exception raising.
+
+## Logging
+The code implements logging using the Pino library. Logs are output to the console and optionally to AWS CloudWatch Logs. Sensitive keys are redacted from log messages.

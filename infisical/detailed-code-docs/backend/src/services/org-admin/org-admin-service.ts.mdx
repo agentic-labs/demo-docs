@@ -1,0 +1,111 @@
+---
+title: "org-admin-service.ts"
+---
+
+## High-level description
+The `org-admin-service.ts` file defines the `orgAdminServiceFactory`, which provides functionality for organization administrators to manage projects within their organization. This includes listing all projects in the organization and granting admin access to a specific project for a user.
+
+## Code Structure
+The `orgAdminServiceFactory` depends on several other services like `permissionService`, `projectDAL`, `projectMembershipDAL`, `projectKeyDAL`, `projectBotDAL`, `userDAL`, and `projectUserMembershipRoleDAL` to implement its functionality. It uses these services to interact with the database and perform operations related to projects, memberships, keys, and permissions.
+
+## References
+This code references several types and constants from other files:
+- `@app/db/schemas`: `ProjectMembershipRole`, `ProjectVersion`, `SecretKeyEncoding`
+- `@app/ee/services/permission/org-permission`: `OrgPermissionAdminConsoleAction`, `OrgPermissionSubjects`
+- `@app/ee/services/permission/permission-service`: `TPermissionServiceFactory`
+- `@app/lib/crypto/encryption`: `infisicalSymmetricDecrypt`
+- `@app/lib/errors`: `BadRequestError`
+- `../project/project-dal`: `TProjectDALFactory`
+- `../project/project-fns`: `assignWorkspaceKeysToMembers`
+- `../project-bot/project-bot-dal`: `TProjectBotDALFactory`
+- `../project-key/project-key-dal`: `TProjectKeyDALFactory`
+- `../project-membership/project-membership-dal`: `TProjectMembershipDALFactory`
+- `../project-membership/project-user-membership-role-dal`: `TProjectUserMembershipRoleDALFactory`
+- `../user/user-dal`: `TUserDALFactory`
+- `./org-admin-types`: `TAccessProjectDTO`, `TListOrgProjectsDTO`
+
+## Symbols
+
+### `orgAdminServiceFactory`
+#### Description
+This factory function creates and returns an object containing two functions: `listOrgProjects` and `grantProjectAdminAccess`. These functions provide the core functionality for the organization admin service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Service to manage organization permissions. |
+| projectDAL | Pick&lt;TProjectDALFactory, "find" \| "findById" \| "findProjectGhostUser"&gt; | Data access layer for projects. |
+| projectMembershipDAL | Pick&lt;TProjectMembershipDALFactory, "findOne" \| "create" \| "transaction" \| "delete"&gt; | Data access layer for project memberships. |
+| projectKeyDAL | Pick&lt;TProjectKeyDALFactory, "findLatestProjectKey" \| "create"&gt; | Data access layer for project keys. |
+| projectBotDAL | Pick&lt;TProjectBotDALFactory, "findOne"&gt; | Data access layer for project bots. |
+| userDAL | Pick&lt;TUserDALFactory, "findUserEncKeyByUserId"&gt; | Data access layer for users. |
+| projectUserMembershipRoleDAL | Pick&lt;TProjectUserMembershipRoleDALFactory, "create" \| "delete"&gt; | Data access layer for project user membership roles. |
+
+#### Outputs
+An object containing the following functions:
+- `listOrgProjects`: Lists all projects within an organization.
+- `grantProjectAdminAccess`: Grants admin access to a specific project for a user.
+
+#### Internal Logic
+The factory function initializes and returns an object containing two functions:
+
+- **`listOrgProjects`**: This function first checks if the actor has permission to access all projects in the organization. If authorized, it retrieves a list of projects belonging to the actor's organization, optionally filtered by a search query. The function returns the list of projects and the total count of projects.
+- **`grantProjectAdminAccess`**: This function first checks if the actor has permission to access all projects in the organization. If authorized, it retrieves the project and checks if the user already has a membership. If a membership exists, it updates the user's role to admin. Otherwise, it creates a new membership with the admin role for the user. The function utilizes the project ghost user's key to generate and assign workspace keys to the user. Finally, it returns a flag indicating whether the user was an existing member and the updated or newly created membership object.
+
+### `listOrgProjects`
+#### Description
+This function lists all projects within an organization, optionally filtered by a search query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor |  | The user performing the action. |
+| limit | number | The maximum number of projects to return. |
+| actorId | string | The ID of the user performing the action. |
+| offset | number | The offset for pagination. |
+| search | string | The search query to filter projects by name. |
+| actorOrgId | string | The ID of the organization. |
+| actorAuthMethod | string | The authentication method used by the actor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projects | Array | An array of projects belonging to the organization. |
+| count | number | The total count of projects in the organization. |
+
+#### Internal Logic
+1. **Check Permission**: Verifies if the actor has permission to access all projects in the organization.
+2. **Fetch Projects**: Retrieves a list of projects belonging to the actor's organization, optionally filtered by a search query.
+3. **Return Results**: Returns the list of projects and the total count of projects.
+
+### `grantProjectAdminAccess`
+#### Description
+This function grants admin access to a specific project for a user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor |  | The user performing the action. |
+| actorId | string | The ID of the user performing the action. |
+| actorOrgId | string | The ID of the organization. |
+| actorAuthMethod | string | The authentication method used by the actor. |
+| projectId | string | The ID of the project. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isExistingMember | boolean | Indicates whether the user was an existing member of the project. |
+| membership | object | The updated or newly created membership object. |
+
+#### Internal Logic
+1. **Check Permission**: Verifies if the actor has permission to access all projects in the organization.
+2. **Retrieve Project**: Fetches the project details using the provided `projectId`.
+3. **Check Project Version**: Ensures the project is not a V1 project.
+4. **Check Existing Membership**: Checks if the user already has a membership in the project.
+5. **Update Existing Membership (if applicable)**: If a membership exists, updates the user's role to admin.
+6. **Create New Membership (if applicable)**: If no membership exists, creates a new membership with the admin role for the user.
+7. **Generate and Assign Workspace Keys**: Utilizes the project ghost user's key to generate and assign workspace keys to the user.
+8. **Return Results**: Returns a flag indicating whether the user was an existing member and the updated or newly created membership object.
+
+## Error Handling
+The code utilizes `BadRequestError` from `@app/lib/errors` to handle invalid requests, such as a missing project, a V1 project, or missing ghost user or bot information. It also uses `ForbiddenError` from `@casl/ability` to handle unauthorized access attempts.

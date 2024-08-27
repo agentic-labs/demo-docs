@@ -1,0 +1,129 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of SAML (Security Assertion Markup Language) configuration services for a backend application. It provides functionality for managing Single Sign-On (SSO) configurations, including creating, updating, retrieving, and using SAML configurations for user authentication. The code is organized into a Data Access Layer (DAL), a service layer, and type definitions to ensure type safety and consistency throughout the SAML-related operations.
+
+## What does it do?
+The SAML configuration service in this directory enables organizations to set up and manage Single Sign-On (SSO) authentication using SAML providers such as Okta, Azure, JumpCloud, Google, and Keycloak. Here's a breakdown of its main functionalities:
+
+1. SAML Configuration Management:
+   - Create new SAML configurations for organizations
+   - Update existing SAML configurations
+   - Retrieve SAML configurations based on various criteria (organization ID, slug, or SSO ID)
+
+2. User Authentication:
+   - Handle SAML login process for users
+   - Create or update user accounts based on SAML login information
+   - Manage organization memberships for authenticated users
+
+3. Security and Encryption:
+   - Encrypt sensitive SAML configuration data before storing it in the database
+   - Use organization-specific encryption keys for added security
+
+4. Permission and License Management:
+   - Enforce user permissions for creating and editing SSO configurations
+   - Verify if an organization's plan allows SAML SSO usage
+
+5. Integration with Other Services:
+   - Interact with user, organization, and authentication-related services
+   - Generate authentication tokens and handle email verifications
+
+## Key Files
+
+1. `saml-config-dal.ts`:
+   - Implements the Data Access Layer for SAML configurations
+   - Provides methods to interact with the database for CRUD operations on SAML configurations
+   - Includes a custom method to find enforceable SAML configurations for organizations
+
+2. `saml-config-service.ts`:
+   - Implements the main SAML configuration service
+   - Provides methods for creating, updating, retrieving, and using SAML configurations
+   - Handles user authentication, permission checks, and integration with other services
+
+3. `saml-config-types.ts`:
+   - Defines TypeScript types and enums related to SAML configuration
+   - Includes types for creating, updating, and retrieving SAML configurations
+   - Defines data transfer objects (DTOs) for SAML login and configuration operations
+
+## Dependencies
+The SAML configuration service relies on several external libraries and internal modules:
+
+1. Database and ORM:
+   - `@app/db`: Provides the database client type
+   - `@app/lib/knex`: Offers the `ormify` function for creating basic CRUD operations
+
+2. Error Handling:
+   - `@app/lib/errors`: Provides custom error classes like `DatabaseError`, `BadRequestError`, and `ForbiddenError`
+
+3. Authentication and Authorization:
+   - Permission service: Handles user permissions for SSO configuration operations
+   - License service: Verifies if an organization's plan allows SAML SSO usage
+   - Token service: Generates authentication tokens
+
+4. User and Organization Management:
+   - User DAL: Manages user data
+   - Organization DAL: Handles organization-related operations
+   - Organization Membership DAL: Manages user memberships in organizations
+
+5. Email Services:
+   - SMTP service: Handles email notifications and verifications
+
+## Configuration
+The SAML configuration service uses encrypted configuration data stored in the database. Key configuration elements include:
+
+1. SAML Provider: Specifies the SSO provider (e.g., Okta, Azure, JumpCloud, Google, Keycloak)
+2. Entry Point: The URL where the SAML authentication request should be sent
+3. Issuer: The entity issuing the SAML assertions
+4. Certificate: The X.509 certificate used for verifying SAML responses
+
+These configurations are encrypted using organization-specific encryption keys before being stored in the database, ensuring the security of sensitive SSO information.
+
+## Error Handling
+The service implements comprehensive error handling:
+
+1. Database errors are caught and wrapped in a `DatabaseError` class, providing consistent error reporting for database operations.
+2. Permission-related errors are handled using the `ForbiddenError` class, ensuring proper access control.
+3. Configuration and input validation errors are managed using the `BadRequestError` class, providing clear feedback on invalid operations or data.
+
+## Code Snippets
+
+Here's an example of how the SAML configuration service creates a new SAML configuration:
+
+```typescript
+async function createSamlCfg({ orgId, actor, actorId, actorAuthMethod, actorOrgId, ...dto }: TCreateSamlCfgDTO) {
+  await permissionService.checkUserPermission({
+    orgId,
+    userId: actorId,
+    permission: OrgUserPermissionFlags.MANAGE_SSO,
+  });
+
+  const org = await orgDAL.findById(orgId);
+  if (!org) {
+    throw new BadRequestError('Organization not found');
+  }
+
+  await licenseService.assertFeatureAllowed(orgId, LicenseFeature.SAML_SSO);
+
+  const orgBot = await orgBotDAL.findOrCreate(orgId);
+  const encryptedData = orgBot.encryptData({
+    entryPoint: dto.entryPoint,
+    issuer: dto.issuer,
+    cert: dto.cert,
+  });
+
+  const samlCfg = await samlConfigDAL.create({
+    orgId,
+    authProvider: dto.authProvider,
+    isActive: dto.isActive,
+    encryptedData,
+  });
+
+  return samlCfg;
+}
+```
+
+This function demonstrates the process of creating a SAML configuration, including permission checks, license verification, data encryption, and database interaction.
+
+In conclusion, this directory provides a robust and secure implementation of SAML configuration management and SSO authentication for enterprise applications, ensuring proper access control, data security, and integration with various SAML providers.

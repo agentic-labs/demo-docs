@@ -1,0 +1,70 @@
+---
+title: "rate-limit-service.ts"
+---
+
+## High-level description
+The `rate-limit-service.ts` file defines a service responsible for managing and synchronizing rate limit configurations in the application. It provides functionalities to retrieve, update, and synchronize rate limit settings, including a background process for periodic synchronization based on license features.
+
+## Code Structure
+The code defines a few key symbols:
+- `rateLimitMaxConfiguration`: A global variable holding the current rate limit configuration.
+- `getRateLimiterConfig`: A function to access the current rate limit configuration.
+- `rateLimitServiceFactory`: A factory function that creates and returns an object containing the main rate limit service functions.
+- The factory returns:
+    - `getRateLimits`: A function to retrieve rate limits from the database.
+    - `updateRateLimit`: A function to update rate limits in the database.
+    - `syncRateLimitConfiguration`: A function to synchronize the in-memory rate limit configuration with the database.
+    - `initializeBackgroundSync`: A function to initialize a background process for periodic synchronization.
+
+## References
+- `@app/lib/logger`: Used for logging.
+- `../license/license-service`: Used to check license features related to custom rate limits.
+- `./rate-limit-dal`: Provides data access layer functions for rate limits.
+- `./rate-limit-types`: Defines types related to rate limits.
+
+## Symbols
+
+### `getRateLimiterConfig`
+#### Description
+This function returns the current rate limit configuration.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | `RateLimitConfiguration` | The current rate limit configuration object. |
+
+### `rateLimitServiceFactory`
+#### Description
+This factory function initializes and returns an object containing the rate limit service functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rateLimitDAL | `TRateLimitDALFactory` | A factory for creating a rate limit data access layer object. |
+| licenseService | `Pick&lt;TLicenseServiceFactory, "onPremFeatures"&gt;` | An object providing access to on-premise license features. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | `TRateLimitServiceFactory` | An object containing the rate limit service functions. |
+
+#### Internal Logic
+The factory initializes a constant `DEFAULT_RATE_LIMIT_CONFIG_ID` and defines four functions:
+- `getRateLimits`: Fetches rate limits from the database using the `rateLimitDAL`. If no rate limit is found, it creates a new one with default values.
+- `updateRateLimit`: Updates rate limits in the database using the `rateLimitDAL`.
+- `syncRateLimitConfiguration`: Synchronizes the in-memory `rateLimitMaxConfiguration` with the values fetched from the database.
+- `initializeBackgroundSync`: Initializes a background process that synchronizes rate limits every 10 minutes using a `CronJob`. This process is only enabled if the license supports custom rate limits.
+
+## Side Effects
+- Modifies the global `rateLimitMaxConfiguration` variable during synchronization.
+- Starts a background `CronJob` for periodic synchronization if custom rate limits are enabled by the license.
+
+## Dependencies
+- `cron`: Used for scheduling the background synchronization job.
+- `@app/lib/logger`: Used for logging.
+
+## Error Handling
+The `getRateLimits` and `syncRateLimitConfiguration` functions include basic error handling using `try...catch` blocks and log any errors encountered.
+
+## Logging
+The code uses the `logger` object from `@app/lib/logger` to log information about rate limit synchronization and errors.

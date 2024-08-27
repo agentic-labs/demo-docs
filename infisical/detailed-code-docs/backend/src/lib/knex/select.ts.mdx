@@ -1,0 +1,63 @@
+---
+title: "select.ts"
+---
+
+## High-level description
+This code defines utility functions for working with Knex.js, a SQL query builder, specifically for selecting data from tables. It includes functions for selecting all columns of a table, stripping undefined values from objects used in where clauses, and safely setting string values for Knex queries.
+
+## Code Structure
+The code consists of three exported functions: `selectAllTableCols`, `stripUndefinedInWhere`, and `setKnexStringValue`. These functions are independent of each other and do not interact directly.
+
+## Symbols
+
+### `selectAllTableCols`
+#### Description
+This function generates a string representing the selection of all columns within a given table. It leverages TypeScript generics to ensure type safety and returns a string that can be used directly in a Knex.js `select` clause.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tableName | Tname extends keyof Tables | The name of the table to select all columns from. This should be a key of the `Tables` type from Knex. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | keyof Tables[Tname]["base"] | A string representing the selection of all columns from the specified table, formatted as "tableName.*". |
+
+#### Internal Logic
+The function uses template literals to construct the output string, interpolating the `tableName` parameter.
+
+### `stripUndefinedInWhere`
+#### Description
+This function removes properties with `undefined` values from an object. This is useful for preparing objects to be used as filters in Knex.js `where` clauses, as Knex.js treats `undefined` values differently than other falsy values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| val | T extends object | The object to remove `undefined` properties from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | Exclude&lt;T, undefined&gt; | A new object with all `undefined` properties removed from the input object. |
+
+#### Internal Logic
+The function iterates over the object's entries using `Object.entries`. For each entry, it checks if the value is `undefined`. If it is, the property is deleted from a copy of the original object. Finally, the modified copy is returned.
+
+### `setKnexStringValue`
+#### Description
+This function provides a safe way to set string values for Knex.js queries. It handles `undefined`, empty strings, and `null` values differently, allowing for more precise control over how these values are interpreted by Knex.js.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | string \| null \| undefined | The string value to be processed. |
+| cb | (arg: string) =&gt; T | A callback function that will be called with the processed string value if it's not `undefined`, `null`, or an empty string. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | T \| undefined \| null | The result of the callback function if the input value is a non-empty string, `null` if the input value is `null` or an empty string, or `undefined` if the input value is `undefined`. |
+
+#### Internal Logic
+The function first checks if the `value` is `undefined`. If it is, it returns `undefined` without calling the callback. If the `value` is an empty string or `null`, it returns `null`. Otherwise, it calls the `cb` function with the `value` and returns the result.

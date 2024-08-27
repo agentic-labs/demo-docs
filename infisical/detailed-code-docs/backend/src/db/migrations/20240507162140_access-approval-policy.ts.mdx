@@ -1,0 +1,77 @@
+---
+title: "20240507162140_access-approval-policy.ts"
+---
+
+## High-level description
+This code defines a database migration script using Knex.js to create two tables related to access approval policies and their approvers. It also sets up triggers to automatically update the `updatedAt` timestamp on these tables.
+
+## Code Structure
+The code defines two asynchronous functions: `up` and `down`. 
+- `up` is responsible for creating the `AccessApprovalPolicy` and `AccessApprovalPolicyApprover` tables and their associated triggers if they don't exist. 
+- `down` is responsible for dropping these tables and their triggers. 
+Both functions use Knex.js schema builder to define the table structure and foreign key constraints.
+
+## References
+- `TableName`: An enum-like object (not shown in the provided code) that likely defines the names of different tables in the database schema.
+- `createOnUpdateTrigger`: A utility function (defined in `backend/src/db/utils.ts`) that creates a trigger to automatically update the `updatedAt` timestamp on a table.
+- `dropOnUpdateTrigger`: A utility function (defined in `backend/src/db/utils.ts`) that drops the trigger created by `createOnUpdateTrigger`.
+
+## Symbols
+
+### `up`
+#### Description
+Creates the `AccessApprovalPolicy` and `AccessApprovalPolicyApprover` tables and their associated triggers if they don't exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return a value. |
+
+#### Internal Logic
+1. Checks if the `AccessApprovalPolicy` table exists. If not, it creates the table with the following columns:
+    - `id`: UUID, primary key, default value is a generated UUID.
+    - `name`: String, not nullable.
+    - `approvals`: Integer, not nullable, default value is 1.
+    - `secretPath`: String.
+    - `envId`: UUID, not nullable, foreign key referencing the `id` column in the `Environment` table, with a cascade delete policy.
+    - `createdAt`: Timestamp, automatically managed by the database.
+    - `updatedAt`: Timestamp, automatically managed by the database.
+2. Creates an `onUpdate` trigger on the `AccessApprovalPolicy` table using the `createOnUpdateTrigger` utility function.
+3. Checks if the `AccessApprovalPolicyApprover` table exists. If not, it creates the table with the following columns:
+    - `id`: UUID, primary key, default value is a generated UUID.
+    - `approverId`: UUID, not nullable, foreign key referencing the `id` column in the `ProjectMembership` table, with a cascade delete policy.
+    - `policyId`: UUID, not nullable, foreign key referencing the `id` column in the `AccessApprovalPolicy` table, with a cascade delete policy.
+    - `createdAt`: Timestamp, automatically managed by the database.
+    - `updatedAt`: Timestamp, automatically managed by the database.
+4. Creates an `onUpdate` trigger on the `AccessApprovalPolicyApprover` table using the `createOnUpdateTrigger` utility function.
+
+### `down`
+#### Description
+Drops the `AccessApprovalPolicy` and `AccessApprovalPolicyApprover` tables and their associated triggers if they exist.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance connected to the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return a value. |
+
+#### Internal Logic
+1. Drops the `AccessApprovalPolicyApprover` table if it exists.
+2. Drops the `AccessApprovalPolicy` table if it exists.
+3. Drops the `onUpdate` trigger on the `AccessApprovalPolicyApprover` table using the `dropOnUpdateTrigger` utility function.
+4. Drops the `onUpdate` trigger on the `AccessApprovalPolicy` table using the `dropOnUpdateTrigger` utility function.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex      | Provides a connection to the database and allows for schema manipulation and querying. |
+

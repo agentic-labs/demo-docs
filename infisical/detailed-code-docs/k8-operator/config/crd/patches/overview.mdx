@@ -1,0 +1,74 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains YAML files that define patches for a CustomResourceDefinition (CRD) named "infisicalsecrets.secrets.infisical.com". These patches are part of the configuration for a Kubernetes operator, specifically for managing Infisical secrets. The patches modify the CRD to enable certificate injection and version conversion capabilities.
+
+## What does it do?
+The patches in this directory enhance the functionality of the Infisical secrets CRD in two ways:
+
+1. Certificate Injection: One patch adds an annotation that instructs cert-manager to inject a Certificate Authority (CA) into the CRD. This is important for securing communication with the custom resource.
+
+2. Conversion Webhook: Another patch enables a conversion webhook for the CRD. This allows for automatic version conversion of the custom resource, which is crucial for maintaining compatibility as the API evolves.
+
+These modifications help in managing the lifecycle and security of Infisical secrets within a Kubernetes environment.
+
+## Key Files
+
+1. `cainjection_in_infisicalsecrets.yaml`:
+   This file contains a patch that adds a cert-manager annotation to the CRD. The annotation specifies where cert-manager should inject the CA certificate from.
+
+   Example of the key addition:
+   ```yaml
+   metadata:
+     annotations:
+       cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+   ```
+
+2. `webhook_in_infisicalsecrets.yaml`:
+   This file contains a patch that configures a conversion webhook for the CRD. It specifies the webhook strategy, service details, and supported conversion review versions.
+
+   Key configuration:
+   ```yaml
+   spec:
+     conversion:
+       strategy: Webhook
+       webhook:
+         clientConfig:
+           service:
+             namespace: system
+             name: webhook-service
+             path: /convert
+         conversionReviewVersions: ["v1"]
+   ```
+
+## Dependencies
+The patches in this directory rely on the following external components:
+
+1. cert-manager (version not specified):
+   - Purpose: Used to inject CA certificates into the CRD.
+   - Chosen for its ability to manage and automate certificate-related operations in Kubernetes.
+
+2. Kubernetes API (version not specified):
+   - Purpose: These YAML files are intended for use with Kubernetes and rely on the Kubernetes API extensions.
+   - Chosen as the underlying platform for running the Infisical operator.
+
+## Configuration
+The patches use the following configuration options:
+
+1. In `cainjection_in_infisicalsecrets.yaml`:
+   - `CERTIFICATE_NAMESPACE`: Namespace where the certificate is located.
+   - `CERTIFICATE_NAME`: Name of the certificate to be used.
+
+   These values are likely to be replaced with actual values during deployment or by a deployment tool.
+
+2. In `webhook_in_infisicalsecrets.yaml`:
+   - `metadata.name`: Set to "infisicalsecrets.secrets.infisical.com", specifying the full name of the CustomResourceDefinition.
+   - `spec.conversion.strategy`: Set to "Webhook", indicating that a webhook should be used for CRD version conversion.
+   - `spec.conversion.webhook.clientConfig.service.namespace`: Set to "system", specifying the namespace where the webhook service is located.
+   - `spec.conversion.webhook.clientConfig.service.name`: Set to "webhook-service", indicating the name of the service hosting the webhook.
+   - `spec.conversion.webhook.clientConfig.service.path`: Set to "/convert", specifying the path for the conversion webhook endpoint.
+   - `spec.conversion.webhook.conversionReviewVersions`: Set to ["v1"], indicating the supported API versions for conversion reviews.
+
+These configuration options allow for flexibility in deploying and managing the Infisical secrets CRD within different Kubernetes environments.

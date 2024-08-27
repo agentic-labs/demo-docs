@@ -1,0 +1,98 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains the implementation of a React context for managing user data in the application. It consists of two files: `UserContext.tsx` and `index.tsx`. The main functionality is defined in `UserContext.tsx`, while `index.tsx` serves as a barrel file for easy importing of the context components.
+
+## What does it do?
+
+The UserContext provides a centralized way to manage and access user data throughout the application. It fetches user information and makes it available to all components without the need for prop drilling. This context allows any component in the application to easily access user data and loading state, simplifying state management and improving code organization.
+
+## Key Files
+
+1. `UserContext.tsx`: This is the main file that defines the UserContext, UserProvider component, and useUser hook.
+
+   - `UserContext`: A React context created to hold user data and loading state.
+   - `UserProvider`: A React component that fetches user data and provides it to its children through the UserContext.
+   - `useUser`: A custom hook that provides access to the user context data.
+
+2. `index.tsx`: A barrel file that re-exports the `UserProvider` component and `useUser` hook, making them easily accessible to other parts of the application.
+
+## Dependencies
+
+The UserContext relies on the following dependencies:
+
+1. React: Core React library for creating components and hooks.
+2. @app/hooks/api: Custom hook for fetching user data (specifically, the useGetUser hook).
+3. @app/hooks/api/types: Type definitions for User and UserEnc.
+
+## Configuration
+
+The UserContext does not require any specific configuration files or environment variables. However, it does rely on the `useGetUser` hook from `@app/hooks/api` to fetch user data. The implementation of this hook may have its own configuration requirements.
+
+## Code Examples
+
+Here's a simplified example of how the UserContext is implemented:
+
+```typescript
+import React, { createContext, useContext, useMemo } from 'react';
+import { useGetUser } from '@app/hooks/api';
+import { User, UserEnc } from '@app/hooks/api/types';
+
+type TUserContext = {
+  user: User | UserEnc | null;
+  isLoading: boolean;
+};
+
+const UserContext = createContext&lt;TUserContext | undefined&gt;(undefined);
+
+export const UserProvider: React.FC&lt;{ children: React.ReactNode }&gt; = ({ children }) =&gt; {
+  const { user, isLoading } = useGetUser();
+
+  const value = useMemo(() =&gt; ({ user, isLoading }), [user, isLoading]);
+
+  return &lt;UserContext.Provider value={value}&gt;{children}&lt;/UserContext.Provider&gt;;
+};
+
+export const useUser = () =&gt; {
+  const ctx = useContext(UserContext);
+  if (ctx === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return ctx;
+};
+```
+
+To use the UserContext in your application, you would wrap your main component with the UserProvider:
+
+```typescript
+import { UserProvider } from './context/UserContext';
+
+const App = () =&gt; {
+  return (
+    &lt;UserProvider&gt;
+      {/* Your application components */}
+    &lt;/UserProvider&gt;
+  );
+};
+```
+
+Then, in any component where you need access to user data:
+
+```typescript
+import { useUser } from './context/UserContext';
+
+const UserProfile = () =&gt; {
+  const { user, isLoading } = useUser();
+
+  if (isLoading) {
+    return &lt;div&gt;Loading...&lt;/div&gt;;
+  }
+
+  return &lt;div&gt;Welcome, {user?.name}&lt;/div&gt;;
+};
+```
+
+This implementation provides a clean and efficient way to manage user data across your application, ensuring that components have access to up-to-date user information without unnecessary prop passing or complex state management.

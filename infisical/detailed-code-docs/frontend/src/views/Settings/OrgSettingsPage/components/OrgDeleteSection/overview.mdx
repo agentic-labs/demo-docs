@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `OrgDeleteSection` directory contains components related to the functionality of deleting an organization within the application. It primarily consists of a React component that handles the UI and logic for the organization deletion process.
+
+## What does it do?
+This directory provides a user interface and functionality for deleting an organization. It presents a delete button to the user, and when clicked, it opens a confirmation modal. If the user confirms the deletion, the component initiates the process of deleting the organization through an API call. It also handles notifications to inform the user about the success or failure of the deletion process and manages navigation after a successful deletion.
+
+## Key Files
+1. `OrgDeleteSection.tsx`: This is the main component file that implements the organization deletion functionality. It contains the React component `OrgDeleteSection` which renders the delete button and confirmation modal, and handles the deletion process.
+
+2. `index.tsx`: This file serves as a re-export for the `OrgDeleteSection` component, providing a clean import interface for other parts of the application.
+
+## Dependencies
+The `OrgDeleteSection` component relies on several external libraries and internal modules:
+
+1. Next.js (`next/router`): Used for routing functionality.
+2. Custom components:
+   - `createNotification`: For creating user notifications.
+   - `Button`: For rendering the delete button.
+   - `DeleteActionModal`: For rendering the confirmation modal.
+3. Custom hooks and contexts:
+   - `useOrganization` and `useOrgPermission`: For accessing organization data and checking permissions.
+   - `useDeleteOrgById`: An API hook for deleting an organization.
+   - `usePopUp`: For managing the state of the confirmation modal.
+4. Utility function:
+   - `navigateUserToOrg`: For handling navigation after successful deletion.
+
+## Configuration
+The component doesn't use any explicit configuration files or environment variables. However, it does rely on the organization context and permission system, which may be configured elsewhere in the application.
+
+Here's an example of how the `OrgDeleteSection` component is structured:
+
+```jsx
+const OrgDeleteSection: React.FC = () =&gt; {
+  const router = useRouter();
+  const { organization } = useOrganization();
+  const { canDeleteOrg } = useOrgPermission();
+  const { mutateAsync: deleteOrg } = useDeleteOrgById();
+  const { isOpen, open, close } = usePopUp();
+
+  const handleDeleteOrgSubmit = async () =&gt; {
+    try {
+      await deleteOrg(organization.id);
+      createNotification({ type: 'success', text: 'Organization deleted successfully' });
+      await navigateUserToOrg(router);
+    } catch (error) {
+      console.error('Error deleting organization:', error);
+      createNotification({ type: 'error', text: 'Failed to delete organization' });
+    }
+  };
+
+  return (
+    &lt;&gt;
+      &lt;Button onClick={open} disabled={!canDeleteOrg}&gt;
+        Delete Organization
+      &lt;/Button&gt;
+      &lt;DeleteActionModal
+        isOpen={isOpen}
+        onClose={close}
+        onSubmit={handleDeleteOrgSubmit}
+        title="Delete Organization"
+        description="Are you sure you want to delete this organization? This action cannot be undone."
+      /&gt;
+    &lt;/&gt;
+  );
+};
+```
+
+This component encapsulates the entire process of deleting an organization, from presenting the UI to handling the API call and subsequent actions. It uses various hooks to manage state and interact with the application's data layer, ensuring a smooth user experience throughout the deletion process.
+
+The re-export in `index.tsx` simplifies the import process for other parts of the application:
+
+```jsx
+export { OrgDeleteSection } from './OrgDeleteSection';
+```
+
+This structure allows for easy integration of the `OrgDeleteSection` component into the larger application, particularly in the organization settings page where it's likely to be used.

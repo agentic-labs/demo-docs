@@ -1,0 +1,374 @@
+---
+title: "encryption.ts"
+---
+
+## High-level description
+The `encryption.ts` file provides a set of functions for encrypting and decrypting data using various cryptographic algorithms, including symmetric (AES-256-GCM) and asymmetric (TweetNaCl) encryption. It also includes functions for generating cryptographic keys, hashes, and asymmetric key pairs.
+
+## Code Structure
+The code is structured as a collection of exported functions, each responsible for a specific cryptographic operation. Some functions, like `encryptSymmetric` and `decryptSymmetric`, are paired to perform complementary operations. Others, like `generateSymmetricKey` and `generateAsymmetricKeyPair`, are standalone functions for key generation.
+
+## References
+This file references the `@app/db/schemas` module for encryption algorithm and key encoding enums. It also uses the `getConfig` function from the `../config/env` module to access environment variables.
+
+## Symbols
+
+### `decodeBase64`
+#### Description
+Decodes a base64-encoded string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| s | string | The base64-encoded string to decode. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | Uint8Array | The decoded byte array. |
+
+#### Internal Logic
+Uses the `decodeBase64` function from the `tweetnacl-util` library to decode the input string.
+
+### `encodeBase64`
+#### Description
+Encodes a byte array as a base64 string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| u | Uint8Array | The byte array to encode. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The base64-encoded string. |
+
+#### Internal Logic
+Uses the `encodeBase64` function from the `tweetnacl-util` library to encode the input byte array.
+
+### `randomSecureBytes`
+#### Description
+Generates a cryptographically secure random byte array.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| length | number | The desired length of the byte array (default: 32). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | Buffer | The generated random byte array. |
+
+#### Internal Logic
+Uses the `crypto.randomBytes` function from the `node:crypto` module to generate the random byte array.
+
+### `decryptSymmetric`
+#### Description
+Decrypts data encrypted using the AES-256-GCM algorithm.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+| key | string | The base64-encoded secret key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The decrypted plaintext. |
+
+#### Internal Logic
+1. Creates a `SecretKey` object from the base64-encoded key.
+2. Creates a `Decipheriv` object using the AES-256-GCM algorithm, the secret key, and the initialization vector.
+3. Sets the authentication tag on the decipher.
+4. Updates the decipher with the base64-encoded ciphertext, producing the decrypted plaintext.
+5. Finalizes the decryption process.
+
+### `encryptSymmetric`
+#### Description
+Encrypts data using the AES-256-GCM algorithm.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plaintext | string | The plaintext to encrypt. |
+| key | string | The base64-encoded secret key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+
+#### Internal Logic
+1. Generates a random initialization vector.
+2. Creates a `SecretKey` object from the base64-encoded key.
+3. Creates a `Cipheriv` object using the AES-256-GCM algorithm, the secret key, and the initialization vector.
+4. Updates the cipher with the plaintext, producing the base64-encoded ciphertext.
+5. Finalizes the encryption process.
+6. Returns the ciphertext, initialization vector, and authentication tag.
+
+### `encryptSymmetric128BitHexKeyUTF8`
+#### Description
+Encrypts data using the AES-256-GCM algorithm with a 128-bit hexadecimal key encoded in UTF-8.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plaintext | string | The plaintext to encrypt. |
+| key | string \| Buffer | The 128-bit hexadecimal key, either as a string or a Buffer. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+
+#### Internal Logic
+1. Generates a random initialization vector.
+2. Creates a `Cipheriv` object using the AES-256-GCM algorithm, the key, and the initialization vector.
+3. Updates the cipher with the plaintext, producing the base64-encoded ciphertext.
+4. Finalizes the encryption process.
+5. Returns the ciphertext, initialization vector, and authentication tag.
+
+### `decryptSymmetric128BitHexKeyUTF8`
+#### Description
+Decrypts data encrypted using the AES-256-GCM algorithm with a 128-bit hexadecimal key encoded in UTF-8.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+| key | string \| Buffer | The 128-bit hexadecimal key, either as a string or a Buffer. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The decrypted plaintext. |
+
+#### Internal Logic
+1. Creates a `Decipheriv` object using the AES-256-GCM algorithm, the key, and the initialization vector.
+2. Sets the authentication tag on the decipher.
+3. Updates the decipher with the base64-encoded ciphertext, producing the decrypted plaintext.
+4. Finalizes the decryption process.
+
+### `encryptAsymmetric`
+#### Description
+Encrypts data using the TweetNaCl box function (asymmetric encryption).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plaintext | string | The plaintext to encrypt. |
+| publicKey | string | The base64-encoded public key of the recipient. |
+| privateKey | string | The base64-encoded private key of the sender. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| nonce | string | The base64-encoded nonce used for encryption. |
+
+#### Internal Logic
+1. Generates a random nonce.
+2. Uses the `nacl.box` function from the `tweetnacl` library to encrypt the plaintext using the nonce, public key, and private key.
+3. Returns the base64-encoded ciphertext and nonce.
+
+### `decryptAsymmetric`
+#### Description
+Decrypts data encrypted using the TweetNaCl box function (asymmetric encryption).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext. |
+| nonce | string | The base64-encoded nonce used for encryption. |
+| publicKey | string | The base64-encoded public key of the sender. |
+| privateKey | string | The base64-encoded private key of the recipient. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The decrypted plaintext. |
+
+#### Internal Logic
+1. Uses the `nacl.box.open` function from the `tweetnacl` library to decrypt the ciphertext using the nonce, public key, and private key.
+2. If decryption fails, throws an error.
+3. Returns the decrypted plaintext.
+
+### `generateSymmetricKey`
+#### Description
+Generates a random base64-encoded symmetric key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| size | number | The desired key size in bytes (default: 32). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The base64-encoded symmetric key. |
+
+#### Internal Logic
+Uses the `crypto.randomBytes` function from the `node:crypto` module to generate a random byte array of the specified size and then encodes it as a base64 string.
+
+### `generateHash`
+#### Description
+Generates a SHA-256 hash of a string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| value | string | The string to hash. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | string | The hexadecimal representation of the SHA-256 hash. |
+
+#### Internal Logic
+Uses the `crypto.createHash` function from the `node:crypto` module to create a SHA-256 hash object, updates it with the input string, and then calculates the digest in hexadecimal format.
+
+### `generateAsymmetricKeyPair`
+#### Description
+Generates an asymmetric key pair using the TweetNaCl library.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| publicKey | string | The base64-encoded public key. |
+| privateKey | string | The base64-encoded private key. |
+
+#### Internal Logic
+1. Uses the `nacl.box.keyPair` function from the `tweetnacl` library to generate the key pair.
+2. Returns the base64-encoded public and private keys.
+
+### `buildSecretBlindIndexFromName`
+#### Description
+Builds a secret blind index from a secret name, using Argon2 hashing and a decrypted salt.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| secretName | string | The name of the secret. |
+| ciphertext | string | The base64-encoded ciphertext containing the encrypted salt. |
+| keyEncoding | SecretKeyEncoding | The encoding of the encryption key. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+| encryptionKey | string | The UTF-8 encoded 128-bit hexadecimal encryption key (optional). |
+| rootEncryptionKey | string | The base64-encoded root encryption key (optional). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | Promise\&lt;string\&gt; | The base64-encoded secret blind index. |
+
+#### Internal Logic
+1. Decrypts the salt from the ciphertext using either `decryptSymmetric` or `decryptSymmetric128BitHexKeyUTF8` based on the `keyEncoding`.
+2. Hashes the secret name using Argon2 with the decrypted salt as a parameter.
+3. Returns the base64-encoded hash as the secret blind index.
+
+### `createSecretBlindIndex`
+#### Description
+Creates a secret blind index by generating a random salt and encrypting it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rootEncryptionKey | string | The base64-encoded root encryption key (optional). |
+| encryptionKey | string | The UTF-8 encoded 128-bit hexadecimal encryption key (optional). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ciphertext | string | The base64-encoded ciphertext containing the encrypted salt. |
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+| algorithm | SecretEncryptionAlgo | The encryption algorithm used (AES-256-GCM). |
+| keyEncoding | SecretKeyEncoding | The encoding of the encryption key. |
+
+#### Internal Logic
+1. Generates a random 16-byte salt and encodes it as a base64 string.
+2. Encrypts the salt using either `encryptSymmetric` or `encryptSymmetric128BitHexKeyUTF8` based on the provided key.
+3. Returns the ciphertext, initialization vector, authentication tag, encryption algorithm, and key encoding.
+
+### `infisicalSymmetricEncypt`
+#### Description
+Encrypts data using the appropriate symmetric encryption method based on the available environment variables.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | string | The plaintext data to encrypt. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| iv | string | The base64-encoded initialization vector. |
+| tag | string | The base64-encoded authentication tag. |
+| ciphertext | string | The base64-encoded ciphertext. |
+| algorithm | SecretEncryptionAlgo | The encryption algorithm used (AES-256-GCM). |
+| encoding | SecretKeyEncoding | The encoding of the encryption key. |
+
+#### Internal Logic
+1. Retrieves the `ROOT_ENCRYPTION_KEY` and `ENCRYPTION_KEY` from the application configuration.
+2. If `ROOT_ENCRYPTION_KEY` is available, uses `encryptSymmetric` with BASE64 encoding.
+3. If `ENCRYPTION_KEY` is available, uses `encryptSymmetric128BitHexKeyUTF8` with UTF8 encoding.
+4. Throws an error if neither key is available.
+5. Returns the encrypted data along with metadata.
+
+### `infisicalSymmetricDecrypt`
+#### Description
+Decrypts data using the appropriate symmetric decryption method based on the available environment variables.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| keyEncoding | SecretKeyEncoding | The encoding of the encryption key. |
+| ciphertext | string | The base64-encoded ciphertext to decrypt. |
+| tag | string | The base64-encoded authentication tag. |
+| iv | string | The base64-encoded initialization vector. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | T | The decrypted data (generic type T, defaults to string). |
+
+#### Internal Logic
+1. Retrieves the `ROOT_ENCRYPTION_KEY` and `ENCRYPTION_KEY` from the application configuration or environment variables.
+2. If `ROOT_ENCRYPTION_KEY` is available and `keyEncoding` is BASE64, uses `decryptSymmetric`.
+3. If `ENCRYPTION_KEY` is available and `keyEncoding` is UTF8, uses `decryptSymmetric128BitHexKeyUTF8`.
+4. Throws an error if neither key is available or if the encoding doesn't match the available keys.
+5. Returns the decrypted data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| node:crypto | For cryptographic operations using Node.js built-in crypto module. |
+| argon2 | For Argon2 hashing algorithm implementation. |
+| tweetnacl | For asymmetric encryption operations. |
+| tweetnacl-util | For utility functions related to TweetNaCl operations. |
+| @app/db/schemas | For type definitions and enums related to encryption. |
+| @app/lib/config/env | For accessing application configuration. |
+
+## Error Handling
+The code uses standard JavaScript error throwing for handling exceptional cases, such as missing encryption keys or invalid ciphertext.
+
+## Performance Considerations
+- The use of cryptographic operations, especially Argon2 hashing, can be computationally expensive. Care should be taken when using these functions in performance-critical paths.
+- The `buildSecretBlindIndexFromName` function uses Argon2 with a relatively high memory cost (65536 KiB), which may impact performance on memory-constrained systems.
+
+This encryption module provides a comprehensive set of cryptographic operations for securing data within the application. It supports both symmetric and asymmetric encryption, as well as hashing and key generation, making it a versatile tool for various security needs.

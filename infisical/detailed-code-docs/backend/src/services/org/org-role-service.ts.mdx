@@ -1,0 +1,148 @@
+---
+title: "org-role-service.ts"
+---
+
+## High-level description
+This code defines the `orgRoleServiceFactory`, which creates a service for managing organization roles. It provides functions for creating, retrieving, updating, and deleting roles, as well as listing roles and getting user permissions within an organization.
+
+## Code Structure
+The `orgRoleServiceFactory` function takes dependencies (`orgRoleDAL` and `permissionService`) and returns an object with methods for managing organization roles. These methods interact with the database through the Data Access Layer (DAL) and enforce permissions using the permission service.
+
+## Symbols
+
+### `orgRoleServiceFactory`
+#### Description
+Creates and returns an object with methods for managing organization roles.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgRoleDAL | TOrgRoleDALFactory | Data Access Layer for organization roles |
+| permissionService | TPermissionServiceFactory | Service for handling permissions |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TOrgRoleServiceFactory | An object containing methods for managing organization roles |
+
+#### Internal Logic
+- Creates methods for creating, retrieving, updating, and deleting roles
+- Implements permission checks using the provided permission service
+- Handles special cases for predefined roles (Admin, Member, No Access)
+
+### `createRole`
+#### Description
+Creates a new organization role.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user creating the role |
+| orgId | string | ID of the organization |
+| data | Omit&lt;TOrgRolesInsert, "orgId"&gt; | Role data to be inserted |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Checks user permissions
+- Verifies that the role slug is not duplicate
+- Creates the role in the database
+
+### `getRole`
+#### Description
+Retrieves a role by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user requesting the role |
+| orgId | string | ID of the organization |
+| roleId | string | ID of the role to retrieve |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Checks user permissions
+- Handles special cases for predefined roles (Admin, Member, No Access)
+- Retrieves the role from the database for custom roles
+
+### `updateRole`
+#### Description
+Updates an existing organization role.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user updating the role |
+| orgId | string | ID of the organization |
+| roleId | string | ID of the role to update |
+| data | Omit&lt;TOrgRolesUpdate, "orgId"&gt; | Updated role data |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Checks user permissions
+- Verifies that the updated role slug is not duplicate
+- Updates the role in the database
+
+### `deleteRole`
+#### Description
+Deletes an organization role.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user deleting the role |
+| orgId | string | ID of the organization |
+| roleId | string | ID of the role to delete |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Checks user permissions
+- Deletes the role from the database
+
+### `listRoles`
+#### Description
+Lists all roles for an organization, including predefined and custom roles.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user requesting the list |
+| orgId | string | ID of the organization |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Checks user permissions
+- Retrieves custom roles from the database
+- Combines predefined roles (Admin, Member, No Access) with custom roles
+
+### `getUserPermission`
+#### Description
+Retrieves the permissions for a user in an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | ID of the user |
+| orgId | string | ID of the organization |
+| actorAuthMethod | ActorAuthMethod | Authentication method of the actor |
+| actorOrgId | string \| undefined | Organization ID of the actor |
+
+#### Internal Logic
+- Retrieves user permissions using the permission service
+- Returns packed rules and membership information
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Used for permission handling |
+| @app/db/schemas | Provides database schema types |
+| @app/ee/services/permission/org-permission | Defines organization permission constants |
+| @app/ee/services/permission/permission-service | Provides the permission service factory |
+| @app/lib/errors | Provides custom error types |
+
+## Error Handling
+The service uses custom error types (`BadRequestError` and `ForbiddenError`) to handle various error scenarios, such as duplicate roles or insufficient permissions.

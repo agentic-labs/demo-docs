@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains Go code for interacting with Git repositories, specifically for retrieving commit logs and diffs. It provides functionality to execute Git commands and parse their output into a structured format using the `gitdiff` package. The directory includes the main implementation file (`git.go`) and a test file (`git_test.go`).
+
+## What does it do?
+The code in this directory allows developers to:
+1. Retrieve commit logs from a Git repository, including the changes made in each commit.
+2. Get the differences between the current state of the repository and the last commit, including both staged and unstaged changes.
+3. Parse the output of these Git operations into a structured format that can be easily processed by other parts of the application.
+
+These functionalities are essential for tools that need to analyze Git repositories, such as code analysis tools, version control systems, or continuous integration pipelines.
+
+## Key Files
+
+### git.go
+This file contains the main implementation of the Git interaction functionality. It includes two primary functions:
+
+1. `GitLog`: Executes the `git log -p` command on a given source and returns a channel of `gitdiff.File` objects. This function allows retrieval of the commit history along with the changes made in each commit.
+
+2. `GitDiff`: Executes the `git diff` command on a given source and returns a channel of `gitdiff.File` objects. This function can show both staged and unstaged changes in the repository.
+
+Both functions use a helper function `listenForStdErr` to handle error output from Git commands, providing specific error handling for rename detection issues.
+
+### git_test.go
+This file contains unit tests for the Git-related functionality implemented in `git.go`. However, the tests are currently commented out due to flakiness issues. The file includes:
+
+1. `TestGitLog`: A test function for the `GitLog` functionality (commented out).
+2. `TestGitDiff`: A test function for the `GitDiff` functionality (commented out).
+3. Helper functions `restore` and `moveDotGit` for setting up and cleaning up the test environment.
+
+There's a TODO note suggesting potential alternatives to fix the flaky tests, such as using `git stash` instead of `restore()`.
+
+## Dependencies
+The code relies on the following external libraries:
+
+1. `github.com/gitleaks/go-gitdiff/gitdiff`: Used for parsing Git diff output into structured data.
+2. `github.com/rs/zerolog/log`: Used for logging purposes, providing structured logging capabilities.
+
+## Configuration
+The code doesn't use any specific configuration files or environment variables. However, it does accept parameters for customizing Git commands:
+
+1. In `GitLog`, an optional `logOpts` parameter allows passing additional options to the `git log` command.
+2. In `GitDiff`, a `staged` boolean parameter determines whether to include staged changes in the diff output.
+
+## Error Handling
+The code implements specific error handling for Git command execution:
+
+1. Specific error messages related to rename detection are logged as warnings.
+2. Other error messages are logged as errors and trigger a global `ErrEncountered` flag.
+
+The `listenForStdErr` function is responsible for parsing the stderr output from Git commands and handling these error cases.
+
+## TODOs and Future Improvements
+1. The tests in `git_test.go` are currently commented out due to flakiness. There's a suggestion to use `git stash` instead of `restore()` as a potential fix.
+2. There's a HACK comment in `git.go` mentioning a sleep to avoid an issue:
+
+```go
+// HACK: to avoid https://github.com/zricethezav/gitleaks/issues/722
+time.Sleep(50 * time.Millisecond)
+```
+
+This might need to be addressed in the future for a more robust solution.
+
+3. The error handling and logging could potentially be improved to provide more detailed information about the nature of encountered errors.
+
+4. The code could benefit from more comprehensive documentation, especially regarding the structure of the `gitdiff.File` objects returned by the main functions.
+
+In conclusion, this directory provides essential functionality for interacting with Git repositories, focusing on retrieving and parsing commit logs and diffs. While the core functionality is implemented, there are areas for improvement in testing and error handling.

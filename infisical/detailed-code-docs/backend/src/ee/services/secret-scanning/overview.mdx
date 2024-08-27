@@ -1,0 +1,93 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a secret scanning service for a software application. It provides functionality to scan GitHub repositories for potential secrets or sensitive information, manage scanning jobs, process results, and handle related operations such as installation sessions and risk management.
+
+## What does it do?
+The secret scanning service performs the following main tasks:
+
+1. Manages GitHub App installation sessions and links them to organizations.
+2. Scans GitHub repositories and push events for potential secrets using the Infisical CLI.
+3. Processes and stores the scan findings in a database.
+4. Allows retrieval and updating of risk statuses associated with found secrets.
+5. Handles repository events like pushes and deletions, triggering scans when necessary.
+6. Sends email notifications to organization admins and relevant users if secrets are found.
+7. Tracks telemetry events related to secret scanning.
+
+## Entry points
+The main entry point for this module is the `secretScanningServiceFactory` function in the `secret-scanning-service.ts` file. This factory function sets up the necessary dependencies and returns an object with methods to interact with the secret scanning functionality.
+
+The workflow typically follows these steps:
+1. The service is initialized with necessary dependencies (DALs, permission service, queue).
+2. External systems can trigger operations like creating installation sessions, linking installations to organizations, retrieving risks, updating risk statuses, and handling repository events.
+3. For scanning operations, jobs are enqueued and processed asynchronously using the secret scanning queue.
+
+## Key Files
+1. `secret-scanning-service.ts`: Contains the main service implementation, handling high-level operations and business logic.
+2. `secret-scanning-queue.ts`: Implements the queue system for managing and processing secret scanning jobs.
+3. `secret-scanning-fns.ts`: Provides utility functions for interacting with the file system, executing shell commands, and running the Infisical CLI for secret scanning.
+4. `git-app-dal.ts` and `git-app-install-session-dal.ts`: Data Access Layer implementations for managing Git app and installation session data.
+5. `secret-scanning-dal.ts`: Data Access Layer for managing secret scanning results and risks.
+6. `secret-scanning-types.ts`: Defines TypeScript types and enums used throughout the secret scanning service.
+
+## Dependencies
+The module relies on several external libraries and internal services:
+
+1. Octokit: Used for interacting with the GitHub API.
+2. Infisical CLI: Used for performing the actual secret scanning on code content.
+3. Internal queue service: Manages job queues and processing for secret scanning.
+4. Internal data access layer (DAL) services: Handles database operations for storing scan results, organization data, and installation sessions.
+5. Internal SMTP service: Sends email notifications when secrets are found.
+6. Internal telemetry service: Tracks events related to secret scanning.
+7. Internal permission service: Manages authorization and permissions for secret scanning operations.
+
+## Configuration
+The module uses environment configuration accessed through the `getConfig` function from `@app/lib/config/env`. This likely includes settings for queue management, database connections, and potentially Infisical CLI configuration.
+
+Key code snippets:
+
+1. Creating an installation session:
+```typescript
+const sessionId = crypto.randomBytes(16).toString("hex");
+await this.gitAppInstallSessionDAL.insert({
+  sessionId,
+  orgId,
+  createdAt: new Date(),
+});
+```
+
+2. Linking an installation to an organization:
+```typescript
+await this.gitAppOrgDAL.upsert({
+  orgId,
+  installationId,
+  createdAt: new Date(),
+});
+await this.secretScanningQueue.startFullRepoScan({ orgId, installationId });
+```
+
+3. Updating risk status:
+```typescript
+await this.secretScanningDAL.update(
+  { id: riskId },
+  { status: status as SecretScanningRiskStatus }
+);
+```
+
+This secret scanning service provides a comprehensive solution for detecting and managing potential security risks in GitHub repositories, helping organizations maintain the security of their codebase while integrating smoothly with their existing workflows.
+
+## Error Handling
+The service implements error handling throughout its methods, throwing specific error types like `ForbiddenError`, `UnauthorizedError`, and `BadRequestError` for different scenarios. This allows for more informative error reporting and potential centralized error handling at a higher level in the application.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides a query builder and schema builder for interacting with databases. |
+| @casl/ability | Used for managing authorization and permissions. |
+| @octokit/webhooks-types | Provides types for GitHub webhook events. |
+| probot | Framework for building GitHub Apps. |
+| crypto | Used for generating random session IDs. |
+
+The secret scanning service is a critical component for maintaining code security, providing organizations with tools to detect and manage sensitive information in their repositories effectively.

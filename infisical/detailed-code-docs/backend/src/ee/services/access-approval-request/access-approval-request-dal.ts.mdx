@@ -1,0 +1,111 @@
+---
+title: "access-approval-request-dal.ts"
+---
+
+## High-level description
+This code defines a Data Access Layer (DAL) for managing access approval requests in a database. It provides functions to query, retrieve, and count access approval requests, along with related information such as policies, reviewers, and approvers.
+
+## Code Structure
+The main function `accessApprovalRequestDALFactory` takes a database client as input and returns an object with methods for interacting with access approval requests. It uses Knex.js for database queries and includes several helper functions for data manipulation and error handling.
+
+## Symbols
+
+### `accessApprovalRequestDALFactory`
+#### Description
+This function creates a data access layer for access approval requests. It encapsulates database operations and provides methods to interact with the access approval request data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client used for database operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TAccessApprovalRequestDALFactory | An object containing methods for access approval request operations |
+
+#### Internal Logic
+1. Creates an ORM instance for access approval requests using `ormify`.
+2. Defines several methods for querying and manipulating access approval request data:
+   - `findRequestsWithPrivilegeByPolicyIds`
+   - `findById`
+   - `getCount`
+3. Returns an object with these methods and the ORM methods.
+
+### `findRequestsWithPrivilegeByPolicyIds`
+#### Description
+Retrieves access approval requests along with related data for given policy IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| policyIds | string[] | An array of policy IDs to filter the requests |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Array | Object[] | An array of formatted access approval request objects |
+
+#### Internal Logic
+1. Constructs a complex database query joining multiple tables.
+2. Selects and aliases various columns from different tables.
+3. Uses `sqlNestRelationships` to format the query results.
+4. Adds approvers to the policy object in the final result.
+
+### `findById`
+#### Description
+Retrieves a single access approval request by its ID, along with related data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | string | The ID of the access approval request |
+| tx | Knex (optional) | An optional Knex transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | A formatted access approval request object with related data |
+
+#### Internal Logic
+1. Uses the `findQuery` helper function to construct the database query.
+2. Formats the query results using `sqlNestRelationships`.
+3. Adds approvers to the policy object in the final result.
+
+### `getCount`
+#### Description
+Retrieves counts of pending and finalized access approval requests for a given project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | The ID of the project to count requests for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { pendingCount: number, finalizedCount: number } | Counts of pending and finalized requests |
+
+#### Internal Logic
+1. Constructs a database query to retrieve access approval requests for the given project.
+2. Formats the query results using `sqlNestRelationships`.
+3. Filters the results to count pending and finalized approvals based on specific criteria.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | SQL query builder |
+| @app/db | Database client and schema definitions |
+| @app/lib/errors | Custom error types |
+| @app/lib/knex | Utility functions for Knex queries |
+
+## Error Handling
+The code uses a `DatabaseError` class to wrap and throw errors that occur during database operations. This provides consistent error handling across the DAL.
+
+## Performance Considerations
+The code uses complex JOIN operations and subqueries, which may impact performance for large datasets. The use of `replicaNode()` suggests that read operations are performed on a replica database to distribute load.
+
+## TODOs
+- There is a TODO comment to add support for groups in the `findRequestsWithPrivilegeByPolicyIds` function.
+
+This code provides a comprehensive data access layer for managing access approval requests, with features for querying, formatting, and counting requests. It handles complex relationships between different entities in the system, such as policies, users, environments, and privileges.

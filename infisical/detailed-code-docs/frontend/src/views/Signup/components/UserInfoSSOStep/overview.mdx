@@ -1,0 +1,84 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the UserInfoSSOStep component, which is a crucial part of the Single Sign-On (SSO) signup process for a user authentication system. The component handles the final step of the SSO signup flow, where users provide their personal information and the system generates necessary cryptographic keys for secure communication.
+
+## What does it do?
+The UserInfoSSOStep component manages the following workflow:
+
+1. Collects user information: It presents a form to the user, asking for their name and organization details (if not already provided by the SSO provider).
+
+2. Generates security credentials: The component creates various cryptographic keys and security tokens necessary for secure communication and user authentication.
+
+3. Completes the signup process: It interacts with the backend API to finalize the user's account creation.
+
+4. Initializes user environment: After successful signup, it sets up the user's initial project and organization.
+
+5. Stores security information: It saves the generated tokens and keys securely in the local storage for future use.
+
+This process ensures that users coming from an SSO provider can complete their account setup with the necessary additional information while maintaining a high level of security through cryptographic operations.
+
+## Key Files
+
+1. UserInfoSSOStep.tsx
+   This is the main component file that implements the UserInfoSSOStep functionality. It contains the React component that renders the form, handles user input, performs cryptographic operations, and manages the signup process.
+
+2. index.tsx
+   This file serves as a re-export module for the UserInfoSSOStep component, simplifying imports in other parts of the application.
+
+## Dependencies
+The component relies on several external libraries and internal utilities:
+
+1. React (v18.2.0 or compatible): For building the user interface and managing component state.
+2. react-i18next: For internationalization support, allowing the component to display text in multiple languages.
+3. jsrp: Implements the Secure Remote Password (SRP) protocol for secure password verification.
+4. tweetnacl (v1.0.3) and tweetnacl-util: For generating cryptographic key pairs and encoding/decoding Base64.
+5. crypto: Node.js built-in module for generating random bytes.
+
+Internal dependencies include:
+- Custom hooks for API interactions (`@app/hooks/api/auth/queries`, `@app/hooks/api/organization/queries`)
+- Utility functions for cryptography and security (`@app/components/utilities/cryptography/aes-256-gcm`, `@app/components/utilities/cryptography/crypto`)
+- Services for project management (`@app/services/ProjectService`)
+
+These dependencies were chosen to provide a robust and secure implementation of the SSO signup process, with strong cryptographic operations and efficient state management.
+
+## Configuration
+The component doesn't directly use configuration files, but it does rely on environment variables and settings that are likely defined elsewhere in the application. Key configurable aspects include:
+
+1. API endpoints: The actual API endpoints used for signup completion and organization management are abstracted through custom hooks, allowing for easy configuration changes.
+
+2. Cryptographic parameters: The component uses specific cryptographic algorithms and key sizes (e.g., AES-256-GCM for encryption), which could be configurable in a production environment.
+
+3. Password generation: The component generates a random password for SSO users, which might be configurable in terms of length and complexity.
+
+Here's an example of how the component generates a random password:
+
+```typescript
+useEffect(() =&gt; {
+  const randomPassword = crypto.randomBytes(16).toString('hex');
+  setPassword(randomPassword);
+}, []);
+```
+
+The cryptographic operations are quite extensive. Here's a snippet showcasing the key generation process:
+
+```typescript
+const keyPair = nacl.box.keyPair();
+const publicKey = naclUtil.encodeBase64(keyPair.publicKey);
+const privateKey = naclUtil.encodeBase64(keyPair.secretKey);
+
+const derivedKey = await argon2.hash({
+  pass: password,
+  salt: naclUtil.decodeBase64(publicKey),
+  type: argon2.ArgonType.Argon2id,
+  hashLen: 32,
+});
+
+const encryptedPrivateKey = await encryptPrivateKey(privateKey, derivedKey);
+```
+
+This code generates a public-private key pair, derives a key from the password using Argon2, and then encrypts the private key for secure storage.
+
+The component's structure and implementation demonstrate a strong focus on security and user privacy, making it a critical part of the application's authentication system.

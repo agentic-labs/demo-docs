@@ -1,0 +1,84 @@
+---
+title: "project-key-dal.ts"
+---
+
+## High-level description
+This code defines a data access layer (DAL) for project keys in a backend application. It provides functions to interact with the database for operations related to project keys, including finding the latest project key and retrieving public keys for all users in a project.
+
+## Code Structure
+The code exports a factory function `projectKeyDALFactory` that creates an object with methods for interacting with project keys in the database. It uses the `ormify` function to generate common CRUD operations and extends it with custom methods.
+
+## Symbols
+
+### `projectKeyDALFactory`
+#### Description
+A factory function that creates a data access layer for project keys.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectKeyDAL | Object | An object containing methods for interacting with project keys |
+
+#### Internal Logic
+1. Creates a project key ORM using the `ormify` function.
+2. Defines custom methods for finding the latest project key and all project user public keys.
+3. Returns an object combining the ORM methods and custom methods.
+
+### `findLatestProjectKey`
+#### Description
+Finds the latest project key for a given user and project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user |
+| projectId | string | The ID of the project |
+| tx | Knex (optional) | A Knex transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectKey | TProjectKeys & { sender: { publicKey: string } } \| undefined | The latest project key with sender's public key |
+
+#### Internal Logic
+1. Performs a database query joining multiple tables to find the latest project key.
+2. Orders the results by creation date in descending order.
+3. Selects all columns from the ProjectKeys table and the public key from the UserEncryptionKey table.
+4. Returns the first result or undefined if not found.
+
+### `findAllProjectUserPubKeys`
+#### Description
+Retrieves public keys for all users in a project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | The ID of the project |
+| tx | Knex (optional) | A Knex transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pubKeys | Array&lt;{ userId: string, publicKey: string }&gt; | An array of user IDs and their public keys |
+
+#### Internal Logic
+1. Performs a database query joining multiple tables to find all users in the project.
+2. Selects the user ID and public key for each user.
+3. Returns an array of user IDs and public keys.
+
+## Error Handling
+Both custom methods wrap their database queries in try-catch blocks and throw a `DatabaseError` with a specific name if an error occurs during the operation.
+
+## Dependencies
+The code relies on several imported types and functions:
+- `Knex` from the "knex" library
+- `TDbClient`, `TableName`, and `TProjectKeys` from internal database-related modules
+- `DatabaseError` from an internal error module
+- `ormify` and `selectAllTableCols` from an internal Knex utility module
+
+This data access layer provides a clean interface for interacting with project keys in the database, abstracting away the complexity of the underlying queries and joins.

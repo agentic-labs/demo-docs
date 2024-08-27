@@ -1,0 +1,62 @@
+---
+title: "check-migration-file-edited.yml"
+---
+
+## High-level description
+This GitHub Actions workflow checks if any existing migration files in the 'backend/src/db/migrations' directory have been modified, renamed, or duplicated in a pull request. It aims to prevent changes to existing migration files, which could potentially cause issues with database schema versioning.
+
+## Code Structure
+The workflow consists of a single job named "rename" with two main steps: checking out the repository and performing the migration file check.
+
+## Symbols
+
+### Workflow
+#### Description
+This GitHub Actions workflow is triggered on pull request events (opened or synchronized) that include changes to files in the 'backend/src/db/migrations' directory.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pull_request | event | The pull request event that triggers the workflow |
+
+#### Internal Logic
+1. The workflow is triggered when a pull request is opened or synchronized.
+2. It checks out the repository.
+3. It then runs a shell script to detect any modified, renamed, or duplicated migration files.
+4. If any such files are found, the workflow fails with an error message.
+
+### Job: rename
+#### Description
+This job runs on the latest Ubuntu runner and performs the migration file check.
+
+#### Internal Logic
+1. Checks out the repository using actions/checkout@v4.
+2. Runs a shell script to detect modified, renamed, or duplicated migration files.
+3. If any such files are found, it outputs an error message and exits with a non-zero status.
+
+### Step: Check out repository
+#### Description
+This step uses the actions/checkout action to fetch the repository content.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fetch-depth | number | The number of commits to fetch (0 for all history) |
+
+### Step: Check any migration files are modified, renamed or duplicated
+#### Description
+This step runs a shell script to detect changes to existing migration files.
+
+#### Internal Logic
+1. Uses `git diff` to compare the current HEAD with its parent (HEAD^).
+2. Filters for modified (M), renamed (R), or copied (C) files in the migrations directory.
+3. Extracts the filenames and saves them to 'edited_files.txt'.
+4. If 'edited_files.txt' is not empty, it prints an error message and exits with status 1.
+
+## Error Handling
+The workflow fails if any existing migration files have been modified, renamed, or duplicated. This is achieved by exiting with a non-zero status in the shell script.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | To check out the repository content |

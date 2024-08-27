@@ -1,0 +1,90 @@
+---
+title: "join.ts"
+---
+
+## High-level description
+This code defines two utility functions, `mergeOneToManyRelation` and `sqlNestRelationships`, for processing and transforming data with nested relationships, particularly useful for handling data retrieved from relational databases. These functions aim to efficiently group and nest related data based on primary-foreign key relationships.
+
+## Code Structure
+Both `mergeOneToManyRelation` and `sqlNestRelationships` are independent functions. However, `sqlNestRelationships` internally uses the `sqlChildMapper` function to recursively process nested child relationships. The code also defines several type aliases (`TSqlPackRelationships`, `TChildMapper`, `MappedRecord`) to improve readability and type safety when working with complex data structures.
+
+## Symbols
+
+### `mergeOneToManyRelation`
+#### Description
+This function groups an array of objects (`data`) based on a shared key (`key`) and nests related objects as children under a specified key (`childKey`) in the parent object. It utilizes two mapper functions, `parentMapper` and `childMapper`, to transform the original objects into the desired parent and child structures.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `T[]` | An array of objects to be grouped and nested. |
+| key | `Pk` | The key in the objects used for grouping (typically a primary key). |
+| parentMapper | `(arg: T) =&gt; P` | A function that transforms an object of type `T` into the desired parent object structure `P`. |
+| childMapper | `(arg: T) =&gt; C` | A function that transforms an object of type `T` into the desired child object structure `C`. |
+| childKey | `Ck` | The key in the parent object under which the grouped children will be nested. Defaults to "child". |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| groupedRecord | `(P & Record&lt;Ck, C[]&gt;)[]` | An array of parent objects (`P`) with nested children (`C[]`) under the specified `childKey`. |
+
+#### Internal Logic
+1. Iterates through the `data` array.
+2. For each object, it checks if the value of the `key` property has changed from the previous object.
+3. If the `key` value is different, it creates a new parent object using the `parentMapper` and initializes an empty array under the `childKey`.
+4. The transformed child object, generated using the `childMapper`, is then pushed into the parent's `childKey` array.
+5. This process repeats until all objects in the `data` array are processed.
+
+### `sqlChildMapper`
+#### Description
+This is a recursive function used within `sqlNestRelationships` to handle nested child relationships. It populates the parent object with mapped child objects based on the provided `childrenMapper` configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| doc | `T` | The current object being processed. |
+| docsByPk | `P` | The parent object where the mapped child will be added. |
+| lookupTable | `Set&lt;string&gt;` | A set to track processed child objects and prevent duplicates. |
+| pk | `keyof P` | The key of the parent object in `docsByPk`. |
+| prefix | `string` | A string prefix used for generating unique keys for the `lookupTable`. |
+| childrenMapper | `C` | An array of `TChildMapper` configurations defining how to map child objects. |
+
+#### Internal Logic
+1. Iterates through the `childrenMapper` array.
+2. For each child mapper, it checks if the child object exists in the `doc` based on the `childPk` defined in the mapper.
+3. If the child object exists, it generates a unique key and checks if it's already present in the `lookupTable`.
+4. If the key is not present, it applies the mapper function to the child object and adds it to the parent object.
+5. The key is then added to the `lookupTable`.
+6. If the child mapper has nested children (`nestedMappers`), the function calls itself recursively to process those nested relationships.
+
+### `sqlNestRelationships`
+#### Description
+This function takes a dataset and a configuration object (`TSqlPackRelationships`) to group and nest related data based on primary-foreign key relationships, effectively mimicking a SQL join operation. It utilizes the `sqlChildMapper` function internally to handle nested child relationships.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `T[]` | An array of objects to be grouped and nested. |
+| key | `keyof T` | The key in the objects used for grouping (typically a primary key). |
+| parentMapper | `(arg: T) =&gt; P` | A function that transforms an object of type `T` into the desired parent object structure `P`. |
+| childrenMapper | `C` | An array of `TChildMapper` configurations defining how to map child objects. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `P[]` | An array of parent objects (`P`) with nested children based on the provided configuration. |
+
+#### Internal Logic
+1. Initializes a `lookupTable` to track processed objects and a `recordsOrder` array to maintain the order of parent objects.
+2. Creates a `recordsGroupedByPk` object to store parent objects grouped by their primary key.
+3. Iterates through the `data` array.
+4. For each object, it checks if its primary key is already in the `lookupTable`.
+5. If not, it creates a new parent object using the `parentMapper`, adds it to `recordsGroupedByPk`, and updates `lookupTable` and `recordsOrder`.
+6. Calls `sqlChildMapper` to process and add child objects to the parent object in `recordsGroupedByPk`.
+7. Finally, it maps the `recordsOrder` to the corresponding parent objects in `recordsGroupedByPk`, preserving the original order.
+
+## References
+- `sqlChildMapper` is used internally by `sqlNestRelationships`.
+
+## Dependencies
+- None. This code does not have external library dependencies.

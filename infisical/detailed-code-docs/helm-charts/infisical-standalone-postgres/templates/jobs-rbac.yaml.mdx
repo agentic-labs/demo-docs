@@ -1,0 +1,51 @@
+---
+title: "jobs-rbac.yaml"
+---
+
+## High-level description
+This YAML file defines Kubernetes RBAC (Role-Based Access Control) resources for managing permissions related to the Infisical schema migration job. It creates a Role and a RoleBinding to allow the default service account to monitor the status of batch jobs.
+
+## Symbols
+
+### Role: k8s-wait-for-infisical-schema-migration
+#### Description
+This Role defines permissions for accessing and monitoring batch jobs within the Kubernetes cluster.
+
+#### Internal Logic
+The Role grants the following permissions:
+- API Groups: "batch"
+- Resources: "jobs"
+- Verbs: "get", "watch", "list"
+
+These permissions allow the role to retrieve information about jobs, watch for changes, and list jobs in the batch API group.
+
+### RoleBinding: default
+#### Description
+This RoleBinding associates the previously defined Role with the default service account in the release namespace.
+
+#### Internal Logic
+The RoleBinding connects the following elements:
+- Subject: The default ServiceAccount in the release namespace
+- RoleRef: The "k8s-wait-for-infisical-schema-migration" Role
+
+This binding allows the default service account to use the permissions defined in the Role.
+
+## Dependencies
+This YAML file relies on Kubernetes RBAC API:
+| Dependency | Purpose |
+|:-----------|:--------|
+| rbac.authorization.k8s.io/v1 | Defines the API version for RBAC resources |
+
+## Configuration
+The configuration in this file uses a Helm template variable:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Release.Namespace | String | N/A | The namespace where the Helm release is being installed |
+
+This variable is used to set the namespace for the default service account in the RoleBinding.
+
+## Notes
+1. This RBAC configuration is specifically designed to allow monitoring of the Infisical schema migration job.
+2. The Role and RoleBinding are created in the same namespace as the Helm release.
+3. The permissions granted are limited to read-only operations on batch jobs, which is suitable for monitoring purposes.
+4. This configuration assumes that the default service account will be used for the schema migration job or related components that need to monitor its progress.

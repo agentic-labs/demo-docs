@@ -1,0 +1,71 @@
+---
+title: "invite-org-router.ts"
+---
+
+## High-level description
+The code defines an API router responsible for handling user invitations to an organization. It allows inviting users via email, verifying the invitation, and managing the invitation process. 
+
+## Code Structure
+The code defines a single symbol `registerInviteOrgRouter` which registers two routes `/signup` and `/verify` for handling user invitations. 
+
+## Symbols
+### `registerInviteOrgRouter`
+#### Description
+This function registers two routes on the provided Fastify server instance for handling user invitations to an organization. The `/signup` route handles sending out invitations, while the `/verify` route handles the verification process when an invited user clicks the invitation link.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of a Fastify server with Zod validation enabled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| N/A | N/A | This function does not return any value. |
+
+#### Internal Logic
+1. **`/signup` Route:**
+    - Defines a POST route `/signup` with rate limiting applied.
+    - Validates the request body using Zod schemas to ensure correct data types and format.
+    - Requires JWT authentication to access this route.
+    - Calls the `inviteUserToOrganization` service to handle the invitation logic.
+    - Sends a `UserOrgInvitation` event to PostHog for telemetry.
+    - Returns a success message and optionally a list of complete invitation links.
+2. **`/verify` Route:**
+    - Defines a POST route `/verify` with rate limiting applied.
+    - Validates the request body using Zod schemas.
+    - Calls the `verifyUserToOrg` service to verify the user's invitation code.
+    - Returns a success message, the user object, and an optional authentication token.
+
+## References
+- `inviteUserRateLimit`: Rate limit configuration for the invite endpoints.
+- `getTelemetryDistinctId`: Utility function to get a unique ID for telemetry events.
+- `verifyAuth`: Authentication middleware to verify user access.
+- `ActorType.USER`: Enum value representing a user actor.
+- `AuthMode.JWT`: Enum value representing JWT authentication mode.
+- `PostHogEventTypes.UserOrgInvitation`: Enum value for the user organization invitation event type.
+- `server.services.org.inviteUserToOrganization`: Service function to handle user invitations.
+- `server.services.telemetry.sendPostHogEvents`: Service function to send telemetry events.
+- `server.services.org.verifyUserToOrg`: Service function to verify user invitations.
+- `UsersSchema`: Zod schema for validating user objects.
+- `OrgMembershipRole`: Enum for organization membership roles.
+- `ProjectMembershipRole`: Enum for project membership roles.
+
+## Side Effects
+- Sends email invitations to the specified users.
+- Creates user records and organization/project memberships upon successful verification.
+- Logs telemetry events to PostHog.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fastify | Web framework for handling HTTP requests. |
+| zod | Data validation library. |
+| @app/server/config/rateLimiter | Module containing rate limit configurations. |
+| @app/server/lib/telemetry | Module containing telemetry utility functions. |
+| @app/server/plugins/auth/verify-auth | Authentication plugin for verifying user access. |
+| @app/services/auth/auth-type | Module defining authentication types. |
+| @app/services/telemetry/telemetry-types | Module defining telemetry event types. |
+| @app/services/org | Module containing organization-related services. |
+| @app/db/schemas | Module containing database schemas. | 
+

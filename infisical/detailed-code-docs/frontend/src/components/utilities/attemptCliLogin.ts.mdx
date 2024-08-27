@@ -1,0 +1,71 @@
+---
+title: "attemptCliLogin.ts"
+---
+
+## High-level description
+This code implements a login functionality for a CLI (Command Line Interface) application. It uses the Secure Remote Password (SRP) protocol for authentication and handles both regular login and Multi-Factor Authentication (MFA) scenarios. The code also manages encryption keys and telemetry data.
+
+## Code Structure
+The main function `attemptLogin` orchestrates the login process, interacting with the `login1` and `login2` API endpoints. It utilizes the `SecurityClient` for token management, `KeyService` for key operations, and `Telemetry` for user activity tracking.
+
+## References
+- `@app/hooks/api/auth/queries`: Contains `login1` and `login2` functions for API calls
+- `@app/services/KeyService`: Handles key-related operations
+- `./telemetry/Telemetry`: Manages telemetry data
+- `./saveTokenToLocalStorage`: Saves authentication tokens
+- `./SecurityClient`: Manages security-related operations
+
+## Symbols
+
+### `attemptLogin`
+#### Description
+This asynchronous function attempts to log in a user using their email and password. It implements the SRP protocol and handles both regular and MFA-enabled login scenarios.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | string | User's email address |
+| password | string | User's password |
+| providerAuthToken | string (optional) | Authentication token from a provider |
+| captchaToken | string (optional) | CAPTCHA verification token |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| IsCliLoginSuccessful | object | Contains login status, MFA status, and user data if successful |
+
+#### Internal Logic
+1. Initializes the SRP client with user credentials
+2. Performs the first login step (login1) to get server public key and salt
+3. Completes the second login step (login2) with client proof
+4. Handles MFA and non-MFA scenarios separately
+5. Decrypts the private key and saves necessary data to local storage
+6. Records telemetry data for successful logins
+
+## Side Effects
+- Sets authentication tokens in `SecurityClient`
+- Saves tokens and keys to local storage
+- Records telemetry data for successful logins
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jsrp | Implements the Secure Remote Password protocol |
+| @app/hooks/api/auth/queries | Provides login API functions |
+| @app/services/KeyService | Handles key-related operations |
+
+## Error Handling
+The function uses a try-catch block to handle errors during the login process. Errors are rejected from the Promise, allowing the caller to handle them appropriately.
+
+## Logging
+The code doesn't implement explicit logging, but it does use telemetry to track successful logins.
+
+## API/Interface Reference
+The function interacts with two API endpoints:
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| login1 | POST | email, clientPublicKey, providerAuthToken | serverPublicKey, salt | First step of SRP authentication |
+| login2 | POST | email, password, clientProof, providerAuthToken, captchaToken | Various authentication and encryption data | Second step of SRP authentication |
+
+## Performance Considerations
+The use of asymmetric encryption and the SRP protocol may have performance implications for large-scale applications. However, these are necessary for secure authentication and key management.

@@ -1,0 +1,70 @@
+---
+title: "index.ts"
+---
+
+## High-level description
+This code defines utility functions for working with CASL (Control Access Level) permissions in a MongoDB environment. It provides functions for matching permissions based on glob patterns and comparing permission sets for privilege levels.
+
+## Code Structure
+The code defines two main functions: `conditionsMatcher` and `isAtLeastAsPrivileged`. `conditionsMatcher` utilizes `$glob` and `glob` symbols to enable glob pattern matching for permissions. `isAtLeastAsPrivileged` uses `extractPermissions` to compare two sets of permissions.
+
+## Symbols
+
+### `conditionsMatcher`
+#### Description
+This function creates a custom query matcher for MongoDB using `buildMongoQueryMatcher` from the `@casl/ability` library. It allows matching documents based on glob patterns defined in CASL permissions.
+
+#### Inputs
+This symbol does not take any direct inputs.
+
+#### Outputs
+The function returns a custom query matcher that can be used with MongoDB queries.
+
+#### Internal Logic
+- It defines a custom field instruction `$glob` for handling glob patterns.
+- It defines a custom interpreter `glob` that uses the `picomatch` library to perform glob pattern matching against a field value.
+- It uses `buildMongoQueryMatcher` to create a MongoDB query matcher that incorporates the custom `$glob` instruction and `glob` interpreter.
+
+### `isAtLeastAsPrivileged`
+#### Description
+This function compares two sets of CASL permissions represented as `MongoAbility` objects. It determines if the first set of permissions (`permissions1`) grants at least the same level of access as the second set (`permissions2`).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permissions1 | MongoAbility | The first set of CASL permissions. |
+| permissions2 | MongoAbility | The second set of CASL permissions. |
+
+#### Outputs
+Returns `true` if `permissions1` is at least as privileged as `permissions2`, otherwise returns `false`.
+
+#### Internal Logic
+1. It extracts permission strings from both `MongoAbility` objects using the `extractPermissions` function.
+2. It creates two sets from the extracted permission strings.
+3. It iterates through the second permission set (`permissions2`) and checks if each permission is present in the first permission set (`permissions1`). If any permission is not found, it returns `false`.
+4. If all permissions from `permissions2` are found in `permissions1`, it compares the size of the sets. If `permissions1` has an equal or greater number of permissions than `permissions2`, it returns `true`, indicating that `permissions1` is at least as privileged. Otherwise, it returns `false`.
+
+### `extractPermissions`
+#### Description
+This is a helper function that extracts and formats permissions from a CASL `MongoAbility` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ability | MongoAbility | The CASL Ability object to extract permissions from. |
+
+#### Outputs
+Returns an array of strings, where each string represents a permission in the format "action_subject".
+
+#### Internal Logic
+- It iterates through the `rules` array of the `MongoAbility` object.
+- For each rule, it extracts the `action` and `subject` properties and concatenates them with an underscore ("_") delimiter.
+- It returns the resulting array of formatted permission strings.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Provides utilities for working with CASL permissions, including building MongoDB query matchers. |
+| @ucast/mongo2js | Offers tools for converting MongoDB queries to JavaScript. |
+| picomatch | Used for glob pattern matching. |
+

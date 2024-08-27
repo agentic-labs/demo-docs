@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a rate limiting service for the backend of an application. It provides functionality to manage, update, and synchronize rate limit configurations, as well as interact with a database to store and retrieve rate limit data.
+
+## What does it do?
+The rate limiting service in this directory performs several key functions:
+
+1. It manages rate limit configurations for various operations in the application, such as read, write, authentication, and accessing secrets.
+
+2. It provides a data access layer (DAL) to interact with the database table storing rate limit information.
+
+3. It offers a service layer that can retrieve, update, and synchronize rate limit settings between the application's memory and the database.
+
+4. It implements a background process that periodically synchronizes the in-memory rate limit configuration with the database, ensuring that the application always has up-to-date rate limit settings.
+
+5. It checks license features to determine if custom rate limits are enabled, adjusting its behavior accordingly.
+
+This service helps protect the application from abuse by limiting the number of requests a user can make within a given time frame for different types of operations. It also allows for dynamic updating of these limits, providing flexibility in managing the application's resources and security.
+
+## Entry points
+The main entry point for this directory is the `rate-limit-service.ts` file. This file contains the `rateLimitServiceFactory` function, which initializes and returns the core functionality of the rate limiting service. The factory pattern used here allows for easy dependency injection and testing.
+
+The data flow in this directory typically follows this pattern:
+1. The `rate-limit-dal.ts` file provides database access functions.
+2. These functions are used by the `rate-limit-service.ts` to interact with the database.
+3. The service layer in `rate-limit-service.ts` manages the in-memory configuration and synchronization with the database.
+4. The types defined in `rate-limit-types.ts` are used throughout to ensure type safety and consistency.
+
+## Key Files
+
+1. `rate-limit-dal.ts`:
+   This file defines the data access layer for rate limits. It exports a factory function `rateLimitDALFactory` that creates an object for interacting with the `RateLimit` table in the database. This DAL is crucial for persisting and retrieving rate limit data.
+
+2. `rate-limit-service.ts`:
+   This is the core of the rate limiting service. It defines the `rateLimitServiceFactory` function, which creates an object containing methods to get and update rate limits, synchronize configurations, and initialize background synchronization. It manages the in-memory rate limit configuration and ensures it stays in sync with the database.
+
+3. `rate-limit-types.ts`:
+   This file contains TypeScript type definitions related to rate limiting. It defines the structure of rate limit objects, update DTOs, and configuration objects. These types are used throughout the other files to ensure type safety and consistency.
+
+## Dependencies
+The rate limiting service relies on several external libraries and internal modules:
+
+1. `cron` (version not specified): Used for scheduling the background synchronization job in `rate-limit-service.ts`.
+2. `@app/lib/logger`: Used for logging throughout the service.
+3. `@app/db`: Provides the database client type used in the DAL.
+4. `@app/lib/knex`: Provides the `ormify` function used to generate the DAL object.
+5. `../license/license-service`: Used to check license features related to custom rate limits.
+
+## Configuration
+The rate limiting service uses a configuration object defined by the `RateLimitConfiguration` type in `rate-limit-types.ts`. This configuration includes settings for various types of rate limits:
+
+```typescript
+type RateLimitConfiguration = {
+  readLimit: number;
+  publicEndpointLimit: number;
+  writeLimit: number;
+  secretsLimit: number;
+  authRateLimit: number;
+  inviteUserRateLimit: number;
+  mfaRateLimit: number;
+};
+```
+
+These settings can be dynamically updated and are synchronized between the in-memory configuration and the database.
+
+The service also uses a constant `DEFAULT_RATE_LIMIT_CONFIG_ID` (value not shown in the provided code) to identify the default rate limit configuration in the database.
+
+Additionally, the background synchronization process is configured to run every 10 minutes using a cron job, but this is only enabled if the license supports custom rate limits.
+
+In summary, this directory implements a flexible and robust rate limiting service that can be easily integrated into the larger application to manage and enforce request limits across various operations.

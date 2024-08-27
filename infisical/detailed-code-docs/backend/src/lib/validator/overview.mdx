@@ -1,0 +1,122 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains utility functions for validating email addresses and URLs. It provides functionality to check if an email is disposable and to validate if a URL contains local IP addresses or localhost, which is particularly important in cloud environments.
+
+## What does it do?
+The validator library performs two main tasks:
+
+1. Email Validation: It checks if a given email address is associated with a disposable email service. This is useful for preventing the use of temporary or throwaway email addresses in applications where persistent user accounts are desired.
+
+2. URL Validation: It verifies if a provided URL contains local IP addresses or refers to localhost. This is crucial for security in cloud environments, where using local addresses might pose risks or be incompatible with the distributed nature of cloud services.
+
+These validations can be used in various parts of an application to ensure data integrity and security, particularly during user registration processes or when handling external URL inputs.
+
+## Key Files
+
+1. `index.ts`:
+   This file serves as the main entry point for the validator library. It re-exports the key functions from other modules, making them easily accessible to other parts of the application.
+
+2. `validate-email.ts`:
+   This file contains the `isDisposableEmail` function, which checks if an email address is associated with a disposable email service. It does this by comparing the email's domain against a list of known disposable email domains stored in a local file.
+
+3. `validate-url.ts`:
+   This file includes the `validateLocalIps` function, which checks if a given URL is a local IP address or localhost. It's particularly important for cloud environments where using local addresses might be restricted or pose security risks.
+
+## Dependencies
+The validator library relies on the following Node.js built-in modules:
+
+1. `fs/promises`: Used for asynchronous file system operations, specifically for reading the list of disposable email domains.
+2. `path`: Used for constructing file paths, ensuring cross-platform compatibility.
+
+Additionally, it uses some internal dependencies:
+
+1. `../config/env`: Provides the `getConfig` function to retrieve application configuration.
+2. `../errors`: Supplies the `BadRequestError` class for throwing specific errors.
+
+## Configuration
+The validator library uses a configuration file or environment variables (accessed through the `getConfig` function) to determine if the application is running in a cloud environment. This affects the URL validation logic, as local IP addresses are only restricted in cloud environments.
+
+Here's a more detailed look at each key file:
+
+### index.ts
+
+This file re-exports the main validation functions:
+
+```typescript
+export { isDisposableEmail } from './validate-email';
+export { validateLocalIps } from './validate-url';
+```
+
+This structure allows other parts of the application to import these functions easily:
+
+```typescript
+import { isDisposableEmail, validateLocalIps } from './lib/validator';
+```
+
+### validate-email.ts
+
+The `isDisposableEmail` function in this file checks if an email is disposable:
+
+```typescript
+import { promises as fs } from 'fs';
+import path from 'path';
+
+export async function isDisposableEmail(email: string): Promise&lt;boolean&gt; {
+  const domain = email.split('@')[1];
+  const disposableDomainsFile = await fs.readFile(
+    path.join(__dirname, 'disposable_emails.txt'),
+    'utf-8'
+  );
+  const disposableDomains = disposableDomainsFile.split('\n');
+  return disposableDomains.includes(domain);
+}
+```
+
+This function:
+1. Extracts the domain from the email address.
+2. Reads a list of disposable email domains from a local file.
+3. Checks if the email's domain is in the list of disposable domains.
+
+The function is asynchronous due to the file reading operation, which could potentially impact performance if called frequently. Consider caching the list of disposable domains in memory for better performance in high-traffic scenarios.
+
+### validate-url.ts
+
+The `validateLocalIps` function in this file checks if a URL is local:
+
+```typescript
+import { getConfig } from '../config/env';
+import { BadRequestError } from '../errors';
+
+export function validateLocalIps(url: string): void {
+  const parsedUrl = new URL(url);
+  const appCfg = getConfig();
+
+  if (appCfg.isCloud) {
+    if (
+      parsedUrl.hostname === 'host.docker.internal' ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(parsedUrl.hostname) ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(parsedUrl.hostname)
+    ) {
+      throw new BadRequestError('Local IPs not allowed as URL');
+    }
+  }
+
+  if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+    throw new BadRequestError('Localhost not allowed');
+  }
+}
+```
+
+This function:
+1. Parses the input URL.
+2. Checks if the application is running in a cloud environment.
+3. If in a cloud environment, it checks for various forms of local IP addresses (including Docker internal hosts and private IP ranges).
+4. It also checks for localhost references.
+5. Throws a `BadRequestError` if any local or localhost addresses are detected.
+
+This validation is crucial for maintaining security in cloud environments where local references might be inappropriate or potentially dangerous.
+
+In conclusion, this validator library provides essential tools for validating email addresses and URLs, which can be crucial for maintaining data integrity and security in web applications, especially those deployed in cloud environments.

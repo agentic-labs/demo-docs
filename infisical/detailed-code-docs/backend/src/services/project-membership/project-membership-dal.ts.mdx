@@ -1,0 +1,121 @@
+---
+title: "project-membership-dal.ts"
+---
+
+## High-level description
+The `project-membership-dal.ts` file defines a factory function `projectMembershipDALFactory` that creates a Data Access Layer (DAL) for managing project memberships. This DAL provides methods for interacting with project membership data in the database.
+
+## Code Structure
+The `projectMembershipDALFactory` function returns an object that includes several functions: `findAllProjectMembers`, `findProjectGhostUser`, `findMembershipsByUsername`, and `findProjectMembershipsByUserId`. These functions handle different aspects of querying and managing project membership data.
+
+## Symbols
+
+### `projectMembershipDALFactory`
+#### Description
+This factory function creates and returns a DAL object for managing project memberships. It sets up an ORM instance for the `ProjectMembership` table and defines several functions for querying and managing project membership data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | A Knex database client instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectMembershipDAL | TProjectMembershipDALFactory | An object containing functions for managing project membership data. |
+
+#### Internal Logic
+1. Creates an ORM instance for the `ProjectMembership` table using `ormify`.
+2. Defines the following functions:
+    - `findAllProjectMembers`: Retrieves all members of a project, optionally filtered by usernames.
+    - `findProjectGhostUser`: Finds the ghost user associated with a project.
+    - `findMembershipsByUsername`: Finds project memberships based on a list of usernames.
+    - `findProjectMembershipsByUserId`: Finds project memberships for a specific user within an organization.
+3. Returns an object containing the ORM instance and the defined functions.
+
+### `findAllProjectMembers`
+#### Description
+This function retrieves all members of a project, optionally filtered by usernames. It performs a series of joins with related tables to retrieve user and role information for each member.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | The ID of the project. |
+| filter | { usernames?: string[]; username?: string } | Optional filter object to filter members by usernames. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| members | any[] | An array of project member objects, each containing user and role information. |
+
+#### Internal Logic
+1. Queries the `ProjectMembership` table, joining with `Project`, `Users`, `UserEncryptionKey`, `ProjectUserMembershipRole`, and `ProjectRoles` tables.
+2. Applies optional filters based on the provided `filter` object.
+3. Selects relevant columns from the joined tables.
+4. Uses `sqlNestRelationships` to structure the retrieved data into a nested format, grouping roles under each member.
+5. Returns the nested array of project members.
+
+### `findProjectGhostUser`
+#### Description
+This function finds the ghost user associated with a project. A ghost user is a special user account that is automatically created for each project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | The ID of the project. |
+| tx | Knex | Optional Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ghostUser | any | The ghost user object, or null if not found. |
+
+#### Internal Logic
+1. Queries the `ProjectMembership` table, joining with the `Users` table.
+2. Filters by `projectId` and `isGhost` flag (set to true for ghost users).
+3. Selects all columns from the `Users` table.
+4. Returns the first matching user object, or null if not found.
+
+### `findMembershipsByUsername`
+#### Description
+This function finds project memberships based on a list of usernames.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | The ID of the project. |
+| usernames | string[] | An array of usernames to search for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| members | any[] | An array of project membership objects, each containing user information. |
+
+#### Internal Logic
+1. Queries the `ProjectMembership` table, joining with `Users` and `UserEncryptionKey` tables.
+2. Filters by `projectId` and the provided `usernames` array.
+3. Selects relevant columns from the joined tables.
+4. Maps the retrieved data to include user information in each membership object.
+5. Returns the array of project membership objects.
+
+### `findProjectMembershipsByUserId`
+#### Description
+This function finds project memberships for a specific user within an organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgId | string | The ID of the organization. |
+| userId | string | The ID of the user. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| members | any[] | An array of project membership objects, each containing user and role information. |
+
+#### Internal Logic
+1. Queries the `ProjectMembership` table, joining with `Project`, `Users`, `UserEncryptionKey`, `ProjectUserMembershipRole`, and `ProjectRoles` tables.
+2. Filters by `userId` and `orgId`.
+3. Selects relevant columns from the joined tables.
+4. Uses `sqlNestRelationships` to structure the retrieved data into a nested format, grouping roles under each member.
+5. Returns the nested array of project members.

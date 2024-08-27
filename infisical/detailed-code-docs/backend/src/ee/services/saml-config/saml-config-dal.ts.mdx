@@ -1,0 +1,70 @@
+---
+title: "saml-config-dal.ts"
+---
+
+## High-level description
+This code defines a Data Access Layer (DAL) for SAML configuration in a backend application. It provides functions to interact with the SAML configuration data stored in a database, including a method to find an enforceable SAML configuration for a given organization.
+
+## Code Structure
+The code exports a factory function `samlConfigDALFactory` that creates a DAL object with methods to interact with SAML configuration data. It uses the `ormify` function to create basic CRUD operations and adds a custom method `findEnforceableSamlCfg`.
+
+## References
+- `@app/db`: Imports the database client type.
+- `@app/db/schemas`: Imports the `TableName` enum.
+- `@app/lib/errors`: Imports the `DatabaseError` class.
+- `@app/lib/knex`: Imports the `ormify` function.
+
+## Symbols
+
+### `samlConfigDALFactory`
+#### Description
+A factory function that creates a SAML configuration Data Access Layer (DAL) object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client instance |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TSamlConfigDALFactory | Object | An object containing SAML configuration DAL methods |
+
+#### Internal Logic
+1. Creates an ORM object for the SAML configuration table using `ormify`.
+2. Defines a custom method `findEnforceableSamlCfg`.
+3. Returns an object that combines the ORM methods and the custom method.
+
+### `findEnforceableSamlCfg`
+#### Description
+A method to find an enforceable SAML configuration for a given organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| orgId | string | The organization ID |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| samlCfg | Object \| undefined | The enforceable SAML configuration, if found |
+
+#### Internal Logic
+1. Queries the SAML configuration table using the replica database node.
+2. Filters for active configurations with a non-null `lastUsed` field.
+3. Returns the first matching configuration or `undefined` if not found.
+4. Wraps the database operation in a try-catch block and throws a `DatabaseError` if an error occurs.
+
+## Error Handling
+The code implements error handling in the `findEnforceableSamlCfg` method. If a database error occurs, it throws a `DatabaseError` with the original error and a name for identification.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @app/db | Provides the database client type |
+| @app/db/schemas | Provides the TableName enum for database table names |
+| @app/lib/errors | Provides the DatabaseError class for error handling |
+| @app/lib/knex | Provides the ormify function for creating basic CRUD operations |
+
+## Performance Considerations
+The `findEnforceableSamlCfg` method uses the `replicaNode()` function, which suggests that it's designed to work with read replicas for improved read performance and scalability.

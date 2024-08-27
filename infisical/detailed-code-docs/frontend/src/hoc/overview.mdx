@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/hoc` directory contains Higher-Order Components (HOCs) that handle permission-based rendering of components in a React application. It includes two main HOCs: `withPermission` for general permission checks and `withProjectPermission` for project-specific permissions.
+
+## What does it do?
+These HOCs act as gatekeepers for React components, enhancing the application's security and access management. They work as follows:
+
+1. A developer wraps a component with either `withPermission` or `withProjectPermission`, specifying the required permissions.
+2. When the application tries to render the wrapped component, the HOC first checks if the user has the specified permissions.
+3. If the user has the required permissions, the original component is rendered as normal.
+4. If the user doesn't have the permissions, instead of rendering the component, it displays an "Access Restricted" or "Permission Denied" message with a lock icon.
+
+This process ensures that users can only access and interact with components they have permission for, adding a crucial layer of security and access control to the application.
+
+## Entry points
+The main entry point for this functionality is the `index.tsx` file, which exports both HOCs:
+
+```typescript
+export { withPermission } from './withPermission';
+export { withProjectPermission } from './withProjectPermission';
+```
+
+The actual implementations are in separate files:
+
+1. `withPermission.tsx`: Contains the core implementation of the `withPermission` HOC.
+2. `withProjectPermission.tsx`: Contains the core implementation of the `withProjectPermission` HOC.
+
+## Dependencies
+Both HOCs rely on several external libraries and internal modules:
+
+1. React: Used for component types and core functionality.
+2. @casl/ability: Provides types for permission handling.
+3. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: Used for rendering the lock icon in the access restricted message.
+4. tailwind-merge: Utility for merging Tailwind CSS classes.
+5. @app/context: Provides custom hooks for checking user permissions (`useOrgPermission` and `useProjectPermission`).
+
+## Configuration
+Both HOCs accept configuration options when used. These options are passed as the second argument to the HOC functions:
+
+```typescript
+withPermission(Component, {
+  action: OrgPermissionActions.Read,
+  subject: OrgPermissionSubjects.Billing,
+  className: "optional-custom-class"
+})
+
+withProjectPermission(Component, {
+  action: ProjectPermissionActions.Read,
+  subject: ProjectPermissionSub.Integrations,
+  className: "optional-custom-class",
+  containerClassName: "optional-container-class"
+})
+```
+
+The configurable fields allow developers to fine-tune the permission requirements for each wrapped component and customize the appearance of the access restricted message.
+
+## Known Issues
+There's a TypeScript issue mentioned in the code comments regarding CASL/React types. This is currently handled using a type assertion (`as any`) for the `action` parameter in the `permission.cannot()` call. This might need to be addressed in future updates to improve type safety.
+
+```typescript
+// akhilmhdh: Set as any due to casl/react ts type bug
+// REASON: casl due to its type checking can't seem to union even if union intersection is applied
+if (permission.cannot(options.action as any, options.subject)) {
+  // Render access restricted message
+}
+```
+
+In conclusion, these HOCs provide a powerful and flexible way to implement permission-based access control in a React application, enhancing security and allowing for fine-grained control over component rendering based on user permissions at both the organization and project levels.

@@ -1,0 +1,92 @@
+---
+title: "keyringwrapper.go"
+---
+
+## High-level description
+This Go package provides utility functions for interacting with a keyring service. It allows setting, getting, and deleting values in a keyring, with fallback mechanisms and error handling. The package is designed to work with different vault backends and includes functionality for generating and storing passphrases.
+
+## Code Structure
+The code defines several functions that interact with a keyring service, using the `github.com/zalando/go-keyring` package. These functions are designed to work with different vault backends, which are determined by the `GetCurrentVaultBackend()` function. The package also includes error handling and logging functionality.
+
+## Symbols
+
+### `SetValueInKeyring`
+#### Description
+This function sets a key-value pair in the keyring. If the default keyring fails, it falls back to a file-based keyring.
+
+#### Inputs
+| Name  | Type   | Description                    |
+|:------|:-------|:-------------------------------|
+| key   | string | The key to store in the keyring |
+| value | string | The value to store in the keyring |
+
+#### Outputs
+| Name | Type  | Description                                  |
+|:-----|:------|:---------------------------------------------|
+| err  | error | An error if the operation fails, nil otherwise |
+
+#### Internal Logic
+1. Get the current vault backend
+2. Attempt to set the key-value pair in the keyring
+3. If it fails, log the error and fall back to a file-based keyring
+4. Generate a random passphrase if needed
+5. Update the config file with the new passphrase and backend type
+6. Attempt to set the key-value pair in the file-based keyring
+
+### `GetValueInKeyring`
+#### Description
+This function retrieves a value from the keyring based on the provided key.
+
+#### Inputs
+| Name | Type   | Description                     |
+|:-----|:-------|:--------------------------------|
+| key  | string | The key to retrieve from the keyring |
+
+#### Outputs
+| Name  | Type   | Description                                  |
+|:------|:-------|:---------------------------------------------|
+| value | string | The retrieved value from the keyring         |
+| err   | error  | An error if the operation fails, nil otherwise |
+
+#### Internal Logic
+1. Get the current vault backend
+2. Retrieve the value from the keyring using the provided key
+
+### `DeleteValueInKeyring`
+#### Description
+This function deletes a key-value pair from the keyring.
+
+#### Inputs
+| Name | Type   | Description                   |
+|:-----|:-------|:------------------------------|
+| key  | string | The key to delete from the keyring |
+
+#### Outputs
+| Name | Type  | Description                                  |
+|:-----|:------|:---------------------------------------------|
+| err  | error | An error if the operation fails, nil otherwise |
+
+#### Internal Logic
+1. Get the current vault backend
+2. Delete the key-value pair from the keyring
+
+### `TimeoutError`
+#### Description
+A custom error type for handling timeout errors.
+
+## Dependencies
+| Dependency                | Purpose                                        |
+|:--------------------------|:-----------------------------------------------|
+| encoding/base64           | For encoding and decoding base64 strings       |
+| fmt                       | For string formatting and printing             |
+| github.com/rs/zerolog/log | For logging                                    |
+| github.com/zalando/go-keyring | For interacting with the system keyring    |
+
+## Error Handling
+The code implements error handling by returning errors from functions and using the `PrintErrorAndExit` function for critical errors. It also includes a custom `TimeoutError` type for specific error scenarios.
+
+## Logging
+The package uses the `github.com/rs/zerolog/log` package for logging debug messages, particularly when errors occur while setting values in the keyring.
+
+## TODOs
+- The error message in `PrintErrorAndExit` for `GetValueInKeyring` suggests running `infisical reset`, but the message in `SetValueInKeyring` suggests `infisical rest`. This inconsistency might need to be addressed.

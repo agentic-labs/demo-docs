@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and types for managing bot-related API operations in the frontend of the application. It provides functionality for fetching bot information and updating bot status within a workspace context.
+
+## What does it do?
+The code in this directory enables the frontend to interact with the backend API for bot-related operations. It allows developers to:
+
+1. Fetch information about a specific bot in a workspace.
+2. Update the active status of a bot.
+
+These operations are implemented as React hooks, which can be easily integrated into React components. The hooks handle API requests, caching, and state management, simplifying the process of working with bot data in the frontend.
+
+## Key Files
+
+1. `index.tsx`: This file serves as the main entry point for the bot-related hooks. It re-exports the `useGetWorkspaceBot` and `useUpdateBotActiveStatus` hooks from the `queries.tsx` file, making them easily accessible to other parts of the application.
+
+2. `queries.tsx`: This file contains the core implementation of the bot-related hooks. It defines:
+   - `useGetWorkspaceBot`: A hook for fetching bot data for a specific workspace.
+   - `useUpdateBotActiveStatus`: A hook for updating the active status of a bot.
+   These hooks utilize React Query for efficient data fetching and caching.
+
+3. `types.ts`: This file defines TypeScript types used throughout the bot-related operations:
+   - `TBot`: Represents the structure of a bot object.
+   - `TSetBotActiveStatusDto`: Defines the data structure for updating a bot's active status.
+
+## Dependencies
+The main external dependency used in this directory is `@tanstack/react-query`. This library is chosen for its powerful data fetching and caching capabilities, which simplify the management of server state in React applications.
+
+React Query is used to:
+- Manage API requests and caching for bot data.
+- Handle loading, error, and success states for API operations.
+- Automatically refetch data when needed.
+
+Additionally, the code relies on an internal `apiRequest` utility from `@app/config/request` for making API calls.
+
+## Configuration
+While there are no explicit configuration files in this directory, the API endpoints used by the hooks are hardcoded within the `queries.tsx` file:
+
+- GET `/api/v1/bot/${workspaceId}` for fetching bot data
+- PATCH `/api/v1/bot/${botId}/active` for updating bot active status
+
+These endpoints suggest that the application uses a RESTful API structure for bot-related operations.
+
+## Code Examples
+
+Here's an example of how the `useGetWorkspaceBot` hook might be used in a React component:
+
+```tsx
+import { useGetWorkspaceBot } from './hooks/api/bots';
+
+function BotInfo({ workspaceId }) {
+  const { data: bot, isLoading, error } = useGetWorkspaceBot(workspaceId);
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Error: {error.message}&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;{bot.name}&lt;/h2&gt;
+      &lt;p&gt;Status: {bot.isActive ? 'Active' : 'Inactive'}&lt;/p&gt;
+      &lt;p&gt;Created: {new Date(bot.createdAt).toLocaleDateString()}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}
+```
+
+And here's an example of using the `useUpdateBotActiveStatus` hook:
+
+```tsx
+import { useUpdateBotActiveStatus } from './hooks/api/bots';
+
+function BotStatusToggle({ bot, workspaceId }) {
+  const updateStatus = useUpdateBotActiveStatus();
+
+  const handleToggle = () =&gt; {
+    updateStatus.mutate({
+      workspaceId,
+      botId: bot.id,
+      isActive: !bot.isActive,
+    });
+  };
+
+  return (
+    &lt;button onClick={handleToggle} disabled={updateStatus.isLoading}&gt;
+      {updateStatus.isLoading ? 'Updating...' : 'Toggle Status'}
+    &lt;/button&gt;
+  );
+}
+```
+
+These examples demonstrate how the hooks can be easily integrated into React components to fetch bot data and update bot status, with built-in handling of loading and error states.
+
+The structure and implementation of these hooks suggest that the application deals with workspaces that can contain multiple bots, each with its own active status and encryption key. The use of React Query indicates a focus on efficient data management and a good user experience by keeping the UI responsive and data up-to-date.

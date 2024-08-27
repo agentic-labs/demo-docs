@@ -1,0 +1,126 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for integrating Cloudflare Workers with the Infisical application. It provides functionality for authorizing and creating Cloudflare Workers integrations, allowing users to connect their Cloudflare Workers projects with Infisical's secret management system.
+
+## What does it do?
+The code in this directory implements two main workflows:
+
+1. Authorization: Users can input their Cloudflare Workers API token and Account ID to authorize the integration. This process validates the input and saves the access token for future use.
+
+2. Integration Creation: After authorization, users can create a new integration by selecting an Infisical project environment, specifying a secret path, and choosing a Cloudflare Workers project to integrate with.
+
+These workflows enable users to securely connect their Cloudflare Workers projects with Infisical, allowing for seamless secret management across their development and deployment processes.
+
+## Key Files
+
+### authorize.tsx
+This file contains the `CloudflareWorkersIntegrationPage` component, which handles the authorization process for the Cloudflare Workers integration. Key features include:
+
+- Input fields for Cloudflare Workers API token and Account ID
+- Input validation
+- Saving the integration access token
+- Redirecting to the creation page upon successful authorization
+
+Example code snippet for handling the authorization:
+
+```javascript
+const handleButtonClick = async () =&gt; {
+  if (!apiToken) {
+    setApiTokenError("Please enter an API token");
+    return;
+  }
+  if (!accountId) {
+    setAccountIdError("Please enter an Account ID");
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const { id } = await mutateAsync({
+      workspaceId,
+      integration: "cloudflare-workers",
+      accessId: accountId,
+      accessToken: apiToken
+    });
+
+    setApiToken("");
+    setAccountId("");
+    setIsLoading(false);
+    localStorage.setItem("cloudflareWorkersIntegrationAuthId", id);
+    router.push(`/integrations/cloudflare-workers/create?integrationAuthId=${id}`);
+  } catch (error) {
+    console.error(error);
+    setIsLoading(false);
+  }
+};
+```
+
+### create.tsx
+This file contains the `CloudflareWorkersIntegrationPage` component for creating a new Cloudflare Workers integration. Key features include:
+
+- Selection of Infisical project environment
+- Input for secret path
+- Selection of Cloudflare Workers project
+- Creation of the integration
+- Error handling and notifications
+
+Example code snippet for creating the integration:
+
+```javascript
+const handleButtonClick = async () =&gt; {
+  if (!integrationAuthId) return;
+
+  setIsLoading(true);
+
+  try {
+    await mutateAsync({
+      integrationAuthId,
+      projectId: selectedProjectId,
+      environment: sourceEnvironment,
+      secretPath,
+      appId: targetApp
+    });
+
+    router.push("/integrations");
+    createNotification({
+      text: "Successfully created Cloudflare Workers integration",
+      type: "success"
+    });
+  } catch (err) {
+    console.error(err);
+    createNotification({
+      text: "Failed to create Cloudflare Workers integration",
+      type: "error"
+    });
+  }
+
+  setIsLoading(false);
+};
+```
+
+## Dependencies
+The code in this directory relies on several external libraries and internal components:
+
+1. React: For building the user interface components
+2. Next.js (next/router): For handling client-side routing
+3. Axios: For making HTTP requests to the backend API
+4. query-string: For parsing query parameters
+5. Custom hooks from @app/hooks/api: For interacting with the application's API
+6. UI components from @app/components/v2: For consistent styling and layout
+
+## Configuration
+Both components in this directory set the `requireAuth` property to `true`, indicating that authentication is required to access these pages. This ensures that only authorized users can perform Cloudflare Workers integrations.
+
+The integration process uses local storage to temporarily store the integration authentication ID, facilitating the flow between the authorization and creation steps.
+
+Example configuration:
+
+```javascript
+CloudflareWorkersIntegrationPage.requireAuth = true;
+```
+
+In summary, this directory provides a comprehensive solution for integrating Cloudflare Workers with Infisical, handling both the authorization and creation processes with appropriate error handling and user feedback.

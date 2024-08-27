@@ -1,0 +1,74 @@
+---
+title: "kms.ts"
+---
+
+## High-level description
+This code provides utility functions for managing encryption keys and performing encryption/decryption operations in a database migration context. It primarily deals with retrieving and creating root keys, managing secret manager data keys, and offering encryption/decryption capabilities for projects.
+
+## Code Structure
+The main functions in this file are `getInstanceRootKey` and `getSecretManagerDataKey`. These functions interact with the database using Knex and utilize the `symmetricCipherService` for encryption and decryption operations.
+
+## References
+- `TableName` enum from "@app/db/schemas"
+- `randomSecureBytes` from "@app/lib/crypto"
+- `symmetricCipherService`, `SymmetricEncryption` from "@app/lib/crypto/cipher"
+- `alphaNumericNanoId` from "@app/lib/nanoid"
+
+## Symbols
+
+### getInstanceRootKey
+#### Description
+This function retrieves or creates the instance root key used for encryption.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex database instance |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rootKey | Buffer | The decrypted root key |
+
+#### Internal Logic
+1. Retrieves the encryption key from environment variables.
+2. Checks for an existing root key configuration in the database.
+3. If found, decrypts and returns the existing root key.
+4. If not found, generates a new root key, encrypts it, and stores it in the database.
+
+### getSecretManagerDataKey
+#### Description
+This function manages the secret manager data key for a given project, including creation, retrieval, and encryption/decryption operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex database instance |
+| projectId | string | The ID of the project |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| object | Object | An object containing encryptor and decryptor functions |
+
+#### Internal Logic
+1. Retrieves the project information from the database.
+2. Gets or creates a secret manager KMS key for the project.
+3. Retrieves or generates a data key for the project.
+4. Returns an object with encryptor and decryptor functions that use the data key.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @sindresorhus/slugify | For creating slugs |
+| knex | For database operations |
+| @app/db/schemas | For database table names |
+| @app/lib/crypto | For generating secure random bytes |
+| @app/lib/crypto/cipher | For encryption and decryption operations |
+| @app/lib/nanoid | For generating unique IDs |
+
+## Error Handling
+The code includes basic error handling, throwing errors when required environment variables or database records are missing.
+
+## Performance Considerations
+The code uses symmetric encryption (AES-GCM-256) for performance. It also implements versioning for encrypted data, which allows for future algorithm updates without breaking existing encrypted data.

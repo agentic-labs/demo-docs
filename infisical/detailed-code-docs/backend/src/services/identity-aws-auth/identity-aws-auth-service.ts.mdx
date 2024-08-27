@@ -1,0 +1,142 @@
+---
+title: "identity-aws-auth-service.ts"
+---
+
+## High-level description
+This code defines a service factory for handling AWS authentication for identities in an application. It provides functionality for logging in, attaching, updating, retrieving, and revoking AWS authentication for identities, with various security checks and permissions handling.
+
+## Code Structure
+The main function `identityAwsAuthServiceFactory` takes several dependencies and returns an object with methods for managing AWS authentication. These methods interact with various data access layers (DALs) and services to perform their operations.
+
+## Symbols
+
+### `identityAwsAuthServiceFactory`
+#### Description
+This is the main factory function that creates and returns the AWS authentication service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dependencies | TIdentityAwsAuthServiceFactoryDep | An object containing various DALs and services required for the AWS auth service |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| service | Object | An object containing methods for AWS auth operations |
+
+#### Internal Logic
+The function creates and returns an object with five methods: `login`, `attachAwsAuth`, `updateAwsAuth`, `getAwsAuth`, and `revokeIdentityAwsAuth`. Each of these methods implements a specific AWS auth-related operation.
+
+### `login`
+#### Description
+Authenticates an identity using AWS IAM credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| loginDTO | TLoginAwsAuthDTO | Object containing identity ID and AWS IAM request details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | Contains access token, AWS auth details, and identity information |
+
+#### Internal Logic
+1. Retrieves AWS auth configuration for the identity
+2. Verifies the AWS account ID and principal ARN if configured
+3. Creates a new access token
+4. Signs and returns a JWT token
+
+### `attachAwsAuth`
+#### Description
+Attaches AWS authentication to an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attachDTO | TAttachAwsAuthDTO | Object containing AWS auth configuration and actor details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | Created AWS auth configuration with organization ID |
+
+#### Internal Logic
+1. Checks permissions and plan limitations
+2. Validates input parameters
+3. Creates AWS auth configuration in a transaction
+4. Updates identity's auth method
+
+### `updateAwsAuth`
+#### Description
+Updates an existing AWS authentication configuration for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updateDTO | TUpdateAwsAuthDTO | Object containing updated AWS auth configuration and actor details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | Updated AWS auth configuration with organization ID |
+
+#### Internal Logic
+1. Verifies the identity and its current auth method
+2. Checks permissions and plan limitations
+3. Validates input parameters
+4. Updates the AWS auth configuration
+
+### `getAwsAuth`
+#### Description
+Retrieves the AWS authentication configuration for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| getDTO | TGetAwsAuthDTO | Object containing identity ID and actor details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | AWS auth configuration with organization ID |
+
+#### Internal Logic
+1. Verifies the identity and its current auth method
+2. Checks read permissions
+3. Retrieves and returns the AWS auth configuration
+
+### `revokeIdentityAwsAuth`
+#### Description
+Revokes AWS authentication for an identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| revokeDTO | TRevokeAwsAuthDTO | Object containing identity ID and actor details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Object | Revoked AWS auth configuration with organization ID |
+
+#### Internal Logic
+1. Verifies the identity and its current auth method
+2. Checks edit permissions and privilege levels
+3. Deletes the AWS auth configuration and updates the identity's auth method in a transaction
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | For handling permissions |
+| axios | For making HTTP requests |
+| jsonwebtoken | For creating and signing JWT tokens |
+| @app/lib/config/env | For accessing application configuration |
+| @app/lib/errors | For custom error types |
+| @app/lib/ip | For IP address validation and processing |
+
+## Error Handling
+The code uses custom error types (BadRequestError, ForbiddenRequestError, UnauthorizedError) for different error scenarios. It also uses CASL's ForbiddenError for permission checks.
+
+## Performance Considerations
+The code uses database transactions for operations that require multiple updates, ensuring data consistency.

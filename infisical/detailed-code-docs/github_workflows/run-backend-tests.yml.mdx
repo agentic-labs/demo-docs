@@ -1,0 +1,68 @@
+---
+title: "run-backend-tests.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file, named "Run backend tests", is designed to automatically run integration tests for the backend of a project when specific conditions are met in pull requests. It also can be called from other workflows.
+
+## Code Structure
+The workflow consists of a single job named "check-be-pr" that runs on an Ubuntu environment and executes a series of steps to set up the testing environment, run the tests, and clean up afterwards.
+
+## Symbols
+
+### Workflow
+#### Description
+This GitHub Actions workflow is triggered on pull request events (opened or synchronized) that modify files in the backend directory, excluding certain files. It can also be called from other workflows.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pull_request | event | Pull request event data |
+| workflow_call | event | Workflow call event data |
+
+#### Internal Logic
+1. Checks out the source code
+2. Sets up Node.js environment
+3. Installs dependencies
+4. Starts PostgreSQL and Redis using Docker Compose
+5. Runs integration tests
+6. Cleans up the Docker environment
+
+### Job: check-be-pr
+#### Description
+This job runs the integration tests for the backend.
+
+#### Steps
+1. **Checkout source**: Uses `actions/checkout@v3` to clone the repository.
+2. **Install `docker compose`**: Conditionally installs Docker Compose for local simulations.
+3. **Setup Node 20**: Sets up Node.js version 20 environment.
+4. **Install dependencies**: Installs npm dependencies for the backend.
+5. **Start postgres and redis**: Starts PostgreSQL and Redis containers using Docker Compose.
+6. **Start integration test**: Runs the integration tests using `npm run test:e2e`.
+7. **Cleanup**: Stops and removes the Docker containers.
+
+#### Environment Variables
+| Name | Value | Description |
+|:-----|:------|:------------|
+| REDIS_URL | redis://172.17.0.1:6379 | URL for Redis connection |
+| DB_CONNECTION_URI | postgres://infisical:infisical@172.17.0.1:5432/infisical?sslmode=disable | PostgreSQL connection URI |
+| AUTH_SECRET | something-random | Secret for authentication |
+| ENCRYPTION_KEY | 4bnfe4e407b8921c104518903515b218 | Key for encryption |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v3 | Checking out the source code |
+| KengoTODA/actions-setup-docker-compose@v1 | Setting up Docker Compose (conditional) |
+| actions/setup-node@v3 | Setting up Node.js environment |
+| Docker Compose | Managing PostgreSQL and Redis containers |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| runs-on | string | ubuntu-latest | Specifies the runner environment |
+| timeout-minutes | number | 15 | Sets the maximum duration for the job |
+
+## TODOs
+- Consider using secrets for sensitive information like `AUTH_SECRET` and `ENCRYPTION_KEY` instead of hardcoding them in the workflow file.
+- The `DB_CONNECTION_URI` uses a hardcoded password ("infisical"). Consider using a more secure method for database authentication in production environments.

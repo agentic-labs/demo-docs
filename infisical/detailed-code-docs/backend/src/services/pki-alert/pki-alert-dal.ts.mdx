@@ -1,0 +1,67 @@
+---
+title: "pki-alert-dal.ts"
+---
+
+## High-level description
+The `pki-alert-dal.ts` file defines a Data Access Layer (DAL) for managing PKI alerts. Its primary function is to retrieve expiring PKI collection items (CAs and certificates) that require alerting based on configured alert settings.
+
+## Code Structure
+The `pkiAlertDALFactory` function serves as the main entry point, returning an object containing data access methods. It utilizes the `ormify` function to generate basic CRUD operations for the `PkiAlert` table. The core logic resides in the `getExpiringPkiCollectionItemsForAlerting` function, which constructs and executes a SQL query to fetch expiring PKI items.
+
+## References
+- `@app/db`: Provides database client and schema definitions.
+- `@app/lib/errors`: Contains custom error classes.
+- `@app/lib/knex`: Offers utilities for working with Knex.js.
+- `../pki-collection/pki-collection-types`: Defines PKI item types.
+
+## Symbols
+
+### `pkiAlertDALFactory`
+#### Description
+This factory function initializes and returns the PKI Alert DAL. It sets up basic CRUD operations using `ormify` and defines the `getExpiringPkiCollectionItemsForAlerting` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `TDbClient` | An instance of the database client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `TPkiAlertDALFactory` | An object containing PKI alert data access methods. |
+
+#### Internal Logic
+1. Initializes an ORM instance for the `PkiAlert` table using `ormify`.
+2. Defines the `getExpiringPkiCollectionItemsForAlerting` function (explained below).
+3. Returns an object containing the `getExpiringPkiCollectionItemsForAlerting` function and the basic CRUD operations from the ORM.
+
+### `getExpiringPkiCollectionItemsForAlerting`
+#### Description
+This asynchronous function retrieves expiring PKI collection items (CAs and certificates) that require alerting. It constructs a SQL query that joins relevant tables, applies filtering based on expiry dates and alert settings, and returns the results.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `Promise&lt;AlertItem[]&gt;` | A promise that resolves to an array of `AlertItem` objects representing expiring PKI items. |
+
+#### Internal Logic
+1. Defines the `AlertItem` type to represent the structure of retrieved data.
+2. Constructs a combined query using `unionAll` to fetch both CAs and certificates from their respective tables, joining with `PkiCollectionItem` to access collection information.
+3. Builds the main alert query, joining the combined query with `PkiAlert` to retrieve alert settings.
+4. Applies a `whereRaw` clause to filter for items expiring within the alert window (defined by `alertBeforeDays`).
+5. Orders the results by `expiryDate` using `orderBy`.
+6. Executes the query and returns the results as an array of `AlertItem` objects.
+7. Handles potential database errors by throwing a `DatabaseError`.
+
+## Error Handling
+The `getExpiringPkiCollectionItemsForAlerting` function includes a try-catch block to handle potential database errors during query execution. If an error occurs, it throws a `DatabaseError` with a descriptive message.
+
+## Dependencies
+- `knex`: Used for SQL query building and execution.
+- `ormify`: Used to generate basic CRUD operations for database tables.
+
+## Logging
+The code does not implement any specific logging mechanisms.

@@ -1,0 +1,87 @@
+---
+title: "project-bot-fns.ts"
+---
+
+## High-level description
+The `project-bot-fns.ts` file provides functions related to managing Infisical project bots, including retrieving and decrypting bot private keys, generating and encrypting bot keys, and handling bot key retrieval for different project versions. These functions are used to facilitate secure access to project secrets by authorized bots.
+
+## Code Structure
+The `getBotPrivateKey` function decrypts the bot's private key. The `getBotKeyFnFactory` function is a factory that returns the `getBotKeyFn` function. The `getBotKeyFn` function retrieves the bot key for a given project, handling different project versions and key encryption schemes.
+
+## References
+- `@app/db/schemas`: Used for importing the `SecretKeyEncoding` enum.
+- `@app/lib/crypto/encryption`: Used for importing encryption and decryption functions.
+- `@app/lib/errors`: Used for importing the `BadRequestError` class.
+- `@app/services/project-bot/project-bot-dal`: Used for importing the `TProjectBotDALFactory` type.
+- `../project/project-dal`: Used for importing the `TProjectDALFactory` type.
+- `./project-bot-types`: Used for importing the `TGetPrivateKeyDTO` type.
+
+## Symbols
+
+### `getBotPrivateKey`
+#### Description
+Decrypts the bot's private key using the provided encryption parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bot | `TGetPrivateKeyDTO` | An object containing the bot's encryption details, including the encrypted private key, IV, tag, and key encoding. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `string` | The decrypted private key of the bot. |
+
+#### Internal Logic
+The function uses the `infisicalSymmetricDecrypt` function to decrypt the bot's private key using the provided encryption parameters.
+
+### `getBotKeyFnFactory`
+#### Description
+A factory function that returns a function (`getBotKeyFn`) for retrieving the bot key for a given project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectBotDAL | `TProjectBotDALFactory` | A factory for creating instances of the ProjectBot data access layer. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findById"&gt;` | An object containing the `findById` function from the Project data access layer. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `(projectId: string) =&gt; Promise&lt;{ botKey: string; project: Project; shouldUseSecretV2Bridge: boolean; }&gt;` | A function that takes a project ID as input and returns a Promise that resolves to an object containing the bot key, project details, and a flag indicating whether to use the SecretV2 bridge. |
+
+#### Internal Logic
+The factory function defines and returns the `getBotKeyFn` function.
+
+### `getBotKeyFn`
+#### Description
+Retrieves the bot key for a given project, handling different project versions and key encryption schemes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | `string` | The ID of the project for which to retrieve the bot key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `Promise&lt;{ botKey: string; project: Project; shouldUseSecretV2Bridge: boolean; }&gt;` | A Promise that resolves to an object containing the bot key, project details, and a flag indicating whether to use the SecretV2 bridge. |
+
+#### Internal Logic
+1. Retrieves the project details using the `projectDAL.findById` function.
+2. If the project version is 3, returns the project details and sets `shouldUseSecretV2Bridge` to `true`.
+3. Retrieves the bot details using the `projectBotDAL.findOne` function.
+4. If the bot is not found or is inactive, attempts to automatically create or update the bot using keys from a previous version of the project.
+5. If the bot exists and is active, decrypts the bot's private key using the `getBotPrivateKey` function and then decrypts the project key using the bot's private key.
+6. Returns the bot key, project details, and sets `shouldUseSecretV2Bridge` to `false`.
+
+## Error Handling
+The code uses the `BadRequestError` class to throw errors in case of invalid input or if the bot or project is not found.
+
+## Dependencies
+- `@app/db/schemas`
+- `@app/lib/crypto/encryption`
+- `@app/lib/errors`
+- `@app/services/project-bot/project-bot-dal`
+- `../project/project-dal`
+- `./project-bot-types`

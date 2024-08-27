@@ -1,0 +1,78 @@
+---
+title: "login-router.ts"
+---
+
+## High-level description
+The code defines API routes related to user login and organization selection in the application. It handles user authentication, organization selection, and sets cookies for session management. The routes interact with various services to perform these actions.
+
+## Code Structure
+The `registerLoginRouter` function registers multiple routes related to login functionality. Each route (`/login1`, `/select-organization`, `/login2`) is defined separately with its own HTTP method, URL, schema, and handler. The handlers interact with services like `login` and use configuration settings for cookie management.
+
+## References
+- `FastifyZodProvider`: Assumed to be a Fastify plugin that provides integration with Zod for schema validation.
+- `getConfig`: A function that retrieves application configuration settings.
+- `server.services`: An object providing access to various application services.
+
+## Symbols
+### `registerLoginRouter`
+#### Description
+Registers API routes related to user login and organization selection.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of the Fastify server with Zod integration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | The function does not return any value. |
+
+#### Internal Logic
+1. **`/login1` Route:**
+   - **Method:** POST
+   - **URL:** `/login1`
+   - **Schema:**
+     - **Body:** Expects `email`, optional `providerAuthToken`, and `clientPublicKey`.
+     - **Response:** Returns `serverPublicKey` and `salt`.
+   - **Handler:**
+     - Calls the `loginGenServerPublicKey` service with the provided email, client public key, and optional provider auth token.
+     - Returns the received `serverPublicKey` and `salt`.
+
+2. **`/select-organization` Route:**
+   - **Method:** POST
+   - **URL:** `/select-organization`
+   - **Schema:**
+     - **Body:** Expects `organizationId`.
+     - **Response:** Returns a `token`.
+   - **Handler:**
+     - Retrieves the user agent, authorization header, and real IP address from the request.
+     - Calls the `selectOrganization` service with the organization ID and request details.
+     - Sets a `jid` cookie with the refresh token, using configuration settings for security.
+     - Returns the access token.
+
+3. **`/login2` Route:**
+   - **Method:** POST
+   - **URL:** `/login2`
+   - **Schema:**
+     - **Body:** Expects `email`, optional `providerAuthToken`, `clientProof`, optional `captchaToken`, and optional `password`.
+     - **Response:** Returns an object indicating MFA status (`mfaEnabled`) and user data or token based on MFA status.
+   - **Handler:**
+     - Retrieves the user agent and real IP address from the request.
+     - Calls the `loginExchangeClientProof` service with the request body data and retrieved details.
+     - If MFA is enabled, returns an object with `mfaEnabled: true` and the received token.
+     - If MFA is not enabled, sets a `jid` cookie with the refresh token and returns an object containing user data and access token.
+
+## Side Effects
+- Sets cookies (`jid`) on successful login or organization selection.
+
+## Dependencies
+- `zod`: Used for schema validation.
+- `@app/lib/config/env`: Used to retrieve configuration settings.
+- `@app/server/config/rateLimiter`: Used for rate limiting configuration.
+
+## Error Handling
+- Throws an error if the user agent header is missing in the `/login2` route handler.
+
+## Logging
+- The code does not include any explicit logging mechanisms.

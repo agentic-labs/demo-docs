@@ -1,0 +1,52 @@
+---
+title: "pki-alert-router.ts"
+---
+
+## High-level description
+This code defines the API routes for managing PKI alerts. It allows for creating, retrieving, updating, and deleting PKI alerts, while enforcing authentication and authorization. Each route interacts with the `server.services.pkiAlert` service to perform the requested action and logs the event using the `server.services.auditLog` service.
+
+## References
+- `@app/db/schemas`: Used for the `PkiAlertsSchema` which defines the structure of a PKI alert.
+- `@app/ee/services/audit-log/audit-log-types`: Used for the `EventType` enum to specify the type of audit log event.
+- `@app/lib/api-docs`: Used for `ALERTS` which likely contains descriptions for the API documentation.
+- `@app/server/config/rateLimiter`: Imports `readLimit` and `writeLimit` functions, likely used for rate limiting API requests.
+- `@app/server/plugins/auth/verify-auth`: Imports `verifyAuth` function, used for authentication and authorization.
+- `@app/services/auth/auth-type`: Imports `AuthMode` enum, used to specify authentication methods.
+
+## Symbols
+### `registerPkiAlertRouter`
+#### Description
+This function registers the API routes for managing PKI alerts with the Fastify server. It defines four routes: POST `/` for creating, GET `/:alertId` for retrieving, PATCH `/:alertId` for updating, and DELETE `/:alertId` for deleting PKI alerts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of the Fastify server with Zod validation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+The function defines four routes using `server.route()`:
+1. **POST /**: Creates a new PKI alert. It validates the request body using the `PkiAlertsSchema`, calls `server.services.pkiAlert.createPkiAlert` to persist the alert, and logs the event using `server.services.auditLog.createAuditLog`.
+2. **GET /:alertId**: Retrieves a PKI alert by ID. It validates the `alertId` parameter, retrieves the alert using `server.services.pkiAlert.getPkiAlertById`, logs the event, and returns the alert data.
+3. **PATCH /:alertId**: Updates a PKI alert. It validates the `alertId` parameter and the request body, updates the alert using `server.services.pkiAlert.updatePkiAlert`, logs the event, and returns the updated alert data.
+4. **DELETE /:alertId**: Deletes a PKI alert. It validates the `alertId` parameter, deletes the alert using `server.services.pkiAlert.deletePkiAlert`, logs the event, and returns the deleted alert data.
+
+All routes require authentication using either JWT or Identity Access Token, enforced by the `verifyAuth` middleware. They also have rate limiting applied using `readLimit` and `writeLimit` configurations.
+
+## Side Effects
+- Creates, updates, and deletes PKI alerts in the database.
+- Creates audit logs for all PKI alert operations.
+
+## Dependencies
+- `zod`: Used for request body validation.
+- `fastify`: Used for defining API routes and handling requests.
+
+## Error Handling
+The code relies on Fastify's built-in error handling mechanism. Zod schema validation handles invalid request data, and any errors during database operations or audit logging are likely caught and handled by Fastify or a global error handler.
+
+## Logging
+The code logs all PKI alert operations (create, get, update, delete) using the `server.services.auditLog.createAuditLog` function. The log entries include the event type, actor information, and relevant metadata about the alert.

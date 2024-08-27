@@ -1,0 +1,113 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains components related to permission management and access control in the frontend of the application. It includes components for handling permissions at both the organization and project levels, as well as a component for displaying a permission denied banner.
+
+## What does it do?
+
+The components in this directory work together to implement a fine-grained access control system in the user interface. They allow for dynamic rendering of UI elements based on user permissions within an organization or project context. Here's a breakdown of the main functionalities:
+
+1. Organization-level permission checks: The `OrgPermissionCan` component allows conditional rendering based on a user's permissions within an organization.
+
+2. Project-level permission checks: The `ProjectPermissionCan` component provides similar functionality but for project-specific permissions.
+
+3. Permission denied messaging: The `PermissionDeniedBanner` component displays a visually appealing banner when a user's access is restricted.
+
+These components enable developers to easily implement access control throughout the application, ensuring that users only see and interact with elements they have permission to access.
+
+## Key Files
+
+1. `OrgPermissionCan.tsx`: This file contains the `OrgPermissionCan` component, which is a wrapper that provides permission-based rendering of its children within an organization context. It uses the CASL library for permission checks and integrates with the organization's permission context.
+
+2. `ProjectPermissionCan.tsx`: This file contains the `ProjectPermissionCan` component, which is similar to `OrgPermissionCan` but operates within a project context. It checks if a user has permission to perform specific actions on particular subjects within a project.
+
+3. `PermissionDeniedBanner.tsx`: This file contains the `PermissionDeniedBanner` component, which renders a visually appealing banner to display when a user's access is restricted. It provides a customizable UI element with a lock icon and a message about restricted access.
+
+4. `index.tsx`: This file serves as an export module for the permission-related components, allowing other parts of the application to import these components from a single location.
+
+## Dependencies
+
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: Used for building the components and managing state.
+2. @casl/react: Provides the `Can` component for permission-based rendering.
+3. @fortawesome/react-fontawesome and @fortawesome/free-solid-svg-icons: Used for rendering icons, particularly in the `PermissionDeniedBanner` component.
+4. tailwind-merge: Used for merging Tailwind CSS classes in the `PermissionDeniedBanner` component.
+5. Internal context modules: The components use custom hooks like `useOrgPermission` and `useProjectPermission` to access permission-related data.
+
+## Configuration
+
+While there are no specific configuration files in this directory, the permission components are designed to be highly configurable through props. For example:
+
+- Both `OrgPermissionCan` and `ProjectPermissionCan` components accept props like `passThrough`, `renderTooltip`, and `allowedLabel` to customize their behavior and appearance.
+- The `PermissionDeniedBanner` component allows for custom CSS classes and content through props.
+
+## Usage Examples
+
+Here are some examples of how these components are used in the application:
+
+1. Using `ProjectPermissionCan` to control access to edit functionality:
+
+```jsx
+&lt;ProjectPermissionCan
+  I={ProjectPermissionActions.Edit}
+  a={subject(ProjectPermissionSub.Secrets, { environment, secretPath })}
+  renderTooltip
+  allowedLabel="Edit"
+&gt;
+  {(isAllowed) =&gt; (
+    &lt;IconButton
+      ariaLabel="edit-dynamic-secret"
+      variant="plain"
+      size="sm"
+      isDisabled={!isAllowed}
+      onClick={handleEdit}
+    &gt;
+      &lt;FontAwesomeIcon icon={faPencilSquare} size="lg" /&gt;
+    &lt;/IconButton&gt;
+  )}
+&lt;/ProjectPermissionCan&gt;
+```
+
+2. Using `ProjectPermissionCan` to control access to delete functionality:
+
+```jsx
+&lt;ProjectPermissionCan
+  I={ProjectPermissionActions.Delete}
+  a={ProjectPermissionSub.CertificateAuthorities}
+&gt;
+  {(isAllowed) =&gt; (
+    &lt;DropdownMenuItem
+      className={twMerge(
+        isAllowed
+          ? "hover:!bg-red-500 hover:!text-white"
+          : "pointer-events-none cursor-not-allowed opacity-50"
+      )}
+      onClick={() =&gt; handlePopUpOpen("deleteCa", { caId: data.id, dn: data.dn })}
+      disabled={!isAllowed}
+    &gt;
+      Delete CA
+    &lt;/DropdownMenuItem&gt;
+  )}
+&lt;/ProjectPermissionCan&gt;
+```
+
+3. Using `OrgPermissionCan` to conditionally render content:
+
+```jsx
+&lt;OrgPermissionCan
+  I={OrgPermissionActions.Read}
+  a={OrgPermissionSub.Users}
+  passThrough
+  label="You don't have permission to view users"
+&gt;
+  {(isAllowed) =&gt; (
+    isAllowed ? &lt;UserList /&gt; : &lt;PermissionDeniedBanner /&gt;
+  )}
+&lt;/OrgPermissionCan&gt;
+```
+
+These components provide a powerful and flexible way to implement access control throughout the application's user interface, ensuring that users only see and interact with elements they have permission to access.

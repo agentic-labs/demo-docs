@@ -1,0 +1,62 @@
+---
+title: "bot-router.ts"
+---
+
+## High-level description
+This code defines two API routes for managing project bots within a Fastify server application. It allows retrieving bot information and updating a bot's active status.
+
+## Code Structure
+The code defines a single asynchronous function `registerProjectBotRouter` which takes a Fastify server instance as input. Inside this function, two routes are defined using `server.route`. The first route handles GET requests to retrieve bot information, while the second route handles PATCH requests to update a bot's active status. Both routes utilize middleware for authentication (`verifyAuth`) and rate limiting (`readLimit`, `writeLimit`).
+
+## References
+- `ProjectBotsSchema`: A Zod schema likely defining the structure of a project bot object.
+- `readLimit`, `writeLimit`: Constants likely defining rate limit configurations.
+- `verifyAuth`: Middleware function for authentication.
+- `AuthMode`: Enum likely defining different authentication modes.
+
+## Symbols
+### `registerProjectBotRouter`
+#### Description
+This asynchronous function registers two routes on a Fastify server instance for managing project bots.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of a Fastify server with Zod validation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| N/A | void | This function does not return a value. |
+
+#### Internal Logic
+1. **Defines a GET route at `/:projectId`:**
+    - Uses `readLimit` for rate limiting.
+    - Validates input parameters using a Zod schema requiring a `projectId`.
+    - Uses `verifyAuth` middleware to enforce JWT authentication.
+    - Calls the `findBotByProjectId` service function to retrieve bot information based on the provided `projectId` and user permissions.
+    - Returns the retrieved bot information, omitting sensitive fields like encryption keys.
+2. **Defines a PATCH route at `/:botId/active`:**
+    - Uses `writeLimit` for rate limiting.
+    - Validates input parameters using a Zod schema requiring a `botId`.
+    - Validates the request body using a Zod schema expecting an `isActive` boolean and an optional `botKey` object.
+    - Uses `verifyAuth` middleware to enforce JWT authentication.
+    - Calls the `setBotActiveState` service function to update the bot's active status based on the provided `botId`, `isActive` flag, optional `botKey`, and user permissions.
+    - Returns the updated bot information, omitting sensitive fields like encryption keys.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fastify | Web framework for building APIs. |
+| zod | Data validation library. |
+
+## Error Handling
+The code does not implement specific error handling beyond basic exception raising. Any errors during route handling or service calls will likely be caught by Fastify's default error handler.
+
+## API/Interface Reference
+This code defines two API endpoints for managing project bots:
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /:projectId | GET | `projectId` (string) | `{ bot: ProjectBot }` | Retrieves information about a specific project bot. Requires JWT authentication. |
+| /:botId/active | PATCH | `botId` (string), `{ isActive: boolean, botKey?: { nonce?: string, encryptedKey?: string } }` | `{ bot: ProjectBot }` | Updates the active status of a project bot. Requires JWT authentication. |

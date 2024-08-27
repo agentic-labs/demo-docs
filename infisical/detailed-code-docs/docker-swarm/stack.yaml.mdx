@@ -1,0 +1,103 @@
+---
+title: "stack.yaml"
+---
+
+## High-level description
+This Docker Compose file defines a complex stack for deploying a distributed system using Docker Swarm. It includes services for HAProxy load balancing, Infisical backend, etcd cluster, PostgreSQL cluster, Redis cluster with replication and sentinels, all interconnected within a custom network called "infisical".
+
+## Code Structure
+The file is structured as a Docker Compose configuration (version 3) with multiple services defined. Each service specifies its image, environment variables, network settings, and deployment constraints. The services are organized to work together, forming a distributed system with load balancing, database clustering, and caching capabilities.
+
+## Symbols
+
+### `haproxy`
+#### Description
+Configures the HAProxy load balancer service.
+
+#### Internal Logic
+- Uses the latest HAProxy image
+- Exposes multiple ports for various services
+- Connects to the "infisical" network
+- Uses a custom configuration file
+- Deploys in global mode (one instance per Swarm node)
+
+### `infisical`
+#### Description
+Defines the Infisical backend service.
+
+#### Internal Logic
+- Uses a specific version of the Infisical image
+- Loads environment variables from a .env file
+- Connects to the "infisical" network
+- Deploys 5 replicas
+
+### `etcd1`, `etcd2`, `etcd3`
+#### Description
+Configures a 3-node etcd cluster for distributed key-value storage.
+
+#### Internal Logic
+- Uses the Spilo image (which includes etcd)
+- Sets up each node with specific etcd configuration
+- Connects to the "infisical" network
+- Deploys each node on a specific Swarm node using placement constraints
+
+### `spolo1`, `spolo2`, `spolo3`
+#### Description
+Configures a 3-node PostgreSQL cluster using Spilo.
+
+#### Internal Logic
+- Uses the Spilo image
+- Connects to the etcd cluster for coordination
+- Sets up PostgreSQL superuser credentials
+- Uses named volumes for persistent storage
+- Deploys each node on a specific Swarm node using placement constraints
+
+### `redis_replica0`, `redis_replica1`, `redis_replica2`
+#### Description
+Sets up a Redis cluster with one master and two replicas.
+
+#### Internal Logic
+- Uses Bitnami Redis image
+- Configures one node as master and two as slaves
+- Sets up replication and authentication
+- Deploys each node on a specific Swarm node using placement constraints
+
+### `redis_sentinel1`, `redis_sentinel2`, `redis_sentinel3`
+#### Description
+Configures Redis Sentinel for high availability of the Redis cluster.
+
+#### Internal Logic
+- Uses Bitnami Redis Sentinel image
+- Sets up Sentinel configuration for monitoring the Redis cluster
+- Deploys each Sentinel on a specific Swarm node using placement constraints
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| HAProxy | Load balancing |
+| Infisical | Backend service |
+| etcd | Distributed key-value store |
+| PostgreSQL (Spilo) | Database cluster |
+| Redis | Caching and data storage |
+| Redis Sentinel | High availability for Redis |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| ETCD_HOSTS | string | etcd1:2379,etcd2:2379,etcd3:2379 | etcd cluster endpoints |
+| PGPASSWORD_SUPERUSER | string | "postgres" | PostgreSQL superuser password |
+| PGUSER_SUPERUSER | string | "postgres" | PostgreSQL superuser username |
+| SCOPE | string | "infisical" | Scope for the PostgreSQL cluster |
+| REDIS_PASSWORD | string | "123456" | Redis authentication password |
+
+## Networks
+The stack uses a custom network named "infisical" to interconnect all services.
+
+## Volumes
+The configuration defines several named volumes for persistent storage, primarily for PostgreSQL data.
+
+## Configs and Secrets
+- A custom HAProxy configuration is provided as a config.
+- An environment file is provided as a secret for the Infisical service.
+
+This Docker Compose file sets up a complex, distributed system with multiple interconnected services, providing load balancing, database clustering, and caching capabilities. It's designed to be deployed on a Docker Swarm cluster with specific node labels for controlled placement of services.

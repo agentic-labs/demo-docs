@@ -1,0 +1,82 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration files for setting up Prometheus monitoring for the k8-operator's controller-manager component in a Kubernetes environment. It uses Kustomize for resource management and defines a ServiceMonitor custom resource for Prometheus to scrape metrics from the controller-manager.
+
+## What does it do?
+The configuration in this directory enables automated monitoring of the k8-operator's controller-manager. It tells Prometheus, a popular monitoring system, how to find and collect performance metrics from the controller-manager. This allows operators to track the health and performance of the controller-manager, which is a critical component of the k8-operator.
+
+Specifically, it sets up a ServiceMonitor that instructs Prometheus to:
+1. Look for services labeled as `control-plane: controller-manager`
+2. Connect to these services using HTTPS
+3. Collect metrics from the `/metrics` endpoint
+4. Use a bearer token for authentication
+5. Skip TLS verification (which can be insecure but is sometimes necessary in certain environments)
+
+This configuration ensures that important metrics about the controller-manager's performance and health are automatically collected and made available for monitoring and alerting purposes.
+
+## Key Files
+
+1. `kustomization.yaml`:
+   This file is a Kustomize configuration that specifies which resources should be included when applying the Kubernetes manifests. In this case, it simply includes the `monitor.yaml` file.
+
+2. `monitor.yaml`:
+   This file defines a ServiceMonitor custom resource, which is used by the Prometheus Operator to discover and scrape metrics from the controller-manager. It specifies details such as:
+   - The target service (controller-manager)
+   - The metrics endpoint (/metrics)
+   - The protocol to use (HTTPS)
+   - Authentication method (bearer token)
+   - TLS configuration (skip verification)
+
+## Dependencies
+The configuration in this directory relies on several external components:
+
+1. Kustomize: 
+   - Purpose: Used for customizing and managing Kubernetes resource configurations.
+   - It allows for easy composition and customization of Kubernetes manifests.
+
+2. Prometheus Operator:
+   - Version: Not specified, but uses `monitoring.coreos.com/v1` API
+   - Purpose: Provides the ServiceMonitor custom resource definition.
+   - It simplifies the deployment and configuration of Prometheus in Kubernetes environments.
+
+3. Prometheus:
+   - While not directly specified, this is the ultimate consumer of the ServiceMonitor configuration.
+   - It will use the ServiceMonitor to discover and scrape metrics from the controller-manager.
+
+## Configuration
+The main configuration is in the `monitor.yaml` file, which defines a ServiceMonitor with the following key settings:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: controller-manager-metrics-monitor
+  namespace: system
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    path: /metrics
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+```
+
+Key configuration points:
+- The ServiceMonitor is named `controller-manager-metrics-monitor` and is deployed in the `system` namespace.
+- It targets services labeled with `control-plane: controller-manager`.
+- Metrics are scraped from the `/metrics` endpoint on the `https` port.
+- HTTPS is used with bearer token authentication.
+- TLS verification is skipped (insecureSkipVerify: true), which can be insecure but may be necessary in certain environments.
+
+It's important to note that while this configuration enables metric collection, it doesn't specify the scraping interval. This is typically controlled by the global Prometheus configuration.
+
+The use of insecure TLS (skipping verification) should be reviewed and, if possible, replaced with proper TLS configuration in production environments to ensure secure communication.
+
+This configuration provides a foundation for monitoring the k8-operator's controller-manager, allowing operators to track its performance and health within the larger Kubernetes ecosystem.

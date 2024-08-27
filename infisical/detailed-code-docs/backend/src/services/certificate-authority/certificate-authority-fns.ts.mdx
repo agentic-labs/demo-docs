@@ -1,0 +1,157 @@
+---
+title: "certificate-authority-fns.ts"
+---
+
+## High-level description
+This file contains utility functions for managing certificate authorities (CAs) in a cryptographic system. It provides functionality for creating and manipulating digital certificates, handling distinguished names, managing CA credentials, and rebuilding certificate revocation lists (CRLs).
+
+## Code Structure
+The code is organized into several functions, each handling a specific aspect of certificate authority management. These functions work together to provide a comprehensive set of tools for CA operations, including key generation, certificate chain management, and CRL rebuilding.
+
+## Symbols
+
+### `createSerialNumber()`
+#### Description
+Generates a random serial number for a certificate.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialNumber | string | A 64-character hexadecimal string representing the serial number |
+
+#### Internal Logic
+1. Generates 32 random bytes.
+2. Ensures the first bit is 0 to avoid negative numbers.
+3. Converts the bytes to a hexadecimal string.
+
+### `createDistinguishedName(parts: TDNParts)`
+#### Description
+Creates a distinguished name string from given parts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| parts | TDNParts | Object containing various parts of a distinguished name |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| distinguishedName | string | Formatted distinguished name string |
+
+### `parseDistinguishedName(dn: string)`
+#### Description
+Parses a distinguished name string into its component parts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dn | string | Distinguished name string to parse |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| parts | TDNParts | Object containing parsed parts of the distinguished name |
+
+### `keyAlgorithmToAlgCfg(keyAlgorithm: CertKeyAlgorithm)`
+#### Description
+Converts a key algorithm enum to its corresponding configuration object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| keyAlgorithm | CertKeyAlgorithm | Enum representing the key algorithm |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| algConfig | object | Configuration object for the specified algorithm |
+
+### `getCaCredentials()`
+#### Description
+Retrieves and decrypts the CA's credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the certificate authority |
+| certificateAuthorityDAL | object | Data access layer for certificate authority |
+| certificateAuthoritySecretDAL | object | Data access layer for CA secrets |
+| projectDAL | object | Data access layer for projects |
+| kmsService | object | Key Management Service for decryption |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| credentials | object | Object containing caSecret, caPrivateKey, and caPublicKey |
+
+### `getCaCertChains()`
+#### Description
+Retrieves and decrypts the certificate chains for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the certificate authority |
+| certificateAuthorityDAL | object | Data access layer for certificate authority |
+| certificateAuthorityCertDAL | object | Data access layer for CA certificates |
+| projectDAL | object | Data access layer for projects |
+| kmsService | object | Key Management Service for decryption |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| decryptedChains | array | Array of decrypted certificate chains |
+
+### `getCaCertChain()`
+#### Description
+Retrieves and decrypts a specific certificate chain for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caCertId | string | ID of the CA certificate |
+| certificateAuthorityDAL | object | Data access layer for certificate authority |
+| certificateAuthorityCertDAL | object | Data access layer for CA certificates |
+| projectDAL | object | Data access layer for projects |
+| kmsService | object | Key Management Service for decryption |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| certChain | object | Object containing caCert, caCertChain, and serialNumber |
+
+### `rebuildCaCrl()`
+#### Description
+Rebuilds the Certificate Revocation List (CRL) for a CA.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caId | string | ID of the certificate authority |
+| certificateAuthorityDAL | object | Data access layer for certificate authority |
+| certificateAuthorityCrlDAL | object | Data access layer for CA CRLs |
+| certificateAuthoritySecretDAL | object | Data access layer for CA secrets |
+| projectDAL | object | Data access layer for projects |
+| certificateDAL | object | Data access layer for certificates |
+| kmsService | object | Key Management Service for encryption/decryption |
+
+#### Internal Logic
+1. Retrieves CA and its secret.
+2. Decrypts the CA's private key.
+3. Fetches all revoked certificates for the CA.
+4. Generates a new CRL using the revoked certificates.
+5. Encrypts and stores the new CRL.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @peculiar/x509 | X.509 certificate manipulation |
+| crypto | Cryptographic operations |
+| @app/lib/errors | Custom error types |
+| @app/services/project/project-fns | Project-related functions |
+
+## Error Handling
+The code uses custom error types (e.g., `NotFoundError`) for specific error scenarios, such as when a CA or its secret is not found.
+
+## Performance Considerations
+The code involves cryptographic operations which can be computationally expensive, especially for large numbers of certificates or frequent CRL rebuilds. Caching strategies or background processing might be considered for performance-critical scenarios.

@@ -1,0 +1,194 @@
+---
+title: "rateLimiter.ts"
+---
+
+## High-level description
+The `rateLimiter.ts` file defines various rate limiting configurations for different API endpoints and actions. It uses the `@fastify/rate-limit` plugin and optionally integrates with Redis for distributed rate limiting. The configurations specify the time window, maximum request count, and key generation logic for identifying unique clients.
+
+## Code Structure
+The code defines several constant objects, each representing a specific rate limiting configuration. These configurations are then used in other parts of the codebase (see References) to apply rate limiting to specific routes.
+
+## References
+- The rate limiting configurations defined in this file are referenced in various route handlers throughout the application (e.g., `backend/src/ee/routes/v1/certificate-authority-crl-router.ts`, `backend/src/server/routes/v1/identity-oidc-auth-router.ts`).
+
+## Symbols
+
+### `globalRateLimiterCfg`
+#### Description
+This function returns the global rate limiter configuration for the Fastify application. It sets a default rate limit of 600 requests per minute and uses the client's IP address as the key for identifying unique clients. It also allows requests to `/healthcheck` and `/api/status` endpoints without rate limiting. If Redis is configured, it uses Redis for distributed rate limiting.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | `RateLimitPluginOptions` | The global rate limiter configuration object. |
+
+#### Internal Logic
+1. Retrieves the application configuration using `getConfig()`.
+2. If Redis is configured, creates a new Redis client instance.
+3. Returns a `RateLimitPluginOptions` object with the following properties:
+    - `timeWindow`: 60 seconds (1 minute)
+    - `max`: 600 requests
+    - `redis`: The Redis client instance (if configured)
+    - `allowList`: A function that allows requests to `/healthcheck` and `/api/status` endpoints.
+    - `keyGenerator`: A function that uses the client's IP address (`req.realIp`) as the key.
+
+### `readLimit`
+#### Description
+This constant defines the rate limiting configuration for GET endpoints. It sets a rate limit based on the `readLimit` property of the request object, which is presumably set dynamically based on the user's permissions or subscription plan.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.readLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `writeLimit`
+#### Description
+This constant defines the rate limiting configuration for write endpoints (POST, PATCH, PUT, DELETE). It sets a rate limit based on the `writeLimit` property of the request object, similar to `readLimit`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.writeLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `secretsLimit`
+#### Description
+This constant defines the rate limiting configuration for endpoints related to secrets, folders, and secret imports. It sets a rate limit based on the `secretsLimit` property of the request object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.secretsLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `authRateLimit`
+#### Description
+This constant defines the rate limiting configuration for authentication-related endpoints. It sets a rate limit based on the `authRateLimit` property of the request object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.authRateLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `inviteUserRateLimit`
+#### Description
+This constant defines the rate limiting configuration for inviting users. It sets a rate limit based on the `inviteUserRateLimit` property of the request object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.inviteUserRateLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `mfaRateLimit`
+#### Description
+This constant defines the rate limiting configuration for MFA-related endpoints. It sets a rate limit based on the `mfaRateLimit` property of the request object. The key generator uses either the authorization token from the request headers or the client's IP address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.mfaRateLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses either the authorization token from the request headers or the client's IP address (`req.realIp`) as the key. |
+
+### `publicEndpointLimit`
+#### Description
+This constant defines the rate limiting configuration for public endpoints to prevent brute force attacks. It sets a rate limit based on the `publicEndpointLimit` property of the request object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| hook | `string` | `"preValidation"` (applies rate limiting before validation) |
+| max | `number` | The value of `req.rateLimits.publicEndpointLimit` |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `publicSecretShareCreationLimit`
+#### Description
+This constant defines the rate limiting configuration for creating public shared secrets. It sets a fixed rate limit of 5 requests per minute.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| max | `number` | 5 requests |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+### `userEngagementLimit`
+#### Description
+This constant defines the rate limiting configuration for user engagement actions. It sets a fixed rate limit of 5 requests per minute.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `FastifyRequest` | The incoming request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timeWindow | `number` | 60 seconds (1 minute) |
+| max | `number` | 5 requests |
+| keyGenerator | `(req: FastifyRequest) =&gt; string` | A function that uses the client's IP address (`req.realIp`) as the key. |
+
+## Dependencies
+- `@fastify/rate-limit`: For rate limiting functionality.
+- `ioredis`: For Redis client (optional, used for distributed rate limiting).
+
+## Configuration
+The Redis configuration is retrieved from the application configuration using `getConfig()`. The `REDIS_URL` property in the application configuration specifies the Redis connection URL.

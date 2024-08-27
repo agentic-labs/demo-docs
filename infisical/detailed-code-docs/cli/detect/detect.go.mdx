@@ -1,0 +1,119 @@
+---
+title: "detect.go"
+---
+
+## High-level description
+This file contains the implementation of a secret detection system called "Detector" in Go. It scans various sources (files, git repositories, strings) for potential secrets or sensitive information based on predefined rules and configurations.
+
+## Code Structure
+The main `Detector` struct contains configuration and state for the detection process. It provides methods for detecting secrets in different contexts (files, git repositories, strings) and uses helper functions for specific detection tasks.
+
+## Symbols
+
+### `Detector` struct
+#### Description
+The main struct that holds the configuration and state for the secret detection process.
+
+#### Internal Logic
+- Initializes with a configuration and sets up pre-filtering using Aho-Corasick algorithm
+- Manages findings, commit tracking, and gitleaks ignore rules
+- Provides methods for different types of scans (files, git, strings)
+
+### `NewDetector` function
+#### Description
+Creates a new `Detector` instance with the given configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | config.Config | Configuration for the detector |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Detector | *Detector | A new Detector instance |
+
+### `DetectGit` method
+#### Description
+Scans a git repository for secrets.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | string | Path to the git repository |
+| logOpts | string | Git log options |
+| gitScanType | GitScanType | Type of git scan to perform |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []report.Finding | []report.Finding | Slice of findings |
+| error | error | Any error encountered during the scan |
+
+#### Internal Logic
+1. Determines the type of git scan to perform (detect, protect, or protect staged)
+2. Uses goroutines to scan git diff files concurrently
+3. Processes each text fragment in the diff files
+4. Calls `Detect` method for each fragment
+5. Augments and adds findings
+
+### `DetectFiles` method
+#### Description
+Scans files in a given directory for secrets.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | string | Path to the directory or file to scan |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []report.Finding | []report.Finding | Slice of findings |
+| error | error | Any error encountered during the scan |
+
+#### Internal Logic
+1. Walks through the directory structure
+2. Skips .git directories and empty files
+3. Handles symlinks if configured
+4. Reads file contents and checks for binary files
+5. Calls `Detect` method for each file's contents
+6. Adds findings to the detector's findings list
+
+### `Detect` method
+#### Description
+Core method that scans a given fragment for secrets based on configured rules.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fragment | Fragment | Fragment of content to scan |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []report.Finding | []report.Finding | Slice of findings |
+
+#### Internal Logic
+1. Checks if the file path is allowed
+2. Builds a keyword map for pre-filtering rules
+3. Iterates through configured rules
+4. Applies rules that match the fragment's keywords
+5. Calls `detectRule` for matching rules
+6. Filters and returns findings
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/h2non/filetype | Determine file types |
+| github.com/fatih/semgroup | Concurrent execution of tasks |
+| github.com/gitleaks/go-gitdiff | Git diff parsing |
+| github.com/petar-dambovaliev/aho-corasick | Efficient string matching |
+| github.com/rs/zerolog | Logging |
+| github.com/spf13/viper | Configuration management |
+
+## Error Handling
+The code uses error return values for most functions and methods. Errors are logged using the zerolog library.
+
+## Logging
+The code uses the zerolog library for logging. Debug, info, and warning level logs are used throughout the code to provide information about the scanning process.

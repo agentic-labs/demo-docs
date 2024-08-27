@@ -1,0 +1,68 @@
+---
+title: "manager_auth_proxy_patch.yaml"
+---
+
+## High-level description
+This YAML file defines a patch for a Kubernetes Deployment, specifically for the controller-manager. It injects a sidecar container (kube-rbac-proxy) that acts as an HTTP proxy for the controller manager, performing RBAC authorization against the Kubernetes API using SubjectAccessReviews.
+
+## Code Structure
+The YAML file consists of a single Kubernetes resource definition for a Deployment patch. It specifies node affinity requirements and defines two containers: kube-rbac-proxy and manager.
+
+## Symbols
+
+### Deployment
+#### Description
+This patch modifies a Deployment named "controller-manager" in the "system" namespace. It adds node affinity requirements and defines two containers.
+
+#### Internal Logic
+1. Sets node affinity to ensure the pod runs on specific architectures (amd64, arm64, ppc64le, s390x) and Linux OS.
+2. Defines two containers: kube-rbac-proxy and manager.
+
+### kube-rbac-proxy Container
+#### Description
+A sidecar container that acts as an HTTP proxy for the controller manager, handling RBAC authorization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| --secure-listen-address | string | Address to listen on for secure connections |
+| --upstream | string | Upstream server to proxy requests to |
+| --logtostderr | boolean | Enable logging to stderr |
+| --v | integer | Verbosity level for logging |
+
+#### Internal Logic
+1. Uses the kube-rbac-proxy image from gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0.
+2. Sets up a secure listen address on 0.0.0.0:8443.
+3. Proxies requests to the upstream server at http://127.0.0.1:8080/.
+4. Configures logging and verbosity.
+5. Exposes port 8443 for HTTPS traffic.
+6. Sets resource limits and requests for CPU and memory.
+
+### manager Container
+#### Description
+The main container for the controller manager.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| --health-probe-bind-address | string | Address to bind the health probe server |
+| --metrics-bind-address | string | Address to bind the metrics server |
+| --leader-elect | flag | Enable leader election |
+
+#### Internal Logic
+1. Configures the health probe bind address to :8081.
+2. Sets up the metrics bind address to 127.0.0.1:8080.
+3. Enables leader election.
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| securityContext.allowPrivilegeEscalation | boolean | false | Disables privilege escalation for the kube-rbac-proxy container |
+| securityContext.capabilities.drop | array | ["ALL"] | Drops all capabilities for the kube-rbac-proxy container |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0 | Image used for the kube-rbac-proxy sidecar container |
+
+This YAML file is crucial for setting up secure access to the controller manager in a Kubernetes cluster. It ensures that the pod runs on compatible nodes and sets up a proxy to handle RBAC authorization, enhancing the security of the controller manager.

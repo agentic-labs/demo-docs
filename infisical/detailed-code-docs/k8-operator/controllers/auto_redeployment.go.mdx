@@ -1,0 +1,97 @@
+---
+title: "auto_redeployment.go"
+---
+
+## High-level description
+This code is part of a Kubernetes operator that manages automatic redeployment of deployments when their associated Infisical secrets are updated. It provides functionality to reconcile deployments with managed secrets, check if a deployment is using a managed secret, and update deployment annotations to trigger redeployment when secrets change.
+
+## Code Structure
+The main symbols in this code are methods of the `InfisicalSecretReconciler` struct. The `ReconcileDeploymentsWithManagedSecrets` method is the entry point, which calls `IsDeploymentUsingManagedSecret` to check deployments and `ReconcileDeployment` to update them if necessary.
+
+## Symbols
+
+### ReconcileDeploymentsWithManagedSecrets
+#### Description
+This method reconciles deployments that use managed secrets associated with an Infisical secret. It fetches all deployments in the specified namespace, checks if they use the managed secret, and triggers reconciliation for eligible deployments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| infisicalSecret | v1alpha1.InfisicalSecret | The Infisical secret object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| int | int | Always returns 0 (unused) |
+| error | error | Error if any occurred during the reconciliation process |
+
+#### Internal Logic
+1. Fetches all deployments in the specified namespace
+2. Retrieves the managed Kubernetes secret
+3. Iterates over deployments, checking if they use the managed secret and have auto-reload enabled
+4. For eligible deployments, starts a goroutine to reconcile the deployment
+5. Waits for all goroutines to complete before returning
+
+### IsDeploymentUsingManagedSecret
+#### Description
+This method checks if a given deployment is using a managed secret associated with an Infisical secret.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deployment | v1.Deployment | The deployment to check |
+| infisicalSecret | v1alpha1.InfisicalSecret | The Infisical secret object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if the deployment is using the managed secret, false otherwise |
+
+#### Internal Logic
+Checks if the managed secret is used in:
+1. Container environment variables (envFrom)
+2. Individual environment variables (env)
+3. Volumes
+
+### ReconcileDeployment
+#### Description
+This method ensures that a deployment is in sync with a Kubernetes secret by comparing their versions and updating the deployment's annotations if necessary.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| deployment | v1.Deployment | The deployment to reconcile |
+| secret | corev1.Secret | The Kubernetes secret to compare against |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error if any occurred during the reconciliation process |
+
+#### Internal Logic
+1. Constructs the annotation key for the secret version
+2. Compares the secret version in the deployment's annotations with the current secret version
+3. If versions differ, updates the deployment's annotations with the new secret version
+4. Updates the deployment in the Kubernetes cluster
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| k8s.io/api/apps/v1 | Kubernetes Deployment API |
+| k8s.io/api/core/v1 | Kubernetes Core API (for Secrets) |
+| k8s.io/apimachinery/pkg/types | Kubernetes types (for NamespacedName) |
+| sigs.k8s.io/controller-runtime/pkg/client | Kubernetes client for interacting with the cluster |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DEPLOYMENT_SECRET_NAME_ANNOTATION_PREFIX | string | "secrets.infisical.com/managed-secret" | Prefix for the annotation key used to store secret versions |
+| AUTO_RELOAD_DEPLOYMENT_ANNOTATION | string | "secrets.infisical.com/auto-reload" | Annotation key to enable auto-reloading for a deployment |
+
+## Error Handling
+The code uses error wrapping to provide context for errors that occur during the reconciliation process. Errors are returned to the caller for further handling.
+
+## Logging
+The code uses `fmt.Printf` for logging information about the reconciliation process, such as when a deployment is already up-to-date or when a redeployment is starting.

@@ -1,0 +1,75 @@
+---
+title: "certificate-router.ts"
+---
+
+## High-level description
+This code defines the API routes for managing certificates within the application. It handles issuing new certificates, signing certificate signing requests (CSRs), revoking certificates, and retrieving certificate details.
+
+## Code Structure
+The code registers multiple routes using the `server.route` function. Each route corresponds to a specific certificate management operation (GET, POST, DELETE) and defines the URL, request schema, authentication requirements, and handler function. The handler functions interact with the `server.services.certificate` and `server.services.certificateAuthority` services to perform the requested operations.
+
+## References
+- `CertificatesSchema`: Database schema for certificates.
+- `EventType`: Enum for audit log event types.
+- `CERTIFICATE_AUTHORITIES`, `CERTIFICATES`: API documentation constants.
+- `readLimit`, `writeLimit`: Rate limiting configurations.
+- `verifyAuth`: Authentication middleware.
+- `AuthMode`: Enum for authentication modes.
+- `CrlReason`: Enum for certificate revocation reasons.
+- `validateAltNamesField`, `validateCaDateField`: Validation functions for certificate fields.
+
+## Symbols
+### `registerCertRouter`
+#### Description
+Registers API routes for managing certificates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The Fastify server instance with Zod validation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None |  |  |
+
+#### Internal Logic
+The function defines multiple routes using `server.route` for different certificate operations:
+- `GET /:serialNumber`: Retrieves a certificate by its serial number.
+- `POST /issue-certificate`: Issues a new certificate from a CA or certificate template.
+- `POST /sign-certificate`: Signs a CSR with a CA or certificate template.
+- `POST /:serialNumber/revoke`: Revokes a certificate by its serial number.
+- `DELETE /:serialNumber`: Deletes a certificate by its serial number.
+- `GET /:serialNumber/certificate`: Retrieves the certificate body and chain for a given serial number.
+
+Each route defines:
+- `method`: HTTP method (GET, POST, DELETE).
+- `url`: Route URL.
+- `config`: Optional configuration, such as rate limiting.
+- `onRequest`: Middleware for authentication (using `verifyAuth`).
+- `schema`: Zod schema for request validation and response definition.
+- `handler`: Asynchronous function that handles the request and returns a response.
+
+The handler functions typically perform the following steps:
+1. Extract data from the request parameters and body.
+2. Call the appropriate service function to perform the operation (e.g., `server.services.certificate.getCert`).
+3. Create an audit log entry using `server.services.auditLog.createAuditLog`.
+4. Return the result of the operation or an error response.
+
+## Dependencies
+- `ms`: Converts various time formats to milliseconds.
+- `zod`: Schema declaration and validation library.
+- `@app/db/schemas`: Database schemas.
+- `@app/ee/services/audit-log/audit-log-types`: Audit log event types.
+- `@app/lib/api-docs`: API documentation constants.
+- `@app/server/config/rateLimiter`: Rate limiting configurations.
+- `@app/server/plugins/auth/verify-auth`: Authentication middleware.
+- `@app/services/auth/auth-type`: Authentication mode enum.
+- `@app/services/certificate/certificate-types`: Certificate related types.
+- `@app/services/certificate-authority/certificate-authority-validators`: Validation functions for certificate fields.
+
+## Error Handling
+The code uses Zod schemas for request validation. If a request fails validation, a 400 Bad Request response is returned with details about the validation errors. The handler functions may also throw errors if there are issues with the requested operations, which are handled by the Fastify framework.
+
+## Logging
+The code creates audit log entries for all certificate management operations using `server.services.auditLog.createAuditLog`. The audit log entries include the event type, metadata about the operation, and information about the actor who initiated the request.

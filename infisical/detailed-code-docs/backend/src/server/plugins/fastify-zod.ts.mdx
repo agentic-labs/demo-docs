@@ -1,0 +1,86 @@
+---
+title: "fastify-zod.ts"
+---
+
+## High-level description
+This code defines a custom Fastify type provider and schema compilers for using Zod schemas with Fastify. It provides utilities for validating incoming requests and serializing outgoing responses using Zod schemas, and also includes a transform function for converting Zod schemas to JSON schemas for documentation purposes.
+
+## Code Structure
+The code defines several functions and a class: `createJsonSchemaTransform`, `jsonSchemaTransform`, `validatorCompiler`, `ResponseValidationError`, and `serializerCompiler`. `createJsonSchemaTransform` is a factory function that creates a transform function for converting Zod schemas to JSON schemas. `jsonSchemaTransform` is an instance of this transform function with a default skip list. `validatorCompiler` and `serializerCompiler` are Fastify schema compilers for validating and serializing data using Zod schemas, respectively. `ResponseValidationError` is a custom error class for handling validation errors during response serialization.
+
+## References
+This code references the following external libraries:
+- `fastify`: For core Fastify functionality and types.
+- `zod`: For defining and validating schemas.
+- `zod-to-json-schema`: For converting Zod schemas to JSON schemas.
+
+## Symbols
+
+### `createJsonSchemaTransform`
+#### Description
+This factory function creates a transform function that converts Zod schemas within a Fastify schema to JSON schemas for documentation purposes. It takes a `skipList` of URLs to exclude from the transformation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| skipList | `readonly string[]` | An array of URLs to exclude from the transformation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| transform function | `({ schema, url }: { schema: Schema; url: string }) =&gt; { schema: FreeformRecord; url: string }` | A function that takes a Fastify schema and URL and returns a transformed schema with Zod schemas converted to JSON schemas. |
+
+#### Internal Logic
+The created transform function iterates through the `headers`, `querystring`, `body`, and `params` properties of the Fastify schema and converts any Zod schemas to JSON schemas using `zodToJsonSchema`. It also handles `response` schemas by converting each response schema for different status codes. If the URL is in the `skipList` or the schema has a `hide` property set to true, the transformation is skipped.
+
+### `jsonSchemaTransform`
+#### Description
+This is an instance of the `createJsonSchemaTransform` function with a default `skipList` of URLs to exclude from the transformation.
+
+### `validatorCompiler`
+#### Description
+This is a Fastify schema compiler that validates incoming request data using a Zod schema.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| schema | `ZodAny` | The Zod schema to use for validation. |
+| data | `any` | The request data to validate. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `{ value: any } \| { error: any }` | An object containing either the validated data (`value`) or a validation error (`error`). |
+
+#### Internal Logic
+The function calls the `parse` method of the Zod schema with the request data. If the validation is successful, it returns an object with the validated data. If the validation fails, it returns an object with the validation error.
+
+### `ResponseValidationError`
+#### Description
+This is a custom error class for handling validation errors during response serialization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| validationResult | `FreeformRecord` | The validation result object from Zod's `safeParse` method. |
+
+#### Internal Logic
+The constructor sets the error message to "Response doesn't match the schema", the error name to "ResponseValidationError", and stores the validation error details from the `validationResult` in the `details` property.
+
+### `serializerCompiler`
+#### Description
+This is a Fastify schema compiler that serializes outgoing response data using a Zod schema.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| schema | `ZodAny \| { properties: ZodAny }` | The Zod schema to use for serialization. |
+| data | `any` | The response data to serialize. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serializedData | `string` | The serialized response data as a JSON string. |
+
+#### Internal Logic
+The function first resolves the Zod schema from the input, handling cases where the schema is wrapped in a `properties` object. It then calls the `safeParse` method of the Zod schema with the response data. If the validation is successful, it returns the serialized data as a JSON string. If the validation fails, it throws a `ResponseValidationError` with the validation error details.

@@ -1,0 +1,54 @@
+---
+title: "mfa-router.ts"
+---
+
+## High-level description
+This code defines an Express.js router that handles multi-factor authentication (MFA) related routes for the application. It provides endpoints for sending MFA tokens, verifying MFA tokens, and logging in users after successful MFA verification.
+
+## Code Structure
+The `registerMfaRouter` function sets up two main routes: `/mfa/send` and `/mfa/verify`. Both routes use a pre-parsing hook to extract and validate the MFA JWT token from the request headers. The `/mfa/send` route resends an MFA token to the user, while the `/mfa/verify` route verifies the provided MFA token and, if successful, generates and returns access and refresh tokens for the user.
+
+## Symbols
+### `registerMfaRouter`
+#### Description
+This function registers the MFA routes with the provided Fastify server instance. It sets up a pre-parsing hook to extract user information from the MFA JWT token and then defines two routes: `/mfa/send` and `/mfa/verify`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of the Fastify server. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| void | void | This function does not return any value. |
+
+#### Internal Logic
+1. **Pre-parsing hook:**
+    - Extracts the bearer token from the `Authorization` header.
+    - Verifies the token using the `AUTH_SECRET`.
+    - Retrieves the user from the database based on the `userId` in the token.
+    - Sets the `req.mfa` object with user information.
+2. **`/mfa/send` route:**
+    - Calls the `resendMfaToken` service to send a new MFA token to the user.
+    - Returns a success message.
+3. **`/mfa/verify` route:**
+    - Extracts the MFA token from the request body.
+    - Calls the `verifyMfaToken` service to verify the MFA token.
+    - Sets the refresh token as a cookie.
+    - Returns user information and access token.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jwt | Used for verifying and decoding JWT tokens. |
+| z | Used for schema validation. |
+| @app/lib/config/env | Used for getting environment variables. |
+| @app/server/config/rateLimiter | Used for rate limiting requests. |
+| @app/services/auth/auth-type | Used for defining authentication types. |
+
+## Error Handling
+The code uses basic error handling by throwing errors in case of invalid input or unauthorized access. These errors are then caught by Fastify and returned as appropriate HTTP error responses.
+
+## Logging
+The code does not implement any specific logging mechanisms.

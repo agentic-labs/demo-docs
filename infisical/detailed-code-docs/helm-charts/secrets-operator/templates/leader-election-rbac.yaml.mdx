@@ -1,0 +1,47 @@
+---
+title: "leader-election-rbac.yaml"
+---
+
+## High-level description
+This YAML file defines Kubernetes RBAC (Role-Based Access Control) resources for leader election in a secrets operator. It creates a Role with permissions for managing configmaps, leases, and events, and a RoleBinding that associates this Role with a ServiceAccount for the controller manager.
+
+## Symbols
+
+### Role
+#### Description
+Defines a Kubernetes Role that grants permissions for leader election-related operations.
+
+#### Internal Logic
+The Role grants permissions to:
+1. Manage (get, list, watch, create, update, patch, delete) configmaps in the core API group.
+2. Manage (get, list, watch, create, update, patch, delete) leases in the coordination.k8s.io API group.
+3. Create and patch events in the core API group.
+
+These permissions are necessary for implementing leader election in Kubernetes operators.
+
+### RoleBinding
+#### Description
+Creates a Kubernetes RoleBinding that associates the previously defined Role with a ServiceAccount.
+
+#### Internal Logic
+The RoleBinding:
+1. References the Role created earlier using its name.
+2. Binds the Role to a ServiceAccount named with the pattern `&lt;fullname&gt;-controller-manager` in the release namespace.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| secrets-operator.fullname | Helm template function to generate the full name of the secrets operator |
+| secrets-operator.labels | Helm template function to include common labels |
+
+## Configuration
+The following Helm template values are used:
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Release.Namespace | string | The namespace where the resources will be deployed |
+
+## Notes
+1. The file uses Helm templating to dynamically generate names and labels.
+2. The resources are labeled with metadata indicating they are part of a Kubernetes operator for secrets management.
+3. The Role and RoleBinding are separated by a YAML document separator (---), allowing multiple resources to be defined in a single file.
+4. The permissions granted are specific to leader election functionality, which is common in Kubernetes operators to ensure only one instance of the operator is active at a time.

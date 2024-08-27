@@ -1,0 +1,47 @@
+---
+title: "inject-rate-limits.ts"
+---
+
+## High-level description
+This code defines a Fastify plugin called `injectRateLimits` that adds rate limiting functionality to the server's request handling pipeline. It retrieves rate limit configurations based on the request context (authenticated user or public endpoint) and attaches the appropriate limits to the request object for later enforcement.
+
+## Code Structure
+The `injectRateLimits` function uses the `fp` (fastify-plugin) function to create a Fastify plugin. Inside the plugin, it defines a request decorator `rateLimits` and a hook that runs `onRequest`. The hook retrieves rate limit configurations and attaches them to the `rateLimits` property of the request object.
+
+## References
+- `@app/ee/services/rate-limit/rate-limit-service`: Uses the `getRateLimiterConfig` function to retrieve the default rate limiter configuration.
+- `@app/lib/config/env`: Uses the `getConfig` function to access application configuration.
+
+## Symbols
+### `injectRateLimits`
+#### Description
+This function is a Fastify plugin that injects rate limit configurations into the request object based on the request context. It first retrieves the default rate limit configuration and then checks if the request is authenticated. If authenticated, it retrieves the organization's rate limits from the license service. Finally, it sets the `req.rateLimits` property with the appropriate rate limits.
+
+#### Inputs
+This function takes a Fastify instance as input, provided implicitly by the `fp` plugin system.
+
+#### Outputs
+This function doesn't return any value directly. It modifies the Fastify instance by adding a request decorator and a hook.
+
+#### Internal Logic
+1. **Decorate Request:** Decorates the request object with a `rateLimits` property, initialized to `null`.
+2. **onRequest Hook:** Adds an `onRequest` hook to the Fastify server.
+3. **Retrieve Configurations:** Retrieves the application configuration and the default rate limiter configuration.
+4. **Handle Unauthenticated Requests:** If the request is not authenticated (`req.auth?.orgId` is falsy), it sets the `req.rateLimits` to the default instance-wide rate limits.
+5. **Handle Authenticated Requests:** If the request is authenticated, it retrieves the organization's rate limits and custom rate limits (if applicable) from the license service.
+6. **Apply Custom Rate Limits:** If custom rate limits are enabled and the application is not running in the cloud, it uses the instance-wide rate limits, assuming custom limits are managed through admin configuration.
+7. **Apply License-Based Rate Limits:** If custom rate limits are not used, it applies the rate limits defined in the organization's license, falling back to the default instance-wide limits if a specific limit is not defined in the license.
+8. **Attach Rate Limits to Request:** Sets the `req.rateLimits` property on the request object with the determined rate limits.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fastify-plugin | Used to create a Fastify plugin. |
+| @app/ee/services/rate-limit/rate-limit-service | Provides the `getRateLimiterConfig` function to retrieve the default rate limiter configuration. |
+| @app/lib/config/env | Provides the `getConfig` function to access application configuration. |
+
+## Error Handling
+This code does not implement specific error handling. It assumes that the `server.services.license.getPlan` function handles errors gracefully.
+
+## Logging
+This code does not implement any logging.

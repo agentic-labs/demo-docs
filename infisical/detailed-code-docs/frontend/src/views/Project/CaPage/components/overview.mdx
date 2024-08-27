@@ -1,0 +1,107 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React components for managing and displaying information related to Certificate Authorities (CAs) within a project. The components handle various aspects of CA management, including displaying CA details, managing certificates, handling Certificate Revocation Lists (CRLs), and facilitating CA renewal.
+
+## What does it do?
+The code in this directory creates a user interface for CA management with the following functionalities:
+
+1. Displays detailed information about a specific CA, including its type, ID, status, key algorithm, and validity dates.
+2. Shows a list of CA certificates in a table format, allowing users to view and download certificates.
+3. Presents Certificate Revocation Lists (CRLs) associated with a CA, enabling users to view and download CRL content.
+4. Provides a modal interface for renewing a CA, allowing users to select a renewal type and specify a new expiration date.
+5. Implements permission-based access control for certain actions, such as renewing or installing CA certificates.
+6. Offers copy-to-clipboard functionality for CA IDs and other relevant information.
+
+These components work together to create a comprehensive interface for managing Certificate Authorities within a larger project or PKI (Public Key Infrastructure) system.
+
+## Key Files
+
+1. `CaDetailsSection.tsx`:
+   - Displays detailed information about a specific CA.
+   - Provides functionality to copy IDs and initiate CA renewal or certificate installation.
+
+2. `CaCertificatesSection/CaCertificatesSection.tsx`:
+   - Renders a section for displaying CA certificates.
+   - Contains a table component for listing certificates with download options.
+
+3. `CaCrlsSection/CaCrlsSection.tsx`:
+   - Displays a section for Certificate Revocation Lists (CRLs).
+   - Includes a table component for listing CRLs with download functionality.
+
+4. `CaRenewalModal.tsx`:
+   - Implements a modal dialog for renewing a Certificate Authority.
+   - Uses React Hook Form and Zod for form management and validation.
+
+5. `index.tsx`:
+   - Serves as an export point for all CA-related components, simplifying imports in other parts of the application.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React: Core library for building the user interface.
+2. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: For rendering icons in the UI.
+3. date-fns: Used for date formatting and manipulation.
+4. file-saver: Handles file downloads for certificates and CRLs.
+5. react-hook-form and @hookform/resolvers/zod: For form management and validation in the CA renewal modal.
+6. zod: Schema validation library used in conjunction with react-hook-form.
+7. Various internal @app components and hooks: For UI elements, API interactions, and permission checks.
+
+## Configuration
+While there are no explicit configuration files in this directory, the components are designed to work with specific API structures and data formats. Key configuration points include:
+
+1. API endpoints: The components use custom hooks like `useGetCaById`, `useGetCaCerts`, and `useGetCaCrls` to interact with backend services.
+2. Permissions: The components use a `ProjectPermissionCan` component to check user permissions for certain actions.
+3. Form validation: The CA renewal modal uses a Zod schema to define validation rules for the renewal form.
+
+## Code Examples
+
+Here's a simplified example of how the `CaDetailsSection` component displays CA information:
+
+```jsx
+const CaDetailsSection: React.FC&lt;{ caId: string }&gt; = ({ caId }) =&gt; {
+  const { data: ca } = useGetCaById(caId);
+
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;CA Details&lt;/h2&gt;
+      &lt;div&gt;Type: {ca?.type}&lt;/div&gt;
+      &lt;div&gt;ID: {ca?.id} &lt;CopyButton text={ca?.id} /&gt;&lt;/div&gt;
+      &lt;div&gt;Status: {ca?.status}&lt;/div&gt;
+      {/* More CA details */}
+      &lt;ProjectPermissionCan permission={PERMISSIONS.RENEW_CA}&gt;
+        &lt;Button onClick={() =&gt; handleRenewCA()}&gt;Renew CA&lt;/Button&gt;
+      &lt;/ProjectPermissionCan&gt;
+    &lt;/div&gt;
+  );
+};
+```
+
+And here's a snippet from the `CaRenewalModal` showing the form structure:
+
+```jsx
+const CaRenewalModal: React.FC&lt;Props&gt; = ({ popUp, handlePopUpToggle }) =&gt; {
+  const { control, handleSubmit } = useForm&lt;FormData&gt;({
+    resolver: zodResolver(schema),
+    defaultValues: { type: CaRenewalType.EXISTING },
+  });
+
+  const onFormSubmit = (data: FormData) =&gt; {
+    renewCa({ caId: popUp.data?.caId, ...data });
+  };
+
+  return (
+    &lt;Modal isOpen={popUp.isOpen} onClose={handlePopUpToggle}&gt;
+      &lt;form onSubmit={handleSubmit(onFormSubmit)}&gt;
+        &lt;Select name="type" control={control} options={renewalTypeOptions} /&gt;
+        &lt;DatePicker name="notAfter" control={control} /&gt;
+        &lt;Button type="submit"&gt;Renew CA&lt;/Button&gt;
+      &lt;/form&gt;
+    &lt;/Modal&gt;
+  );
+};
+```
+
+These examples demonstrate how the components work together to create a comprehensive interface for managing Certificate Authorities, with a focus on displaying information, handling user interactions, and managing complex operations like CA renewal.

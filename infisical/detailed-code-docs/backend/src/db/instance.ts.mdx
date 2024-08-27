@@ -1,0 +1,52 @@
+---
+title: "instance.ts"
+---
+
+## High-level description
+The `instance.ts` file exports a function `initDbConnection` which initializes and returns a Knex client instance for connecting to a PostgreSQL database. It also configures read replicas if provided.
+
+## Code Structure
+The `initDbConnection` function initializes a primary Knex client (`db`) and an array of read replica Knex clients (`readReplicaDbs`). It then extends the Knex QueryBuilder with two custom methods: `primaryNode` and `replicaNode`. The `primaryNode` method always returns the primary Knex client, while the `replicaNode` method randomly selects and returns a read replica client if available, otherwise falling back to the primary client.
+
+## References
+- **knex**: This code directly uses the `knex` library for interacting with the PostgreSQL database.
+
+## Symbols
+
+### `initDbConnection`
+#### Description
+Initializes a connection to a PostgreSQL database using the Knex library. It configures the primary database connection and optionally sets up read replicas. The function returns the primary Knex client instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| { dbConnectionUri, dbRootCert, readReplicas } | `{ dbConnectionUri: string; dbRootCert?: string; readReplicas?: { dbConnectionUri: string; dbRootCert?: string; }[]; }` | An object containing the database connection URI, optional root certificate, and an optional array of read replica configurations. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `Knex&lt;any, unknown[]&gt;` | The primary Knex client instance. |
+
+#### Internal Logic
+1. **Initialize variables:**
+   - `db`: A variable to hold the primary Knex client instance.
+   - `readReplicaDbs`: An array to hold read replica Knex client instances.
+2. **Extend Knex QueryBuilder:**
+   - Define a custom `primaryNode` method that returns the primary Knex client (`db`).
+   - Define a custom `replicaNode` method that randomly selects and returns a read replica client from `readReplicaDbs` if available, otherwise falling back to the primary client (`db`).
+3. **Configure primary database connection:**
+   - Create a Knex instance with the provided `dbConnectionUri` and other connection parameters.
+   - Set up SSL connection if `dbRootCert` is provided.
+4. **Configure read replicas (if any):**
+   - Iterate through the `readReplicas` array.
+   - For each replica, create a Knex instance with the provided connection URI and optional root certificate.
+   - Add the created replica Knex instance to the `readReplicaDbs` array.
+5. **Return the primary Knex client instance (`db`).**
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides a connection to the PostgreSQL database and facilitates database operations. |
+
+## Error Handling
+The code does not implement specific error handling beyond basic exception raising. Any errors during the database connection initialization or query builder extension will be thrown as exceptions.

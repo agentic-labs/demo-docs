@@ -1,0 +1,145 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The code defines a `Redlock` class that implements the Redlock distributed lock algorithm using Redis. This algorithm allows for acquiring and managing locks across multiple Redis instances or clusters, ensuring mutual exclusion in a distributed environment.
+
+## Code Structure
+The code defines a `Redlock` class that uses `IORedisClient` or `IORedisCluster` for Redis interaction. It defines scripts for acquiring, extending, and releasing locks. The `Lock` class represents a successfully acquired lock and provides methods for releasing and extending it. The code also includes error classes for lock-related issues and utility functions for hashing and random string generation.
+
+## References
+This code references the `ioredis` library for interacting with Redis.
+
+## Symbols
+
+### `Redlock`
+#### Description
+This class implements the Redlock distributed lock algorithm using one or more Redis clients. It provides methods for acquiring, releasing, and extending locks across multiple Redis instances.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| clients | `Iterable&lt;Client&gt;` | An iterable of Redis clients (IORedisClient or IORedisCluster). |
+| settings | `Partial&lt;Settings&gt;` | Optional settings to customize Redlock behavior. |
+| scripts | `{ acquireScript?: string \| ((script: string) =&gt; string); extendScript?: string \| ((script: string) =&gt; string); releaseScript?: string \| ((script: string) =&gt; string); }` | Optional custom Lua scripts or script modifiers for acquiring, extending, and releasing locks. |
+
+#### Outputs
+A `Redlock` instance.
+
+#### Internal Logic
+The constructor initializes the Redlock instance with the provided Redis clients, settings, and scripts. It also defines default settings and pre-computes script hashes for efficient execution.
+
+### `Lock`
+#### Description
+Represents a successfully acquired distributed lock.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| redlock | `Redlock` | The Redlock instance that acquired the lock. |
+| resources | `string[]` | An array of resource names that are locked. |
+| value | `string` | The random value associated with this lock. |
+| attempts | `ReadonlyArray&lt;Promise&lt;ExecutionStats&gt;&gt;` | An array of promises, each resolving to execution statistics for an attempt to acquire the lock. |
+| expiration | `number` | The timestamp when the lock expires. |
+
+#### Outputs
+A `Lock` instance.
+
+#### Internal Logic
+The constructor initializes the Lock object with the provided parameters.
+
+### `Redlock.acquire`
+#### Description
+Acquires a distributed lock on the specified resources for the given duration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resources | `string[]` | An array of resource names to lock. |
+| duration | `number` | The lock duration in milliseconds. |
+| settings | `Partial&lt;Settings&gt;` | Optional settings to override the default settings for this acquisition attempt. |
+
+#### Outputs
+A `Promise&lt;Lock&gt;` that resolves to a `Lock` object if successful, or throws an error if unsuccessful.
+
+#### Internal Logic
+The method generates a random value and attempts to acquire the lock on all Redis instances using the `_execute` method with the `acquireScript`. If successful, it returns a `Lock` object. If unsuccessful, it attempts to release any partially acquired locks and throws an error.
+
+### `Redlock.release`
+#### Description
+Releases the provided lock from all Redis instances.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| lock | `Lock` | The lock object to release. |
+| settings | `Partial&lt;Settings&gt;` | Optional settings to override the default settings for this release attempt. |
+
+#### Outputs
+A `Promise&lt;ExecutionResult&gt;` that resolves when the lock is released on a quorum of Redis instances.
+
+#### Internal Logic
+The method invalidates the lock and attempts to release it on all Redis instances using the `_execute` method with the `releaseScript`.
+
+### `Redlock.extend`
+#### Description
+Extends the duration of an existing lock.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| existing | `Lock` | The existing lock object to extend. |
+| duration | `number` | The new duration for the lock in milliseconds. |
+| settings | `Partial&lt;Settings&gt;` | Optional settings to override the default settings for this extension attempt. |
+
+#### Outputs
+A `Promise&lt;Lock&gt;` that resolves to a new `Lock` object with the extended duration.
+
+#### Internal Logic
+The method checks if the lock has already expired. If not, it attempts to extend the lock on all Redis instances using the `_execute` method with the `extendScript`. If successful, it returns a new `Lock` object with the extended duration.
+
+### `Redlock.using`
+#### Description
+Executes a provided asynchronous routine within the context of an auto-extending lock.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resources | `string[]` | An array of resource names to lock. |
+| duration | `number` | The initial lock duration in milliseconds. |
+| settings | `Partial&lt;Settings&gt;` | Optional settings to override the default settings for this lock. |
+| routine | `(signal: RedlockAbortSignal) =&gt; Promise&lt;T&gt;` | The asynchronous routine to execute within the lock context. |
+
+#### Outputs
+A `Promise&lt;T&gt;` that resolves to the result of the provided routine if successful.
+
+#### Internal Logic
+The method acquires a lock on the specified resources and sets up a timer to automatically extend the lock before it expires. The provided routine is executed within this lock context. An `AbortSignal` is passed to the routine, allowing it to be notified if the lock cannot be extended. The lock is released after the routine completes or throws an error.
+
+## Error Handling
+The code defines two custom error classes:
+
+- `ResourceLockedError`: Thrown when a lock cannot be acquired because one or more of the requested resources are already locked.
+- `ExecutionError`: Thrown when an operation (acquire, release, or extend) fails to achieve a quorum across the Redis instances.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `crypto` | Used for generating random values and hashing. |
+| `events` | Used for the `EventEmitter` base class. |
+| `ioredis` | Used for interacting with Redis instances. |
+
+## Configuration
+The `Redlock` constructor accepts an optional `settings` object to customize its behavior. The available settings are:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `driftFactor` | `number` | `0.01` | The maximum allowed clock drift between Redis instances, as a fraction of the lock duration. |
+| `retryCount` | `number` | `10` | The number of times to retry acquiring a lock before failing. |
+| `retryDelay` | `number` | `200` | The base delay in milliseconds between retry attempts. |
+| `retryJitter` | `number` | `100` | The maximum random jitter in milliseconds added to the `retryDelay`. |
+| `automaticExtensionThreshold` | `number` | `500` | The time in milliseconds before a lock's expiration to automatically extend it. |
+
+## Logging
+The `Redlock` class extends `EventEmitter` and emits an "error" event whenever it encounters an error during lock operations. This allows for monitoring and logging of errors without crashing the application.

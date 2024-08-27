@@ -1,0 +1,65 @@
+---
+title: "project-key-router.ts"
+---
+
+## High-level description
+This code defines an API endpoint for uploading encrypted project keys to a workspace. It handles authentication, rate limiting, and input validation before invoking a service to persist the key.
+
+## Code Structure
+The code defines a single function `registerProjectKeyRouter` which takes a `FastifyZodProvider` instance as input. This function defines a POST route `/:workspaceId/key` using the provided server instance. The route handler extracts data from the request, performs validation, and calls the `uploadProjectKeys` service to store the key.
+
+## References
+- `verifyAuth`: Authentication middleware from `@app/server/plugins/auth/verify-auth`.
+- `AuthMode`: Enum likely defining authentication methods from `@app/services/auth/auth-type`.
+- `server.services.projectKey.uploadProjectKeys`: Service function to persist the project key.
+
+## Symbols
+### `registerProjectKeyRouter`
+#### Description
+Registers a POST route on the provided Fastify server to handle project key uploads.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | An instance of the Fastify server with Zod validation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | The function does not return any value. |
+
+#### Internal Logic
+1. **Route Definition:** Defines a POST route at `/:workspaceId/key`.
+2. **Rate Limiting:** Applies a rate limit using `writeLimit` configuration.
+3. **Validation:**
+    - Uses Zod schemas to validate:
+        - `workspaceId` in the URL parameters.
+        - Request body containing `encryptedKey`, `nonce`, and `userId`.
+    - Defines the expected response schema for status code 200.
+4. **Authentication:** Requires JWT authentication using `verifyAuth` middleware.
+5. **Handler:**
+    - Extracts `workspaceId` from request parameters.
+    - Extracts `nonce`, `userId`, and `encryptedKey` from the request body.
+    - Calls `server.services.projectKey.uploadProjectKeys` with the extracted data and information from the authenticated user.
+    - Returns a success message upon successful key upload.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| z | Zod library for schema validation. |
+| @app/server/config/rateLimiter | Module providing rate limiting configuration. |
+| @app/server/plugins/auth/verify-auth | Middleware for JWT authentication. |
+| @app/services/auth/auth-type | Module defining authentication types. |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| writeLimit | Object |  | Configuration object for rate limiting write operations, likely defined in `@app/server/config/rateLimiter`. |
+
+## Error Handling
+The code relies on Fastify's built-in error handling. Zod schema validation will throw errors for invalid input, and the `verifyAuth` middleware will handle authentication failures. These errors are likely caught and handled by a global error handler in the Fastify server.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /:workspaceId/key | POST | `{ "key": { "encryptedKey": "string", "nonce": "string", "userId": "string" } }` | `{ "message": "Successfully uploaded key to workspace" }` | Uploads an encrypted project key to the specified workspace. Requires JWT authentication. |

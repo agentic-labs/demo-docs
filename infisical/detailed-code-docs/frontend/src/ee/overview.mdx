@@ -1,0 +1,111 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/ee` directory contains utility functions and API interfaces for the enterprise edition (EE) of a frontend application. It is divided into two main subdirectories: `api` and `utilities`. The `api` subdirectory focuses on functions for interacting with a secrets management API and updating user project permissions, while the `utilities` subdirectory provides general-purpose utility functions for text comparison and time-based calculations.
+
+## What does it do?
+This directory provides essential functionality for the enterprise edition of the frontend application:
+
+1. Secret Management:
+   - Fetching and managing secret snapshots for projects or workspaces
+   - Retrieving version history of secrets
+   - Performing rollbacks to previous secret versions
+
+2. User Permissions:
+   - Updating user permissions for specific environments in a project
+
+3. Text Comparison:
+   - Implementing the Patience Diff algorithm for finding and highlighting differences between two texts
+
+4. Time Calculations:
+   - Calculating and presenting time elapsed since a given date in a human-readable format
+
+These functionalities enhance the application's capabilities in managing secrets, handling user permissions, and providing user-friendly interfaces for text comparison and time representation.
+
+## Key Files
+
+1. API Directory:
+   - `GetActionData.ts`: Fetches data for specific user actions
+   - `GetProjectSercetShanpshots.ts`: Retrieves secret snapshots for a project
+   - `GetProjectSercetSnapshotsCount.ts`: Gets the count of secret snapshots for a project
+   - `GetSecretSnapshotData.ts`: Fetches detailed data for a specific secret snapshot
+   - `GetSecretVersions.ts`: Retrieves the version history of a secret
+   - `PerformSecretRollback.ts`: Initiates a rollback of secrets to a previous version
+   - `memberships/updateUserProjectPermission.ts`: Updates user permissions for a specific environment in a project
+
+2. Utilities Directory:
+   - `findTextDifferences.ts`: Implements the Patience Diff algorithm for text comparison
+   - `timeSince.ts`: Calculates time elapsed since a given date
+
+## Dependencies
+The main dependency used in the API functions is the `SecurityClient`, likely imported from `"@app/components/utilities/SecurityClient"`. This client is used to make authenticated API calls to the backend.
+
+## Configuration
+There are no specific configuration files or environment variables used in this directory. However, the `timeSince` function in `utilities/timeSince.ts` uses hardcoded thresholds for different time units, which might need adjustment for specific use cases.
+
+## Code Structure and Patterns
+
+1. API Functions:
+   Each API function follows a similar structure:
+   - Import the `SecurityClient`
+   - Define an interface for function parameters (if needed)
+   - Define an asynchronous function that makes an API call using `SecurityClient.fetchCall`
+   - Handle the response, returning the data if successful or `undefined` if failed
+
+   Example:
+   ```typescript
+   import { SecurityClient } from "@app/components/utilities/SecurityClient";
+
+   export const updateUserProjectPermission = async (
+     membershipId: string,
+     denials: Array&lt;{ ability: string; environmentSlug: string }&gt;
+   ) =&gt; {
+     try {
+       const res = await SecurityClient.fetchCall(
+         `/api/v1/memberships/${membershipId}/permissions`,
+         {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+           },
+           body: JSON.stringify({
+             permissions: denials,
+           }),
+         }
+       );
+
+       if (res.status === 200) {
+         return await res.json();
+       }
+     } catch (error) {
+       console.log("Failed to update user project permission");
+     }
+
+     return undefined;
+   };
+   ```
+
+2. Utility Functions:
+   - `findTextDifferences.ts` implements the Patience Diff algorithm using recursion and nested helper functions
+   - `timeSince.ts` contains a single function for calculating elapsed time
+
+   Example (timeSince):
+   ```typescript
+   export function timeSince(date: Date) {
+     const seconds = Math.floor((new Date() as any - date as any) / 1000);
+     // ... (time calculation logic)
+     return `${interval} ${intervalType} ago`;
+   }
+   ```
+
+## Improvements and Considerations
+1. Error handling in API functions could be improved by providing more detailed error information to the caller.
+2. There are typos in some file names (e.g., "Sercet" instead of "Secret") that should be corrected for consistency and clarity.
+3. The Patience Diff algorithm implementation could be optimized using dynamic programming.
+4. The `timeSince` function could be improved for grammar and type safety.
+5. Input validation and error handling could be enhanced in both API and utility functions.
+6. Consider using a shared configuration for API endpoints to make updates easier in the future.
+
+Overall, this directory provides crucial functionality for the enterprise edition of the frontend application, handling secret management, user permissions, text comparison, and time calculations. While the code is functional, there are opportunities for optimization and improvement in various areas.

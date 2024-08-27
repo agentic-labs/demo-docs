@@ -1,0 +1,87 @@
+---
+title: "index.ts"
+---
+
+## High-level description
+This code defines the `registerRoutes` function, which is responsible for registering all API routes for the Infisical server. It initializes database layers, creates service instances, injects plugins, and registers routes for different API versions.
+
+## Code Structure
+The `registerRoutes` function first initializes database access layers (DALs) for various entities. Then, it creates service instances using these DALs and other dependencies like the database client, SMTP service, and queue service. It also injects plugins for authentication, authorization, rate limiting, and audit logging. Finally, it registers routes for different API versions (v1, v2, v3) and special routes like the certificate EST router.
+
+## References
+- `@app/ee/routes/v1`: Contains the route definitions for the Enterprise Edition (EE) v1 API.
+- `@app/server/config/rateLimiter`: Defines rate limiting configurations for different API endpoints.
+- `@app/services/super-admin/super-admin-service`: Provides the `getServerCfg` function to retrieve server configuration.
+- `./v1`: Contains the route definitions for the v1 API.
+- `./v2`: Contains the route definitions for the v2 API.
+- `./v3`: Contains the route definitions for the v3 API.
+- `./est/certificate-est-router`: Defines the certificate EST router.
+
+## Symbols
+
+### `registerRoutes`
+#### Description
+Registers all API routes for the Infisical server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The Fastify server instance. |
+| { db, smtp, queue, keyStore } | { db: Knex; smtp: TSmtpService; queue: TQueueServiceFactory; keyStore: TKeyStoreFactory } | An object containing dependencies: database client, SMTP service, queue service, and key store. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | void | This function does not return any value. |
+
+#### Internal Logic
+1. **Initialize Secret Scanner:** If secret scanning is enabled, register the secret scanner GitHub app.
+2. **Initialize Database Access Layers (DALs):** Create instances of DALs for all entities, including users, organizations, projects, secrets, integrations, identities, audit logs, and EE-specific entities.
+3. **Create Service Instances:** Instantiate services using the DALs and other dependencies. This includes services for authentication, user management, organization management, project management, secret management, integration management, identity management, audit logging, and EE-specific services.
+4. **Initialize License Service:** Initialize the communication with the license key server and retrieve the license plan.
+5. **Start Background Tasks:** Start background tasks for telemetry checks, resource cleanup, expiring PKI item alerts, and KMS service.
+6. **Decorate Server with Services:** Decorate the Fastify server with the created service instances, making them accessible through `server.services`.
+7. **Decorate Server with Store:** Decorate the Fastify server with the user DAL, making it accessible through `server.store.user`.
+8. **Inject Plugins:** Register plugins for injecting identity, permission, rate limits, and audit log information into the request context.
+9. **Register Status Route:** Register a route `/api/status` to check the server status and configuration.
+10. **Register Special Routes:** Register the certificate EST router under the prefix `/.well-known/est`.
+11. **Register API Routes:** Register routes for different API versions (v1, v2, v3) under their respective prefixes.
+12. **Register Cron Jobs:** If in production mode, initialize and start cron jobs for rate limit synchronization.
+13. **Register onClose Hook:** Add an `onClose` hook to stop cron jobs and flush telemetry data when the server closes.
+
+## Side Effects
+- Registers API routes with the Fastify server.
+- Starts background tasks for telemetry, resource cleanup, PKI alerts, and KMS service.
+- Initializes and starts cron jobs for rate limit synchronization in production mode.
+
+## Dependencies
+- `cron`: Used for scheduling cron jobs.
+- `knex`: Used for interacting with the PostgreSQL database.
+- `zod`: Used for data validation.
+- `@app/ee/services/*`: Contains various EE-specific services.
+- `@app/keystore/keystore`: Provides the key store for managing encryption keys.
+- `@app/lib/config/env`: Provides functions for retrieving environment configuration.
+- `@app/queue`: Provides the queue service for managing background tasks.
+- `@app/server/config/rateLimiter`: Defines rate limiting configurations.
+- `@app/services/*`: Contains various services for user management, organization management, project management, secret management, integration management, identity management, audit logging, and other functionalities.
+- `../plugins/audit-log`: Provides the `injectAuditLogInfo` plugin for injecting audit log information.
+- `../plugins/auth/inject-identity`: Provides the `injectIdentity` plugin for injecting user identity.
+- `../plugins/auth/inject-permission`: Provides the `injectPermission` plugin for injecting user permissions.
+- `../plugins/inject-rate-limits`: Provides the `injectRateLimits` plugin for injecting rate limiting information.
+- `../plugins/secret-scanner`: Provides the `registerSecretScannerGhApp` function for registering the secret scanner GitHub app.
+- `./v1`: Contains the route definitions for the v1 API.
+- `./v2`: Contains the route definitions for the v2 API.
+- `./v3`: Contains the route definitions for the v3 API.
+- `./est/certificate-est-router`: Defines the certificate EST router.
+
+## Configuration
+The `registerRoutes` function relies on environment configuration provided by `@app/lib/config/env`. This includes settings for the database connection, SMTP service, Redis, secret scanning, license server, and other server-related configurations.
+
+## Error Handling
+The code uses basic exception handling with `try...catch` blocks to catch errors during service initialization and route registration. Specific error types like `BadRequestError`, `NotFoundError`, and `UnauthorizedError` are used to handle different error scenarios.
+
+## Logging
+The code uses the `logger` object from `@app/lib/logger` to log information about server status, background tasks, and errors.
+
+## API/Interface Reference
+The `registerRoutes` function registers various API endpoints for different versions (v1, v2, v3) and functionalities. The specific endpoints, request/response formats, and authentication requirements are defined in the respective route files (`./v1`, `./v2`, `./v3`, `./est/certificate-est-router`).

@@ -1,0 +1,104 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and TypeScript types for managing Key Management System (KMS) operations in the frontend of the application. It provides functionality for querying, adding, updating, and removing external KMS configurations, as well as managing project KMS settings.
+
+## What does it do?
+The code in this directory enables the frontend to interact with the KMS-related API endpoints. It allows the application to:
+
+1. Fetch lists of external KMS configurations
+2. Retrieve details of specific external KMS setups
+3. Add new external KMS configurations
+4. Update existing external KMS settings
+5. Remove external KMS configurations
+6. Update project KMS settings
+7. Load KMS backups for projects
+8. Fetch active KMS information for projects
+
+These operations are implemented as React hooks, which can be easily integrated into components to manage KMS-related state and operations.
+
+## Key Files
+1. `index.tsx`: Serves as an export hub, consolidating and re-exporting hooks from `mutations.tsx` and `queries.tsx` for easier access throughout the application.
+
+2. `mutations.tsx`: Contains custom React hooks for KMS-related mutation operations, such as adding, updating, and removing external KMS configurations, updating project KMS settings, and loading KMS backups.
+
+3. `queries.tsx`: Provides custom React hooks for fetching KMS-related data, including lists of external KMS configurations, details of specific KMS setups, and active project KMS information.
+
+4. `types.ts`: Defines TypeScript types and Zod schemas for KMS-related data structures, ensuring type safety and input validation throughout the application.
+
+## Dependencies
+The code in this directory relies on several external libraries:
+
+1. @tanstack/react-query (version not specified):
+   - Used for managing server state, caching, and synchronization.
+   - Provides hooks like `useMutation` and `useQuery` for efficient data fetching and mutation.
+
+2. zod (version not specified):
+   - Used for schema definition and validation in `types.ts`.
+   - Ensures type safety and input validation for KMS-related data structures.
+
+3. @sindresorhus/slugify (version not specified):
+   - Used in `types.ts` for slug validation in KMS-related schemas.
+
+4. @app/config/request (internal module):
+   - Provides the `apiRequest` utility for making API calls to the backend.
+
+These dependencies were likely chosen to provide a robust and type-safe approach to managing KMS-related operations in the frontend, with React Query offering efficient state management and Zod ensuring data integrity.
+
+## Configuration
+While there are no explicit configuration files in this directory, the code uses several API endpoints for KMS-related operations:
+
+1. `/api/v1/external-kms`: Used for fetching, adding, updating, and removing external KMS configurations.
+2. `/api/v1/workspace/{projectId}/kms`: Used for fetching and updating project KMS settings.
+3. `/api/v1/workspace/{projectId}/kms/backup`: Used for loading and fetching KMS backups for projects.
+
+These endpoints are used in the custom hooks to interact with the backend API. The actual configuration of these endpoints likely resides in a separate configuration file or environment variables.
+
+The `types.ts` file also defines several important constants and enums that configure the behavior of KMS-related operations:
+
+```typescript
+export enum KmsType {
+  Internal = "internal",
+  External = "external",
+}
+
+export enum ExternalKmsProvider {
+  AWS = "aws",
+}
+
+export const INTERNAL_KMS_KEY_ID = "internal";
+
+export enum KmsAwsCredentialType {
+  AssumeRole = "assumeRole",
+  AccessKey = "accessKey",
+}
+```
+
+These enums and constants define the types of KMS (internal or external), supported external KMS providers (currently only AWS), and AWS credential types. They are used throughout the codebase to ensure consistent handling of KMS-related data and operations.
+
+The `ExternalKmsAwsSchema` in `types.ts` also provides a configuration schema for AWS KMS:
+
+```typescript
+export const ExternalKmsAwsSchema = z.object({
+  provider: z.literal(ExternalKmsProvider.AWS),
+  credentials: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal(KmsAwsCredentialType.AssumeRole),
+      roleArn: z.string().min(1),
+    }),
+    z.object({
+      type: z.literal(KmsAwsCredentialType.AccessKey),
+      accessKeyId: z.string().min(1),
+      secretAccessKey: z.string().min(1),
+    }),
+  ]),
+  region: z.string().min(1),
+  kmsKeyId: z.string().optional(),
+});
+```
+
+This schema defines the structure and validation rules for AWS KMS configuration, including credential information (either access key or assume role), AWS region, and optional KMS key ID.
+
+By using these types, enums, and schemas, the codebase ensures consistent and type-safe handling of KMS-related data and operations throughout the frontend application.

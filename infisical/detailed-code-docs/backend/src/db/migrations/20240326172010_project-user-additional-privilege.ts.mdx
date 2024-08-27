@@ -1,0 +1,57 @@
+---
+title: "20240326172010_project-user-additional-privilege.ts"
+---
+
+## High-level description
+This code defines a database migration using Knex.js to create a table named `ProjectUserAdditionalPrivilege`. This table likely stores information about additional privileges granted to users within specific projects, including temporary access settings and permissions.
+
+## References
+- `TableName`: An enum or object defining table names, likely imported from `../schemas`.
+- `createOnUpdateTrigger`: A utility function, likely imported from `../utils`, to create a database trigger for updating timestamps on row changes.
+- `dropOnUpdateTrigger`: A utility function, likely imported from `../utils`, to drop the update trigger associated with the table.
+
+## Symbols
+### `up(knex)`
+#### Description
+This asynchronous function defines the actions to perform when applying the migration. It creates the `ProjectUserAdditionalPrivilege` table if it doesn't exist and sets up an update trigger for automatic timestamp updates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Internal Logic
+1. Checks if the `ProjectUserAdditionalPrivilege` table already exists.
+2. If not, creates the table with the following columns:
+    - `id`: UUID primary key, automatically generated.
+    - `slug`: String (60 characters max), not nullable.
+    - `projectMembershipId`: UUID, foreign key referencing `ProjectMembership` table, cascades deletion.
+    - `isTemporary`: Boolean, defaults to false.
+    - `temporaryMode`: String.
+    - `temporaryRange`: String, potentially storing cron expressions or relative time values.
+    - `temporaryAccessStartTime`: Datetime.
+    - `temporaryAccessEndTime`: Datetime.
+    - `permissions`: JSONB, not nullable.
+    - `created_at`, `updated_at`, `deleted_at`: Timestamps for tracking creation, updates, and soft deletion.
+3. Calls `createOnUpdateTrigger` to set up the timestamp update trigger.
+
+### `down(knex)`
+#### Description
+This asynchronous function defines the actions to perform when reverting the migration. It drops the update trigger and then drops the `ProjectUserAdditionalPrivilege` table if it exists.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex.js instance connected to the database. |
+
+#### Internal Logic
+1. Calls `dropOnUpdateTrigger` to remove the timestamp update trigger.
+2. Calls `knex.schema.dropTableIfExists` to safely drop the table if it exists.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex      | Provides the database connection and schema building functionality. |
+
+## Error Handling
+The code doesn't implement specific error handling beyond what Knex.js provides. Any errors during the migration process will likely be thrown and handled by the calling code or the migration runner.

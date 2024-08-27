@@ -1,0 +1,230 @@
+---
+title: "identity-ua-service.ts"
+---
+
+## High-level description
+The `identity-ua-service.ts` file defines the `identityUaServiceFactory`, which provides functionality for managing identities authenticated via Universal Auth. This includes login, attaching/updating/revoking Universal Auth to identities, and managing client secrets associated with Universal Auth.
+
+## Code Structure
+The `identityUaServiceFactory` depends on several other factories, including `identityUaDAL`, `identityUaClientSecretDAL`, `identityAccessTokenDAL`, `identityOrgMembershipDAL`, `identityDAL`, `permissionService`, and `licenseService`. These factories provide access to data access layers and other services necessary for the `identityUaServiceFactory` to function.
+
+## References
+- `@app/db/schemas`: Defines database schemas, including `IdentityAuthMethod`.
+- `@app/ee/services/license/license-service`: Provides access to the `licenseService`.
+- `@app/ee/services/permission/permission-service`: Provides access to the `permissionService`.
+- `@app/lib/casl`: Provides the `isAtLeastAsPrivileged` function for authorization checks.
+- `@app/lib/config/env`: Provides the `getConfig` function for accessing application configuration.
+- `@app/lib/errors`: Defines custom error classes, including `BadRequestError`, `ForbiddenRequestError`, and `UnauthorizedError`.
+- `@app/lib/ip`: Provides IP address utility functions.
+- `../auth/auth-type`: Defines authentication-related types, including `ActorType` and `AuthTokenType`.
+- `../identity/identity-dal`: Provides access to the `identityDAL`.
+- `../identity/identity-org-dal`: Provides access to the `identityOrgMembershipDAL`.
+- `../identity-access-token/identity-access-token-dal`: Provides access to the `identityAccessTokenDAL`.
+- `../identity-access-token/identity-access-token-types`: Defines types related to identity access tokens.
+- `./identity-ua-client-secret-dal`: Provides access to the `identityUaClientSecretDAL`.
+- `./identity-ua-dal`: Provides access to the `identityUaDAL`.
+- `./identity-ua-types`: Defines types specific to Universal Auth.
+
+## Symbols
+
+### `identityUaServiceFactory`
+#### Description
+This factory function creates and returns an object containing functions for managing identities authenticated via Universal Auth.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityUaDAL | TIdentityUaDALFactory | Data access layer for Universal Auth identities. |
+| identityUaClientSecretDAL | TIdentityUaClientSecretDALFactory | Data access layer for Universal Auth client secrets. |
+| identityAccessTokenDAL | TIdentityAccessTokenDALFactory | Data access layer for identity access tokens. |
+| identityOrgMembershipDAL | TIdentityOrgDALFactory | Data access layer for identity organization memberships. |
+| identityDAL | Pick&lt;TIdentityDALFactory, "updateById"&gt; | Partial data access layer for identities, providing the `updateById` function. |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Partial permission service, providing the `getOrgPermission` function. |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Partial license service, providing the `getPlan` function. |
+
+#### Outputs
+An object containing the following functions:
+- `login`: Authenticates a Universal Auth identity using a client ID and secret.
+- `attachUniversalAuth`: Attaches Universal Auth configuration to an existing identity.
+- `updateUniversalAuth`: Updates the Universal Auth configuration of an identity.
+- `getIdentityUniversalAuth`: Retrieves the Universal Auth configuration of an identity.
+- `revokeIdentityUniversalAuth`: Revokes the Universal Auth configuration from an identity.
+- `createUniversalAuthClientSecret`: Creates a new client secret for a Universal Auth identity.
+- `getUniversalAuthClientSecrets`: Retrieves all client secrets for a Universal Auth identity.
+- `revokeUniversalAuthClientSecret`: Revokes a specific client secret for a Universal Auth identity.
+- `getUniversalAuthClientSecretById`: Retrieves a specific client secret by its ID.
+
+### `login`
+#### Description
+Authenticates a Universal Auth identity using a client ID and secret. It verifies the credentials, checks for IP blocklisting, manages client secret expiration and usage limits, and generates an access token upon successful authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| clientId | string | The client ID of the Universal Auth identity. |
+| clientSecret | string | The client secret of the Universal Auth identity. |
+| ip | string | The IP address of the client making the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessToken | string | The generated JWT access token upon successful authentication. |
+| identityUa | TIdentityUniversalAuth | The Universal Auth identity data. |
+| validClientSecretInfo | TIdentityUaClientSecret | The validated client secret information. |
+| identityAccessToken | TIdentityAccessTokens | The generated identity access token data. |
+| identityMembershipOrg | TIdentityOrgMemberships | The organization membership information of the identity. |
+
+#### Internal Logic
+1. Retrieves the Universal Auth identity based on the provided `clientId`.
+2. Checks if the identity exists and throws an `UnauthorizedError` if not.
+3. Retrieves the organization membership of the identity.
+4. Checks the client's IP address against the identity's blocklist.
+5. Retrieves all non-revoked client secrets associated with the identity.
+6. Finds a matching client secret by comparing the provided `clientSecret` with the hashed secrets.
+7. Throws an `UnauthorizedError` if no matching client secret is found.
+8. Checks if the client secret has expired or reached its usage limit, revoking it if necessary and throwing an `UnauthorizedError`.
+9. Creates a new identity access token, increments the client secret usage counter, and updates the database within a transaction.
+10. Generates a JWT access token containing relevant identity and token information.
+11. Returns the access token and relevant data.
+
+### `attachUniversalAuth`
+#### Description
+Attaches Universal Auth configuration to an existing identity. This function handles adding Universal Auth settings to an identity that doesn't already have them.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The updated Universal Auth identity data, including the organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity already has an authentication method configured and throws a `BadRequestError` if so.
+3. Validates that the access token TTL is not greater than the maximum TTL.
+4. Performs authorization checks to ensure the actor has permission to create an identity.
+5. Retrieves the license plan for the organization and validates IP allowlisting settings.
+6. Formats and validates the client secret and access token trusted IPs.
+7. Creates a new Universal Auth entry in the database, updates the identity's authentication method, and returns the updated data within a transaction.
+
+### `updateUniversalAuth`
+#### Description
+Updates the Universal Auth configuration of an identity. This function handles modifying existing Universal Auth settings for an identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The updated Universal Auth identity data, including the organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Validates that the access token TTL is not greater than the maximum TTL.
+4. Performs authorization checks to ensure the actor has permission to edit the identity.
+5. Retrieves the license plan for the organization and validates IP allowlisting settings.
+6. Formats and validates the client secret and access token trusted IPs.
+7. Updates the Universal Auth entry in the database and returns the updated data.
+
+### `getIdentityUniversalAuth`
+#### Description
+Retrieves the Universal Auth configuration of an identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The Universal Auth identity data, including the organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to read the identity.
+4. Retrieves and returns the Universal Auth data for the identity.
+
+### `revokeIdentityUniversalAuth`
+#### Description
+Revokes the Universal Auth configuration from an identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The revoked Universal Auth identity data, including the organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to edit the identity.
+4. Performs additional authorization checks to prevent revoking Universal Auth from identities with more privileged roles.
+5. Deletes the Universal Auth entry from the database, updates the identity's authentication method to null, and returns the revoked data within a transaction.
+
+### `createUniversalAuthClientSecret`
+#### Description
+Creates a new client secret for a Universal Auth identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+An object containing the generated client secret, client secret data, Universal Auth data, and organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to create an identity.
+4. Performs additional authorization checks to prevent creating client secrets for identities with more privileged roles.
+5. Generates a random client secret and hashes it.
+6. Retrieves the Universal Auth data for the identity.
+7. Creates a new client secret entry in the database and returns the generated secret and relevant data.
+
+### `getUniversalAuthClientSecrets`
+#### Description
+Retrieves all client secrets for a Universal Auth identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+An object containing an array of client secrets and the organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to read the identity.
+4. Performs additional authorization checks to prevent retrieving client secrets for identities with more privileged roles.
+5. Retrieves the Universal Auth data for the identity.
+6. Retrieves and returns all non-revoked client secrets associated with the identity.
+
+### `getUniversalAuthClientSecretById`
+#### Description
+Retrieves a specific client secret by its ID.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The client secret data, including the identity ID and organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to read the identity.
+4. Performs additional authorization checks to prevent retrieving client secrets for identities with more privileged roles.
+5. Retrieves and returns the client secret data for the specified ID.
+
+### `revokeUniversalAuthClientSecret`
+#### Description
+Revokes a specific client secret for a Universal Auth identity.
+
+#### Inputs
+See code comments for input details.
+
+#### Outputs
+The revoked client secret data, including the identity ID and organization ID.
+
+#### Internal Logic
+1. Retrieves the organization membership of the identity.
+2. Checks if the identity has Universal Auth configured and throws a `BadRequestError` if not.
+3. Performs authorization checks to ensure the actor has permission to delete the identity.
+4. Performs additional authorization checks to prevent revoking client secrets for identities with more privileged roles.
+5. Updates the client secret entry in the database, setting `isClientSecretRevoked` to true, and returns the revoked data.

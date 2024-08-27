@@ -1,0 +1,39 @@
+---
+title: "certificate-est-fns.ts"
+---
+
+## High-level description
+This code defines a function `convertRawCertsToPkcs7` that takes an array of raw certificate buffers, converts them to X.509 certificates, and packages them into a PKCS#7 SignedData structure. The resulting PKCS#7 data is then encoded in DER format, converted to Base64, and formatted with line breaks for compatibility with CURL clients.
+
+## Symbols
+
+### `convertRawCertsToPkcs7`
+#### Description
+This function takes an array of raw certificate buffers, converts them to X.509 certificates, and packages them into a PKCS#7 SignedData structure. The resulting PKCS#7 data is then encoded in DER format, converted to Base64, and formatted with line breaks for compatibility with CURL clients.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rawCertificate | `ArrayBuffer[]` | An array of raw certificate buffers. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| base64Pkcs7 | `string` | A Base64 encoded string representing the PKCS#7 SignedData structure containing the input certificates, formatted with line breaks. |
+
+#### Internal Logic
+1. **Convert raw certificates:** Each raw certificate buffer in the input array is converted to an X.509 certificate object using `Certificate.fromBER()`.
+2. **Create SignedData structure:** A new `SignedData` object is created with the following:
+    - `encapContentInfo`: An `EncapsulatedContentInfo` object representing the content type of the signed data. In this case, it's set to "1.2.840.113549.1.7.1", indicating unencrypted and uncompressed data.
+    - `certificates`: The array of X.509 certificates generated in the previous step.
+3. **Create ContentInfo structure:** A new `ContentInfo` object is created with the following:
+    - `contentType`: Set to "1.2.840.113549.1.7.2", indicating that the content is a `SignedData` structure.
+    - `content`: The `SignedData` object's schema representation obtained using `toSchema()`.
+4. **Encode to DER and Base64:** The `ContentInfo` object's schema representation is encoded in DER format using `toBER(false)`. The resulting buffer is then converted to a Base64 string using `Buffer.from(derBuffer).toString("base64")`.
+5. **Format for CURL:** Line breaks are added to the Base64 string every 64 characters for compatibility with CURL clients.
+6. **Return Base64 encoded PKCS#7:** The formatted Base64 string representing the PKCS#7 SignedData structure is returned.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pkijs | Used for working with PKI structures like certificates, SignedData, and ContentInfo. |

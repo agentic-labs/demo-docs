@@ -1,0 +1,107 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains end-to-end (e2e) tests for the backend of the application. It includes mock implementations of various services, tests for different API versions, and a custom Vitest environment for running these tests. The directory is structured to cover comprehensive testing of the application's API endpoints, authentication mechanisms, and data management functionalities.
+
+## What does it do?
+The e2e-test directory serves several key purposes:
+
+1. Mocking Services: It provides mock implementations of key backend services like key-value stores, queue services, and SMTP servers. These mocks allow for isolated testing without relying on external dependencies.
+
+2. API Testing: It contains tests for multiple versions of the API (v1, v2, v3), covering various functionalities such as identity management, login processes, organization management, project environments, and secret management.
+
+3. Test Environment Setup: It includes a custom Vitest environment that sets up a test database, initializes mocked services, starts the application server, and creates authentication tokens for testing.
+
+These components work together to simulate real-world usage of the API, verify correct behavior across different API versions, and ensure that the application functions correctly in a controlled testing environment.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `vitest-environment-knex.ts`: This file sets up the custom Vitest environment for running e2e tests. It initializes the test database, mocks services, and starts the application server.
+
+2. Test files in the `routes` directory: These files contain the actual e2e tests for different API endpoints and functionalities. They are organized by API version and feature.
+
+3. Mock implementations in the `mocks` directory: These files provide mock versions of various services used by the application during testing.
+
+The flow of execution typically starts with the Vitest environment setup, followed by the execution of individual test files, which may use the mock implementations as needed.
+
+## Key Files
+
+### vitest-environment-knex.ts
+This file defines a custom Vitest environment for e2e testing. It:
+- Sets up a test database
+- Initializes mock services
+- Starts the main application server
+- Creates a JWT token for authentication during tests
+
+Example usage:
+```typescript
+// This environment is likely configured in a Vitest config file
+export default {
+  name: 'knex-env',
+  setup: async () =&gt; {
+    // Setup logic here
+  },
+  teardown: async () =&gt; {
+    // Teardown logic here
+  }
+};
+```
+
+### routes/secrets-v2.spec.ts and routes/secrets.spec.ts
+These files contain tests for the Secret V2 and V3 API endpoints respectively. They cover operations like:
+- Creating, reading, updating, and deleting secrets
+- Managing secret folders
+- Handling secret imports
+- Performing bulk operations on secrets
+
+Example test:
+```typescript
+it('should create a secret', async () =&gt; {
+  const response = await testServer.inject({
+    method: 'POST',
+    url: '/api/v2/secrets',
+    headers: { authorization: `Bearer ${jwtAuthToken}` },
+    payload: { /* secret data */ }
+  });
+  expect(response.statusCode).toBe(200);
+  // Additional assertions
+});
+```
+
+### mocks/keystore.ts
+This file provides a mock implementation of a key-value store for testing purposes. It includes methods for setting, getting, and deleting items, as well as simulating locking mechanisms.
+
+Example usage:
+```typescript
+const store = mockKeyStore();
+await store.setItem('key', 'value');
+const value = await store.getItem('key');
+expect(value).toBe('value');
+```
+
+## Dependencies
+The e2e tests rely on several key dependencies:
+
+1. Vitest: The testing framework used for running the e2e tests.
+2. Knex: Used for database operations in the test environment.
+3. jsrp: Implements the Secure Remote Password protocol for login tests.
+4. jsonwebtoken: Used for creating JWT tokens for authentication in tests.
+
+## Configuration
+The test environment is configured using:
+
+1. `.env.test` file: Contains environment variables for the test setup.
+2. Database migrations and seeds: Used to set up the test database structure and initial data.
+
+Example configuration in `vitest-environment-knex.ts`:
+```typescript
+config({ path: path.resolve(process.cwd(), '.env.test') });
+const knex = Knex(knexConfig);
+await knex.migrate.latest();
+await knex.seed.run();
+```
+
+This e2e-test directory provides a comprehensive testing suite for the backend application, ensuring that all API endpoints, authentication mechanisms, and data management functionalities work correctly across different versions and scenarios.

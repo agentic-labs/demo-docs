@@ -1,0 +1,72 @@
+---
+title: "baseline.go"
+---
+
+## High-level description
+This file, `baseline.go`, is part of the `detect` package in a CLI application. It provides functionality for comparing new findings against a baseline of existing findings and loading a baseline from a JSON file. The code is designed to work with secret detection and reporting mechanisms.
+
+## Symbols
+
+### `IsNew`
+#### Description
+This function determines if a given finding is new by comparing it against a baseline of existing findings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| finding | report.Finding | The finding to be checked |
+| baseline | []report.Finding | A slice of existing findings to compare against |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isNew | bool | Returns true if the finding is new, false otherwise |
+
+#### Internal Logic
+The function iterates through the baseline findings and compares each property of the input finding with the baseline findings. If all properties match (except for the Fingerprint), it returns false, indicating the finding is not new. If no match is found, it returns true.
+
+#### Performance Considerations
+The function explicitly compares each property instead of using `cmp.Equal()` for better performance. However, this approach requires maintenance if the `Finding` struct changes.
+
+### `LoadBaseline`
+#### Description
+This function loads a baseline of findings from a JSON file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| baselinePath | string | The file path of the JSON baseline file |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| previousFindings | []report.Finding | A slice of findings loaded from the file |
+| error | error | An error if the file cannot be opened, read, or parsed |
+
+#### Internal Logic
+1. Opens the specified JSON file
+2. Reads the entire file content
+3. Unmarshals the JSON data into a slice of `report.Finding` structs
+4. Returns the loaded findings or an error if any step fails
+
+#### Error Handling
+The function returns specific error messages for different failure scenarios:
+- If the file cannot be opened
+- If the file cannot be read
+- If the JSON data cannot be unmarshaled
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/json | For unmarshaling JSON data |
+| fmt | For formatting error messages |
+| io | For reading file content |
+| os | For file operations |
+| github.com/rs/zerolog/log | For logging warnings |
+| github.com/Infisical/infisical-merge/report | For the `Finding` struct definition |
+
+## Error Handling
+The `LoadBaseline` function implements error handling by returning specific error messages for different failure scenarios. It also uses deferred file closing with error logging to ensure proper resource management.
+
+## Logging
+The code uses the `zerolog` library for logging. It logs a warning message if there's an error while closing the file in the `LoadBaseline` function.

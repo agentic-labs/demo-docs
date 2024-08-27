@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a secret scanning queue system for a software application. It provides functionality to scan GitHub repositories and push events for potential secrets or sensitive information. The system uses queues to manage scanning jobs, performs the scans using the Infisical CLI, and handles the results by storing findings and sending notifications.
+
+## What does it do?
+The secret scanning queue system performs the following main tasks:
+
+1. Clones GitHub repositories or retrieves push event content.
+2. Scans the code for potential secrets using the Infisical CLI.
+3. Processes and stores the scan findings in a database.
+4. Sends email notifications to organization admins and relevant users if secrets are found.
+5. Tracks telemetry events related to secret scanning.
+
+The system can handle two types of scans:
+1. Full repository scans: Scanning an entire GitHub repository for secrets.
+2. Push event scans: Scanning specific commits in a push event for secrets.
+
+## Entry points
+The main entry point for this module is the `secretScanningQueueFactory` function in the `secret-scanning-queue.ts` file. This factory function sets up the queues, defines job processing logic, and returns methods to start full repository scans and push event scans.
+
+The workflow typically follows these steps:
+1. The factory function is initialized with necessary dependencies.
+2. External systems can trigger scans by calling `startFullRepoScan` or `startPushEventScan`.
+3. Jobs are enqueued and processed asynchronously.
+4. The system clones repositories or retrieves content, performs scans, and handles results.
+
+## Key Files
+1. `secret-scanning-queue.ts`: Contains the main queue implementation and job processing logic.
+2. `secret-scanning-fns.ts`: Provides utility functions for interacting with the file system, executing shell commands, and running the Infisical CLI for secret scanning.
+3. `secret-scanning-queue-types.ts`: Defines TypeScript types for secret matches, push event payloads, and full repository scan payloads.
+
+## Dependencies
+The module relies on several external libraries and internal services:
+
+1. Octokit: Used for interacting with the GitHub API.
+2. Infisical CLI: Used for performing the actual secret scanning on code content.
+3. Internal queue service: Manages job queues and processing.
+4. Internal data access layer (DAL) services: Handles database operations for storing scan results and organization data.
+5. Internal SMTP service: Sends email notifications.
+6. Internal telemetry service: Tracks events related to secret scanning.
+
+## Configuration
+The module uses environment configuration accessed through the `getConfig` function from `@app/lib/config/env`. This likely includes settings for queue management, database connections, and potentially Infisical CLI configuration.
+
+Key code snippets:
+
+1. Setting up queue listeners:
+```typescript
+queueService.listen(QueueName.SecretPushEventScan, async (job) =&gt; {
+  // Job processing logic
+});
+```
+
+2. Performing a secret scan:
+```typescript
+const findings = await scanContentAndGetFindings(textContent);
+```
+
+3. Sending email notifications:
+```typescript
+await smtpService.sendMail({
+  to: adminEmails,
+  subject: `[Action Required] Secrets found in ${payload.repository.name}`,
+  html: emailContent,
+});
+```
+
+This secret scanning queue system provides a robust and scalable solution for detecting and managing potential security risks in GitHub repositories, helping organizations maintain the security of their codebase.

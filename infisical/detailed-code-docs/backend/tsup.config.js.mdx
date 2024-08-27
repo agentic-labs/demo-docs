@@ -1,0 +1,82 @@
+---
+title: "tsup.config.js"
+---
+
+## High-level description
+This file configures the build process for a TypeScript project using tsup. It defines settings for bundling, transpilation, and output generation, with a focus on accommodating both ESM and CommonJS requirements while handling various file types and resolving import paths.
+
+## Code Structure
+The configuration is exported as a default object using `defineConfig` from tsup. It includes various build options, a custom esbuild plugin for handling imports, and a post-build step for replacing TypeScript alias paths.
+
+## Symbols
+
+### Default Export (tsup configuration)
+#### Description
+Defines the configuration for tsup, a TypeScript bundler and build tool.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| N/A | N/A | This is a configuration object, not a function |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Configuration | Object | tsup configuration object |
+
+#### Internal Logic
+1. Sets various build options like shims, cleaning, minification, format, etc.
+2. Configures file copying for specific file types.
+3. Defines external dependencies.
+4. Sets up source mapping and TypeScript configuration.
+5. Includes a custom esbuild plugin for handling imports.
+6. Defines a post-build step for replacing TypeScript alias paths.
+
+### esbuildPlugins[0] (commonjs-esm-directory-import)
+#### Description
+A custom esbuild plugin that handles directory imports, ensuring compatibility between CommonJS and ESM modules.
+
+#### Internal Logic
+1. Intercepts import statement resolutions.
+2. For relative paths, constructs an absolute path.
+3. Checks if the import refers to a file or a directory.
+4. Modifies the import path to include `.mjs` extension for files or `index.mjs` for directories.
+5. Marks the import as external.
+
+### onSuccess
+#### Description
+A callback function executed after a successful build.
+
+#### Internal Logic
+Replaces TypeScript alias paths in the output directory using the `replaceTscAliasPaths` function from the `tsc-alias` package.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| node:path | For working with file and directory paths |
+| fs/promises | For file system operations (used in the custom plugin) |
+| tsc-alias | For replacing TypeScript alias paths after build |
+| tsup | The main build tool being configured |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| shims | boolean | true | Enables shims for better compatibility |
+| clean | boolean | true | Cleans the output directory before build |
+| minify | boolean | false | Disables minification of output |
+| keepNames | boolean | true | Preserves original names in the output |
+| splitting | boolean | false | Disables code splitting |
+| format | string | "esm" | Sets the output format to ECMAScript modules |
+| loader | object | {...} | Configures file copying for specific extensions |
+| external | array | [...] | Lists external dependencies |
+| outDir | string | "dist" | Specifies the output directory |
+| tsconfig | string | "./tsconfig.json" | Points to the TypeScript configuration file |
+| entry | array | ["./src"] | Defines the entry point(s) for the build |
+| sourceMap | boolean | true | Enables source map generation |
+| skipNodeModulesBundle | boolean | true | Skips bundling of node_modules |
+
+## TODOs
+The code includes a comment suggesting considerations for using tsup instead of tsx or tsc for building:
+- TSX is an alternative to Node.js, allowing direct building on the Node.js runtime without a final build step.
+- TSC is effective for creating a final build but requires manual copying of static files.
+- The configuration aims to balance ESM and CommonJS requirements, addressing challenges with the shift towards ESM in package ecosystems.

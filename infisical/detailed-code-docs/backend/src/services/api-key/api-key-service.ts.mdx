@@ -1,0 +1,126 @@
+---
+title: "api-key-service.ts"
+---
+
+## High-level description
+This code defines an API key service factory that provides functionality for managing API keys, including creating, retrieving, deleting, and validating API keys. It uses cryptographic functions to generate and verify API keys securely.
+
+## Code Structure
+The main function `apiKeyServiceFactory` returns an object with four methods: `getMyApiKeys`, `createApiKey`, `deleteApiKey`, and `fnValidateApiKey`. These methods interact with the provided `apiKeyDAL` and `userDAL` to perform operations on API keys and users.
+
+## References
+- `@app/db/schemas/api-keys`: For the `TApiKeys` type
+- `@app/lib/config/env`: For the `getConfig` function
+- `@app/lib/errors`: For `BadRequestError` and `UnauthorizedError`
+
+## Symbols
+
+### `apiKeyServiceFactory`
+#### Description
+Creates and returns an object with methods for managing API keys.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| apiKeyDAL | TApiKeyDALFactory | Data access layer for API keys |
+| userDAL | Pick&lt;TUserDALFactory, "findById"&gt; | Data access layer for users (only findById method) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { getMyApiKeys, createApiKey, deleteApiKey, fnValidateApiKey } | An object containing API key management methods |
+
+#### Internal Logic
+1. Defines helper function `formatApiKey` to remove `secretHash` from API key data
+2. Implements four main methods for API key operations
+
+### `getMyApiKeys`
+#### Description
+Retrieves all API keys for a given user ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user whose API keys are to be retrieved |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Array | TApiKeys[] (without secretHash) | An array of API key objects for the user |
+
+### `createApiKey`
+#### Description
+Creates a new API key for a user with a specified name and expiration time.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user for whom the API key is created |
+| name | string | The name of the API key |
+| expiresIn | number | The number of seconds until the API key expires |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | { apiKey: string, apiKeyData: TApiKeys } | The created API key and its associated data |
+
+#### Internal Logic
+1. Generates a random secret using crypto
+2. Hashes the secret using bcrypt
+3. Calculates the expiration date
+4. Creates the API key in the database
+5. Formats the API key string as `ak.{id}.{secret}`
+
+### `deleteApiKey`
+#### Description
+Deletes an API key for a given user and API key ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user who owns the API key |
+| apiKeyId | string | The ID of the API key to be deleted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TApiKeys (without secretHash) | The deleted API key data |
+
+#### Internal Logic
+1. Attempts to delete the API key
+2. Throws a BadRequestError if the API key is not found
+3. Returns the formatted API key data
+
+### `fnValidateApiKey`
+#### Description
+Validates an API key token and returns the associated user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The API key token to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | User | The user associated with the valid API key |
+
+#### Internal Logic
+1. Splits the token into identifier and secret
+2. Retrieves the API key from the database
+3. Checks if the API key has expired, deletes it if so
+4. Compares the provided secret with the stored hash
+5. Updates the last used timestamp
+6. Retrieves and returns the associated user
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| node:crypto | For generating random bytes for API key secrets |
+| bcrypt | For hashing and comparing API key secrets |
+
+## Error Handling
+- Throws `BadRequestError` when attempting to delete a non-existent API key
+- Throws `UnauthorizedError` when validating an invalid or expired API key
+
+Your response should not exceed 3000 words or 4000 tokens. Focus on providing clear, concise information that can be directly inferred from the code. Include optional sections only when they provide significant value for understanding the code.

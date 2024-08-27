@@ -1,0 +1,104 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a trusted IP service for a project-based system. It provides functionality to manage (list, add, update, and delete) trusted IP addresses associated with projects. The service includes data access layer (DAL) operations, business logic, and type definitions for managing trusted IPs.
+
+## What does it do?
+The trusted IP service allows the system to maintain a list of IP addresses that are considered trustworthy for each project. This is likely used for security purposes, such as allowing access to certain resources or features only from these trusted IP addresses. The service provides the following main functionalities:
+
+1. List trusted IPs for a specific project
+2. Add a new trusted IP to a project
+3. Update an existing trusted IP for a project
+4. Delete a trusted IP from a project
+
+Each operation includes permission checks to ensure that the actor performing the action has the necessary rights. Additionally, the service integrates with a license service to verify that the project's plan allows IP allowlisting.
+
+## Key Files
+
+1. `trusted-ip-dal.ts`: This file defines the data access layer for trusted IP operations. It uses an ORM-like interface to interact with the `TrustedIps` table in the database.
+
+2. `trusted-ip-service.ts`: This file contains the main business logic for the trusted IP service. It implements the core functionalities (list, add, update, delete) and handles permission checks, license validation, and IP address validation.
+
+3. `trusted-ip-types.ts`: This file defines the data transfer object (DTO) types used in the trusted IP service. It includes types for creating, updating, and deleting trusted IP entries, each incorporating project permission information.
+
+## Dependencies
+The trusted IP service relies on several external libraries and internal modules:
+
+1. `@casl/ability`: Used for handling permission checks.
+2. `@app/lib/errors`: Provides custom error types for handling exceptions.
+3. `@app/lib/ip`: Used for IP address validation and parsing.
+4. `@app/lib/types`: Provides common type definitions used across the application.
+5. `@app/services/project/project-dal`: Used for project-related data access operations.
+6. `@app/ee/services/license/license-service`: Integrates with the license service to verify plan features.
+7. `@app/ee/services/permission/permission-service`: Handles permission-related operations.
+8. `@app/db`: Provides database client types and utilities.
+9. `@app/lib/knex`: Offers the `ormify` function for creating ORM-like interfaces.
+
+## Configuration
+The trusted IP service doesn't appear to have any specific configuration files or environment variables. However, it relies on the configuration of the underlying database and other services it depends on, such as the license service and permission service.
+
+## Code Snippets and Examples
+
+Here's an example of how the `addProjectIp` method in the `trusted-ip-service.ts` file works:
+
+```typescript
+async addProjectIp({
+  projectId,
+  actorId,
+  actorAuthMethod,
+  actor,
+  actorOrgId,
+  ipAddress,
+  comment,
+  isActive,
+}: TCreateIpDTO) {
+  const permission = await this.permissionService.getProjectPermission({
+    projectId,
+    actorId,
+    actorAuthMethod,
+    actor,
+    actorOrgId,
+  });
+
+  if (!permission.can(ProjectPermission.IpAllowListWrite)) {
+    throw new ForbiddenError();
+  }
+
+  const project = await this.projectDAL.findById(projectId);
+  const plan = await this.licenseService.getPlan(project.planId);
+
+  if (!plan.ipAllowList) {
+    throw new BadRequestError("Your plan doesn't support IP allowlisting");
+  }
+
+  if (!isValidIpAddress(ipAddress)) {
+    throw new BadRequestError("Invalid IP address format");
+  }
+
+  const { address, type, prefix } = parseIpAddress(ipAddress);
+
+  const trustedIp = await this.trustedIpDAL.create({
+    projectId,
+    ipAddress: address,
+    ipType: type,
+    prefix,
+    comment,
+    isActive,
+  });
+
+  return { trustedIp, project };
+}
+```
+
+This method demonstrates the following steps:
+1. Check the actor's permission for the project
+2. Verify that the project's license plan allows IP allowlisting
+3. Validate the IP address format
+4. Parse the IP address details
+5. Create a new trusted IP entry in the database
+
+The other methods (`listIpsByProjectId`, `updateProjectIp`, and `deleteProjectIp`) follow a similar pattern, ensuring proper permission checks and data validation before performing the requested operation.
+
+In conclusion, this trusted IP service provides a robust and secure way to manage IP allowlists for projects, integrating with other services to ensure proper authorization and licensing compliance.

@@ -1,0 +1,106 @@
+---
+title: "snapshot-dal.ts"
+---
+
+## High-level description
+This code defines a data access layer (DAL) for managing snapshots in a secret management system. It provides functions to interact with the database for operations related to snapshots, including querying, creating, updating, and deleting snapshots, as well as managing related data such as secret versions and folders.
+
+## Code Structure
+The code exports a factory function `snapshotDALFactory` that takes a database client as input and returns an object with various methods for snapshot-related operations. These methods utilize the provided database client to execute SQL queries and manage snapshot data.
+
+## Symbols
+
+### snapshotDALFactory
+#### Description
+This function creates and returns an object with methods for interacting with snapshot data in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client used for executing queries |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | An object containing methods for snapshot-related operations |
+
+#### Internal Logic
+- Creates an ORM instance for the Snapshot table
+- Defines various methods for querying and manipulating snapshot data
+- Returns an object with all the defined methods
+
+### findById
+#### Description
+Retrieves a snapshot by its ID, including related environment information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | string | The ID of the snapshot to retrieve |
+| tx | Knex (optional) | An optional transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | The snapshot data with environment information |
+
+### findSecretSnapshotDataById
+#### Description
+Retrieves detailed snapshot data, including secret versions and tags, for a given snapshot ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snapshotId | string | The ID of the snapshot to retrieve |
+| tx | Knex (optional) | An optional transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | Detailed snapshot data including secret versions and tags |
+
+### findRecursivelySnapshots
+#### Description
+Recursively retrieves snapshots and their related data, starting from a given snapshot ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snapshotId | string | The ID of the starting snapshot |
+| tx | Knex (optional) | An optional transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Array | Array&lt;Object&gt; | An array of nested snapshot data |
+
+### pruneExcessSnapshots
+#### Description
+Prunes excess snapshots from the database to ensure only a specified number of recent snapshots are retained for each folder.
+
+#### Internal Logic
+1. Prunes snapshots from current folders
+2. Prunes snapshots from non-current folders (versioned ones)
+3. Removes orphaned snapshots that do not belong to any existing folder or folder version
+
+## Dependencies
+The code relies on several external libraries and modules:
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | SQL query builder and database client |
+| zod | Runtime type checking and validation |
+| @app/db | Database schemas and types |
+| @app/lib/errors | Custom error types |
+| @app/lib/knex | Utility functions for Knex queries |
+| @app/lib/logger | Logging functionality |
+
+## Error Handling
+The code uses a `DatabaseError` class to wrap and throw errors that occur during database operations. This allows for consistent error handling and logging throughout the application.
+
+## Logging
+The code uses a logger (imported from `@app/lib/logger`) to log information and errors, particularly in the `pruneExcessSnapshots` method.
+
+## Performance Considerations
+- The `pruneExcessSnapshots` method processes snapshots in batches to manage large datasets without overwhelming the database.
+- The code uses Common Table Expressions (CTEs) and window functions for efficient querying of related data.
+- Read replicas are supported through the use of the `replicaNode()` method on the database client.

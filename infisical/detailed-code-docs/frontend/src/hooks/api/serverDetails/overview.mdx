@@ -1,0 +1,63 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains code related to fetching and managing server status information in a React application. It includes a custom React hook, type definitions, and utility functions for making API requests to retrieve server details.
+
+## What does it do?
+The code in this directory provides a way for the React application to fetch and use server status information. This is useful for checking various server configurations, such as whether email is set up, if secret scanning is configured, or if Redis is running. The main functionality is encapsulated in a custom React hook called `useFetchServerStatus`, which uses React Query to manage the data fetching and caching process.
+
+When a component in the application needs to know about the server's status, it can use this hook to easily fetch the information. The hook takes care of making the API request, handling loading and error states, and caching the result to prevent unnecessary network requests.
+
+For example, a component might use this hook to check if email is configured on the server before attempting to send a verification email. If email isn't configured, the component could then prompt the user to set up email instead.
+
+## Key Files
+
+1. `queries.tsx`:
+   This file contains the core logic for fetching server status. It defines:
+   - `serverStatusKeys`: An object that provides a cache key for React Query.
+   - `fetchServerStatus`: An async function that makes the actual API request to get server status.
+   - `useFetchServerStatus`: The custom React hook that uses React Query to manage the server status data.
+
+2. `types.ts`:
+   This file defines the `ServerStatus` type, which outlines the structure of the server status data. It includes fields for date, message, and various configuration flags (e.g., emailConfigured, secretScanningConfigured).
+
+3. `index.ts`:
+   This is a barrel file that re-exports the `useFetchServerStatus` hook, making it easier to import in other parts of the application.
+
+## Dependencies
+The main external dependency used in this directory is `@tanstack/react-query`. This library is chosen for its powerful data synchronization capabilities, which simplify the process of fetching, caching, and updating asynchronous data in React applications.
+
+The code also relies on an internal `apiRequest` object from `@app/config/request`, which is likely a configured instance of an HTTP client (possibly Axios) for making API requests.
+
+## Usage Example
+Here's an example of how the `useFetchServerStatus` hook might be used in a React component:
+
+```typescript
+import React from 'react';
+import { useFetchServerStatus } from './hooks/api/serverDetails';
+
+const ServerStatusComponent: React.FC = () =&gt; {
+  const { data: serverDetails, isLoading, error } = useFetchServerStatus();
+
+  if (isLoading) return &lt;div&gt;Loading server status...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Error fetching server status&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;Server Status&lt;/h2&gt;
+      &lt;p&gt;Date: {serverDetails?.date}&lt;/p&gt;
+      &lt;p&gt;Message: {serverDetails?.message}&lt;/p&gt;
+      &lt;p&gt;Email Configured: {serverDetails?.emailConfigured ? 'Yes' : 'No'}&lt;/p&gt;
+      &lt;p&gt;Secret Scanning Configured: {serverDetails?.secretScanningConfigured ? 'Yes' : 'No'}&lt;/p&gt;
+      &lt;p&gt;Redis Configured: {serverDetails?.redisConfigured ? 'Yes' : 'No'}&lt;/p&gt;
+      &lt;p&gt;SAML Default Org Slug: {serverDetails?.samlDefaultOrgSlug}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+};
+
+export default ServerStatusComponent;
+```
+
+This example demonstrates how the hook provides an easy way to access server status information and display it in a React component. The hook handles the complexities of data fetching and state management, allowing the component to focus on rendering the data.

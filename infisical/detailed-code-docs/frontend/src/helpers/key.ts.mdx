@@ -1,0 +1,60 @@
+---
+title: "key.ts"
+---
+
+## High-level description
+This code defines a helper function `decryptPrivateKeyHelper` for decrypting a private key. It supports two encryption versions (1 and 2) and uses AES-256-GCM encryption along with key derivation techniques to securely decrypt the private key.
+
+## Symbols
+
+### `decryptPrivateKeyHelper`
+#### Description
+An asynchronous function that decrypts a private key using different methods based on the encryption version. It handles two encryption versions: 1 and 2.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encryptionVersion | number | The version of encryption used |
+| encryptedPrivateKey | string | The encrypted private key |
+| iv | string | Initialization vector for decryption |
+| tag | string | Authentication tag for decryption |
+| password | string | The password used for decryption |
+| salt | string | Salt used for key derivation (version 2) |
+| protectedKey | string | (Optional) Protected key for version 2 encryption |
+| protectedKeyIV | string | (Optional) IV for protected key |
+| protectedKeyTag | string | (Optional) Tag for protected key |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| privateKey | string | The decrypted private key |
+
+#### Internal Logic
+1. For encryption version 1:
+   - Uses `Aes256Gcm.decrypt` with a modified password as the secret.
+   - The password is sliced, padded, and adjusted to ensure a 32-byte length.
+
+2. For encryption version 2:
+   - Derives a key using Argon2 with the provided password and salt.
+   - Decrypts the protected key using the derived key.
+   - Uses the decrypted protected key to decrypt the private key.
+
+3. Throws an error if the encryption version is not supported or if there are insufficient details to decrypt.
+
+4. Catches and re-throws any decryption errors with a generic message.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Aes256Gcm | Provides AES-256-GCM encryption and decryption functionality |
+| deriveArgonKey | Function for deriving a key using Argon2 algorithm |
+
+## Error Handling
+The function wraps the decryption process in a try-catch block. If any error occurs during decryption, it throws a generic error message: "Failed to decrypt private key". It also throws specific errors for unsupported encryption versions or insufficient decryption details.
+
+## Performance Considerations
+For version 2 encryption, the function uses Argon2 for key derivation, which is designed to be computationally intensive. The parameters (mem: 65536, time: 3, parallelism: 1) suggest a balance between security and performance, but this could be a bottleneck for high-frequency operations.
+
+___
+
+This documentation provides a comprehensive overview of the `decryptPrivateKeyHelper` function, its inputs, outputs, internal logic, and error handling. It also highlights the dependencies and potential performance considerations, which are crucial for understanding and using this helper function effectively.

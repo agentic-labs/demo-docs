@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains Go code for visualizing and displaying information in a command-line interface (CLI) tool, likely part of the Infisical project. It provides functionality to print formatted tables for folders and secrets, as well as a general-purpose table rendering utility.
+
+## What does it do?
+The code in this directory enables the CLI tool to present information in a structured and readable format. It can:
+
+1. Display a list of folders with their names, paths, and IDs in a tabular format.
+2. Present a table of secrets or environment variables, showing their keys, values, and types.
+3. Create and render customizable tables with three columns, adapting to terminal constraints and handling long values through truncation.
+
+These functionalities allow users of the CLI tool to easily view and understand the structure of their folders and the contents of their secrets or environment variables.
+
+## Key Files
+
+### folders.go
+This file contains the `PrintAllFoldersDetails` function, which takes a list of folders and their associated path, and prints a formatted table with folder details including name, path, and ID.
+
+### secrets.go
+This file defines the `PrintAllSecretDetails` function, which takes a list of environment variables or secrets and displays them in a tabular format, showing the key, value, and type of each secret.
+
+### visualize.go
+This is the core file of the package, providing the general-purpose table rendering functionality. It includes:
+- A `TableOptions` struct for customization (currently only with a `Title` field).
+- The main `Table` function that creates and displays formatted tables.
+- Helper functions like `getLongestValues` and `stringWidth` for table formatting and measurement.
+
+## Dependencies
+The package relies on several external libraries:
+
+1. github.com/jedib0t/go-pretty/table (v4.3.0+incompatible): Used for creating and rendering tables.
+2. github.com/mattn/go-isatty (v0.0.18): Determines if stdout is a terminal.
+3. github.com/muesli/ansi (v0.0.0-20211018074035-2e021307bc4b): Handles ANSI escape sequences.
+4. github.com/muesli/reflow/truncate (v0.3.0): Provides string truncation functionality.
+5. github.com/rs/zerolog/log (v1.29.1): Used for logging.
+6. golang.org/x/term (v0.6.0): Retrieves terminal size information.
+
+These dependencies are chosen to provide efficient table rendering, terminal interaction, and string manipulation capabilities.
+
+## Configuration
+The `visualize.go` file includes some configuration constants:
+- `borderWidths`: Set to 10, representing the combined width of table borders and padding.
+- `ellipsis`: Set to "…", used to indicate truncated strings.
+
+The package adapts to terminal constraints, applying truncation when necessary and logging any errors encountered during terminal size detection.
+
+## Code Snippets
+
+Here's an example of how the `Table` function in `visualize.go` is called:
+
+```go
+headers := [3]string{"Name", "Path", "ID"}
+rows := [][3]string{
+    {"Folder1", "/path/to/folder1", "id1"},
+    {"Folder2", "/path/to/folder2", "id2"},
+}
+Table(headers, rows)
+```
+
+This would create and display a formatted table with the given headers and rows.
+
+The `PrintAllFoldersDetails` function in `folders.go` uses this `Table` function:
+
+```go
+func PrintAllFoldersDetails(folders []models.SingleFolder, path string) {
+    rows := make([][3]string, 0)
+    for _, folder := range folders {
+        rows = append(rows, [3]string{folder.Name, path, folder.ID})
+    }
+    headers := [3]string{"Name", "Path", "ID"}
+    Table(headers, rows)
+}
+```
+
+Similarly, `PrintAllSecretDetails` in `secrets.go` follows the same pattern:
+
+```go
+func PrintAllSecretDetails(secrets []models.SingleEnvironmentVariable) {
+    rows := make([][3]string, 0)
+    for _, secret := range secrets {
+        rows = append(rows, [3]string{secret.Key, secret.Value, secret.Type})
+    }
+    headers := [3]string{"Key", "Value", "Type"}
+    Table(headers, rows)
+}
+```
+
+These functions demonstrate how the package processes input data and uses the `Table` function to create formatted output for different types of information.

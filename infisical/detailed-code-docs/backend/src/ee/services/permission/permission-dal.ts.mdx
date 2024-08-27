@@ -1,0 +1,115 @@
+---
+title: "permission-dal.ts"
+---
+
+## High-level description
+This file defines a factory function `permissionDALFactory` that creates a data access layer (DAL) for handling permissions in an enterprise edition (EE) of a software application. It provides methods to retrieve organization and project permissions for both users and identities.
+
+## Code Structure
+The `permissionDALFactory` function takes a database client (`TDbClient`) as input and returns an object with four methods: `getOrgPermission`, `getOrgIdentityPermission`, `getProjectPermission`, and `getProjectIdentityPermission`. These methods interact with the database to fetch and process permission-related data.
+
+## Symbols
+
+### permissionDALFactory
+#### Description
+This function creates and returns an object with methods for retrieving permission-related data from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client used for querying |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | TPermissionDALFactory | An object containing permission-related methods |
+
+### getOrgPermission
+#### Description
+Retrieves organization permissions for a specific user and organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user |
+| orgId | string | The ID of the organization |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| membership | Object | Organization membership details including permissions |
+
+#### Internal Logic
+1. Queries the database joining OrgMembership, OrgRoles, and Organization tables.
+2. Selects relevant columns including authEnforced, permissions, and all OrgMembership columns.
+3. Returns the first matching result.
+
+### getOrgIdentityPermission
+#### Description
+Retrieves organization permissions for a specific identity and organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity |
+| orgId | string | The ID of the organization |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| membership | Object | Organization membership details including permissions for the identity |
+
+#### Internal Logic
+Similar to `getOrgPermission`, but uses IdentityOrgMembership table instead of OrgMembership.
+
+### getProjectPermission
+#### Description
+Retrieves project permissions for a specific user and project, including group memberships and additional privileges.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| userId | string | The ID of the user |
+| projectId | string | The ID of the project |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permission | Object | Project permission details including roles and additional privileges |
+
+#### Internal Logic
+1. Fetches group memberships for the user in the project.
+2. Retrieves direct project memberships for the user.
+3. Combines and processes the results, including additional privileges.
+4. Filters active roles and privileges based on temporary access settings.
+
+### getProjectIdentityPermission
+#### Description
+Retrieves project permissions for a specific identity and project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity |
+| projectId | string | The ID of the project |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| permission | Object | Project permission details for the identity including roles and additional privileges |
+
+#### Internal Logic
+Similar to `getProjectPermission`, but focuses on identity-specific tables and doesn't include group memberships.
+
+## Error Handling
+All methods wrap their database queries in try-catch blocks and throw a `DatabaseError` with a specific name if an error occurs during the database operation.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| zod | Used for schema validation |
+| @app/db | Imports database-related types and schemas |
+| @app/lib/errors | Imports DatabaseError for error handling |
+| @app/lib/knex | Imports utility functions for SQL queries |
+
+This code is part of a larger system dealing with permissions and access control in an enterprise application. It provides a data access layer for retrieving and processing permission-related information from the database, supporting both user and identity-based permissions at the organization and project levels.

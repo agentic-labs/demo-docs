@@ -1,0 +1,60 @@
+---
+title: "20240107153439_saml-config.ts"
+---
+
+## High-level description
+This code defines a database migration script using Knex.js to create a table named "SamlConfig" for storing SAML configuration data. It also sets up an "on update" trigger for the table and handles the rollback by dropping the table and the trigger.
+
+## References
+- `TableName`: An enum or object defining table names, likely imported from "../schemas".
+- `createOnUpdateTrigger`, `dropOnUpdateTrigger`: Utility functions for managing triggers, likely imported from "../utils".
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function defines the actions to perform when applying the migration. It checks if the "SamlConfig" table exists and creates it if it doesn't, along with its columns and constraints. It also sets up an "on update" trigger for the table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance providing database connection and schema building capabilities. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;void&gt; | Promise | A promise that resolves when the migration is applied successfully. |
+
+#### Internal Logic
+1. Checks if the "SamlConfig" table exists using `knex.schema.hasTable`.
+2. If the table doesn't exist:
+    - Creates the table using `knex.schema.createTable`.
+    - Defines columns for SAML configuration:
+        - `id`: UUID primary key, auto-generated.
+        - `authProvider`: String, not nullable.
+        - `isActive`: Boolean, not nullable.
+        - `encryptedEntryPoint`, `entryPointIV`, `entryPointTag`: Strings for encrypted entry point data.
+        - `encryptedIssuer`, `issuerTag`, `issuerIV`: Strings for encrypted issuer data.
+        - `encryptedCert`, `certIV`, `certTag`: Text and strings for encrypted certificate data.
+        - `timestamps`: Automatically managed timestamps for creation, update, and deletion.
+        - `orgId`: UUID foreign key referencing the "Organization" table, not nullable and unique.
+    - Sets up a foreign key constraint on `orgId` referencing the "id" column in the "Organization" table.
+3. Calls `createOnUpdateTrigger` to create an "on update" trigger for the "SamlConfig" table.
+
+### `down`
+#### Description
+This asynchronous function defines the actions to perform when rolling back the migration. It drops the "SamlConfig" table if it exists and removes the associated "on update" trigger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | A Knex instance providing database connection and schema building capabilities. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;void&gt; | Promise | A promise that resolves when the migration rollback is completed. |
+
+#### Internal Logic
+1. Drops the "SamlConfig" table if it exists using `knex.schema.dropTableIfExists`.
+2. Calls `dropOnUpdateTrigger` to remove the "on update" trigger associated with the "SamlConfig" table.

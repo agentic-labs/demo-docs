@@ -1,0 +1,94 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains components related to the Identity Projects Section of an organization's identity management page. It includes components for displaying a table of projects associated with an identity, adding an identity to a project, and managing individual project rows.
+
+## What does it do?
+The Identity Projects Section allows users to view and manage the projects associated with a specific identity within an organization. It provides functionality to:
+
+1. Display a table of projects the identity is a member of, including project names, roles, and creation dates.
+2. Add an identity to a new project by selecting the project and assigning a role.
+3. Remove an identity from a project.
+4. Navigate to project details (if the user has access).
+
+The section handles loading states, empty states, and error notifications to provide a smooth user experience.
+
+## Key Files
+
+1. IdentityProjectsSection.tsx
+   - Main component that orchestrates the entire section.
+   - Manages state for adding and removing identities from projects.
+   - Renders the header, add button, projects table, and modals.
+
+2. IdentityProjectsTable.tsx
+   - Renders the table of projects associated with an identity.
+   - Handles loading states and empty states.
+   - Uses IdentityProjectRow to display individual project memberships.
+
+3. IdentityProjectRow.tsx
+   - Renders a single row in the projects table.
+   - Displays project name, role, creation date, and a remove button.
+   - Handles navigation to project details and removal actions.
+
+4. IdentityAddToProjectModal.tsx
+   - Renders a modal for adding an identity to a project.
+   - Manages form state and validation using React Hook Form and Zod.
+   - Handles project selection, role assignment, and form submission.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal modules:
+
+1. React and Next.js: For building the user interface and handling routing.
+2. React Hook Form and Zod: For form management and validation in the add project modal.
+3. @fortawesome/react-fontawesome: For rendering icons.
+4. date-fns: For date formatting.
+5. Custom hooks (@app/hooks/api): For API interactions, data fetching, and mutations.
+6. Custom UI components (@app/components/v2): For consistent styling and layout.
+7. Context providers (@app/context): For accessing organization and workspace data.
+
+## Configuration
+The components in this directory do not require specific configuration files or environment variables. However, they rely on the broader application context and API endpoints for fetching and mutating data related to identities, projects, and workspaces.
+
+Here's an example of how the IdentityProjectsSection component is structured:
+
+```typescript
+const IdentityProjectsSection: React.FC&lt;{ identityId: string }&gt; = ({ identityId }) =&gt; {
+  const { deleteMutateAsync } = useDeleteIdentityFromWorkspace();
+  const { popUp, handlePopUpOpen, handlePopUpClose, handlePopUpToggle } = usePopUp(["addIdentityToProject", "removeIdentityFromProject"]);
+
+  const onRemoveIdentitySubmit = async (id: string, projectId: string) =&gt; {
+    try {
+      await deleteMutateAsync({ identityId: id, workspaceId: projectId });
+      createNotification({ type: "success", text: "Identity removed from project successfully" });
+      handlePopUpClose("removeIdentityFromProject");
+    } catch (error) {
+      console.error(error);
+      createNotification({ type: "error", text: error.message || "Failed to remove identity from project" });
+    }
+  };
+
+  return (
+    &lt;Container&gt;
+      &lt;Header&gt;
+        &lt;Title&gt;Projects&lt;/Title&gt;
+        &lt;AddButton onClick={() =&gt; handlePopUpOpen("addIdentityToProject")} /&gt;
+      &lt;/Header&gt;
+      &lt;IdentityProjectsTable identityId={identityId} handlePopUpOpen={handlePopUpOpen} /&gt;
+      &lt;IdentityAddToProjectModal
+        identityId={identityId}
+        popUp={popUp}
+        handlePopUpToggle={handlePopUpToggle}
+      /&gt;
+      &lt;RemoveIdentityFromProjectModal
+        popUp={popUp}
+        handlePopUpToggle={handlePopUpToggle}
+        onSubmit={onRemoveIdentitySubmit}
+      /&gt;
+    &lt;/Container&gt;
+  );
+};
+```
+
+This structure allows for a modular and maintainable approach to managing the Identity Projects Section, with clear separation of concerns between different components and functionalities.

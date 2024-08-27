@@ -1,0 +1,115 @@
+---
+title: "trusted-ip-router.ts"
+---
+
+## High-level description
+This code defines a router for managing trusted IP addresses in a workspace. It provides endpoints for listing, adding, updating, and deleting trusted IPs, with authentication, rate limiting, and audit logging functionality.
+
+## Code Structure
+The main function `registerTrustedIpRouter` sets up four routes: GET, POST, PATCH, and DELETE for trusted IP operations. Each route is defined with its HTTP method, URL, rate limiting, schema validation, authentication, and handler function.
+
+## Symbols
+
+### `registerTrustedIpRouter`
+#### Description
+This async function registers four routes for managing trusted IPs on a FastifyZodProvider server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | FastifyZodProvider | The server instance to register routes on |
+
+#### Internal Logic
+1. Defines four routes: GET, POST, PATCH, and DELETE for trusted IP operations.
+2. Each route includes schema validation, rate limiting, and authentication.
+3. Handlers interact with `server.services.trustedIp` for CRUD operations.
+4. POST, PATCH, and DELETE routes create audit logs using `server.services.auditLog`.
+
+### GET Route
+#### Description
+Retrieves a list of trusted IPs for a given workspace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| workspaceId | string | The ID of the workspace |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| trustedIps | TrustedIpsSchema[] | Array of trusted IP objects |
+
+### POST Route
+#### Description
+Adds a new trusted IP to a workspace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| workspaceId | string | The ID of the workspace |
+| ipAddress | string | The IP address to add |
+| comment | string | Optional comment for the IP |
+| isActive | boolean | Whether the IP is active |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| trustedIp | TrustedIpsSchema | The newly created trusted IP object |
+
+### PATCH Route
+#### Description
+Updates an existing trusted IP in a workspace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| workspaceId | string | The ID of the workspace |
+| trustedIpId | string | The ID of the trusted IP to update |
+| ipAddress | string | The new IP address |
+| comment | string | The new comment |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| trustedIp | TrustedIpsSchema | The updated trusted IP object |
+
+### DELETE Route
+#### Description
+Deletes a trusted IP from a workspace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| workspaceId | string | The ID of the workspace |
+| trustedIpId | string | The ID of the trusted IP to delete |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| trustedIp | TrustedIpsSchema | The deleted trusted IP object |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| zod | Schema validation for request and response data |
+| @app/db/schemas | Provides TrustedIpsSchema for data structure |
+| @app/ee/services/audit-log/audit-log-types | Defines EventType for audit logging |
+| @app/server/config/rateLimiter | Provides rate limiting configurations |
+| @app/server/plugins/auth/verify-auth | Authentication verification |
+| @app/services/auth/auth-type | Defines AuthMode for authentication |
+
+## Error Handling
+The code relies on Fastify's built-in error handling. Schema validation errors will be automatically handled by the zod integration.
+
+## Logging
+Audit logging is implemented for POST, PATCH, and DELETE operations using `server.services.auditLog.createAuditLog()`.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /:workspaceId/trusted-ips | GET | - | { trustedIps: TrustedIpsSchema[] } | List trusted IPs |
+| /:workspaceId/trusted-ips | POST | { ipAddress, comment, isActive } | { trustedIp: TrustedIpsSchema } | Add trusted IP |
+| /:workspaceId/trusted-ips/:trustedIpId | PATCH | { ipAddress, comment } | { trustedIp: TrustedIpsSchema } | Update trusted IP |
+| /:workspaceId/trusted-ips/:trustedIpId | DELETE | - | { trustedIp: TrustedIpsSchema } | Delete trusted IP |
+
+All endpoints require JWT authentication and have rate limiting applied.

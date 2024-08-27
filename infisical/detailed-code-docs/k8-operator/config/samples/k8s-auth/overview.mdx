@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains Kubernetes configuration files for setting up authentication and authorization for the Infisical Kubernetes Operator. The files define resources necessary for Kubernetes-based authentication, including a ServiceAccount, a ClusterRoleBinding, a service account token, and a sample custom resource for the Infisical Secret.
+
+## What does it do?
+
+These configuration files work together to:
+
+1. Create a ServiceAccount named "infisical-auth" in the default namespace.
+2. Bind this ServiceAccount to the "system:auth-delegator" ClusterRole, granting it permissions to perform token reviews across the cluster.
+3. Create a Secret containing a service account token for the "infisical-auth" ServiceAccount.
+4. Provide a sample configuration for an InfisicalSecret custom resource, which defines how the Infisical Operator should authenticate, fetch secrets from Infisical, and manage them within the Kubernetes cluster.
+
+This setup enables the Infisical Kubernetes Operator to authenticate with the Kubernetes API server and manage secrets securely within the cluster.
+
+## Key Files
+
+1. `infisical-service-account.yaml`: Defines the "infisical-auth" ServiceAccount in the default namespace.
+
+2. `cluster-role-binding.yaml`: Creates a ClusterRoleBinding that grants the "infisical-auth" ServiceAccount the permissions defined in the "system:auth-delegator" ClusterRole.
+
+3. `service-account-token.yaml`: Defines a Secret of type `kubernetes.io/service-account-token` for the "infisical-auth" ServiceAccount, which will contain the automatically generated service account token.
+
+4. `sample.yaml`: Provides a sample configuration for an InfisicalSecret custom resource, demonstrating how to set up Kubernetes-based authentication for the Infisical Operator.
+
+## Dependencies
+
+These configuration files rely on the following Kubernetes resources and components:
+
+1. Kubernetes API server: For processing and creating the defined resources.
+2. Infisical Kubernetes Operator: To process and act upon the InfisicalSecret custom resource.
+3. "system:auth-delegator" ClusterRole: A predefined role in Kubernetes for delegating authentication and authorization decisions.
+
+## Configuration
+
+The key configuration options across these files include:
+
+1. ServiceAccount name: "infisical-auth"
+2. Namespace: "default" (used for the ServiceAccount and ClusterRoleBinding)
+3. ClusterRoleBinding name: "role-tokenreview-binding"
+4. Secret name for the service account token: "infisical-auth-token"
+
+In the `sample.yaml` file, important configuration options for the InfisicalSecret custom resource include:
+
+```yaml
+spec:
+  hostAPI: https://app.infisical.com/api
+  resyncInterval: 10
+  authentication:
+    kubernetesAuth:
+      identityId: &lt;&gt;
+      serviceAccountRef:
+        name: infisical-auth
+        namespace: default
+      secretsScope:
+        envSlug: dev
+        secretPath: /
+  managedSecretReference:
+    name: infisical-secrets
+    namespace: default
+```
+
+This configuration specifies:
+- The Infisical API endpoint
+- The resync interval for secrets (in minutes)
+- Kubernetes authentication details, including the service account reference and secrets scope
+- How the fetched secrets should be managed in Kubernetes
+
+These files provide a complete setup for integrating the Infisical Kubernetes Operator with Kubernetes-based authentication, allowing secure management of secrets within a Kubernetes cluster.

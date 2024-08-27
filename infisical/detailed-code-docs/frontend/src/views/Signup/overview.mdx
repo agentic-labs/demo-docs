@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `frontend/src/views/Signup` directory contains components and logic for handling the user signup process, with a focus on Single Sign-On (SSO) functionality. It implements a multi-step signup flow that includes email confirmation, user information collection, and backup PDF generation for account recovery.
+
+## What does it do?
+This directory implements a comprehensive signup process for users, particularly those using SSO. The workflow typically follows these steps:
+
+1. Initial signup information is collected.
+2. Email confirmation is requested and verified.
+3. For SSO users, additional information is collected.
+4. A backup PDF containing a recovery key is generated for the user to download.
+5. The user is then directed to the appropriate next step or page, such as the organization overview.
+
+The process handles different authentication types (SAML, LDAP, OIDC) and manages various security aspects, including cryptographic key generation and secure password handling.
+
+## Entry points
+The main entry point for this directory is the `SignupSSO` component, which is exported from the `index.tsx` file. This component orchestrates the entire SSO signup flow, rendering different sub-components based on the current step of the process.
+
+The `SignupSSO` component in `SignupSSO.tsx` manages the state of the signup process and determines which step to render. It decodes a provided authentication token to extract user information and uses this to guide the user through the signup flow.
+
+The actual implementation of each step is contained within the `components` subdirectory, which houses the following key components:
+
+1. `EmailConfirmationStep`: Handles email verification.
+2. `UserInfoSSOStep`: Collects additional user information for SSO signups.
+3. `BackupPDFStep`: Generates and allows download of a backup key PDF.
+
+## Key Files
+1. `SignupSSO.tsx`:
+   - Manages the overall signup flow.
+   - Decodes the authentication token and determines the initial step.
+   - Renders the appropriate component for each step of the signup process.
+
+2. `components/EmailConfirmationStep.tsx`:
+   - Provides UI for entering and verifying the email confirmation code.
+   - Handles code resending and different authentication types.
+
+3. `components/UserInfoSSOStep.tsx`:
+   - Collects additional user information for SSO signups.
+   - Generates cryptographic keys and security tokens.
+   - Interacts with backend APIs to finalize account creation.
+
+4. `components/BackupPDFStep.tsx`:
+   - Renders a warning message and download button for the backup PDF.
+   - Generates the backup key using the `issueBackupKey` utility.
+
+## Dependencies
+The components in this directory rely on several external libraries and internal utilities:
+
+1. React and Next.js: For component structure, state management, and routing.
+2. react-i18next: For internationalization support.
+3. jwt-decode: For decoding JWT tokens in the SSO process.
+4. jsrp: Implements the Secure Remote Password (SRP) protocol.
+5. tweetnacl and tweetnacl-util: For cryptographic operations.
+6. react-code-input: Provides the code input field UI in EmailConfirmationStep.
+7. @fortawesome/free-solid-svg-icons and @fortawesome/react-fontawesome: For icon rendering.
+
+Internal utilities and hooks are also used for API calls, cryptography, and UI components.
+
+## Configuration
+While there are no explicit configuration files, the components use various configuration options:
+
+1. `SignupSSO` component:
+   - Accepts a `providerAuthToken` prop, which is a JWT token containing user information from the SSO provider.
+
+2. `EmailConfirmationStep`:
+   - Uses constant objects (`props` and `propsPhone`) to define styling for code input fields.
+   - Accepts props for authType, username, email, organizationSlug, and setStep.
+
+3. `UserInfoSSOStep`:
+   - Uses specific cryptographic algorithms and key sizes (e.g., AES-256-GCM).
+   - Relies on environment variables and settings defined elsewhere in the application.
+
+Example of cryptographic configuration in UserInfoSSOStep:
+
+```typescript
+const keyPair = nacl.box.keyPair();
+const publicKey = naclUtil.encodeBase64(keyPair.publicKey);
+const privateKey = naclUtil.encodeBase64(keyPair.secretKey);
+
+const derivedKey = await argon2.hash({
+  pass: password,
+  salt: naclUtil.decodeBase64(publicKey),
+  type: argon2.ArgonType.Argon2id,
+  hashLen: 32,
+});
+```
+
+This directory plays a crucial role in the user onboarding process, ensuring secure account creation, verification, and backup procedures. The implementation demonstrates a strong focus on security, particularly in the cryptographic operations performed during the SSO signup process.

@@ -1,0 +1,120 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the super admin service for a backend application. It provides functionality for managing server configurations, user administration, and authentication methods. The service is designed to handle operations that require elevated privileges, such as initializing the server, managing users, and updating system-wide settings.
+
+## What does it do?
+The super admin service performs several key functions:
+
+1. Server Configuration Management:
+   - Initializes and updates server-wide configurations.
+   - Caches configuration data for improved performance.
+
+2. User Administration:
+   - Handles the sign-up process for new admin users.
+   - Retrieves lists of users based on specified criteria.
+   - Deletes users from the system.
+
+3. Authentication:
+   - Supports multiple login methods (email, Google, GitHub, GitLab, SAML, LDAP, OIDC).
+   - Generates authentication tokens for users.
+
+4. License Management:
+   - Checks license features before performing certain operations.
+
+5. Data Access:
+   - Interacts with the database through Data Access Layer (DAL) objects.
+   - Performs CRUD operations on super admin and user records.
+
+## Entry points
+The main entry point for this service is the `superAdminServiceFactory` function in `super-admin-service.ts`. This factory function creates and returns an object with methods for performing various super admin operations. The service relies on the Data Access Layer defined in `super-admin-dal.ts` for database interactions.
+
+The data flow typically starts with a request to one of the service methods, which then interacts with the DAL to perform database operations. The service also integrates with other components like the license service, key store, and authentication service to provide a comprehensive set of functionalities.
+
+## Key Files
+1. `super-admin-service.ts`:
+   - Contains the `superAdminServiceFactory` which is the core of the super admin service.
+   - Implements functions for server configuration, admin sign-up, user management, and more.
+   - Integrates with other services and DALs to perform operations.
+
+2. `super-admin-dal.ts`:
+   - Defines the Data Access Layer for super admin operations.
+   - Provides methods for finding and updating super admin records in the database.
+   - Utilizes the Knex query builder for database interactions.
+
+3. `super-admin-types.ts`:
+   - Contains TypeScript type definitions used throughout the super admin service.
+   - Defines interfaces for admin sign-up data, user retrieval parameters, and login methods.
+
+## Dependencies
+The super admin service relies on several external libraries and internal modules:
+
+1. Knex: Used for database query building and transactions.
+2. bcrypt: Likely used for password hashing (inferred from the context).
+3. @app/db: Provides database schemas and client types.
+4. @app/lib/errors: Custom error classes for error handling.
+5. @app/lib/knex: Provides the `ormify` function for creating ORM instances.
+6. @app/lib/crypto: Utilities for encryption and key management.
+7. @app/keystore: Key-value store for caching configurations.
+8. @app/ee/services/license: License checking functionality.
+
+Internal services and DALs:
+- Auth service
+- Organization service
+- User DAL
+
+## Configuration
+The super admin service uses several configuration parameters:
+
+1. `ADMIN_CONFIG_KEY`: Key used for caching server configuration in the key-value store.
+2. `ADMIN_CONFIG_KEY_EXP`: Expiration time for the cached server configuration (in seconds).
+3. `ADMIN_CONFIG_DB_UUID`: Fixed UUID for the admin configuration in the database.
+
+These configurations are used to manage the caching and retrieval of server configurations.
+
+The service also interacts with environment variables through the `getConfig` function from `@app/lib/config/env`, although the specific variables used are not detailed in the provided code snippets.
+
+Example usage of the super admin service:
+
+```typescript
+const superAdminService = superAdminServiceFactory(
+  serverCfgDAL,
+  userDAL,
+  authService,
+  orgService,
+  keyStore,
+  licenseService
+);
+
+// Initialize server configuration
+await superAdminService.initServerCfg();
+
+// Update server configuration
+const updatedConfig = await superAdminService.updateServerCfg(
+  { enabledLoginMethods: [LoginMethod.EMAIL, LoginMethod.GOOGLE] },
+  adminUserId
+);
+
+// Sign up a new admin user
+const signUpResult = await superAdminService.adminSignUp({
+  email: 'admin@example.com',
+  password: 'securePassword',
+  firstName: 'Admin',
+  lastName: 'User',
+  // ... other required fields
+});
+
+// Retrieve users
+const users = await superAdminService.getUsers({
+  offset: 0,
+  limit: 10,
+  searchTerm: 'john'
+});
+
+// Delete a user
+await superAdminService.deleteUser('user-id-to-delete');
+```
+
+This service provides a comprehensive set of tools for managing the application at an administrative level, ensuring secure and efficient operations for super admin users.

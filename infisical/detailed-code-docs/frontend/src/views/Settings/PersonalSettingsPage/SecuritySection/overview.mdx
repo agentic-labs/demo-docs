@@ -1,0 +1,70 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `SecuritySection` directory within the personal settings page of the frontend application is primarily focused on managing two-factor authentication (2FA) settings for users. It contains components and logic for enabling or disabling 2FA, handling different user scenarios, and integrating with the application's API and UI components.
+
+## What does it do?
+This section of the application allows users to manage their security settings, specifically their two-factor authentication (2FA) preferences. Here's a breakdown of its functionality:
+
+1. It presents users with a checkbox to enable or disable 2FA for their account.
+2. When a user toggles the 2FA setting, the application checks if the user is eligible to use 2FA (e.g., not an LDAP user).
+3. If eligible, it updates the user's 2FA status in the backend through an API call.
+4. It handles different scenarios, such as checking if the email service is properly configured, which is necessary for 2FA to function.
+5. If the email service is not set up, it provides a modal for configuring the email service.
+6. The section provides feedback to the user through notifications, informing them of successful updates or any errors that occur during the process.
+
+## Key Files
+
+### MFASection.tsx
+This is the main component file that implements the 2FA toggle functionality. It contains:
+
+1. The `MFASection` React component, which renders the 2FA checkbox and handles user interactions.
+2. A `toggleMfa` function that processes the 2FA state change, including API calls and error handling.
+3. Logic to fetch and use user data and server status.
+4. Conditional rendering for the email service setup modal.
+
+Here's a snippet of the core functionality:
+
+```typescript
+const toggleMfa = async (state: boolean) =&gt; {
+  if (!user || user.isLDAPUser) return;
+  try {
+    await mutateAsync({ mfaEnabled: state });
+    createNotification({ text: 'Successfully updated MFA', type: 'success' });
+  } catch (err) {
+    console.error(err);
+    createNotification({ text: 'Failed to update MFA', type: 'error' });
+  }
+};
+```
+
+### index.tsx
+This file serves as a barrel export for the `MFASection` component, simplifying imports in other parts of the application. It contains a single line:
+
+```typescript
+export { MFASection } from "./MFASection";
+```
+
+## Dependencies
+The `SecuritySection` relies on several external libraries and internal modules:
+
+1. React: For building the user interface components.
+2. @app/components/notifications: For creating user notifications.
+3. @app/components/v2: For UI components like Checkbox and EmailServiceSetupModal.
+4. @app/hooks/api: Custom hooks for API interactions (useGetUser, useUpdateMfaEnabled, useFetchServerStatus).
+5. @app/hooks/usePopUp: For managing pop-up state.
+
+These dependencies are chosen to provide a robust, efficient, and user-friendly interface for managing security settings.
+
+## Configuration
+While there are no explicit configuration files in this directory, the component does rely on certain application-wide configurations and states:
+
+1. User authentication state: The component checks if a user is logged in and their user type (e.g., LDAP user).
+2. Server status: It fetches the server status to determine if the email service is configured.
+3. API endpoints: The component uses API hooks that likely rely on configured API endpoints for user data and MFA status updates.
+
+The `MFASection` component is designed to be flexible and respond to these configurations, providing appropriate UI and functionality based on the user's status and server configuration.
+
+In conclusion, the `SecuritySection` directory, particularly the `MFASection` component, plays a crucial role in the application's user security management. It provides a straightforward interface for users to control their 2FA settings while handling various edge cases and providing clear feedback, contributing to a secure and user-friendly application experience.

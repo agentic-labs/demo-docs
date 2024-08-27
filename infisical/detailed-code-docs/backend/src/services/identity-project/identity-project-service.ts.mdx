@@ -1,0 +1,148 @@
+---
+title: "identity-project-service.ts"
+---
+
+## High-level description
+This file defines the `identityProjectServiceFactory`, which creates a service for managing project identities. It provides functions for creating, updating, deleting, listing, and retrieving project identities, with proper permission checks and data validation.
+
+## Code Structure
+The main function `identityProjectServiceFactory` takes dependencies as input and returns an object with methods for managing project identities. These methods interact with various data access layers (DALs) and services to perform operations on project identities.
+
+## Symbols
+
+### `identityProjectServiceFactory`
+#### Description
+This factory function creates and returns an object with methods for managing project identities.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityProjectDAL | TIdentityProjectDALFactory | Data access layer for project identities |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getProjectPermission" \| "getProjectPermissionByRole"&gt; | Service for handling permissions |
+| identityOrgMembershipDAL | Pick&lt;TIdentityOrgDALFactory, "findOne"&gt; | DAL for identity organization memberships |
+| identityProjectMembershipRoleDAL | Pick&lt;TIdentityProjectMembershipRoleDALFactory, "create" \| "transaction" \| "insertMany" \| "delete"&gt; | DAL for project membership roles |
+| projectDAL | Pick&lt;TProjectDALFactory, "findById"&gt; | DAL for projects |
+| projectRoleDAL | Pick&lt;TProjectRoleDALFactory, "find"&gt; | DAL for project roles |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| createProjectIdentity | Function | Creates a new project identity |
+| updateProjectIdentity | Function | Updates an existing project identity |
+| deleteProjectIdentity | Function | Deletes a project identity |
+| listProjectIdentities | Function | Lists project identities |
+| getProjectIdentityByIdentityId | Function | Retrieves a project identity by identity ID |
+
+#### Internal Logic
+The factory function creates and returns an object with methods for managing project identities. Each method performs permission checks, validates input data, and interacts with the necessary DALs to perform the requested operation.
+
+### `createProjectIdentity`
+#### Description
+Creates a new project identity with specified roles.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | ID of the identity |
+| actor | ActorType | Type of actor performing the action |
+| actorId | string | ID of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| projectId | string | ID of the project |
+| roles | Array | Roles to be assigned to the identity |
+
+#### Internal Logic
+1. Checks permissions for creating an identity in the project.
+2. Verifies that the identity doesn't already exist in the project.
+3. Validates the requested roles and checks if the actor has the required privileges.
+4. Creates the project identity and associated roles in a transaction.
+
+### `updateProjectIdentity`
+#### Description
+Updates the roles of an existing project identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | ID of the project |
+| identityId | string | ID of the identity |
+| roles | Array | Updated roles for the identity |
+| actor | ActorType | Type of actor performing the action |
+| actorId | string | ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Internal Logic
+1. Checks permissions for editing an identity in the project.
+2. Verifies that the identity exists in the project.
+3. Validates the requested role changes and checks if the actor has the required privileges.
+4. Updates the identity's roles in a transaction.
+
+### `deleteProjectIdentity`
+#### Description
+Deletes a project identity.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | ID of the identity to delete |
+| actorId | string | ID of the actor performing the deletion |
+| actor | ActorType | Type of actor performing the action |
+| actorOrgId | string | Organization ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| projectId | string | ID of the project |
+
+#### Internal Logic
+1. Checks permissions for deleting an identity from the project.
+2. Verifies that the actor has the required privileges to delete the identity.
+3. Deletes the identity from the project.
+
+### `listProjectIdentities`
+#### Description
+Lists all identities in a project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | ID of the project |
+| actor | ActorType | Type of actor performing the action |
+| actorId | string | ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| actorOrgId | string | Organization ID of the actor |
+
+#### Internal Logic
+1. Checks permissions for reading identities in the project.
+2. Retrieves and returns all identity memberships for the project.
+
+### `getProjectIdentityByIdentityId`
+#### Description
+Retrieves a specific project identity by its identity ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| projectId | string | ID of the project |
+| actor | ActorType | Type of actor performing the action |
+| actorId | string | ID of the actor |
+| actorAuthMethod | string | Authentication method of the actor |
+| actorOrgId | string | Organization ID of the actor |
+| identityId | string | ID of the identity to retrieve |
+
+#### Internal Logic
+1. Checks permissions for reading identities in the project.
+2. Retrieves and returns the specific identity membership for the project and identity ID.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| @casl/ability | Used for permission checks |
+| ms | Used for parsing time strings |
+| @app/db/schemas | Provides schema definitions |
+| @app/ee/services/permission/permission-service | Used for permission-related operations |
+| @app/ee/services/permission/project-permission | Defines project permission actions and subjects |
+| @app/lib/casl | Provides utility functions for permission checks |
+| @app/lib/errors | Provides custom error classes |
+| @app/lib/fn | Provides utility functions |
+
+## Error Handling
+The service uses custom error classes (`BadRequestError` and `ForbiddenRequestError`) to handle and throw specific errors. It also uses `ForbiddenError` from the `@casl/ability` package for permission-related errors.

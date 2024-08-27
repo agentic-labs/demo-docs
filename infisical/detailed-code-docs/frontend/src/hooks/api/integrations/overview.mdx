@@ -1,0 +1,94 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains custom React hooks and TypeScript types for managing integrations in a web application. It provides functionality for creating, retrieving, deleting, and syncing integrations between the application and various third-party services. The code is organized to facilitate easy integration management and API interactions.
+
+## What does it do?
+The code in this directory enables the application to:
+1. Fetch available cloud integrations that users can connect to.
+2. Create new integrations by connecting the application with third-party services.
+3. Delete existing integrations when they are no longer needed.
+4. Manually trigger synchronization of data for specific integrations.
+5. Define structured data types for representing cloud integration options and active integration instances.
+
+These functionalities allow the application to seamlessly interact with external services, manage user-connected integrations, and keep data synchronized between the application and integrated services.
+
+## Key Files
+
+### index.tsx
+This file serves as the main entry point for the integration hooks. It re-exports three key hooks from the `queries.tsx` file:
+- `useCreateIntegration`
+- `useDeleteIntegration`
+- `useGetCloudIntegrations`
+
+This centralized export makes it easy for other parts of the application to import and use these integration-related hooks.
+
+### queries.tsx
+This file contains the core implementation of the integration-related hooks. It defines several custom hooks that leverage the react-query library for efficient data fetching and state management:
+
+1. `useGetCloudIntegrations`: Fetches available cloud integrations.
+2. `useCreateIntegration`: Creates a new integration.
+3. `useDeleteIntegration`: Deletes an existing integration.
+4. `useSyncIntegration`: Manually syncs an integration.
+
+Each hook interacts with specific API endpoints to perform its designated task. For example:
+
+```typescript
+const useCreateIntegration = () =&gt; {
+  return useMutation(
+    (data: TCreateIntegrationPayload) =&gt;
+      request.post('/api/v1/integration', data),
+    {
+      onSuccess: () =&gt; {
+        queryClient.invalidateQueries(integrationQueryKeys.list());
+      },
+    }
+  );
+};
+```
+
+This hook sends a POST request to create a new integration and invalidates the integration list query on success, ensuring that the UI reflects the latest data.
+
+### types.ts
+This file defines TypeScript types and enums used throughout the integration management process:
+
+1. `TCloudIntegration`: Represents available cloud integration options.
+2. `TIntegration`: Describes the structure of an active integration instance.
+3. `IntegrationSyncBehavior`: Enum for different synchronization behaviors.
+4. `IntegrationMappingBehavior`: Enum for different mapping behaviors.
+
+For example, the `TIntegration` type is defined as:
+
+```typescript
+export type TIntegration = {
+  id: string;
+  isActive: boolean;
+  url?: string;
+  app?: string;
+  appId?: string;
+  // ... other properties
+};
+```
+
+These types ensure type safety and provide clear structures for integration-related data throughout the application.
+
+## Dependencies
+The main external dependency used in this directory is `@tanstack/react-query`, which is employed for state management and data fetching. It provides hooks like `useQuery` and `useMutation` that are used to implement the custom integration hooks.
+
+Other dependencies include:
+- `@app/components/notifications`: Used for displaying notifications after successful operations.
+- `@app/config/request`: Likely contains configuration for API requests.
+
+## Configuration
+While there are no explicit configuration files in this directory, the code uses API endpoints for various integration operations. These endpoints are hardcoded in the `queries.tsx` file:
+
+- GET `/api/v1/integration-auth/integration-options`: Fetch available cloud integrations
+- POST `/api/v1/integration`: Create a new integration
+- DELETE `/api/v1/integration/:id`: Delete an existing integration
+- POST `/api/v1/integration/:id/sync`: Manually sync an integration
+
+These endpoints suggest that the application uses a RESTful API structure for managing integrations.
+
+In conclusion, this directory provides a comprehensive set of tools for managing integrations in a React application. It offers type-safe, efficient, and easy-to-use hooks that abstract away the complexities of API interactions and state management, allowing developers to easily implement integration features in their components.

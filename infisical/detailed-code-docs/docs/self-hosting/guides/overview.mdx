@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains guides for self-hosting Infisical, focusing on advanced configuration and migration processes. The guides provide detailed instructions for adding custom certificates and migrating from MongoDB to PostgreSQL.
+
+## What does it do?
+The guides in this directory help users perform two specific tasks:
+
+1. Adding custom certificates: This guide explains how to configure Infisical to trust custom certificates, which is useful for connecting to internal services that use private certificate authorities.
+
+2. Migrating from MongoDB to PostgreSQL: This comprehensive guide walks users through the process of migrating their Infisical instance from MongoDB to PostgreSQL, which is the new database backend for Infisical that will receive future updates and patches.
+
+## Key Files
+
+1. custom-certificates.mdx
+   - Explains how to add custom certificates to an Infisical Docker container
+   - Provides step-by-step instructions for mounting certificate files and configuring the container
+
+2. mongo-to-postgres.mdx
+   - Offers a detailed guide for migrating Infisical from MongoDB to PostgreSQL
+   - Covers prerequisites, preparation steps, data dumping, migration process, and post-migration tasks
+
+## Configuration
+
+The guides mention several configuration aspects:
+
+1. Custom Certificates:
+   - Environment variable: `NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt`
+   - Mount point for certificate files: `/usr/local/share/ca-certificates/`
+
+2. MongoDB to PostgreSQL Migration:
+   - Environment variable for migration mode: `MIGRATION_MODE=true`
+   - MongoDB connection string format: `mongodb://root:example@localhost:27017/&lt;db-name&gt;?authSource=admin`
+   - PostgreSQL connection string format: `postgres://infisical:infisical@localhost/infisical?sslmode=disable`
+
+## Dependencies
+
+The MongoDB to PostgreSQL migration guide mentions several command-line tools as prerequisites:
+
+- git
+- pg_dump
+- pg_restore
+- mongodump
+- mongorestore
+- Docker
+
+The guide also provides a Docker Compose file for setting up local instances of MongoDB and PostgreSQL for the migration process.
+
+## Code Snippets
+
+1. Docker Compose file for local database instances:
+
+```yaml
+version: '3.1'
+
+services:
+  mongodb:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  mongodb_data:
+  postgres_data:
+```
+
+2. MongoDB dump command:
+
+```
+mongodump --uri=&lt;your_mongo_prod_uri&gt; --archive="mongodump-db" --db=&lt;db name&gt; --excludeCollection=auditlogs
+```
+
+3. MongoDB restore command:
+
+```
+mongorestore --uri=mongodb://root:example@localhost:27017/ --archive="mongodump-db"
+```
+
+4. PostgreSQL dump command:
+
+```
+pg_dump -h localhost -U infisical -Fc -b -v -f dumpfilelocation.sql -d infisical
+```
+
+5. PostgreSQL restore command:
+
+```
+pg_restore --clean -v -h &lt;host&gt; -U &lt;db-user-name&gt; -d &lt;database-name&gt; -j 2 dumpfilelocation.sql 
+```
+
+These guides provide detailed instructions for advanced Infisical configuration and migration, ensuring users can successfully implement custom certificates and transition from MongoDB to PostgreSQL.

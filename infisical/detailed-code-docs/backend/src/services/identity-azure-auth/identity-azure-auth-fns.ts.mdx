@@ -1,0 +1,47 @@
+---
+title: "identity-azure-auth-fns.ts"
+---
+
+## High-level description
+The `validateAzureIdentity` function verifies the authenticity of an Azure AD JWT (JSON Web Token) and returns the payload if valid. It fetches the signing keys from Azure AD, verifies the token signature, and checks the audience and issuer claims.
+
+## References
+- `TAzureAuthJwtPayload`, `TAzureJwksUriResponse`, `TDecodedAzureAuthJwt` types from `./identity-azure-auth-types`
+
+## Symbols
+
+### `validateAzureIdentity`
+#### Description
+This asynchronous function validates an Azure AD JWT. It constructs the JWKS (JSON Web Key Set) URI using the provided tenant ID, decodes the JWT, retrieves the signing keys from Azure AD, finds the matching signing key, and verifies the JWT signature against the public key of the signing key. It also validates the audience and issuer claims of the JWT.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tenantId | string | The Azure AD tenant ID. |
+| resource | string | The audience (resource) the JWT is intended for. |
+| jwt | string | The Azure AD JWT to validate. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | `TAzureAuthJwtPayload` | The decoded JWT payload if the token is valid. |
+
+#### Internal Logic
+1. **Construct JWKS URI:** Builds the JWKS URI using the provided `tenantId`.
+2. **Decode JWT:** Decodes the JWT using the `jsonwebtoken` library.
+3. **Fetch Signing Keys:** Makes a GET request to the JWKS URI to retrieve the signing keys.
+4. **Find Matching Signing Key:** Searches for the signing key in the JWKS response that matches the `kid` (key ID) from the JWT header.
+5. **Verify Signature:** Verifies the JWT signature against the public key of the matching signing key.
+6. **Validate Audience:** Checks if the `aud` (audience) claim in the JWT matches the provided `resource`. Handles cases where the audience in the JWT might not have a trailing slash.
+7. **Validate Issuer:** Checks if the `iss` (issuer) claim in the JWT matches the expected issuer format for the given `tenantId`.
+8. **Return Payload:** If all validations pass, returns the decoded JWT payload.
+
+#### Error Handling
+- Throws an `UnauthorizedError` if the signing key is not found or if the JWT verification fails.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| axios | Making HTTP requests to fetch the JWKS from Azure AD. |
+| jsonwebtoken | Decoding and verifying the JWT. |
+| @app/lib/errors | Importing the `UnauthorizedError` class. |

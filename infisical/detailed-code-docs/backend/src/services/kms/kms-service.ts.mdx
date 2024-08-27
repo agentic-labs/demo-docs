@@ -1,0 +1,91 @@
+---
+title: "kms-service.ts"
+---
+
+## High-level description
+The `kmsServiceFactory` creates a KMS service that manages encryption and decryption of sensitive data within the Infisical application. It handles both internal KMS (using a symmetric key) and external KMS (using providers like AWS KMS). The service also manages data keys for organizations and projects, ensuring secure access to encrypted data.
+
+## Code Structure
+The `kmsServiceFactory` defines a factory function that returns an object with various methods for managing KMS keys and encryption/decryption operations. The factory function takes dependencies like data access layers (DALs) for KMS keys, projects, organizations, and internal KMS, as well as a key store for managing locks and a service for interacting with the internal KMS.
+
+## References
+- `@app/db/schemas`: Defines the database schema for KMS keys.
+- `@app/ee/services/external-kms/providers/aws-kms`: Provides functionality for interacting with AWS KMS.
+- `@app/keystore/keystore`: Provides a key store for managing locks and storing data.
+- `@app/lib/config/env`: Provides access to environment configuration.
+- `@app/lib/crypto`: Provides cryptographic utilities.
+- `@app/lib/errors`: Defines custom error types.
+- `@app/lib/logger`: Provides logging functionality.
+- `@app/lib/nanoid`: Provides a utility for generating unique IDs.
+
+## Symbols
+
+### `kmsServiceFactory`
+#### Description
+This factory function creates a KMS service instance with methods for managing KMS keys and encryption/decryption operations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| kmsDAL | `TKmsKeyDALFactory` | Data access layer for KMS keys. |
+| projectDAL | `Pick&lt;TProjectDALFactory, "findById" | "updateById" | "transaction"&gt;` | Data access layer for projects. |
+| orgDAL | `Pick&lt;TOrgDALFactory, "findById" | "updateById" | "transaction"&gt;` | Data access layer for organizations. |
+| kmsRootConfigDAL | `Pick&lt;TKmsRootConfigDALFactory, "findById" | "create"&gt;` | Data access layer for KMS root configuration. |
+| keyStore | `Pick&lt;TKeyStoreFactory, "acquireLock" | "waitTillReady" | "setItemWithExpiry"&gt;` | Key store for managing locks and storing data. |
+| internalKmsDAL | `Pick&lt;TInternalKmsDALFactory, "create"&gt;` | Data access layer for internal KMS. |
+
+#### Outputs
+Returns an object of type `TKmsServiceFactory` with the following methods:
+
+- `startService`: Initializes the KMS service by loading the root encryption key.
+- `generateKmsKey`: Generates a new internal KMS key.
+- `deleteInternalKms`: Deletes an internal KMS key.
+- `encryptWithKmsKey`: Encrypts data using a KMS key.
+- `decryptWithKmsKey`: Decrypts data using a KMS key.
+- `encryptWithInputKey`: Encrypts data using a provided key.
+- `decryptWithInputKey`: Decrypts data using a provided key.
+- `getOrgKmsKeyId`: Retrieves the KMS key ID for an organization.
+- `getProjectSecretManagerKmsKeyId`: Retrieves the KMS key ID for a project's secret manager.
+- `updateProjectSecretManagerKmsKey`: Updates the KMS key for a project's secret manager.
+- `getProjectKeyBackup`: Generates a backup of the project's secret manager data key.
+- `loadProjectKeyBackup`: Loads a backup of the project's secret manager data key.
+- `getKmsById`: Retrieves a KMS key by ID.
+- `createCipherPairWithDataKey`: Creates an encryption/decryption pair using a data key.
+
+#### Internal Logic
+The factory function initializes a `ROOT_ENCRYPTION_KEY` variable to store the root encryption key. It then defines various methods for managing KMS keys and encryption/decryption operations.
+
+- `generateKmsKey`: Generates a new internal KMS key by creating a random key material, encrypting it with the root encryption key, and storing it in the database.
+- `deleteInternalKms`: Deletes an internal KMS key from the database.
+- `encryptWithInputKey`: Encrypts data using a provided key and the AES-GCM-256 algorithm.
+- `decryptWithInputKey`: Decrypts data using a provided key and the AES-GCM-256 algorithm.
+- `getOrgKmsKeyId`: Retrieves the KMS key ID for an organization. If the organization doesn't have a KMS key assigned, it acquires a lock and generates a new key.
+- `decryptWithKmsKey`: Decrypts data using a KMS key. It handles both internal and external KMS keys.
+- `encryptWithKmsKey`: Encrypts data using a KMS key. It handles both internal and external KMS keys.
+- `$getOrgKmsDataKey`: Retrieves the data key for an organization. If the data key doesn't exist, it acquires a lock and generates a new one.
+- `getProjectSecretManagerKmsKeyId`: Retrieves the KMS key ID for a project's secret manager. If the project doesn't have a KMS key assigned, it acquires a lock and generates a new key.
+- `$getProjectSecretManagerKmsDataKey`: Retrieves the data key for a project's secret manager. If the data key doesn't exist, it acquires a lock and generates a new one.
+- `$getDataKey`: Retrieves the data key based on the provided type (SecretManager or other).
+- `createCipherPairWithDataKey`: Creates an encryption/decryption pair using a data key.
+- `updateProjectSecretManagerKmsKey`: Updates the KMS key for a project's secret manager.
+- `getProjectKeyBackup`: Generates a backup of the project's secret manager data key.
+- `loadProjectKeyBackup`: Loads a backup of the project's secret manager data key.
+- `getKmsById`: Retrieves a KMS key by ID.
+- `startService`: Initializes the KMS service by loading the root encryption key from the database or generating a new one if it doesn't exist.
+
+## Side Effects
+- Modifies the database by creating, updating, and deleting KMS keys and related data.
+- Acquires and releases locks in the key store.
+- Logs information about KMS operations.
+
+## Dependencies
+- `@sindresorhus/slugify`: For generating slugs.
+- `knex`: For database interactions.
+- `zod`: For data validation.
+
+## Error Handling
+- Throws custom error types like `BadRequestError` and `NotFoundError` for invalid input or missing data.
+- Handles errors during KMS operations and logs them.
+
+## Logging
+- Uses the `logger` object to log information about KMS operations.

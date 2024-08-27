@@ -1,0 +1,145 @@
+---
+title: "srp.ts"
+---
+
+## High-level description
+The `srp.ts` file provides functions for user authentication and key management using the Secure Remote Password (SRP) protocol and other cryptographic techniques. It includes functions for generating SRP keys, verifying client proofs, encrypting and decrypting user private keys, and building user-specific project keys.
+
+## References
+- `@app/db/schemas`: References the `TUserEncryptionKeys` type, likely defining the structure of user encryption data stored in the database.
+- `./encryption`: Imports helper functions `decryptSymmetric128BitHexKeyUTF8`, `encryptAsymmetric`, and `encryptSymmetric` for various encryption operations.
+
+## Symbols
+
+### `generateSrpServerKey`
+#### Description
+Asynchronously generates an SRP server key pair (public and private) based on provided salt and verifier values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| salt | string | The salt used in SRP key derivation. |
+| verifier | string | The verifier generated during user registration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `{ pubKey, privateKey }` | object | An object containing the generated server's public key (`pubKey`) and private key (`privateKey`). |
+
+#### Internal Logic
+1. Initializes a new `jsrp.server` instance.
+2. Calls `server.init` with the provided salt and verifier to generate the key pair.
+3. Returns an object containing the server's public and private keys.
+
+### `srpCheckClientProof`
+#### Description
+Asynchronously verifies an SRP client proof against the server's private key and other provided parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| salt | string | The salt used in SRP key derivation. |
+| verifier | string | The verifier generated during user registration. |
+| serverPrivateKey | string | The server's private key. |
+| clientPublicKey | string | The client's public key. |
+| clientProof | string | The client's proof value. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `boolean` |  | Returns `true` if the client proof is valid, otherwise `false`. |
+
+#### Internal Logic
+1. Initializes a new `jsrp.server` instance.
+2. Calls `server.init` with the provided salt, verifier, and server private key.
+3. Sets the client's public key using `server.setClientPublicKey`.
+4. Uses `server.checkClientProof` to verify the client's proof against the server's state.
+5. Returns the result of the verification.
+
+### `generateUserSrpKeys`
+#### Description
+Asynchronously generates SRP keys and other cryptographic materials for a user during registration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email | string | The user's email address. |
+| password | string | The user's password. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `object` |  | An object containing the generated user SRP keys and encrypted materials: `protectedKey`, `plainPrivateKey`, `protectedKeyIV`, `protectedKeyTag`, `publicKey`, `encryptedPrivateKey`, `encryptedPrivateKeyIV`, `encryptedPrivateKeyTag`, `salt`, `verifier`. |
+
+#### Internal Logic
+1. Generates a NaCl key pair for asymmetric encryption.
+2. Encodes the secret and public keys in Base64.
+3. Initializes a new `jsrp.client` instance.
+4. Creates an SRP verifier using the user's email and password.
+5. Derives a key from the password using Argon2.
+6. Generates a random symmetric key.
+7. Encrypts the private key with the symmetric key.
+8. Encrypts the symmetric key with the derived key.
+9. Returns an object containing all generated keys and encryption materials.
+
+### `getUserPrivateKey`
+#### Description
+Asynchronously retrieves and decrypts a user's private key based on their password and stored encryption data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| password | string | The user's password. |
+| user | Pick&lt;TUserEncryptionKeys, ...&gt; | An object containing the user's encryption data from the database. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `string` |  | The decrypted user private key. |
+
+#### Internal Logic
+1. Determines the encryption version used based on the `user.encryptionVersion` property.
+2. For version 1:
+   - Decrypts the `encryptedPrivateKey` using a substring of the password as the key.
+3. For version 2:
+   - Derives a key from the password and stored salt using Argon2.
+   - Decrypts the `protectedKey` using the derived key.
+   - Decrypts the `encryptedPrivateKey` using the decrypted `protectedKey`.
+4. Returns the decrypted private key.
+5. Throws an error if the encryption version is not recognized.
+
+### `buildUserProjectKey`
+#### Description
+Asynchronously builds a user-specific project key by encrypting a random value with the user's public key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| privateKey | string | The user's private key. |
+| publicKey | string | The user's public key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `{ nonce, ciphertext }` | object | An object containing the nonce and ciphertext of the encrypted project key. |
+
+#### Internal Logic
+1. Generates a random 16-byte value and converts it to a hexadecimal string.
+2. Encrypts the random value using the user's public key and private key.
+3. Returns an object containing the nonce and ciphertext of the encrypted value.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| argon2 | Password hashing using Argon2id algorithm. |
+| crypto | Node.js built-in module for cryptographic operations. |
+| jsrp | Implementation of the Secure Remote Password (SRP) protocol. |
+| nacl | TweetNaCl library for network authenticated cryptography. |
+| tweetnacl-util | Utility functions for TweetNaCl. |
+
+## Error Handling
+- Throws errors for specific failure cases, such as failing to derive a key or encountering an unsupported encryption version.
+- Emits an "error" event on the `Redlock` instance for observability in case of errors during lock operations.
+
+## Logging
+- No specific logging mechanisms are implemented within this file. However, the imported `Redlock` class emits an "error" event for potential logging in other parts of the application.

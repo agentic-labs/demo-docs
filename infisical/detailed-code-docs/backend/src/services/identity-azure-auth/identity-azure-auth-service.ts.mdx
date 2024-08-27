@@ -1,0 +1,196 @@
+---
+title: "identity-azure-auth-service.ts"
+---
+
+## High-level description
+The code defines an Azure authentication service (`identityAzureAuthServiceFactory`) for managing Azure authentication related operations for identities within an organization. It provides functionalities for logging in with Azure credentials, attaching, updating, retrieving, and revoking Azure authentication configurations for identities.
+
+## Code Structure
+The `identityAzureAuthServiceFactory` acts as a factory function, taking in several dependencies related to identity and permission management. It returns an object containing various functions like `login`, `attachAzureAuth`, `updateAzureAuth`, `getAzureAuth`, and `revokeIdentityAzureAuth`, each responsible for a specific Azure authentication operation.
+
+## References
+This code references several other modules and types within the codebase, including:
+- `@app/db/schemas`: For accessing database schemas, specifically `IdentityAuthMethod`.
+- `@app/ee/services/license/license-service`: For interacting with the license service, particularly `getPlan` to retrieve plan details.
+- `@app/ee/services/permission/org-permission`: For handling organization-level permissions, including actions and subjects.
+- `@app/ee/services/permission/permission-service`: For utilizing the permission service, specifically `getOrgPermission` to check permissions.
+- `@app/lib/casl`: For utilizing CASL (Control Access Based on Roles) library, specifically `isAtLeastAsPrivileged` to compare permissions.
+- `@app/lib/config/env`: For accessing application configuration using `getConfig`.
+- `@app/lib/errors`: For utilizing custom error classes like `BadRequestError`, `ForbiddenRequestError`, and `UnauthorizedError`.
+- `@app/lib/ip`: For IP address related utilities, including `extractIPDetails` and `isValidIpOrCidr`.
+- Various other modules related to identity, authentication, and data access.
+
+## Symbols
+
+### `identityAzureAuthServiceFactory`
+#### Description
+This factory function initializes and returns an instance of the Azure authentication service. It sets up various functions for managing Azure authentication for identities.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAzureAuthDAL | Pick&lt;TIdentityAzureAuthDALFactory, "findOne" \| "transaction" \| "create" \| "updateById" \| "delete"&gt; | Data access layer functions for Azure authentication. |
+| identityOrgMembershipDAL | Pick&lt;TIdentityOrgDALFactory, "findOne"&gt; | Data access layer function for identity organization membership. |
+| identityAccessTokenDAL | Pick&lt;TIdentityAccessTokenDALFactory, "create"&gt; | Data access layer function for identity access tokens. |
+| identityDAL | Pick&lt;TIdentityDALFactory, "updateById"&gt; | Data access layer function for identities. |
+| permissionService | Pick&lt;TPermissionServiceFactory, "getOrgPermission"&gt; | Service for managing organization permissions. |
+| licenseService | Pick&lt;TLicenseServiceFactory, "getPlan"&gt; | Service for retrieving license plan details. |
+
+#### Outputs
+An object containing the following functions:
+- `login`: Handles Azure authentication login.
+- `attachAzureAuth`: Attaches Azure authentication configuration to an identity.
+- `updateAzureAuth`: Updates existing Azure authentication configuration for an identity.
+- `getAzureAuth`: Retrieves Azure authentication configuration for an identity.
+- `revokeIdentityAzureAuth`: Revokes Azure authentication for an identity.
+
+### `login`
+#### Description
+This asynchronous function handles the login process for an identity using Azure authentication. It verifies the provided Azure JWT token, checks for allowed service principal IDs, and generates an access token upon successful authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity attempting to log in. |
+| azureJwt | string | The Azure JWT token provided for authentication. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| accessToken | string | The generated access token upon successful authentication. |
+| identityAzureAuth | object | The Azure authentication configuration associated with the identity. |
+| identityAccessToken | object | The generated access token details. |
+| identityMembershipOrg | object | The organization membership details of the identity. |
+
+#### Internal Logic
+1. Retrieves the Azure authentication configuration (`identityAzureAuth`) for the given `identityId`.
+2. Fetches the organization membership details (`identityMembershipOrg`) for the identity.
+3. Validates the provided `azureJwt` token against the configured tenant ID and resource.
+4. Checks if the service principal ID from the token is allowed based on the `allowedServicePrincipalIds` configuration.
+5. Creates a new access token (`identityAccessToken`) with appropriate TTL and usage limits.
+6. Generates a JWT access token (`accessToken`) containing the identity and access token information.
+7. Returns the generated `accessToken`, Azure authentication details, access token details, and organization membership details.
+
+### `attachAzureAuth`
+#### Description
+This asynchronous function attaches Azure authentication configuration to an identity. It validates the provided configuration, checks for necessary permissions, and creates the Azure authentication association.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity to attach Azure authentication to. |
+| tenantId | string | The Azure tenant ID. |
+| resource | string | The Azure resource. |
+| allowedServicePrincipalIds | string \| null | Comma-separated list of allowed service principal IDs. |
+| accessTokenTTL | number | Access token time-to-live in seconds. |
+| accessTokenMaxTTL | number | Maximum access token time-to-live in seconds. |
+| accessTokenNumUsesLimit | number | Maximum number of times the access token can be used. |
+| accessTokenTrustedIps | { comment?: string \| null; ipAddress: string }[] | List of trusted IP addresses for the access token. |
+| actorId | string | The ID of the actor initiating the action. |
+| actorAuthMethod | AuthTokenType | The authentication method of the actor. |
+| actor | ActorType | The type of the actor. |
+| actorOrgId | string | The organization ID of the actor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAzureAuth | object | The created Azure authentication configuration. |
+| orgId | string | The organization ID associated with the identity. |
+
+#### Internal Logic
+1. Retrieves the organization membership details (`identityMembershipOrg`) for the given `identityId`.
+2. Validates if the identity already has an authentication method configured.
+3. Checks for permission to create an identity with Azure authentication.
+4. Retrieves the license plan details for the organization.
+5. Validates and formats the provided `accessTokenTrustedIps` based on plan restrictions.
+6. Creates the Azure authentication configuration (`identityAzureAuth`) in the database.
+7. Updates the identity's authentication method to `IdentityAuthMethod.AZURE_AUTH`.
+8. Returns the created Azure authentication configuration and the organization ID.
+
+### `updateAzureAuth`
+#### Description
+This asynchronous function updates the Azure authentication configuration for an existing identity. It validates the provided configuration, checks for necessary permissions, and updates the Azure authentication association.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity to update Azure authentication for. |
+| tenantId | string \| undefined | The Azure tenant ID. |
+| resource | string \| undefined | The Azure resource. |
+| allowedServicePrincipalIds | string \| null \| undefined | Comma-separated list of allowed service principal IDs. |
+| accessTokenTTL | number \| undefined | Access token time-to-live in seconds. |
+| accessTokenMaxTTL | number \| undefined | Maximum access token time-to-live in seconds. |
+| accessTokenNumUsesLimit | number \| undefined | Maximum number of times the access token can be used. |
+| accessTokenTrustedIps | { comment?: string \| null; ipAddress: string }[] \| undefined | List of trusted IP addresses for the access token. |
+| actorId | string | The ID of the actor initiating the action. |
+| actorAuthMethod | AuthTokenType | The authentication method of the actor. |
+| actor | ActorType | The type of the actor. |
+| actorOrgId | string | The organization ID of the actor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| updatedAzureAuth | object | The updated Azure authentication configuration. |
+| orgId | string | The organization ID associated with the identity. |
+
+#### Internal Logic
+1. Retrieves the organization membership details (`identityMembershipOrg`) for the given `identityId`.
+2. Validates if the identity has Azure authentication configured.
+3. Checks for permission to edit the identity's Azure authentication.
+4. Retrieves the license plan details for the organization.
+5. Validates and formats the provided `accessTokenTrustedIps` based on plan restrictions.
+6. Updates the Azure authentication configuration (`updatedAzureAuth`) in the database.
+7. Returns the updated Azure authentication configuration and the organization ID.
+
+### `getAzureAuth`
+#### Description
+This asynchronous function retrieves the Azure authentication configuration for an identity. It checks for necessary permissions and returns the configuration if authorized.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity to retrieve Azure authentication configuration for. |
+| actorId | string | The ID of the actor initiating the action. |
+| actor | ActorType | The type of the actor. |
+| actorAuthMethod | AuthTokenType | The authentication method of the actor. |
+| actorOrgId | string | The organization ID of the actor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityAzureAuth | object | The retrieved Azure authentication configuration. |
+| orgId | string | The organization ID associated with the identity. |
+
+#### Internal Logic
+1. Retrieves the organization membership details (`identityMembershipOrg`) for the given `identityId`.
+2. Validates if the identity has Azure authentication configured.
+3. Checks for permission to read the identity's Azure authentication configuration.
+4. Retrieves the Azure authentication configuration (`identityAzureAuth`) from the database.
+5. Returns the retrieved Azure authentication configuration and the organization ID.
+
+### `revokeIdentityAzureAuth`
+#### Description
+This asynchronous function revokes Azure authentication for an identity. It checks for necessary permissions, ensures the revoking actor has higher privileges, and removes the Azure authentication association.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| identityId | string | The ID of the identity to revoke Azure authentication for. |
+| actorId | string | The ID of the actor initiating the action. |
+| actor | ActorType | The type of the actor. |
+| actorAuthMethod | AuthTokenType | The authentication method of the actor. |
+| actorOrgId | string | The organization ID of the actor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| revokedIdentityAzureAuth | object | The revoked Azure authentication configuration. |
+
+#### Internal Logic
+1. Retrieves the organization membership details (`identityMembershipOrg`) for the given `identityId`.
+2. Validates if the identity has Azure authentication configured.
+3. Checks for permission to edit the identity's authentication configuration.
+4. Compares the permissions of the revoking actor with the identity's role permissions to ensure privilege escalation is not possible.
+5. Deletes the Azure authentication configuration (`revokedIdentityAzureAuth`) from the database.
+6. Updates the identity's authentication method to `null`.
+7. Returns the revoked Azure authentication configuration and the organization ID.

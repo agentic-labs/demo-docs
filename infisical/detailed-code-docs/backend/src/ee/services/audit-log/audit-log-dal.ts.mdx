@@ -1,0 +1,88 @@
+---
+title: "audit-log-dal.ts"
+---
+
+## High-level description
+This code defines a Data Access Layer (DAL) for audit logs in a backend application. It provides functionality to find audit logs based on various criteria and to prune expired audit logs from the database.
+
+## Code Structure
+The main function `auditLogDALFactory` creates and returns an object with methods for interacting with audit logs in the database. It uses the `ormify` function to create basic CRUD operations and extends them with custom `find` and `pruneAuditLog` methods.
+
+## Symbols
+
+### `auditLogDALFactory`
+#### Description
+This function creates a Data Access Layer for audit logs. It initializes an ORM for the audit log table and defines custom methods for finding and pruning audit logs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | TDbClient | The database client to use for operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Object | Object | An object containing methods for interacting with audit logs |
+
+#### Internal Logic
+1. Creates an ORM for the audit log table using `ormify`.
+2. Defines a `find` method for querying audit logs.
+3. Defines a `pruneAuditLog` method for deleting expired audit logs.
+4. Returns an object combining the ORM methods and custom methods.
+
+### `find`
+#### Description
+This method queries the audit log table based on provided criteria.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | TFindQuery | An object containing query parameters |
+| tx | Knex (optional) | A Knex transaction object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| docs | Array | An array of audit log documents matching the query |
+
+#### Internal Logic
+1. Constructs a SQL query using the provided parameters.
+2. Applies filters for date range if provided.
+3. Executes the query and returns the results.
+4. Wraps the operation in a try-catch block to handle database errors.
+
+### `pruneAuditLog`
+#### Description
+This method deletes expired audit logs from the database in batches.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tx | Knex (optional) | A Knex transaction object |
+
+#### Internal Logic
+1. Sets up constants for batch size and maximum retry attempts.
+2. Enters a loop to delete expired logs in batches.
+3. Uses a subquery to find expired logs and delete them.
+4. Implements a retry mechanism in case of failures.
+5. Adds a small delay between batches to reduce database load.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | SQL query builder |
+| @app/db | Database client and schema definitions |
+| @app/lib/errors | Custom error types |
+| @app/lib/knex | Utility functions for Knex |
+| @app/lib/logger | Logging functionality |
+
+## Error Handling
+The code uses try-catch blocks to handle database errors. In the `find` method, it throws a `DatabaseError` if an error occurs. In the `pruneAuditLog` method, it logs the error and continues with retries.
+
+## Logging
+The code uses a logger (imported from `@app/lib/logger`) to log errors encountered during the audit log pruning process.
+
+## Performance Considerations
+1. The `find` method uses pagination (limit and offset) to manage large result sets.
+2. The `pruneAuditLog` method deletes expired logs in batches to avoid overwhelming the database.
+3. A small delay is added between pruning batches to reduce database load.

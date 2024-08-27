@@ -1,0 +1,90 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains React hooks and TypeScript types for managing integration authentication in a frontend application. It provides a comprehensive set of tools for interacting with various third-party services, handling authentication flows, and managing integration-related data.
+
+## What does it do?
+The code in this directory enables the frontend application to:
+
+1. Authenticate with various third-party services and platforms.
+2. Retrieve and manage integration authorization details.
+3. Fetch application data from integrated services.
+4. Handle authorization processes for different integrations.
+5. Save and manage access tokens for integrations.
+6. Provide type safety for integration-related data structures.
+
+These functionalities allow the application to seamlessly integrate with external services, manage user authentication for these services, and handle the associated data in a type-safe manner.
+
+## Entry points
+The main entry point for this directory is the `index.tsx` file, which exports various custom hooks for use throughout the application. These hooks are implemented in the `queries.tsx` file, which contains the core logic for interacting with the API and managing integration data.
+
+The data flow typically starts with a component in the application using one of the exported hooks. This hook then interacts with the API using the `apiRequest` utility, fetches or modifies data, and returns the result to the component. The `types.ts` file provides TypeScript definitions used throughout this process to ensure type safety.
+
+## Key Files
+1. `index.tsx`: Exports the custom hooks for easy access in other parts of the application.
+2. `queries.tsx`: Contains the implementation of the custom hooks, including API interactions and data management logic.
+3. `types.ts`: Defines TypeScript types for various entities related to integration authentication and external services.
+
+## Dependencies
+The main external dependency used in this directory is `@tanstack/react-query`, which is employed for data fetching, caching, and state management. The version is not explicitly specified in the provided code.
+
+React Query was likely chosen for its powerful data synchronization capabilities, built-in caching mechanisms, and seamless integration with React applications. It simplifies the process of fetching, caching, and updating data in React applications.
+
+The code also relies on an internal `apiRequest` utility from `@app/config/request`, which is used to make API calls.
+
+## Configuration
+While there are no explicit configuration files in this directory, the code uses query keys defined in the `integrationAuthKeys` object to manage caching and data fetching. These keys are used throughout the custom hooks to ensure consistent data management.
+
+Example of a query key:
+
+```typescript
+const integrationAuthKeys = {
+  all: ['integrationAuth'] as const,
+  lists: () =&gt; [...integrationAuthKeys.all, 'list'] as const,
+  list: (filters: string) =&gt; [...integrationAuthKeys.lists(), { filters }] as const,
+  details: () =&gt; [...integrationAuthKeys.all, 'detail'] as const,
+  detail: (id: string) =&gt; [...integrationAuthKeys.details(), id] as const,
+};
+```
+
+These query keys are used in conjunction with React Query to manage data fetching and caching strategies.
+
+The custom hooks often accept parameters such as `workspaceId`, `integrationAuthId`, and `integration` name, which are used to configure the behavior of the hooks and determine which data to fetch or modify.
+
+For example, the `useGetIntegrationAuthById` hook is configured with an `integrationAuthId`:
+
+```typescript
+const useGetIntegrationAuthById = (integrationAuthId: string) =&gt; {
+  return useQuery({
+    queryKey: integrationAuthKeys.detail(integrationAuthId),
+    queryFn: () =&gt;
+      apiRequest&lt;IntegrationAuth&gt;({
+        url: `/integration-auth/${integrationAuthId}`,
+        method: 'GET',
+      }),
+  });
+};
+```
+
+This configuration allows the hook to fetch the specific integration authentication details based on the provided ID.
+
+The types defined in `types.ts` also serve as a form of configuration, ensuring that the data structures used throughout the application conform to the expected shapes. For instance, the `IntegrationAuth` type defines the structure of integration authentication data:
+
+```typescript
+type IntegrationAuth = {
+  id: string;
+  integration: string;
+  projectId: string;
+  __v: number;
+  createdAt: string;
+  updatedAt: string;
+  algorithm: string;
+  keyEncoding: string;
+  url?: string;
+  teamId?: string;
+};
+```
+
+This type configuration helps maintain consistency and prevents errors when working with integration authentication data throughout the application.

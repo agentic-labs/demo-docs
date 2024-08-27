@@ -1,0 +1,83 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a Certificate Authority Certificate Revocation List (CA CRL) service for an enterprise environment. It provides functionality to manage, retrieve, and handle CRLs associated with Certificate Authorities. The code is organized into three main components: a data access layer (DAL), a service layer, and type definitions.
+
+## What does it do?
+The CA CRL service allows the system to:
+
+1. Retrieve specific CRLs by their unique identifier.
+2. Fetch all CRLs associated with a particular Certificate Authority.
+3. Handle encryption and decryption of CRLs using a Key Management System (KMS).
+4. Manage permissions for accessing CRLs based on user roles and project associations.
+5. Provide a data access layer for interacting with the database storing CRL information.
+
+This service is crucial for maintaining and distributing up-to-date information about revoked certificates, which is essential for ensuring the security and integrity of a Public Key Infrastructure (PKI) system.
+
+## Key Files
+
+1. `certificate-authority-crl-dal.ts`:
+   This file defines the Data Access Layer for CA CRLs. It exports a factory function `certificateAuthorityCrlDALFactory` that creates an ORM (Object-Relational Mapping) instance for the CertificateAuthorityCrl table. This abstraction layer simplifies database operations related to CA CRLs.
+
+   Example usage:
+   ```typescript
+   const caCrlDAL = certificateAuthorityCrlDALFactory(dbClient);
+   const crl = await caCrlDAL.findById(crlId);
+   ```
+
+2. `certificate-authority-crl-service.ts`:
+   This file contains the core business logic for the CA CRL service. It exports a factory function `certificateAuthorityCrlServiceFactory` that creates an object with two main methods: `getCrlById` and `getCaCrls`. These methods handle the retrieval of CRLs, permission checking, and decryption of CRL data.
+
+   Example usage:
+   ```typescript
+   const caCrlService = certificateAuthorityCrlServiceFactory(caDAL, caCrlDAL, projectDAL, kmsService, permissionService);
+   const { ca, caCrl, crl } = await caCrlService.getCrlById(crlId);
+   ```
+
+3. `certificate-authority-crl-types.ts`:
+   This file defines TypeScript types used throughout the CA CRL service. It includes types for identifying CRLs (`TGetCrlById`) and for specifying parameters when retrieving CA CRLs (`TGetCaCrlsDTO`).
+
+   Example usage:
+   ```typescript
+   const getCaCrlsParams: TGetCaCrlsDTO = {
+     caId: 'ca-123',
+     actorId: 'user-456',
+     actorAuthMethod: 'password',
+     actor: 'USER',
+     actorOrgId: 'org-789'
+   };
+   ```
+
+## Dependencies
+The CA CRL service relies on several external libraries and internal modules:
+
+1. `@casl/ability`: Used for handling permissions and authorization checks.
+2. `@peculiar/x509`: Provides functionality for working with X.509 certificates and CRLs.
+3. `@app/db`: Supplies the database client type and schema information.
+4. `@app/lib/knex`: Offers the `ormify` utility for creating ORM instances.
+5. Internal services: The service depends on other internal services such as the Key Management Service (KMS) and Permission Service.
+
+## Configuration
+The CA CRL service does not have explicit configuration files. However, it relies on the configuration of the underlying database, KMS, and permission systems. The service factory functions accept dependencies as parameters, allowing for flexible configuration and dependency injection.
+
+## Error Handling
+The service implements custom error classes such as `BadRequestError`, `NotFoundError`, and `ForbiddenError` to handle various error scenarios. These errors are thrown when appropriate conditions are not met, such as when a CRL is not found or when the user doesn't have the required permissions.
+
+Example error handling:
+```typescript
+try {
+  const crl = await caCrlService.getCrlById(crlId);
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    console.log('CRL not found');
+  } else if (error instanceof ForbiddenError) {
+    console.log('User does not have permission to access this CRL');
+  } else {
+    console.log('An unexpected error occurred', error);
+  }
+}
+```
+
+In conclusion, this directory provides a comprehensive implementation of a CA CRL service, handling data access, business logic, and type definitions. It offers a secure and efficient way to manage and retrieve Certificate Revocation Lists in an enterprise environment, integrating with other services like KMS and permission management to ensure data security and proper access control.

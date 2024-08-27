@@ -1,0 +1,70 @@
+---
+title: "release_build_infisical_cli.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file defines a process for building and releasing the Infisical CLI. It is triggered manually or when a new tag matching the pattern "infisical-cli/v*.*.*" is pushed. The workflow runs integration tests, builds the CLI for multiple platforms, and publishes the releases to various package repositories.
+
+## Code Structure
+The workflow consists of two main jobs: `cli-integration-tests` and `goreleaser`. The `goreleaser` job depends on the successful completion of the `cli-integration-tests` job.
+
+## Symbols
+
+### `cli-integration-tests`
+#### Description
+This job runs integration tests for the CLI before deployment.
+
+#### Internal Logic
+- Uses a reusable workflow defined in `./.github/workflows/run-cli-tests.yml`
+- Passes several secrets to the test workflow for authentication and configuration
+
+### `goreleaser`
+#### Description
+This job builds and releases the CLI using GoReleaser.
+
+#### Internal Logic
+1. Checks out the repository
+2. Logs in to Docker Hub
+3. Sets up Docker Buildx
+4. Fetches Git tags
+5. Sets up Go environment
+6. Installs libssl1.0-dev for OSXCross
+7. Sets up OSXCross for CGO support
+8. Runs GoReleaser to build and release the CLI
+9. Sets up Python environment
+10. Installs cloudsmith-cli
+11. Publishes the release to CloudSmith
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v3 | Checkout the repository |
+| docker/login-action@v2 | Log in to Docker Hub |
+| docker/setup-buildx-action@v2 | Set up Docker Buildx |
+| actions/setup-go@v3 | Set up Go environment |
+| goreleaser/goreleaser-action@v4 | Run GoReleaser |
+| actions/setup-python@v4 | Set up Python environment |
+
+## Configuration
+The workflow uses several secrets for authentication and configuration:
+
+| Secret | Description |
+|:-------|:------------|
+| CLI_TESTS_* | Various secrets for CLI integration tests |
+| DOCKERHUB_USERNAME | Docker Hub username |
+| DOCKERHUB_TOKEN | Docker Hub token |
+| GO_RELEASER_GITHUB_TOKEN | GitHub token for GoReleaser |
+| POSTHOG_API_KEY_FOR_CLI | PostHog API key |
+| FURY_TOKEN | Fury push token |
+| AUR_KEY | AUR key |
+| GORELEASER_KEY | GoReleaser key |
+| CLOUDSMITH_API_KEY | CloudSmith API key |
+
+## Error Handling
+The workflow does not implement specific error handling mechanisms. It relies on GitHub Actions' default behavior of stopping the workflow if a step fails.
+
+## Logging
+The workflow uses default GitHub Actions logging. Some steps, like echoing the ref name, provide additional logging information.
+
+## API/Interface Reference
+This workflow file does not define an API or public interface.

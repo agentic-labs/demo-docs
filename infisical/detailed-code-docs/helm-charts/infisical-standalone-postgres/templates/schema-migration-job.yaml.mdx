@@ -1,0 +1,57 @@
+---
+title: "schema-migration-job.yaml"
+---
+
+## High-level description
+This Kubernetes Job manifest is designed to perform database schema migrations for the Infisical application. It creates a one-time job that runs the migration script to update the database schema to the latest version when the Helm chart is installed or upgraded.
+
+## Code Structure
+The manifest is a Kubernetes Job resource that uses the Infisical container image to run a database migration command. It includes conditional logic to only create the job if auto-migration is enabled and sets up the necessary environment variables and secrets for database connection.
+
+## Symbols
+
+### Job Resource
+#### Description
+Defines a Kubernetes Job resource that runs a database schema migration for Infisical.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.infisical | Object | Values specific to the Infisical application |
+| .Release | Object | Information about the Helm release |
+| .Chart | Object | Information about the Helm chart |
+
+#### Internal Logic
+1. Checks if auto database schema migration is enabled.
+2. Sets up job metadata with release and chart information.
+3. Configures the job spec with a backoff limit and pod template.
+4. Sets up the container with the Infisical image and migration command.
+5. Configures environment variables for database connection.
+6. Mounts secrets for additional configuration.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Kubernetes | The manifest is designed to be deployed on a Kubernetes cluster |
+| Helm | Uses Helm templating for dynamic value insertion |
+| PostgreSQL | The database that the migration will be performed on |
+
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.infisical.autoDatabaseSchemaMigration | Boolean | N/A | Determines whether to create the migration job |
+| .Values.infisical.image.repository | String | N/A | The repository for the Infisical image |
+| .Values.infisical.image.tag | String | N/A | The tag for the Infisical image |
+| .Values.infisical.kubeSecretRef | String | N/A | The name of the Kubernetes secret containing additional configuration |
+
+## Error Handling
+The job is configured with a `backoffLimit` of 10, allowing it to retry up to 10 times in case of failure. The `restartPolicy` is set to `OnFailure`, ensuring that the pod restarts if the migration command fails.
+
+## Notes
+1. The job is only created if `.Values.infisical.autoDatabaseSchemaMigration` is true.
+2. The job name includes the release name and revision for uniqueness across upgrades.
+3. The database connection string is included only if PostgreSQL is enabled in the Helm release.
+4. Image pull secrets are included if specified in the values.
+5. The migration command used is `npm run migration:latest`, suggesting that the Infisical application uses npm scripts for database migrations.
+
+This Job manifest provides a way to automatically keep the database schema up-to-date with the application version being deployed, ensuring smooth upgrades and consistency between the application and its data store.

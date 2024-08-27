@@ -1,0 +1,72 @@
+---
+title: "20240802181855_ca-cert-version.ts"
+---
+
+## High-level description
+This code implements a database migration script using Knex.js. It aims to add versioning to Certificate Authority Certificates and update related tables to reference the specific version of the certificate. It also introduces a new `caSecretId` column to link certificates with their corresponding secrets.
+
+## Code Structure
+The code defines two asynchronous functions: `up` and `down`. 
+- `up` is responsible for applying the migration, adding new columns and updating data. 
+- `down` is responsible for reverting the migration, removing added columns.
+
+Both functions perform a series of checks to determine if the target tables and columns exist before attempting modifications.
+
+## References
+This code references the following database tables:
+- `CertificateAuthority`
+- `CertificateAuthorityCert`
+- `CertificateAuthoritySecret`
+- `Certificate`
+
+It also uses the `TableName` enum to reference table names.
+
+## Symbols
+
+### `up`
+#### Description
+This asynchronous function applies the database migration. It adds new columns for versioning and secret linking to the Certificate Authority Certificates table and updates related tables to reference the specific version.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration is complete. |
+
+#### Internal Logic
+1. **Check for `CertificateAuthority` table and `activeCaCertId` column:** If the table and column don't exist, add the `activeCaCertId` column and update it with the ID of the active certificate.
+2. **Check for `CertificateAuthorityCert` table:**
+    - **Check for `version` column:** If it doesn't exist, add it, set it to 1 for existing records, and make it non-nullable.
+    - **Check for `caSecretId` column:** If it doesn't exist, add it, update it with the corresponding secret ID, and make it non-nullable.
+3. **Check for `CertificateAuthoritySecret` table:** If it exists, drop the unique constraint on the `caId` column.
+4. **Check for `Certificate` table:** If it exists, add the `caCertId` column, update it with the ID of the corresponding certificate, and make it non-nullable.
+
+### `down`
+#### Description
+This asynchronous function reverts the database migration applied by the `up` function. It removes the added columns and constraints.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| knex | Knex | Knex instance for database interaction. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise\&lt;void\&gt; | Promise | A promise that resolves when the migration rollback is complete. |
+
+#### Internal Logic
+1. **Check for `CertificateAuthority` table and `activeCaCertId` column:** If the column exists, drop it.
+2. **Check for `CertificateAuthorityCert` table:**
+    - **Check for `version` column:** If it exists, drop it.
+    - **Check for `caSecretId` column:** If it exists, drop it.
+3. **Check for `Certificate` table and `caCertId` column:** If the column exists, drop it.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides database interaction capabilities for running migrations. |

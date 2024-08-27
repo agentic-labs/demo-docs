@@ -1,0 +1,89 @@
+---
+title: "super-admin-dal.ts"
+---
+
+## High-level description
+The code defines a factory function `superAdminDALFactory` that creates a Data Access Layer (DAL) for interacting with the `SuperAdmin` table in the database. This DAL provides methods for finding, and updating super admin records.
+
+## Code Structure
+The `superAdminDALFactory` function returns an object containing several database operation methods, including `findById` and `updateById`. These methods utilize the `ormify` function and the Knex query builder to interact with the database.
+
+## References
+- `@app/db/schemas`:  Uses the `TableName` and `TSuperAdmin` enums, and the `TSuperAdminUpdate` type.
+- `@app/lib/errors`: Imports the `DatabaseError` class.
+- `@app/lib/knex`: Imports the `ormify` function.
+
+## Symbols
+
+### `superAdminDALFactory`
+#### Description
+This factory function creates and returns a DAL object for managing super admin records in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `TDbClient` | A Knex database client instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `TSuperAdminDALFactory` | An object containing methods for interacting with the `SuperAdmin` table. |
+
+#### Internal Logic
+1.  Initializes an ORM instance `superAdminOrm` using the provided `db` client and the `SuperAdmin` table name.
+2.  Defines the `findById` function for retrieving a super admin record by ID.
+3.  Defines the `updateById` function for updating a super admin record by ID.
+4.  Returns an object containing the `superAdminOrm` instance and the defined data access methods.
+
+### `findById`
+#### Description
+This asynchronous function retrieves a super admin record from the database based on the provided ID. It also fetches the associated organization slug if available.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the super admin to retrieve. |
+| tx | `Knex` | (Optional) An existing Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `TSuperAdmin & { defaultAuthOrgSlug: string \| null } \| null` | The retrieved super admin record with the organization slug, or `null` if not found. |
+
+#### Internal Logic
+1.  Constructs a query to select the super admin record and join with the `Organization` table to retrieve the organization slug.
+2.  Executes the query and retrieves the first matching record.
+3.  If a record is found, constructs and returns the super admin object with the organization slug.
+4.  If no record is found, returns `null`.
+
+### `updateById`
+#### Description
+This asynchronous function updates a super admin record in the database with the provided data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the super admin to update. |
+| data | `TSuperAdminUpdate` | An object containing the updated super admin data. |
+| tx | `Knex` | (Optional) An existing Knex transaction object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `Promise&lt;TSuperAdmin & { defaultAuthOrgSlug: string \| null }&gt;` | A promise that resolves to the updated super admin record. |
+
+#### Internal Logic
+1.  Starts a database transaction using `superAdminOrm.transaction`.
+2.  Updates the super admin record with the provided `id` and `data` using `superAdminOrm.updateById`.
+3.  Retrieves the updated super admin record using `findById`.
+4.  If the updated record is not found, throws a `DatabaseError`.
+5.  Commits the transaction and returns the updated super admin record.
+6.  If any error occurs during the process, the transaction is rolled back.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| knex | Provides the query builder and transaction management for database interactions. |
+| @app/db | Provides the database client (`TDbClient`) and database schema definitions. |
+| @app/lib/errors | Provides the `DatabaseError` class for custom error handling. |
+| @app/lib/knex | Provides the `ormify` function for creating ORM instances. |

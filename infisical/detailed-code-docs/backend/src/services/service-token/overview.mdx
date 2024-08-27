@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a service token management system for a backend application. It includes data access layer (DAL) operations, service-level logic, and type definitions for managing service tokens. The system provides functionality for creating, deleting, retrieving, and validating service tokens, which are likely used for authentication and authorization purposes within the application.
+
+## What does it do?
+The service token management system allows the application to:
+
+1. Create new service tokens with specific permissions, scopes, and expiration times.
+2. Delete existing service tokens.
+3. Retrieve information about individual service tokens or all tokens associated with a project.
+4. Validate service tokens to ensure they are valid, not expired, and have the correct permissions.
+
+This system enables secure, granular access control for different parts of the application or API. Service tokens can be scoped to specific environments and secret paths, allowing for fine-grained control over what resources each token can access. The system also incorporates encryption and hashing for added security.
+
+## Key Files
+
+1. `service-token-dal.ts`: 
+   - Implements the data access layer for service tokens.
+   - Provides methods for basic CRUD operations and custom queries.
+   - Uses the `ormify` function to generate standard database operations.
+   - Includes a custom `findById` method that joins with the Users table to retrieve the token creator's email.
+
+2. `service-token-service.ts`:
+   - Implements the business logic for managing service tokens.
+   - Provides methods for creating, deleting, retrieving, and validating service tokens.
+   - Handles permission checks, token generation, and data validation.
+   - Interacts with various DALs and services to perform its operations.
+
+3. `service-token-types.ts`:
+   - Defines TypeScript types and interfaces used throughout the service token system.
+   - Includes types for creating, retrieving, and deleting service tokens.
+   - Defines structures for token scopes, permissions, and project-related information.
+
+## Dependencies
+The service token system relies on several external libraries and internal modules:
+
+1. `knex`: Used for database queries and operations.
+2. `@casl/ability`: Handles permission checks and authorization.
+3. `bcrypt`: Used for hashing and comparing token secrets.
+4. `crypto`: Generates random bytes for token creation.
+5. Internal modules:
+   - `@app/db/schemas`: Provides database schema definitions.
+   - `@app/lib/errors`: Defines custom error types.
+   - `@app/lib/knex`: Offers utility functions for database operations.
+   - `@app/lib/config/env`: Provides access to application configuration.
+
+## Configuration
+The service token system uses environment variables for configuration, likely accessed through the `@app/lib/config/env` module. While specific configuration details are not provided in the given files, it's probable that the system uses configuration for:
+
+1. Database connection settings
+2. Token expiration defaults
+3. Encryption key settings
+4. Permission and scope configurations
+
+## Key Concepts
+
+1. **Service Tokens**: Secure tokens used for authentication and authorization within the application.
+
+2. **Scopes**: Each token can have multiple scopes, defining which environments and secret paths it can access.
+
+3. **Permissions**: Tokens can have read and/or write permissions, controlling their level of access.
+
+4. **Encryption**: The system uses encryption for storing sensitive token information, with fields like `encryptedKey`, `iv`, and `tag`.
+
+5. **Expiration**: Tokens can have an optional expiration time, after which they become invalid.
+
+6. **Project Association**: Service tokens are associated with specific projects, allowing for project-level token management.
+
+Here's an example of how a service token might be created using this system:
+
+```typescript
+const tokenService = serviceTokenServiceFactory(/* ... dependencies ... */);
+
+const newToken = await tokenService.createServiceToken({
+  name: "API Access Token",
+  scopes: [
+    { environment: "production", secretPath: "/api/keys" },
+    { environment: "staging", secretPath: "/api/keys" }
+  ],
+  encryptedKey: "...",
+  iv: "...",
+  tag: "...",
+  expiresIn: 30 * 24 * 60 * 60, // 30 days in seconds
+  permissions: ["read", "write"],
+  projectId: "project-123",
+  actorId: "user-456",
+  actorAuthMethod: "session"
+});
+
+console.log("New token created:", newToken.token);
+```
+
+This system provides a robust and secure way to manage service tokens, enabling fine-grained access control and enhancing the overall security of the application.

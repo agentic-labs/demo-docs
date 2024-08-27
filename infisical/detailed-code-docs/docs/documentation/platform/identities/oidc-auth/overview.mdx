@@ -1,0 +1,115 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains documentation for OpenID Connect (OIDC) authentication with Infisical, a platform for managing secrets and configuration. The documentation covers general OIDC authentication and specific implementation for GitHub workflows.
+
+## What does it do?
+
+The documentation explains how to use OIDC authentication to securely access Infisical's API from various platforms and environments, with a focus on GitHub workflows. It outlines the process of creating and configuring identities, adding them to projects, and using them to authenticate API requests. The authentication flow involves obtaining a JWT from an identity provider, exchanging it for an Infisical access token, and using that token to make authenticated API calls.
+
+## Key Files
+
+1. `general.mdx`: This file provides a comprehensive overview of OIDC authentication with Infisical. It includes:
+   - A sequence diagram illustrating the OIDC Auth workflow
+   - Explanation of the authentication concept
+   - Step-by-step guide for creating and using identities
+   - Code snippets demonstrating the authentication process
+
+2. `github.mdx`: This file focuses specifically on authenticating GitHub workflows with Infisical using OIDC. It includes:
+   - A sequence diagram for the GitHub-specific OIDC Auth workflow
+   - Detailed instructions for configuring OIDC Auth for GitHub workflows
+   - Example YAML configuration for GitHub Actions
+   - Guidance on using the Infisical Secrets Action with OIDC Auth
+
+## Dependencies
+
+The documentation mentions the following dependencies:
+
+1. OpenID Connect (OIDC) compatible identity provider
+2. Infisical API
+3. GitHub Actions (for GitHub-specific implementation)
+4. Infisical Secrets Action (recommended for GitHub workflows)
+
+## Configuration
+
+The documentation describes several configuration steps and parameters:
+
+1. Creating an identity in Infisical:
+   - Name
+   - Role (organization level)
+
+2. Configuring OIDC Auth for an identity:
+   - OIDC Discovery URL
+   - Issuer
+   - CA Certificate
+   - Subject
+   - Audiences
+   - Claims
+   - Access Token TTL
+   - Access Token Max TTL
+   - Access Token Max Number of Uses
+   - Access Token Trusted IPs
+
+3. GitHub-specific configuration:
+   - Setting `id-token:write` permissions in GitHub workflow YAML
+   - Configuring the Infisical Secrets Action with OIDC method
+
+The documentation provides guidance on setting these parameters, including specific values for GitHub workflows and tips for restricting access and determining appropriate values.
+
+Code snippets and examples are provided throughout the documentation to illustrate key concepts and implementation details. For instance, a JavaScript code snippet demonstrates how to perform OIDC login:
+
+```javascript
+export const oidcLogin = async ({ identityId, domain, oidcAudience }) =&gt; {
+    const idToken = await core.getIDToken(oidcAudience);
+
+    const loginData = querystring.stringify({
+        identityId,
+        jwt: idToken,
+    });
+
+    try {
+        const response = await axios({
+        method: "post",
+        url: `${domain}/api/v1/auth/oidc-auth/login`,
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        data: loginData,
+        });
+
+        return response.data.accessToken;
+    } catch (err) {
+        core.error("Error:", err.message);
+        throw err;
+    }
+};
+```
+
+The documentation also includes YAML examples for configuring GitHub workflows to use OIDC authentication with Infisical:
+
+```yaml
+name: Manual workflow
+
+on:
+    workflow_dispatch:
+
+permissions:
+    id-token: write # This is required for requesting the JWT
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: Infisical/secrets-action@v1.0.7
+            with:
+                method: "oidc"
+                env-slug: "dev"
+                project-slug: "ggggg-9-des"
+                identity-id: "6b579c00-5c85-4b44-aabe-f8a
+...
+```
+
+These code examples and configuration snippets provide practical guidance for implementing OIDC authentication with Infisical in various scenarios, particularly for GitHub workflows.

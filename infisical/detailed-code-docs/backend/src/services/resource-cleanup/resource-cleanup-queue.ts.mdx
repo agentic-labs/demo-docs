@@ -1,0 +1,61 @@
+---
+title: "resource-cleanup-queue.ts"
+---
+
+## High-level description
+The code defines a queue service responsible for daily resource cleanup tasks in the application. It sets up a recurring job that executes various cleanup operations, such as pruning audit logs, removing expired tokens, and deleting excess secret versions.
+
+## Code Structure
+The `dailyResourceCleanUpQueueServiceFactory` function initializes and configures the daily resource cleanup queue. It utilizes the `queueService` to define the queue, schedule its execution, and handle potential errors. The function depends on various DALs (Data Access Layer) to perform the actual cleanup operations.
+
+## References
+- `QueueName`: An enum defining the names of different queues used in the application.
+- `QueueJobs`: An enum defining the names of different jobs that can be added to the queues.
+- `TQueueServiceFactory`: A factory function for creating instances of the queue service.
+
+## Symbols
+
+### `dailyResourceCleanUpQueueServiceFactory`
+#### Description
+This factory function initializes and configures the daily resource cleanup queue service. It sets up a recurring job that performs various cleanup tasks at a scheduled time.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auditLogDAL | Pick&lt;TAuditLogDALFactory, "pruneAuditLog"&gt; | An object providing access to the `pruneAuditLog` method of the AuditLogDAL. |
+| identityAccessTokenDAL | Pick&lt;TIdentityAccessTokenDALFactory, "removeExpiredTokens"&gt; | An object providing access to the `removeExpiredTokens` method of the IdentityAccessTokenDAL. |
+| identityUniversalAuthClientSecretDAL | Pick&lt;TIdentityUaClientSecretDALFactory, "removeExpiredClientSecrets"&gt; | An object providing access to the `removeExpiredClientSecrets` method of the IdentityUaClientSecretDAL. |
+| secretVersionDAL | Pick&lt;TSecretVersionDALFactory, "pruneExcessVersions"&gt; | An object providing access to the `pruneExcessVersions` method of the SecretVersionDAL. |
+| secretVersionV2DAL | Pick&lt;TSecretVersionV2DALFactory, "pruneExcessVersions"&gt; | An object providing access to the `pruneExcessVersions` method of the SecretVersionV2DAL. |
+| secretFolderVersionDAL | Pick&lt;TSecretFolderVersionDALFactory, "pruneExcessVersions"&gt; | An object providing access to the `pruneExcessVersions` method of the SecretFolderVersionDAL. |
+| snapshotDAL | Pick&lt;TSnapshotDALFactory, "pruneExcessSnapshots"&gt; | An object providing access to the `pruneExcessSnapshots` method of the SnapshotDAL. |
+| secretSharingDAL | Pick&lt;TSecretSharingDALFactory, "pruneExpiredSharedSecrets"&gt; | An object providing access to the `pruneExpiredSharedSecrets` method of the SecretSharingDAL. |
+| queueService | TQueueServiceFactory | An instance of the queue service factory. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| startCleanUp | () =&gt; Promise&lt;void&gt; | A function that starts the daily resource cleanup job. |
+
+#### Internal Logic
+1. Starts the `DailyResourceCleanUp` queue and defines its task.
+2. Defines the cleanup task which includes:
+    - Pruning audit logs using `auditLogDAL.pruneAuditLog()`.
+    - Removing expired identity access tokens using `identityAccessTokenDAL.removeExpiredTokens()`.
+    - Removing expired identity universal auth client secrets using `identityUniversalAuthClientSecretDAL.removeExpiredClientSecrets()`.
+    - Pruning expired shared secrets using `secretSharingDAL.pruneExpiredSharedSecrets()`.
+    - Pruning excess secret snapshots using `snapshotDAL.pruneExcessSnapshots()`.
+    - Pruning excess secret versions using `secretVersionDAL.pruneExcessVersions()`.
+    - Pruning excess secret versions (v2) using `secretVersionV2DAL.pruneExcessVersions()`.
+    - Pruning excess secret folder versions using `secretFolderVersionDAL.pruneExcessVersions()`.
+3. Sets up a repeating job using `queueService.queue` to execute the `DailyResourceCleanUp` queue job every day at midnight UTC.
+4. Sets up an error listener using `queueService.listen` to log any errors encountered during the cleanup process.
+5. Returns the `startCleanUp` function.
+
+## Side Effects
+- Starts a recurring background job that performs resource cleanup tasks.
+- Logs informational messages before and after the cleanup task execution.
+- Logs error messages if any of the cleanup operations fail.
+
+## TODOs
+- `// TODO(akhilmhdh): remove later`: Indicates a code block that needs to be removed in the future.

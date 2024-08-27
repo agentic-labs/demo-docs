@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the OrgPermissionContext, which is a React context for managing and providing organization permissions throughout the Infisical application. It includes a context provider, a custom hook for accessing permissions, and type definitions for the permission structure.
+
+## What does it do?
+The OrgPermissionContext manages user permissions within an organization in the Infisical application. It fetches the user's permissions for the current organization and provides this information to other components in the application. This allows different parts of the application to check if a user has the necessary permissions to perform certain actions or access specific features.
+
+For example, if a user tries to edit a workspace, the application can use this context to check if the user has the 'Edit' permission for the 'Workspace' subject. This context simplifies permission checks across the application and ensures consistent access control.
+
+## Key Files
+1. OrgPermissionContext.tsx
+   - Defines the React context for organization permissions
+   - Implements the `OrgPermissionProvider` component, which fetches and provides permission data
+   - Provides the `useOrgPermission` custom hook for consuming the permission context
+
+2. types.ts
+   - Defines TypeScript types and enums related to organization permissions
+   - Includes enums for permission actions and subjects
+   - Defines the structure of permission sets and the overall organization permission type
+
+3. index.tsx
+   - Acts as the entry point for the OrgPermissionContext
+   - Exports the provider, hook, types, and enums for easy import in other parts of the application
+
+## Dependencies
+The main external dependency used in this directory is:
+
+- @casl/ability (version not specified)
+  - Used for defining the `MongoAbility` type, which is the basis for the `TOrgPermission` type
+  - Chosen likely for its robust and flexible permission management capabilities
+
+Other internal dependencies include:
+- @app/hooks/api: For fetching user organization permissions
+- @app/hooks/api/types: For type definitions related to API responses
+- ../OrganizationContext: For accessing the current organization information
+
+## Configuration
+This directory does not use any specific configuration files or environment variables. However, it relies on the current organization context, which is likely configured elsewhere in the application.
+
+## Code Examples
+
+Here's an example of how the `OrgPermissionProvider` is implemented:
+
+```typescript
+export const OrgPermissionProvider: React.FC&lt;{ children: ReactNode }&gt; = ({ children }) =&gt; {
+  const { currentOrg } = useOrganization();
+  const { data, isLoading, error } = useGetUserOrgPermissions(currentOrg?.id);
+
+  if (isLoading) {
+    return &lt;div&gt;Loading...&lt;/div&gt;;
+  }
+
+  if (error) {
+    return &lt;div&gt;Failed to load permissions&lt;/div&gt;;
+  }
+
+  return (
+    &lt;OrgPermissionContext.Provider
+      value={{
+        permission: data?.permission ?? [],
+        membership: data?.membership ?? null
+      }}
+    &gt;
+      {children}
+    &lt;/OrgPermissionContext.Provider&gt;
+  );
+};
+```
+
+And here's how the `useOrgPermission` hook is implemented:
+
+```typescript
+export const useOrgPermission = () =&gt; {
+  const ctx = useContext(OrgPermissionContext);
+  if (!ctx) {
+    throw new Error("useOrgPermission must be used within an OrgPermissionProvider");
+  }
+  return ctx;
+};
+```
+
+These implementations work together to provide a centralized way of managing and accessing organization permissions throughout the application. The provider fetches the permissions data and makes it available through the context, while the hook provides a convenient way for components to access this data.
+
+The types defined in `types.ts` ensure type safety when working with permissions:
+
+```typescript
+export enum OrgPermissionActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete"
+}
+
+export enum OrgPermissionSubjects {
+  Workspace = "workspace",
+  Role = "role",
+  Member = "member",
+  // ... other subjects ...
+}
+
+export type OrgPermissionSet = [OrgPermissionActions, OrgPermissionSubjects];
+
+export type TOrgPermission = MongoAbility&lt;OrgPermissionSet&gt;;
+```
+
+These types and enums provide a structured way to define and work with permissions, making it easier to maintain consistency across the application and catch potential errors at compile-time.

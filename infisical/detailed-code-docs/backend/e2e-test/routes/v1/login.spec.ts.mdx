@@ -1,0 +1,57 @@
+---
+title: "login.spec.ts"
+---
+
+## High-level description
+This code contains end-to-end (e2e) tests for the login process of a web application. It tests a two-phase login system using the Secure Remote Password (SRP) protocol, implemented with the jsrp library. The tests verify the correct functioning of both phases of the login process.
+
+## Code Structure
+The code consists of two main test cases within a describe block for the "Login V1 Router". The first test case checks the initial phase of the login process, while the second test case verifies the second phase. Both tests use a shared jsrp client instance initialized with seed data.
+
+## Symbols
+
+### `describe("Login V1 Router", async () =&gt; {...})`
+#### Description
+This is the main test suite for the Login V1 Router. It sets up the jsrp client and contains the individual test cases.
+
+#### Internal Logic
+1. Initializes a jsrp client with seed data (email and password).
+2. Sets up a shared `clientProof` variable to be used across test cases.
+
+### `test("Login first phase", async () =&gt; {...})`
+#### Description
+Tests the first phase of the login process, which involves sending the client's public key and receiving the server's public key and salt.
+
+#### Internal Logic
+1. Sends a POST request to "/api/v3/auth/login1" with the email and client's public key.
+2. Expects a 200 status code response.
+3. Verifies that the response contains `serverPublicKey` and `salt`.
+4. Sets the received salt and server public key in the jsrp client.
+5. Generates the client proof (M1) for use in the second phase.
+
+### `test("Login second phase", async () =&gt; {...})`
+#### Description
+Tests the second phase of the login process, which involves sending the client proof and receiving authentication tokens.
+
+#### Internal Logic
+1. Sends a POST request to "/api/v3/auth/login2" with the email and client proof.
+2. Expects a 200 status code response.
+3. Verifies that the response contains `mfaEnabled` and `token` properties.
+4. Checks that `mfaEnabled` is false.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jsrp | Implements the Secure Remote Password (SRP) protocol for secure authentication |
+| @app/db/seed-data | Provides seed data for testing, including email and password |
+
+## Error Handling
+The tests use Jest's `expect` assertions to verify the correct behavior of the login process. If any assertion fails, the test will fail, indicating an error in the login implementation.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /api/v3/auth/login1 | POST | { email, clientPublicKey } | { serverPublicKey, salt } | First phase of login |
+| /api/v3/auth/login2 | POST | { email, clientProof } | { mfaEnabled, token } | Second phase of login |
+
+This documentation provides a comprehensive overview of the login process e2e tests, explaining the purpose, structure, and key components of the code. It highlights the two-phase login system and the use of the SRP protocol for secure authentication.

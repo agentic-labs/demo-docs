@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This code implements a telemetry system for the Infisical CLI. It provides functionality to capture and send usage events to PostHog, an open-source product analytics platform. The telemetry system can be enabled or disabled, and it includes mechanisms for user identification and event logging.
+
+## Code Structure
+The main `Telemetry` struct encapsulates the telemetry functionality, including the PostHog client and enabled status. The `NewTelemetry` function initializes the telemetry system, while `CaptureEvent` and `GetDistinctId` methods handle event capturing and user identification, respectively.
+
+## Symbols
+
+### `Telemetry`
+#### Description
+A struct that represents the telemetry system, containing the enabled status and PostHog client.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isEnabled | bool | Indicates whether telemetry is enabled |
+| posthogClient | posthog.Client | The PostHog client for sending events |
+
+### `NoOpLogger`
+#### Description
+A custom logger that implements the PostHog logger interface, redirecting logs to the zerolog debug level.
+
+### `NewTelemetry`
+#### Description
+Creates and initializes a new Telemetry instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| telemetryIsEnabled | bool | Indicates whether telemetry should be enabled |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Telemetry | *Telemetry | A pointer to the initialized Telemetry instance |
+
+#### Internal Logic
+1. Checks if `POSTHOG_API_KEY_FOR_CLI` is set
+2. If set, initializes a PostHog client with the API key and custom logger
+3. Returns a new Telemetry instance with the provided enabled status and PostHog client
+4. If API key is not set, returns a disabled Telemetry instance
+
+### `CaptureEvent`
+#### Description
+Captures and sends a telemetry event to PostHog if telemetry is enabled.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| eventName | string | The name of the event to capture |
+| properties | posthog.Properties | Additional properties for the event |
+
+#### Internal Logic
+1. Gets the distinct user ID
+2. If telemetry is enabled, enqueues the event with PostHog client
+3. Defers closing the PostHog client
+
+### `GetDistinctId`
+#### Description
+Generates a distinct ID for the user based on machine ID or logged-in user email.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The distinct ID for the user |
+| error | error | Any error encountered during the process |
+
+#### Internal Logic
+1. Attempts to get the machine ID
+2. Retrieves the Infisical config file
+3. Determines the distinct ID based on logged-in user email, machine ID, or returns an empty string
+4. Returns the distinct ID and any encountered error
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/Infisical/infisical-merge/packages/util | Accessing Infisical configuration |
+| github.com/denisbrodbeck/machineid | Generating machine IDs |
+| github.com/posthog/posthog-go | PostHog client for event tracking |
+| github.com/rs/zerolog/log | Logging |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| POSTHOG_API_KEY_FOR_CLI | string | "" | API key for PostHog integration |
+
+## Side Effects
+- The telemetry system sends usage data to PostHog when enabled.
+- The system reads the machine ID and Infisical configuration file.
+
+## Performance Considerations
+The telemetry system uses deferred closing of the PostHog client, which may impact performance if called frequently. Consider batching events or implementing a more efficient closing mechanism for high-frequency usage.
