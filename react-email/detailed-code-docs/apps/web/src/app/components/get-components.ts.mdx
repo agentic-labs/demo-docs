@@ -1,0 +1,154 @@
+---
+title: "get-components.ts"
+---
+
+## High-level description
+The `get-components.ts` file is responsible for importing React components from the file system, extracting their source code, and preparing them for rendering and display in the application. It handles different code variants (e.g., Tailwind CSS, inline styles) and provides a structured representation of the imported components.
+
+## Code Structure
+The code defines several types and functions that work together to import and process components:
+- `CodeVariant`: An enum-like type defining the possible code variants.
+- `ImportedComponent`: An interface extending the base `Component` type with additional properties for the rendered element and code.
+- `ComponentModule`: A Zod schema for validating the structure of imported component modules.
+- `getComponentCodeFrom`: A function that extracts the component's source code from a string containing the file content.
+- `getComponentElement`: A function that dynamically imports a component module and returns the React element.
+- `getImportedComponent`: A function that reads a component's directory, imports the component module, extracts the code, and returns an `ImportedComponent` object.
+- `getImportedComponentsFor`: A function that takes a category and returns an array of `ImportedComponent` objects for all components in that category.
+
+## References
+- `getComponentPathFromSlug`: A function imported from `../../../components/structure` that returns the file system path for a component given its slug.
+- `pathToComponents`: A constant imported from `../../../components/structure` that defines the base path for component files.
+- `Category`: An interface imported from `../../../components/structure` that represents a category of components.
+- `Component`: An interface imported from `../../../components/structure` that represents a single component.
+
+## Symbols
+
+### `CodeVariant`
+#### Description
+A type alias representing the different code variants available for components.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `ImportedComponent`
+#### Description
+An interface representing a component that has been imported and processed.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `ComponentModule`
+#### Description
+A Zod schema used to validate the structure of imported component modules. It ensures that the imported module has a `component` property which is a record of strings to any type.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `getComponentCodeFrom`
+#### Description
+This function takes the content of a component file as a string and extracts the JSX code for the component. It uses Babel to parse the code and find the variable declaration for the component.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fileContent | string | The content of the component file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| componentCode | string | The extracted JSX code for the component. |
+
+#### Internal Logic
+1. Parses the `fileContent` using Babel.
+2. Traverses the parsed code and looks for a variable declaration with the name "component" and an initializer that is a JSX element or fragment.
+3. Extracts the source code for the JSX element or fragment.
+4. Removes leading whitespace from each line of the code.
+5. Returns the formatted code.
+
+### `getComponentElement`
+#### Description
+This function takes the file path of a component and dynamically imports it. It then returns the React element from the imported module.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filepath | string | The file path of the component. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| React.ReactElement | React.ReactElement | The React element of the imported component. |
+
+#### Internal Logic
+1. Calculates the relative path of the component file from the `pathToComponents` directory.
+2. Dynamically imports the component module using the relative path.
+3. Parses the imported module using the `ComponentModule` schema.
+4. Returns the `component` property from the parsed module as a React element.
+
+### `getImportedComponent`
+#### Description
+This function takes a `Component` object and returns an `ImportedComponent` object. It reads the component's directory, imports the component module, extracts the code, and returns an `ImportedComponent` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| component | Component | The component object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ImportedComponent | ImportedComponent | The imported component object. |
+
+#### Internal Logic
+1. Gets the directory path of the component using `getComponentPathFromSlug`.
+2. Reads the directory contents to get the variant filenames.
+3. If there's only one file named "index.tsx", it imports the component, extracts the code, and returns the `ImportedComponent`.
+4. If there are multiple files, it iterates through each variant file:
+    - Imports the component element.
+    - Reads the file content.
+    - Extracts the code for each variant.
+5. Returns the `ImportedComponent` with the element and code for each variant.
+
+### `getImportedComponentsFor`
+#### Description
+This function takes a `Category` object and returns a Promise that resolves to an array of `ImportedComponent` objects for all components in that category.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| category | Category | The category object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Promise&lt;ImportedComponent[]&gt; | Promise&lt;ImportedComponent[]&gt; | A Promise that resolves to an array of imported component objects. |
+
+#### Internal Logic
+1. Maps over the `components` array of the `category` object.
+2. For each component, it calls the `getImportedComponent` function.
+3. Returns a Promise that resolves when all the `getImportedComponent` calls are resolved.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| fs | Node.js file system module for reading files and directories. |
+| path | Node.js path module for working with file and directory paths. |
+| @babel/core | Babel compiler core for parsing and traversing code. |
+| @babel/parser | Babel parser for parsing JavaScript code. |
+| zod | Zod validation library for validating data structures. |
+| react | React library for working with React elements. |
+
+## Error Handling
+- The `getComponentCodeFrom` function throws an error if it cannot find the source code for the component.
+
+## TODOs
+N/A

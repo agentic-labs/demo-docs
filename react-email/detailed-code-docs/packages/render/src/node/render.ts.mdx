@@ -1,0 +1,82 @@
+---
+title: "render.ts"
+---
+
+## High-level description
+This code provides a function to render React components to HTML or plain text. It supports both server-side rendering methods (renderToReadableStream and renderToPipeableStream) and offers options for prettifying the output or converting it to plain text.
+
+## Code Structure
+The main function `render` uses helper functions and imported utilities to process the React component. It interacts with the `react-dom/server` module for rendering, and uses the `convert` function from `html-to-text` for plain text conversion when needed.
+
+## References
+- `react-dom/server`: For server-side rendering of React components
+- `html-to-text`: For converting HTML to plain text
+- `../shared/utils/pretty`: For prettifying HTML output
+- `../shared/plain-text-selectors`: For plain text conversion options
+- `../shared/options`: For defining render options
+
+## Symbols
+
+### `readStream`
+#### Description
+Reads a stream (either PipeableStream or ReactDOMServerReadableStream) and returns its content as a string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stream | PipeableStream \| ReactDOMServerReadableStream | The stream to be read |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Promise&lt;string&gt; | The content of the stream as a string |
+
+#### Internal Logic
+1. Initializes an empty result string.
+2. Checks if the stream has a `pipeTo` method (indicating a readable stream).
+3. If it's a readable stream, creates a WritableStream and pipes the input stream to it.
+4. If it's not a readable stream, creates a Writable stream and pipes the input stream to it.
+5. Decodes chunks using TextDecoder and appends them to the result.
+6. Returns a promise that resolves with the final result.
+
+### `render`
+#### Description
+Renders a React component to HTML or plain text, with options for prettifying and plain text conversion.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| component | React.ReactElement | The React component to render |
+| options | Options (optional) | Rendering options |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Promise&lt;string&gt; | The rendered output as HTML or plain text |
+
+#### Internal Logic
+1. Imports `react-dom/server` dynamically.
+2. Checks if `renderToReadableStream` is available, otherwise uses `renderToPipeableStream`.
+3. Renders the component using the appropriate method and reads the stream.
+4. If `plainText` option is true, converts HTML to plain text using `html-to-text`.
+5. If not plain text, adds DOCTYPE and optionally prettifies the HTML.
+6. Returns the final result.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| react-dom/server | Server-side rendering of React components |
+| html-to-text | Converting HTML to plain text |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| pretty | boolean | false | Whether to prettify the HTML output |
+| plainText | boolean | false | Whether to convert the output to plain text |
+| htmlToTextOptions | HtmlToTextOptions | undefined | Options for HTML to text conversion |
+
+## Error Handling
+The code uses try-catch blocks and promise rejection handling to manage errors during the rendering process.
+
+## Performance Considerations
+The code uses streaming for rendering, which can be more memory-efficient for large components. However, the entire rendered content is stored in memory before processing, which could be a concern for extremely large renders.

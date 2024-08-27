@@ -1,0 +1,139 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains an example implementation of integrating the Resend email service with a Next.js application. It demonstrates how to set up a simple API endpoint for sending waitlist emails using a predefined React email template.
+
+## What does it do?
+The code in this directory sets up a Next.js application with an API route that allows sending a waitlist confirmation email. When a GET request is made to the `/api/send` endpoint, the application uses the Resend API to send a pre-designed email template to a specified recipient. The email template is created using React components, making it easy to maintain and customize.
+
+## Entry points
+The main entry point for this example is the `pages/api/send.ts` file, which defines the API route handler for the `/api/send` endpoint. This file orchestrates the process of sending the email by:
+
+1. Importing the Resend client instance from `lib/resend.ts`
+2. Importing the `WaitlistEmail` component from the `transactional/emails/waitlist` directory
+3. Handling the GET request and using the Resend client to send the email
+
+## Key Files
+
+### `/lib/resend.ts`
+This file initializes and exports a Resend client instance using an API key from the environment variables:
+
+```typescript
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY!);
+
+export { resend };
+```
+
+### `/pages/api/send.ts`
+This file defines the API endpoint for sending a waitlist email:
+
+```typescript
+import { NextApiRequest, NextApiResponse } from 'next';
+import { WaitlistEmail } from '../../../transactional/emails/waitlist';
+import { resend } from '../../lib/resend';
+
+export default async function send(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { method } = req;
+
+  switch (method) {
+    case 'GET':
+      try {
+        const data = await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: 'demo@resend.dev',
+          subject: `You're on the list! 🎉`,
+          react: WaitlistEmail({}),
+        });
+        res.status(200).json(data);
+      } catch (error) {
+        res.status(500).json({ error });
+      }
+      break;
+    default:
+      res.setHeader('Allow', ['GET']);
+      res.status(405).end(`Method ${method} Not Allowed`);
+  }
+}
+```
+
+### `/transactional/emails/waitlist.tsx`
+This file contains the React component for the waitlist email template:
+
+```typescript
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Text,
+} from '@react-email/components';
+import * as React from 'react';
+
+export const WaitlistEmail = ({ name = 'there' }) =&gt; (
+  &lt;Html&gt;
+    &lt;Head /&gt;
+    &lt;Preview&gt;You're on the waitlist!&lt;/Preview&gt;
+    &lt;Body style={main}&gt;
+      &lt;Container style={container}&gt;
+        &lt;Heading style={h1}&gt;You're on the list!&lt;/Heading&gt;
+        &lt;Text style={text}&gt;
+          Hey {name}, thanks for joining our waitlist. We'll let you know when
+          we launch!
+        &lt;/Text&gt;
+      &lt;/Container&gt;
+    &lt;/Body&gt;
+  &lt;/Html&gt;
+);
+
+export default WaitlistEmail;
+
+// Styles omitted for brevity
+```
+
+## Dependencies
+- `next`: The Next.js framework for building React applications
+- `react` and `react-dom`: Core React libraries
+- `resend`: The Resend email service client
+- `@react-email/components`: Provides pre-built React components for creating email templates
+- `typescript`: For TypeScript support
+
+## Configuration
+The project uses TypeScript and is configured with a `tsconfig.json` file that sets up the compiler options for a Next.js project. The main configuration point is the `RESEND_API_KEY` environment variable, which must be set to a valid Resend API key for the email functionality to work correctly.
+
+The `package.json` file defines the project's dependencies and scripts for building, developing, and starting the application:
+
+```json
+{
+  "name": "react-email-with-resend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "13.4.12",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "resend": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.4.4",
+    "@types/react": "18.2.15",
+    "@types/react-dom": "18.2.7",
+    "typescript": "5.1.6"
+  }
+}
+```
+
+This example demonstrates a simple yet effective way to integrate email functionality into a Next.js application using Resend and React Email components. It provides a foundation that can be easily extended to support more complex email scenarios and templates.

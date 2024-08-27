@@ -1,0 +1,75 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `examples/resend/src` directory demonstrates how to integrate the Resend email service into a Next.js application. It provides a simple API endpoint for sending waitlist emails using a predefined template.
+
+## What does it do?
+This code sets up an API endpoint (`/api/send`) that allows users to send a pre-defined waitlist email. When a GET request is made to this endpoint, the code uses the Resend API to send the email and returns a success message to the user.
+
+## Entry points
+The main entry point for this example is the `pages/api/send.ts` file. This file defines the API route handler for the `/api/send` endpoint. It imports the `resend` client instance from `lib/resend.ts` and the `WaitlistEmail` component from the `transactional/emails/waitlist` directory.
+
+Data flow:
+1. A GET request is made to the `/api/send` endpoint.
+2. The `send` function in `pages/api/send.ts` is executed.
+3. The `send` function uses the `resend` client to send the waitlist email.
+4. The response from the Resend API is returned to the client.
+
+## Key Files
+
+### `/lib/resend.ts`
+This file initializes and exports a Resend client instance using an API key from the environment variables. This allows for easy integration of email functionality throughout the application.
+
+```typescript
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY!);
+
+export { resend };
+```
+
+### `/pages/api/send.ts`
+This file defines the API endpoint for sending a waitlist email using the Resend email service. It handles GET requests, sends a predefined email template, and returns the response data or an error for unsupported HTTP methods.
+
+```typescript
+import { NextApiRequest, NextApiResponse } from 'next';
+import { WaitlistEmail } from '../../../transactional/emails/waitlist';
+import { resend } from '../../lib/resend';
+
+export default async function send(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { method } = req;
+
+  switch (method) {
+    case 'GET':
+      try {
+        const data = await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: 'demo@resend.dev',
+          subject: `You're on the list! 🎉`,
+          react: WaitlistEmail({}),
+        });
+        res.status(200).json(data);
+      } catch (error) {
+        res.status(500).json({ error });
+      }
+      break;
+    default:
+      res.setHeader('Allow', ['GET']);
+      res.status(405).end(`Method ${method} Not Allowed`);
+  }
+}
+```
+
+## Dependencies
+
+- `resend`: Provides the `Resend` class for interacting with the Resend email service.
+- `next`: Provides types for Next.js API routes.
+- `@react-email/components`: Used in the `WaitlistEmail` component for building responsive email templates.
+
+## Configuration
+The code relies on the `RESEND_API_KEY` environment variable to authenticate with the Resend service. This variable must be set to a valid Resend API key for the email functionality to work correctly. 

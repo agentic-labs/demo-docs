@@ -1,0 +1,74 @@
+---
+title: "render-async.ts"
+---
+
+## High-level description
+This code provides functionality to render React components asynchronously into HTML or plain text. It supports both node and edge environments, handling different stream types and offering options for prettifying output or converting to plain text.
+
+## Code Structure
+The main function `renderAsync` uses helper functions like `readStream` to process different types of streams. It also imports utility functions from other modules for prettifying HTML and converting to plain text.
+
+## References
+- `pretty` from "../shared/utils/pretty"
+- `plainTextSelectors` from "../shared/plain-text-selectors"
+- `Options` type from "../shared/options"
+
+## Symbols
+
+### `readStream`
+#### Description
+Reads data from a stream and returns it as a string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stream | PipeableStream \| ReactDOMServerReadableStream | The stream to read from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | string | The content of the stream as a string |
+
+#### Internal Logic
+1. Checks if the stream has a `pipeTo` method (indicating a readable stream).
+2. If it's a readable stream, uses a `WritableStream` to collect chunks.
+3. If not, uses a `Writable` stream from Node.js to collect chunks.
+4. Decodes chunks using a `TextDecoder` and concatenates them.
+
+### `renderAsync`
+#### Description
+Renders a React component to HTML or plain text asynchronously.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| component | React.ReactElement | The React component to render |
+| options | Options (optional) | Rendering options |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | string | The rendered HTML or plain text |
+
+#### Internal Logic
+1. Imports `react-dom/server` dynamically.
+2. Chooses between `renderToReadableStream` and `renderToPipeableStream` based on availability.
+3. Reads the stream using the `readStream` function.
+4. If `plainText` option is true, converts HTML to plain text using `html-to-text`.
+5. If `pretty` option is true, prettifies the HTML using the `pretty` function.
+6. Returns the final result as a string.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| react-dom/server | For server-side rendering of React components |
+| html-to-text | For converting HTML to plain text |
+
+## Error Handling
+The code uses promises and async/await for handling asynchronous operations. Errors in the rendering process are propagated through the promise chain.
+
+## Performance Considerations
+The code uses streaming APIs for rendering, which can be more memory-efficient for large components. However, the entire rendered content is stored in memory before being processed or returned.
+
+## TODOs
+The `renderAsync` function is marked as deprecated with a comment suggesting to use `render` instead.

@@ -1,0 +1,76 @@
+---
+title: "bump-stable.yml"
+---
+
+## High-level description
+This GitHub Actions workflow automates the process of bumping the project version and creating a release pull request when changes are pushed to the `main` branch. It utilizes `changesets` library to manage versioning and releases.
+
+## Code Structure
+The workflow defines a single job named `release` that runs on the latest Ubuntu environment. The job consists of several steps executed sequentially: checkout the repository, set up Node.js, enable pnpm, install dependencies, exit prerelease mode (if applicable), and create a release pull request using the `changesets/action`.
+
+## Symbols
+
+### `name: Bump`
+#### Description
+This section defines the name of the entire workflow, displayed as "Bump" on the Actions tab in the GitHub repository.
+
+### `on: push`
+#### Description
+This section specifies the trigger for the workflow. It will be automatically triggered on every `push` event to the repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| branches | string | Specifies that the workflow should only be triggered on pushes to the `main` branch. |
+
+### `concurrency`
+#### Description
+This section ensures that only one workflow run for this specific workflow is executed at a time, preventing concurrent runs for the same workflow and branch.
+
+### `jobs: release`
+#### Description
+This section defines a single job named `release` within the workflow.
+
+### `runs-on: ubuntu-latest`
+#### Description
+Specifies that the job should run on the latest available Ubuntu virtual environment provided by GitHub Actions.
+
+### `steps`
+#### Description
+This section outlines the individual steps that will be executed sequentially within the `release` job.
+
+### `name: Checkout Repo`
+#### Description
+This step checks out the repository's code using the `actions/checkout@v4` action, making the code accessible to subsequent steps.
+
+### `name: Setup Node.js 20`
+#### Description
+This step sets up the Node.js environment using the `actions/setup-node@v3` action, specifying version 20.
+
+### `name: Enable Corepack`
+#### Description
+This step enables Corepack, a Node.js feature for managing package managers, and configures pnpm as the active package manager.
+
+### `name: pnpm Cache`
+#### Description
+This step sets up caching for the pnpm store using the `buildjet/cache@v3` action, speeding up subsequent workflow runs by reusing cached packages.
+
+### `name: Install packages`
+#### Description
+This step installs the project dependencies using `pnpm install --frozen-lockfile`, ensuring that only the packages specified in the lockfile are installed.
+
+### `name: Exit prerelease mode`
+#### Description
+This step attempts to exit the prerelease mode using `pnpm canary:exit`. It has a `continue-on-error` flag set to `true`, meaning the workflow will continue even if this step fails. This is useful for handling cases where the project is not in prerelease mode.
+
+### `name: Create Release Pull Request`
+#### Description
+This step utilizes the `changesets/action@v1` action to automate the creation of a release pull request. It determines the new version using `pnpm run version` and sets the pull request title to "chore: Bump for release". The `GITHUB_TOKEN` secret is used to authenticate with the GitHub API.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository's code. |
+| actions/setup-node | Sets up the Node.js environment. |
+| buildjet/cache | Caches dependencies to speed up workflows. |
+| changesets/action | Automates version bumping and release creation. |
