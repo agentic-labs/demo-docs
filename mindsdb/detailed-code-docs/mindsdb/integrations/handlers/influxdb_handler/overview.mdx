@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the InfluxDB handler for MindsDB. It provides functionality to connect to and query InfluxDB databases, allowing MindsDB to integrate with InfluxDB as a data source. The handler translates SQL queries into InfluxDB-compatible queries and processes the results.
+
+## What does it do?
+The InfluxDB handler enables MindsDB to:
+1. Establish connections to InfluxDB databases using provided credentials and connection details.
+2. Execute SQL queries against InfluxDB data, translating them into InfluxDB's query language.
+3. Retrieve and process data from InfluxDB tables.
+4. Manage tables within the InfluxDB database.
+5. Provide a seamless interface for MindsDB users to work with time-series data stored in InfluxDB using familiar SQL syntax.
+
+## Key Files
+1. `influxdb_handler.py`: Contains the main `InfluxDBHandler` class, which handles connections to InfluxDB and executes queries.
+2. `influxdb_tables.py`: Implements the `InfluxDBTables` class, which manages table operations and query translations.
+3. `__init__.py`: Defines the entry point for the handler and exports relevant metadata.
+4. `__about__.py`: Contains package metadata such as version, author, and description.
+
+## Dependencies
+The InfluxDB handler relies on the following main external libraries:
+- `influxdb_client_3`: Provides the client library for interacting with InfluxDB (version 3.x).
+- `pandas`: Used for data manipulation and analysis, particularly for handling DataFrames.
+- `mindsdb_sql`: Offers SQL parsing capabilities for translating SQL queries.
+
+## Configuration
+To use the InfluxDB handler, users need to provide the following configuration parameters:
+- `influxdb_url`: The hosted URL of the InfluxDB Cloud instance.
+- `influxdb_token`: Authentication token for accessing the InfluxDB cloud instance.
+- `influxdb_db_name`: The name of the database in the InfluxDB cloud instance.
+- `influxdb_table_name`: The name of the table in the InfluxDB cloud instance.
+- `org`: The organization name in the InfluxDB cloud instance.
+
+These parameters are used when creating a new database connection in MindsDB using the `CREATE DATABASE` SQL command.
+
+## Key Features and Functionality
+
+### Connection Management
+The `InfluxDBHandler` class in `influxdb_handler.py` manages connections to InfluxDB. It provides methods to:
+- Establish a connection using provided credentials (`connect` method).
+- Check the connection status (`check_connection` method).
+- Execute native queries directly against InfluxDB (`native_query` method).
+
+Example of connection checking:
+```python
+def check_connection(self):
+    response = HandlerStatusResponse(False)
+    try:
+        self.connect()
+        response.success = True
+    except Exception as e:
+        log.error(f'Error connecting to InfluxDB: {e}')
+        response.error_message = str(e)
+    return response
+```
+
+### Query Execution and Translation
+The `InfluxDBTables` class in `influxdb_tables.py` handles the translation of SQL queries to InfluxDB-compatible queries and executes them. Key functionalities include:
+
+1. Parsing SQL SELECT queries using `SELECTQueryParser`.
+2. Translating parsed queries into InfluxDB format using the `get_select_query` method.
+3. Executing queries and returning results as pandas DataFrames.
+
+Example of query translation:
+```python
+def get_select_query(table_name, selected_columns, where_conditions, order_by_conditions, result_limit):
+    query = f"SELECT {', '.join(selected_columns)} FROM {table_name}"
+    if where_conditions:
+        query += f" WHERE {' AND '.join(where_conditions)}"
+    if order_by_conditions:
+        query += f" ORDER BY {', '.join([f'{col} {order}' for col, order in order_by_conditions.items()])}"
+    if result_limit:
+        query += f" LIMIT {result_limit}"
+    return query
+```
+
+### Data Retrieval and Processing
+The handler processes query results and returns them as pandas DataFrames, making it easy for MindsDB to work with the data. It handles specifics of InfluxDB data structures, such as removing 'name' and 'tags' columns if they are not explicitly requested.
+
+### Error Handling and Logging
+The handler implements basic error handling and uses MindsDB's logging utility to log warnings and errors. This helps in debugging and provides informative messages to users when issues occur.
+
+## Usage
+To use the InfluxDB handler in MindsDB, users can create a new database connection using SQL commands:
+
+```sql
+CREATE DATABASE influxdb_source
+WITH
+engine='influxdb',
+parameters={
+    "influxdb_url": "&lt;influxdb-hosted-url&gt;",
+    "influxdb_token": "&lt;api-key-token&gt;",
+    "influxdb_db_name": "&lt;database-name&gt;",
+    "influxdb_table_name": "&lt;table-name&gt;",
+    "org": "Organisation"
+};
+```
+
+After creating the connection, users can query InfluxDB data using standard SQL syntax:
+
+```sql
+SELECT * FROM influxdb_source.tables
+```
+
+The handler takes care of translating these SQL queries into InfluxDB-compatible queries, executing them, and returning the results.
+
+In conclusion, the InfluxDB handler provides a robust integration between MindsDB and InfluxDB, allowing users to leverage InfluxDB's time-series database capabilities within the MindsDB ecosystem using familiar SQL syntax.

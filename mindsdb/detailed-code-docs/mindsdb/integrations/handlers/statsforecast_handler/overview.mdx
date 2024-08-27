@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the StatsForecast handler for MindsDB, which integrates Nixtla's StatsForecast package for time series forecasting. The handler provides functionality to create, train, and make predictions using various classical time series models, including AutoARIMA, AutoETS, AutoCES, and AutoTheta.
+
+## What does it do?
+The StatsForecast handler allows MindsDB users to perform time series forecasting using classical statistical methods. It supports:
+1. Automatic model selection and tuning
+2. Forecasting with different time frequencies (e.g., hourly, daily, monthly)
+3. Hierarchical forecasting for data with hierarchical structures
+4. Cross-validation for model evaluation
+5. Automatic seasonality detection
+
+Users can create predictive models, make forecasts, and obtain model descriptions through SQL-like syntax within MindsDB.
+
+## Key Files
+1. `statsforecast_handler.py`: The main implementation file containing the `StatsForecastHandler` class and utility functions for model creation, prediction, and description.
+2. `__init__.py`: Initializes the handler and exports essential components and metadata.
+3. `__about__.py`: Contains metadata about the handler, including version, description, and licensing information.
+
+## Dependencies
+- `statsforecast`: The core library for time series forecasting models
+- `pandas`: For data manipulation and analysis
+- `dill`: For object serialization
+- `sklearn.metrics`: For model evaluation metrics
+- `hierarchicalforecast` (optional): For hierarchical forecasting capabilities
+
+## Configuration
+The handler supports several configuration options through the `USING` syntax in MindsDB queries:
+
+1. `horizon`: Specifies the forecast horizon
+2. `model_name`: Chooses the predictive model (AutoARIMA, AutoETS, AutoCES, AutoTheta, or auto)
+3. `frequency`: Sets the data frequency (e.g., 'H' for hourly, 'D' for daily)
+4. `hierarchy`: Specifies the hierarchical structure of the data for reconciliation
+
+Example usage:
+```sql
+CREATE PREDICTOR my_forecast
+FROM my_data
+PREDICT target_column
+USING
+  engine = 'statsforecast',
+  horizon = 30,
+  model_name = 'AutoARIMA',
+  frequency = 'D'
+```
+
+The handler automatically infers seasonality and frequency from the input data if not specified.
+
+## Key Features and Functionality
+
+1. **Model Creation and Training**:
+   The `create` method in `StatsForecastHandler` prepares the data, selects the appropriate model, and trains it. It supports automatic model selection when 'auto' is specified as the model name.
+
+   ```python
+   def create(self, target, df, args={}):
+       # ... (data preparation)
+       model_args = self._get_model_args(args)
+       results_df = get_insample_cv_results(model_args, df)
+       self.model = choose_model(model_args, results_df)
+       # ... (model fitting and storage)
+   ```
+
+2. **Prediction**:
+   The `predict` method generates forecasts using the trained model. It supports hierarchical reconciliation if a hierarchy is specified.
+
+   ```python
+   def predict(self, df, args={}):
+       # ... (data preparation)
+       forecast = self.model.forecast(h=self.horizon, X_df=df)
+       # ... (hierarchical reconciliation if applicable)
+       return forecast
+   ```
+
+3. **Model Description**:
+   The `describe` method provides information about the model, including its type, accuracy metrics, and inferred seasonality.
+
+   ```python
+   def describe(self, attribute=None):
+       # ... (generate description dictionary)
+       return description
+   ```
+
+4. **Utility Functions**:
+   - `get_season_length`: Infers the best season length from the given frequency.
+   - `get_insample_cv_results`: Performs in-sample cross-validation for model evaluation.
+   - `choose_model`: Selects the best performing model based on cross-validation results.
+
+The StatsForecast handler provides a powerful and flexible solution for time series forecasting within MindsDB, leveraging classical statistical methods that are fast to train and less prone to overfitting compared to deep learning approaches.

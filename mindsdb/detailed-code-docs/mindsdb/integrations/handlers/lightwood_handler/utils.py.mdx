@@ -1,0 +1,95 @@
+---
+title: "utils.py"
+---
+
+## High-level description
+This file contains utility functions for handling and manipulating data structures, particularly for working with predictors and JSON-like configurations. It includes functions for unpacking nested JSON structures, loading predictors, recursively replacing dictionary values, and converting bracket notation to module-like structures.
+
+## Symbols
+
+### `unpack_jsonai_old_args`
+#### Description
+This function unpacks nested JSON-like structures with dot-separated keys into a nested dictionary structure.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| json_ai_override | dict | A dictionary potentially containing dot-separated keys |
+
+#### Internal Logic
+1. Iterates through the keys of the input dictionary.
+2. For keys containing dots, it splits them and creates nested dictionaries.
+3. Moves the value to the innermost level of the nested structure.
+4. Removes the original dot-separated key from the dictionary.
+
+### `load_predictor`
+#### Description
+Loads a predictor object from a dictionary, handling potential module import issues.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictor_dict | dict | A dictionary containing the serialized predictor and its code |
+| name | str | The name of the predictor (unused in the function) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictor | object | The deserialized predictor object |
+
+#### Internal Logic
+1. Attempts to deserialize the predictor using `dill.loads`.
+2. If it fails due to a missing module, it extracts the module name from the error.
+3. Removes the problematic module from `sys.modules` if present.
+4. Runs garbage collection to free up resources.
+5. Creates a new module from the provided code.
+6. Retries deserializing the predictor.
+
+### `rep_recur`
+#### Description
+Recursively replaces values in a target dictionary with values from an override dictionary.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| org | dict | The original dictionary to be modified |
+| ovr | dict | The override dictionary containing new values |
+
+#### Internal Logic
+1. Iterates through the keys in the override dictionary.
+2. If a key exists in both dictionaries and both values are dictionaries, recursively calls itself.
+3. Otherwise, replaces the value in the original dictionary with the value from the override dictionary.
+4. Adds new keys from the override dictionary to the original dictionary.
+
+### `brack_to_mod`
+#### Description
+Converts bracket notation strings to module-like dictionary structures and attempts to parse JSON-like strings.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ovr | any | The input value to be processed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| processed_value | any | The processed value after conversion |
+
+#### Internal Logic
+1. If the input is a list, recursively processes each element.
+2. If the input is a string:
+   a. Checks for bracket notation (e.g., "module(arg1=value1, arg2=value2)") and converts it to a dictionary.
+   b. Attempts to parse JSON-like strings enclosed in curly braces.
+3. If the input is a dictionary, recursively processes its values.
+4. Returns the processed value.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| gc | For garbage collection |
+| json | For parsing JSON-like strings |
+| sys | For manipulating Python's module system |
+| dill | For serialization and deserialization of Python objects |
+| lightwood.api.high_level | For creating modules from code strings |
+
+This utility file provides essential functions for handling complex data structures and loading predictors in the Lightwood handler integration for MindsDB. It focuses on manipulating nested configurations, loading serialized predictors with potential module conflicts, and converting between different notation formats.

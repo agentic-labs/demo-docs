@@ -1,0 +1,93 @@
+---
+title: "fs.py"
+---
+
+Here's a high-level description and documentation of the target file `mindsdb/interfaces/storage/fs.py`:
+
+## High-level description
+
+This file implements various file storage mechanisms for MindsDB, including local file storage, S3 storage, and a file locking mechanism. It provides classes for handling different storage types and a unified interface for file operations across different storage backends.
+
+## Code Structure
+
+The main classes in this file are:
+
+1. `BaseFSStore`: An abstract base class for file storage implementations.
+2. `AbsentFSStore`: A dummy storage class that doesn't actually store anything.
+3. `LocalFSStore`: A storage class for local file system operations.
+4. `FileLock`: A class for implementing file-based locking mechanism.
+5. `S3FSStore`: A storage class for Amazon S3 operations.
+6. `FileStorage`: A high-level class that provides a unified interface for file operations across different storage backends.
+
+These classes interact with each other to provide a flexible and extensible storage system for MindsDB.
+
+## Symbols
+
+### `BaseFSStore`
+#### Description
+An abstract base class that defines the interface for file storage implementations.
+
+#### Methods
+- `get(self, local_name, base_dir)`: Abstract method to copy a file/folder from storage to a local directory.
+- `put(self, local_name, base_dir)`: Abstract method to copy a file/folder from a local directory to storage.
+- `delete(self, remote_name)`: Abstract method to delete a file/folder from storage.
+
+### `LocalFSStore`
+#### Description
+A concrete implementation of `BaseFSStore` for local file system operations.
+
+#### Methods
+- `get(self, local_name, base_dir)`: Copies a file/folder from storage to a local directory.
+- `put(self, local_name, base_dir, compression_level=9)`: Copies a file/folder from a local directory to storage.
+- `delete(self, remote_name)`: Deletes a file/folder from storage.
+
+### `S3FSStore`
+#### Description
+A concrete implementation of `BaseFSStore` for Amazon S3 operations.
+
+#### Methods
+- `get(self, local_name, base_dir)`: Downloads a file/folder from S3 to a local directory.
+- `put(self, local_name, base_dir, compression_level=9)`: Uploads a file/folder from a local directory to S3.
+- `delete(self, remote_name)`: Deletes a file/folder from S3.
+
+### `FileStorage`
+#### Description
+A high-level class that provides a unified interface for file operations across different storage backends.
+
+#### Methods
+- `push(self, compression_level: int = 9)`: Pushes local changes to the storage backend.
+- `pull(self)`: Pulls changes from the storage backend to the local file system.
+- `file_set(self, name, content)`: Sets the content of a file in storage.
+- `file_get(self, name)`: Gets the content of a file from storage.
+- `add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None)`: Adds a file or folder to storage.
+- `get_path(self, relative_path: Union[str, Path]) -&gt; Path`: Gets the path to a file or folder in storage.
+- `delete(self, relative_path: Union[str, Path] = '.')`: Deletes a file or folder from storage.
+
+## Dependencies
+- os
+- io
+- shutil
+- tarfile
+- hashlib
+- pathlib
+- abc
+- typing
+- dataclasses
+- datetime
+- threading
+- boto3 (optional, for S3 storage)
+- checksumdir
+- psutil
+
+## Error Handling
+The code implements various error handling mechanisms, including try-except blocks for file operations and S3 interactions. It also uses custom exceptions like `FileNotFoundError` and `BlockingIOError` for specific error scenarios.
+
+## Logging
+The code uses a custom logger (`mindsdb.utilities.log`) for logging various operations and error messages.
+
+## Performance Considerations
+- The code implements caching mechanisms for S3 operations to reduce unnecessary network calls.
+- It uses compression (with configurable levels) when storing files to reduce storage space and transfer times.
+- The `FileLock` class is used to ensure thread-safe operations on shared resources.
+
+This file plays a crucial role in MindsDB's storage system, providing a flexible and extensible way to handle file operations across different storage backends. It's designed to be thread-safe and efficient, with considerations for performance and error handling.

@@ -1,0 +1,83 @@
+---
+title: "build_deploy_staging.yml"
+---
+
+## High-level description
+This GitHub Actions workflow is designed to build Docker images, deploy them to staging environments, and run integration tests when a pull request is merged into the main branch. It ensures that the latest changes are built, deployed, and tested in a staging environment before they reach production.
+
+## Code Structure
+The workflow consists of four main jobs: `build`, `build_cache`, `deploy`, and `run_tests`. These jobs are executed sequentially, with dependencies between them to ensure proper order of operations.
+
+## Symbols
+
+### Workflow
+#### Description
+This GitHub Actions workflow is triggered when a pull request is closed and merged. It builds Docker images, deploys them to staging environments, and runs integration tests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| github.event | object | Contains information about the pull request event |
+
+#### Internal Logic
+1. Checks if the pull request was merged
+2. Builds Docker images
+3. Builds and pushes Docker cache layers
+4. Deploys to staging environments
+5. Runs integration tests
+
+### `build` job
+#### Description
+Builds Docker images based on a bake file.
+
+#### Internal Logic
+1. Checks out the repository
+2. Pulls MindsDB GitHub Actions
+3. Uses a custom action to build Docker images
+
+### `build_cache` job
+#### Description
+Builds and pushes Docker cache layers to a cache repository.
+
+#### Internal Logic
+1. Checks out the repository
+2. Pulls MindsDB GitHub Actions
+3. Uses a custom action to build and push Docker cache layers
+
+### `deploy` job
+#### Description
+Deploys the built Docker images to staging environments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deploy-envs | JSON array | List of environments to deploy to |
+| image-tag | string | Git SHA of the commit to deploy |
+
+#### Internal Logic
+Uses a reusable workflow to handle the deployment process
+
+### `run_tests` job
+#### Description
+Runs integration tests against the deployed environments.
+
+#### Internal Logic
+Uses a reusable workflow to run integration tests
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checking out the repository and MindsDB GitHub Actions |
+| ./github-actions/docker-bake | Custom action for building Docker images |
+| ./github-actions/docker-bake-cache | Custom action for building and pushing Docker cache layers |
+| ./.github/workflows/deploy.yml | Reusable workflow for deployment |
+| ./.github/workflows/test_on_deploy.yml | Reusable workflow for running integration tests |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| concurrency.group | string | ${{ github.workflow_ref }} | Defines the concurrency group for the workflow |
+| concurrency.cancel-in-progress | boolean | true | Cancels in-progress runs of the same workflow |
+
+## TODOs
+- Run integration tests against the deployed environment (currently a TODO in the workflow)

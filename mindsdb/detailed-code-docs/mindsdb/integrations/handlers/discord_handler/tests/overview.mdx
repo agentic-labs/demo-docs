@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the DiscordHandler class, which is part of the MindsDB integration with Discord. The tests are designed to verify the functionality of connecting to Discord, reading messages from a Discord channel, and sending messages to a Discord channel.
+
+## What does it do?
+The tests in this directory ensure that the DiscordHandler works correctly by:
+1. Checking if the connection to Discord can be established successfully.
+2. Verifying that messages can be read from a specified Discord channel.
+3. Confirming that messages can be sent to a Discord channel.
+
+These tests help maintain the reliability and functionality of the Discord integration in MindsDB by simulating real-world usage scenarios and verifying that the handler responds correctly.
+
+## Key Files
+1. `test_discord.py`: This is the main test file containing the `DiscordHandlerTest` class. It includes three test methods:
+   - `test_0_check_connection`: Verifies the connection check functionality.
+   - `test_1_read_messages`: Tests the ability to read messages from a Discord channel.
+   - `test_2_send_message`: Tests the ability to send a message to a Discord channel.
+
+## Dependencies
+The tests rely on the following external libraries and modules:
+1. `unittest`: Provides the testing framework for structuring and running the tests.
+2. `unittest.mock`: Used for mocking external API calls to Discord, allowing tests to run without actual network requests.
+3. `mindsdb.integrations.handlers.discord_handler.discord_handler`: Contains the DiscordHandler class being tested.
+4. `mindsdb_sql.parser`: Used for parsing SQL-like queries in the message reading test.
+
+## Configuration
+The tests use a test token for authentication, which is set up in the `setUpClass` method of the `DiscordHandlerTest` class. This token is used to initialize the DiscordHandler instance for testing.
+
+Here's an example of how the DiscordHandler is initialized in the tests:
+
+```python
+@classmethod
+def setUpClass(cls):
+    cls.handler = DiscordHandler({"token": "test_token"})
+```
+
+## Code Snippets and Examples
+
+1. Checking the connection:
+```python
+def test_0_check_connection(self):
+    assert self.handler.check_connection()
+```
+
+2. Reading messages (with mocked API call):
+```python
+@patch('requests.get')
+def test_1_read_messages(self, mock_get):
+    mock_response = Mock()
+    mock_response.json.return_value = {'messages': [{'id': '1', 'content': 'Test message'}]}
+    mock_get.return_value = mock_response
+
+    query = parse_sql("SELECT * FROM messages WHERE channel_id = '123456789'", dialect='mindsdb')
+    self.handler._tables['messages'].select(query)
+
+    mock_get.assert_called_once_with(
+        'https://discord.com/api/v10/channels/123456789/messages',
+        headers={'Authorization': 'Bot test_token'}
+    )
+```
+
+3. Sending a message (with mocked API call):
+```python
+@patch('requests.post')
+def test_2_send_message(self, mock_post):
+    self.handler._tables['messages'].send_message('123456789', 'Test message')
+
+    mock_post.assert_called_once_with(
+        'https://discord.com/api/v10/channels/123456789/messages',
+        headers={'Authorization': 'Bot test_token'},
+        json={'content': 'Test message'}
+    )
+```
+
+These tests demonstrate how the DiscordHandler interacts with the Discord API, including how it formats requests and handles responses. By mocking the API calls, the tests can run quickly and reliably without depending on external services or network conditions.
+
+The use of unittest and mocking allows for isolated testing of the DiscordHandler's functionality, ensuring that changes to the handler don't inadvertently break existing features. This test suite provides a solid foundation for maintaining and expanding the Discord integration in MindsDB.

@@ -1,0 +1,180 @@
+---
+title: "urlcrawl_helpers.py"
+---
+
+## High-level description
+This file contains helper functions for crawling and processing web content. It provides utilities for converting PDFs to markdown, fetching website links, and extracting readable text from HTML content. The main functionality is to recursively crawl websites, process their content, and return the results in a structured format.
+
+## Code Structure
+The file defines several interconnected functions that work together to crawl websites and process their content. The main function `get_all_websites` utilizes other helper functions like `get_all_website_links_recursively` and `parallel_get_all_website_links` to fetch and process website data.
+
+## Symbols
+
+### `pdf_to_markdown`
+#### Description
+Converts a PDF document to Markdown text.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | object | Response object containing PDF data |
+| gap_threshold | int | Vertical gap size triggering a new line (default 10) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| markdown_text | str | Converted Markdown text |
+
+#### Internal Logic
+1. Opens the PDF from the response content
+2. Iterates through each page, extracting text blocks
+3. Sorts blocks by position and adds line breaks based on gap_threshold
+4. Joins all processed text into a single markdown string
+
+### `is_valid`
+#### Description
+Checks if a given URL is valid.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | URL to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| is_valid | bool | True if URL is valid, False otherwise |
+
+### `parallel_get_all_website_links`
+#### Description
+Fetches all website links from a list of URLs in parallel.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| urls | list | List of URLs to fetch links from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url_contents | dict | Dictionary mapping each URL to a list of links found on that URL |
+
+#### Internal Logic
+Uses concurrent.futures to process URLs in parallel if there are more than 10 URLs.
+
+### `get_all_website_links`
+#### Description
+Fetches all website links from a single URL.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | URL to fetch links from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | dict | Dictionary containing URL, extracted links, HTML content, text content, and any errors |
+
+#### Internal Logic
+1. Sends a request to the URL
+2. Processes the response based on content type (PDF or HTML)
+3. Extracts links and content
+4. Handles errors and returns a structured result
+
+### `get_readable_text_from_soup`
+#### Description
+Extracts readable text from a BeautifulSoup object and converts it to Markdown.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| soup | BeautifulSoup | BeautifulSoup object containing HTML content |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| markdown_text | str | Extracted text in Markdown format |
+
+### `get_all_website_links_recursively`
+#### Description
+Recursively gathers all links from a given website up to a specified limit.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | Starting URL to fetch links from |
+| reviewed_urls | dict | Dictionary to keep track of reviewed URLs and associated data |
+| limit | int | Maximum number of URLs to process (optional) |
+| crawl_depth | int | How deep to crawl from each base URL |
+| current_depth | int | Current crawl depth |
+| filters | List[str] | Regex patterns to filter URLs (optional) |
+
+#### Internal Logic
+Recursively crawls websites, respecting the specified limit and depth, and applies filters if provided.
+
+### `get_all_websites`
+#### Description
+Crawls a list of websites and returns a DataFrame containing the results.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| urls | list | List of URLs to crawl |
+| limit | int | Maximum number of web pages to crawl |
+| html | bool | Whether to include HTML content in results |
+| crawl_depth | int | Crawl depth for URLs |
+| filters | List[str] | Regex patterns to filter URLs (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pd.DataFrame | DataFrame containing crawled data |
+
+#### Internal Logic
+1. Uses ThreadPoolExecutor to crawl URLs in parallel
+2. Processes results and converts to a DataFrame
+3. Handles errors and returns the final DataFrame
+
+### `dict_to_dataframe`
+#### Description
+Converts a dictionary of dictionaries to a DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dict_of_dicts | dict | Dictionary of dictionaries to convert |
+| columns_to_ignore | list | Columns to exclude from the DataFrame (optional) |
+| index_name | str | Name for the index column (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Resulting DataFrame |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| concurrent.futures | For parallel processing of URLs |
+| io | For handling file-like objects |
+| re | For regular expression operations |
+| urllib.parse | For URL parsing and manipulation |
+| html2text | For converting HTML to readable text |
+| fitz (PyMuPDF) | For PDF processing |
+| pandas | For data manipulation and DataFrame creation |
+| requests | For making HTTP requests |
+| BeautifulSoup | For HTML parsing |
+
+## Error Handling
+The code implements error handling in various functions, particularly in `get_all_website_links` and `pdf_to_markdown`. Errors are logged and often included in the returned data structures to provide context about failed operations.
+
+## Logging
+The code uses a logger named `logger` for error and informational logging throughout the file.
+
+## Performance Considerations
+1. Parallel processing is used for handling multiple URLs in `parallel_get_all_website_links`.
+2. A limit is implemented in `get_all_website_links_recursively` to control the depth and breadth of crawling.
+3. The `get_all_websites` function uses ThreadPoolExecutor for concurrent processing of URLs.
+
+## TODOs
+There is a TODO comment in `get_all_website_links_recursively` suggesting a refactor to use an iterative approach instead of recursion.

@@ -1,0 +1,127 @@
+---
+title: "consumer.py"
+---
+
+Here's a comprehensive documentation for the `mindsdb/utilities/ml_task_queue/consumer.py` file:
+
+## High-level description
+This file implements the `MLTaskConsumer` class, which is responsible for consuming and executing machine learning tasks from a Redis queue. It manages warm processes for task execution, handles task distribution, and maintains the state of running tasks.
+
+## Code Structure
+The main class `MLTaskConsumer` inherits from `BaseRedisQueue`. It uses a Redis stream to receive tasks and a process pool to execute them. The class manages the lifecycle of worker processes, including initialization, execution, and cleanup.
+
+## Symbols
+
+### `_save_thread_link`
+#### Description
+A decorator that saves the thread in which a function is executed to a list.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| func | Callable | The function to be decorated |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| wrapper | Callable | The wrapped function |
+
+#### Internal Logic
+- Adds the current thread to `_listen_message_threads` before execution
+- Removes the thread from the list after execution
+
+### `MLTaskConsumer`
+#### Description
+The main class for consuming and executing ML tasks from a Redis queue.
+
+#### Inputs
+None
+
+#### Internal Logic
+- Initializes Redis connection and consumer group
+- Manages warm processes for task execution
+- Listens for new tasks and distributes them to available processes
+- Handles task status updates and result storage
+
+### `MLTaskConsumer.__init__`
+#### Description
+Initializes the MLTaskConsumer instance.
+
+#### Internal Logic
+- Sets up events for managing the consumer's state
+- Initializes process cache
+- Starts CPU usage collection thread
+- Connects to Redis and sets up the consumer group
+
+### `MLTaskConsumer._collect_cpu_stat`
+#### Description
+Collects CPU usage statistics in a separate thread.
+
+### `MLTaskConsumer.get_avg_cpu_usage`
+#### Description
+Calculates the average CPU usage over the last period.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| avg_cpu_usage | float | Average CPU usage (0-100) |
+
+### `MLTaskConsumer.wait_free_resources`
+#### Description
+Waits until there are free resources available for task execution.
+
+#### Internal Logic
+- Checks average CPU usage, current CPU usage, and current task count
+- Sleeps if resources are not available
+
+### `MLTaskConsumer._listen`
+#### Description
+Listens for new messages in the Redis queue and executes tasks.
+
+#### Internal Logic
+- Waits for free resources
+- Reads messages from the Redis stream
+- Processes the message and executes the corresponding task
+- Updates task status and handles results
+
+### `MLTaskConsumer.run`
+#### Description
+Starts the consumer's main loop, creating new listening threads as needed.
+
+### `MLTaskConsumer.stop`
+#### Description
+Stops all executing threads and cleans up resources.
+
+### `start`
+#### Description
+Creates a task queue consumer and starts listening to the queue.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| verbose | bool | Verbosity flag |
+
+#### Internal Logic
+- Creates an `MLTaskConsumer` instance
+- Sets up signal handling for graceful shutdown
+- Runs the consumer and handles exceptions
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| walrus | Redis client library |
+| pandas | Data manipulation library |
+| psutil | System and process utilities |
+
+## Error Handling
+The code implements basic error handling, catching exceptions during task execution and updating the task status accordingly.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging various events and errors.
+
+## Performance Considerations
+- The consumer uses a process pool to execute tasks in parallel
+- It monitors CPU usage and limits task execution based on available resources
+- Warm processes are maintained to reduce startup time for new tasks
+
+This documentation provides a comprehensive overview of the `MLTaskConsumer` class and its related functions in the `mindsdb/utilities/ml_task_queue/consumer.py` file. The class is designed to efficiently manage and execute machine learning tasks using a Redis-based queue system, with considerations for resource management and parallel processing.

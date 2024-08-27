@@ -1,0 +1,84 @@
+---
+title: "process_cache.py"
+---
+
+Here's a detailed documentation of the `mindsdb/integrations/libs/process_cache.py` file:
+
+## High-level description
+This file implements a caching mechanism for machine learning processes in MindsDB. It provides a way to manage and reuse long-running processes for various ML tasks, improving efficiency and resource utilization.
+
+## Code Structure
+The main components of this code are:
+1. `MLProcessException`: A custom exception class for ML process errors.
+2. `WarmProcess`: A class that wraps a persistent process for ML tasks.
+3. `ProcessCache`: A class that manages a cache of `WarmProcess` instances.
+4. Various helper functions for ML tasks (e.g., `learn_process`, `predict_process`, etc.).
+
+These components work together to provide a caching system for ML processes, allowing MindsDB to reuse processes for similar tasks and manage resources efficiently.
+
+## Symbols
+
+### `MLProcessException`
+#### Description
+A custom exception class used to safely send exceptions back to the main process.
+
+#### Attributes
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| base_exception_bytes | bytes | Serialized base exception |
+| message | str | Exception message |
+
+### `WarmProcess`
+#### Description
+A class that wraps a long-running process, primarily used for ML tasks.
+
+#### Methods
+- `__init__`: Initializes the process.
+- `shutdown`: Shuts down the process.
+- `ready`: Checks if the process is ready for a new task.
+- `add_marker`: Adds a marker to the process.
+- `has_marker`: Checks if the process has a specific marker.
+- `is_marked`: Checks if the process has any markers.
+- `apply_async`: Runs a new task on the process.
+
+### `ProcessCache`
+#### Description
+A cache for `WarmProcess` instances, managing their lifecycle and reuse.
+
+#### Methods
+- `__init__`: Initializes the cache.
+- `init`: Initializes processes for specified handlers.
+- `apply_async`: Runs a new task, using an existing process if possible.
+- `remove_processes_for_handler`: Removes all processes for a given handler.
+
+#### Internal Logic
+- Maintains a cache of `WarmProcess` instances.
+- Periodically cleans up unused processes.
+- Handles different types of ML tasks (learn, predict, describe, etc.).
+
+### Helper Functions
+- `init_ml_handler`: Initializes an ML handler.
+- `dummy_task`: A no-op task.
+- `empty_callback`: A no-op callback.
+- `warm_function`: Wraps a function call with context loading and error handling.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| concurrent.futures | For managing process pools |
+| pandas | For DataFrame handling |
+| mindsdb.interfaces.storage.db | For database operations |
+| mindsdb.utilities.config | For configuration management |
+| mindsdb.utilities.context | For context management |
+| mindsdb.utilities.ml_task_queue.const | For ML task constants |
+| mindsdb.integrations.libs.ml_handler_process | For various ML process functions |
+
+## Error Handling
+The code uses the custom `MLProcessException` to wrap exceptions that occur in ML processes. This ensures that exceptions can be safely sent back to the main process without risking process termination due to unpicklable exceptions.
+
+## Performance Considerations
+- The `ProcessCache` class implements a caching mechanism to reuse processes, which can significantly improve performance by avoiding the overhead of creating new processes for each task.
+- The cache implements a cleaning mechanism to remove unused processes after a certain period, helping to manage memory usage.
+- The code uses `ProcessPoolExecutor` for parallel processing, which can improve performance for CPU-bound tasks.
+
+This code plays a crucial role in managing the execution of ML tasks in MindsDB, providing an efficient way to handle long-running processes and improve overall system performance.

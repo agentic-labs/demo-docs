@@ -1,0 +1,83 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the PirateWeather API handler for MindsDB. It allows users to query historical weather data from PirateWeather using SQL-like syntax. The handler provides two main tables: hourly and daily weather data, which can be queried based on latitude, longitude, and time.
+
+## What does it do?
+The PirateWeather handler enables users to:
+1. Connect to the PirateWeather API using an API key.
+2. Query historical hourly and daily weather data for specific locations and dates.
+3. Use SQL-like syntax to filter and retrieve weather information.
+4. Integrate PirateWeather data into MindsDB for further analysis or machine learning tasks.
+
+The handler translates SQL queries into API calls to PirateWeather, fetches the data, and returns it in a structured format (pandas DataFrame) that can be easily used within MindsDB.
+
+## Entry points
+The main entry point for this handler is the `PirateWeatherAPIHandler` class in the `pirateweather_handler.py` file. This class manages the connection to the PirateWeather API and handles query execution. It utilizes two table classes, `PiratePirateWeatherAPIHourlyTable` and `PiratePirateWeatherAPIDailyTable`, to process queries for hourly and daily weather data respectively.
+
+The data flow typically follows this pattern:
+1. User creates a database connection using the PirateWeather handler.
+2. SQL queries are sent to the handler.
+3. The handler parses the query, extracts relevant parameters (latitude, longitude, time, etc.).
+4. An API call is made to PirateWeather with the extracted parameters.
+5. The API response is processed and returned as a pandas DataFrame.
+
+## Key Files
+1. `pirateweather_handler.py`: Contains the main implementation of the PirateWeather API handler, including the `PirateWeatherAPIHandler` class and the table classes for hourly and daily data.
+
+2. `__init__.py`: Defines the integration metadata and imports the main handler class.
+
+3. `connection_args.py`: Specifies the connection arguments required for the PirateWeather API, primarily the API key.
+
+4. `README.md`: Provides documentation on how to use the PirateWeather handler, including setup instructions and example queries.
+
+## Dependencies
+The handler relies on the following external libraries:
+- `pandas`: Used for data manipulation and creating DataFrames from API responses.
+- `requests`: Used to make HTTP requests to the PirateWeather API.
+- `mindsdb_sql`: Used for SQL parsing and query execution within the MindsDB ecosystem.
+
+## Configuration
+The main configuration for this handler is the API key, which is required to authenticate with the PirateWeather service. This is specified in the `connection_args.py` file:
+
+```python
+connection_args = OrderedDict(
+    api_key={
+        'type': ARG_TYPE.STR,
+        'description': 'The PirateWeather API key used for authentication',
+        'required': True,
+        'secret': True
+    }
+)
+```
+
+Users need to provide their PirateWeather API key when creating a database connection in MindsDB:
+
+```sql
+CREATE DATABASE pirateweather
+WITH ENGINE = 'pirateweather',
+PARAMETERS = {
+  "api_key": "your_api_key"
+};
+```
+
+The handler supports additional query parameters:
+- `latitude` and `longitude`: Required for specifying the location.
+- `time`: Optional, for querying historical data for a specific date.
+- `units`: Optional, for specifying the unit system (e.g., 'us', 'si', 'ca', 'uk').
+
+These parameters are used in SQL queries rather than in the initial configuration.
+
+Example query:
+```sql
+SELECT *
+FROM pirateweather.hourly
+WHERE latitude = 51.507351
+  AND longitude = -0.127758
+  AND time = "1672578052"
+  AND units = "si"
+```
+
+In conclusion, this handler provides a seamless integration between MindsDB and the PirateWeather API, allowing users to easily incorporate weather data into their MindsDB workflows using familiar SQL syntax.

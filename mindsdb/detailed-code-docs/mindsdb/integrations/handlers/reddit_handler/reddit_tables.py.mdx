@@ -1,0 +1,162 @@
+---
+title: "reddit_tables.py"
+---
+
+## High-level description
+The `reddit_tables.py` file defines two classes, `CommentTable` and `SubmissionTable`, that represent tables for interacting with Reddit data through the Reddit API. These classes inherit from the `APITable` class and implement methods for selecting data based on SQL-like queries.
+
+## Code Structure
+Both `CommentTable` and `SubmissionTable` classes follow a similar structure. They define `select` methods to fetch data based on a provided SQL query, `get_columns` methods to list available columns, and `filter_columns` methods to refine the returned data according to the query. 
+
+The `CommentTable` interacts with the Reddit API to retrieve comments for a specific submission ID, while the `SubmissionTable` fetches submissions from a subreddit based on specified criteria like sort type and item limit.
+
+## References
+This code references the following symbols from other files:
+
+* `mindsdb.integrations.libs.api_handler.APITable`: Base class for API-interacting tables.
+* `mindsdb_sql.parser.ast`: Module for abstract syntax tree representation of SQL queries.
+* `mindsdb.integrations.utilities.sql_utils.extract_comparison_conditions`: Function to extract comparison conditions from a SQL query.
+
+## Symbols
+
+### `CommentTable`
+#### Description
+This class represents a table of Reddit comments and provides methods to query comments for a specific submission.
+
+#### Inputs
+This class doesn't have a constructor with explicit inputs. It relies on the `handler` attribute being set, which is expected to be an instance of a class handling the Reddit API connection.
+
+#### Outputs
+This class doesn't directly return any output. Its methods return pandas DataFrames containing the requested data.
+
+#### Internal Logic
+The `select` method extracts the submission ID from the provided SQL query, fetches comments for that submission using the Reddit API, structures the data into a pandas DataFrame, and filters the DataFrame based on the query's column selection.
+
+### `CommentTable.select`
+#### Description
+This method fetches comments for a specific Reddit submission based on the provided SQL query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | The SQL query to be executed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pandas.DataFrame | A pandas DataFrame containing the selected comments data. |
+
+#### Internal Logic
+1. **Extract Submission ID:** The method extracts the submission ID from the `WHERE` clause of the SQL query.
+2. **Fetch Comments:** It uses the Reddit API through the `handler` object to fetch comments for the extracted submission ID.
+3. **Structure Data:** The fetched comments are structured into a list of dictionaries, where each dictionary represents a comment with its attributes.
+4. **Create DataFrame:** The list of dictionaries is converted into a pandas DataFrame.
+5. **Filter Columns:** The `filter_columns` method is called to select only the columns specified in the SQL query.
+6. **Return DataFrame:** The resulting DataFrame containing the selected comments is returned.
+
+### `CommentTable.get_columns`
+#### Description
+This method returns a list of available column names for the comment table.
+
+#### Inputs
+This method doesn't take any input.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | list | A list of column names for the comment table. |
+
+### `CommentTable.filter_columns`
+#### Description
+This method filters the DataFrame to include only the columns specified in the SQL query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pandas.DataFrame | The DataFrame to be filtered. |
+| query | ast.Select | The SQL query containing column selection information. |
+
+#### Outputs
+This method modifies the input `result` DataFrame in-place.
+
+### `SubmissionTable`
+#### Description
+This class represents a table of Reddit submissions and provides methods to query submissions based on criteria like subreddit, sort type, and item limit.
+
+#### Inputs
+Similar to `CommentTable`, this class doesn't have a constructor with explicit inputs and relies on the `handler` attribute for Reddit API interaction.
+
+#### Outputs
+This class doesn't directly return any output. Its methods return pandas DataFrames containing the requested data.
+
+#### Internal Logic
+The `select` method extracts the subreddit name, sort type, and item limit from the provided SQL query. It then fetches submissions from the specified subreddit using the Reddit API, structures the data into a pandas DataFrame, and filters the DataFrame based on the query's column selection.
+
+### `SubmissionTable.select`
+#### Description
+This method fetches Reddit submissions based on the provided SQL query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | The SQL query to be executed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pandas.DataFrame | A pandas DataFrame containing the selected submissions data. |
+
+#### Internal Logic
+1. **Extract Parameters:** The method extracts the subreddit name, sort type, and item limit from the `WHERE` clause of the SQL query.
+2. **Fetch Submissions:** It uses the Reddit API through the `handler` object to fetch submissions from the specified subreddit, applying the extracted sort type and limit.
+3. **Structure Data:** The fetched submissions are structured into a list of dictionaries, where each dictionary represents a submission with its attributes.
+4. **Create DataFrame:** The list of dictionaries is converted into a pandas DataFrame.
+5. **Filter Columns:** The `filter_columns` method is called to select only the columns specified in the SQL query.
+6. **Return DataFrame:** The resulting DataFrame containing the selected submissions is returned.
+
+### `SubmissionTable.get_columns`
+#### Description
+This method returns a list of available column names for the submission table.
+
+#### Inputs
+This method doesn't take any input.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | list | A list of column names for the submission table. |
+
+### `SubmissionTable.filter_columns`
+#### Description
+This method filters the DataFrame to include only the columns specified in the SQL query, handling cases with no matching columns and applying the limit specified in the query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pandas.DataFrame | The DataFrame to be filtered. |
+| query | ast.Select | The SQL query containing column selection and limit information. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pandas.DataFrame | The filtered DataFrame containing only the selected columns and limited rows. |
+
+#### Internal Logic
+1. **Determine Columns:** If the query is provided and includes specific column selections, those are used. Otherwise, all available columns from `get_columns` are used.
+2. **Handle Empty DataFrame:** If the DataFrame is empty, an empty DataFrame with the selected columns is returned.
+3. **Add Missing Columns:** If the DataFrame is not empty, any missing columns from the selection are added with `None` values.
+4. **Filter and Limit:** The DataFrame is then filtered to include only the selected columns, and the `head` method is used to apply the limit from the query if present.
+5. **Return DataFrame:** The resulting DataFrame, potentially filtered and limited, is returned.
+
+## Dependencies
+This code depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Used for creating and manipulating DataFrames. |
+| praw | Used for interacting with the Reddit API. |
+| mindsdb_sql.parser.ast | Used for parsing and working with SQL queries as abstract syntax trees. |
+| mindsdb.integrations.utilities.sql_utils | Used for extracting comparison conditions from SQL queries. |
+
+## Error Handling
+The `CommentTable.select` method raises a `ValueError` if the submission ID is missing in the SQL query. The `SubmissionTable.filter_columns` method raises a `NotImplementedError` for unsupported target types in the query.

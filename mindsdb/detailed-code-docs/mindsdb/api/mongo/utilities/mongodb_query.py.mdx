@@ -1,0 +1,84 @@
+---
+title: "mongodb_query.py"
+---
+
+## High-level description
+This code defines a `MongoQuery` class and a `MongoJSONEncoder` class for handling MongoDB queries and JSON encoding of MongoDB-specific data types. The `MongoQuery` class provides a way to build and represent MongoDB queries programmatically, while the `MongoJSONEncoder` handles the serialization of MongoDB-specific data types like `ObjectId` and `datetime`.
+
+## Code Structure
+The main symbols in this code are the `MongoJSONEncoder` class and the `MongoQuery` class. The `MongoJSONEncoder` is used within the `MongoQuery` class to handle JSON encoding of query arguments.
+
+## Symbols
+
+### `MongoJSONEncoder`
+#### Description
+A custom JSON encoder that extends the `json.JSONEncoder` class to handle MongoDB-specific data types.
+
+#### Internal Logic
+- Overrides the `default` method to handle `datetime` and `ObjectId` objects.
+- For `datetime` objects, it returns an `ISODate` string representation.
+- For `ObjectId` objects, it returns an `ObjectId` string representation.
+- For other types, it falls back to the default JSON encoder behavior.
+
+### `MongoQuery`
+#### Description
+A class that represents and builds MongoDB queries programmatically.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| collection | str | The name of the MongoDB collection |
+| pipeline | list | Optional. Initial pipeline steps |
+
+#### Internal Logic
+- Initializes with a collection name and an optional pipeline.
+- Provides methods to add steps to the query pipeline.
+- Implements `__getattr__` to allow method chaining for building queries.
+- Converts the query to a string representation using `__str__` method.
+
+#### Methods
+
+##### `add_step`
+###### Description
+Adds a step to the query pipeline.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | dict | A dictionary containing 'method' and 'args' keys |
+
+##### `to_string`
+###### Description
+Returns the string representation of the query.
+
+##### `__getattr__`
+###### Description
+Allows method chaining by dynamically creating pipeline steps.
+
+##### `__str__`
+###### Description
+Converts the query to a string representation.
+
+##### `__repr__`
+###### Description
+Returns a string representation of the `MongoQuery` object.
+
+## Performance Considerations
+The `MongoQuery` class builds the query pipeline incrementally, which allows for efficient query construction. However, the string representation of the query is generated on-demand, which may have a slight performance impact for very large queries.
+
+## Error Handling
+The `add_step` method includes basic error checking to ensure that the step dictionary has the required keys and that the 'args' value is a list. It raises an `AttributeError` if these conditions are not met.
+
+## API/Interface Reference
+The `MongoQuery` class provides a fluent interface for building MongoDB queries. Users can chain methods to construct complex queries, and the resulting object can be converted to a string representation of the MongoDB query.
+
+Example usage:
+```python
+query = MongoQuery('users').find({'age': {'$gt': 18}}).sort({'name': 1}).limit(10)
+print(str(query))
+```
+
+This would output a string representation of the MongoDB query:
+```
+db.users.find({"age": {"$gt": 18}}).sort({"name": 1}).limit(10)
+```

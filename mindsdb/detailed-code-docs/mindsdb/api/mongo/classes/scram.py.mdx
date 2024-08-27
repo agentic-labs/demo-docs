@@ -1,0 +1,107 @@
+---
+title: "scram.py"
+---
+
+## High-level description
+This code implements the server-side SCRAM-SHA-1 and SCRAM-SHA-256 authentication mechanisms for MongoDB. It provides a `Scram` class that handles the SCRAM authentication process, including generating salts, processing client messages, and verifying client proofs.
+
+## Code Structure
+The main symbol in this code is the `Scram` class, which contains methods for initializing the SCRAM process, processing client messages, and performing cryptographic operations.
+
+## Symbols
+
+### Scram
+#### Description
+The `Scram` class implements the server-side SCRAM-SHA-1 and SCRAM-SHA-256 authentication mechanisms for MongoDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| method | str | The hash method to use ('sha1' or 'sha256') |
+| get_salted_password | function | Optional function to retrieve salted password |
+
+#### Internal Logic
+1. Initializes SCRAM parameters (nonce, iterations, salt) based on the chosen method.
+2. Processes client messages in two steps: first and second messages.
+3. Performs cryptographic operations (HMAC, XOR) to verify client proofs and generate server signatures.
+
+### process_client_first_message
+#### Description
+Processes the first message from the client in the SCRAM authentication process.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | str | The client's first message payload |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response_msg | str | Server's response to the client's first message |
+
+#### Internal Logic
+1. Extracts client username and nonce from the payload.
+2. Generates or retrieves salted password.
+3. Constructs and returns the server's response message.
+
+### process_client_second_message
+#### Description
+Processes the second message from the client and verifies the client's proof.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| payload | str | The client's second message payload |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server_final_message | str | Server's final message with signature |
+
+#### Internal Logic
+1. Computes server and client keys using HMAC.
+2. Generates server signature.
+3. Verifies client proof against the expected proof.
+4. Returns the server's final message with its signature.
+
+### salt_password
+#### Description
+Generates a salted password using PBKDF2 with the specified hash method.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user | str | Username |
+| password | str | User's password |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| salted_password | bytes | The salted password |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| base64 | For encoding and decoding base64 strings |
+| hashlib | For cryptographic hash functions |
+| hmac | For HMAC operations |
+| os | For generating random bytes |
+| pymongo.auth | For password digestion and XOR operations |
+
+## Error Handling
+The code raises an exception with the message "wrong password" if the client's proof does not match the expected proof during the second message processing.
+
+## References
+The code references external functions from `pymongo.auth`:
+- `_password_digest`
+- `_xor`
+- `saslprep`
+
+These functions are used in the password salting process and for XOR operations.
+
+## TODOs
+There are no explicit TODOs in the code, but the following improvements could be considered:
+1. Add more robust error handling and input validation.
+2. Implement logging for debugging and auditing purposes.
+3. Consider making the `iterations` parameter configurable.
+4. Add type hints to improve code readability and maintainability.

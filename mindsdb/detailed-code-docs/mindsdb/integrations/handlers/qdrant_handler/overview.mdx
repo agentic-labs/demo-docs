@@ -1,0 +1,89 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `qdrant_handler` directory contains the implementation of a MindsDB handler for Qdrant, a high-performance vector database. This handler enables MindsDB to interact with Qdrant, allowing users to perform vector similarity searches, manage collections, and execute CRUD operations on vector data.
+
+## What does it do?
+The Qdrant handler facilitates the integration of Qdrant's vector database capabilities into MindsDB. It provides functionality to:
+
+1. Connect to a Qdrant instance, either in-memory or remote.
+2. Create and manage collections in Qdrant.
+3. Insert and update vector data in collections.
+4. Perform similarity searches using vector embeddings.
+5. Apply filters to search results based on metadata.
+6. Delete entries from collections.
+7. Drop entire collections.
+
+This integration allows users to leverage Qdrant's efficient vector search capabilities within MindsDB's SQL-like interface, making it easier to work with vector embeddings and similarity searches in AI and machine learning workflows.
+
+## Key Files
+1. `qdrant_handler.py`: This is the core implementation file containing the `QdrantHandler` class. It extends the `VectorStoreHandler` and implements Qdrant-specific operations such as connecting to the database, creating collections, inserting data, and performing vector searches.
+
+2. `__init__.py`: This file sets up the Qdrant integration handler for MindsDB. It imports the `QdrantHandler` class and defines metadata for the integration, including its name, type, and connection arguments.
+
+3. `connection_args.py`: This file defines the connection arguments required for establishing a connection with a Qdrant instance. It specifies both required and optional parameters for local and remote configurations.
+
+4. `__about__.py`: This file contains metadata about the Qdrant handler package, including its version, description, and licensing information.
+
+## Dependencies
+The Qdrant handler relies on the following main external libraries:
+
+1. `qdrant-client` (version not specified): This is the official Python client for Qdrant, used to interact with the Qdrant vector database.
+
+2. `pandas`: Used for data manipulation and storage, particularly in formatting query results.
+
+3. MindsDB internal libraries: The handler uses various MindsDB libraries for integration, such as `VectorStoreHandler` and response handling utilities.
+
+## Configuration
+The Qdrant handler can be configured using the following main parameters:
+
+1. `location`: Specifies the Qdrant instance location (in-memory or remote URL).
+2. `url`: Full URL of the Qdrant service.
+3. `host` and `port`: For specifying the hostname and port of the Qdrant service.
+4. `api_key`: API key for Qdrant Cloud authentication.
+5. `collection_config`: Configuration for collection creation, including vector size and distance metric.
+
+Example configuration:
+```sql
+CREATE DATABASE qdrant_test
+WITH ENGINE = "qdrant",
+PARAMETERS = {
+    "location": ":memory:",
+    "collection_config": {
+        "size": 386,
+        "distance": "Cosine"
+    }
+}
+```
+
+The handler supports both local (in-memory or file-based) and remote Qdrant instances, allowing flexibility in deployment scenarios.
+
+## Usage Examples
+1. Creating a new table (collection):
+```sql
+CREATE TABLE qdrant_test.test_table (
+   SELECT embeddings,'{"source": "bbc"}' as metadata FROM mysql_demo_db.test_embeddings
+);
+```
+
+2. Performing a similarity search:
+```sql
+SELECT * FROM qdrant_test.test_table
+WHERE search_vector = (select embeddings from mysql_demo_db.test_embeddings limit 1)
+```
+
+3. Querying with metadata filters:
+```sql
+SELECT * FROM qdrant_test.test_table
+WHERE `metadata.source` = 'bbc';
+```
+
+4. Deleting entries:
+```sql
+DELETE FROM qtest.test_table_6
+WHERE id = 2
+```
+
+These examples demonstrate how the Qdrant handler allows users to interact with vector data using familiar SQL-like syntax within MindsDB, abstracting away the complexities of direct Qdrant API interactions.

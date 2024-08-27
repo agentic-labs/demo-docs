@@ -1,0 +1,72 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains utility functions and classes for handling MongoDB queries within the MindsDB integration for MongoDB. The main component is the `MongodbRender` class, which is responsible for converting SQL queries represented as Abstract Syntax Tree (AST) nodes to MongoDB queries. This conversion is crucial for enabling SQL-based interactions with MongoDB databases within the MindsDB ecosystem.
+
+## What does it do?
+
+The code in this directory, specifically the `MongodbRender` class, acts as a translator between SQL and MongoDB query languages. It takes SQL queries that users might write when interacting with MindsDB and converts them into equivalent MongoDB queries. This allows users to interact with MongoDB databases using familiar SQL syntax, while the system handles the conversion to MongoDB's query format behind the scenes.
+
+The utility supports various SQL operations, including:
+
+1. SELECT statements: It can convert SQL SELECT queries to MongoDB's aggregation pipeline, handling clauses like WHERE, GROUP BY, ORDER BY, LIMIT, and OFFSET.
+2. UPDATE statements: It translates SQL UPDATE queries into MongoDB update operations.
+
+For each type of SQL query, the utility breaks down the query into its components (e.g., conditions, sorting, limits) and constructs an equivalent MongoDB query or aggregation pipeline. This process involves handling different types of SQL elements and operators and mapping them to their MongoDB counterparts.
+
+## Key Files
+
+1. `mongodb_render.py`: This is the main file in the directory, containing the `MongodbRender` class. It includes methods for converting different types of SQL queries and clauses to MongoDB query format. The key methods include:
+
+   - `to_mongo_query`: The entry point for converting an SQL query to a MongoDB query.
+   - `update`: Handles the conversion of SQL UPDATE statements.
+   - `select`: Processes SQL SELECT statements, converting them to MongoDB aggregation pipelines.
+   - `handle_where`: Converts SQL WHERE clauses to MongoDB query filters.
+   - `where_element_convert`: Handles the conversion of individual elements in WHERE clauses.
+
+## Dependencies
+
+The code relies on several external libraries and internal MindsDB modules:
+
+1. `datetime`: Used for handling date and time operations in queries.
+2. `typing`: Provides type hinting for better code readability and IDE support.
+3. `bson.objectid`: Used for handling MongoDB's ObjectId type.
+4. `mindsdb_sql.parser.ast`: Provides the AST (Abstract Syntax Tree) nodes representing SQL queries.
+5. `mindsdb.api.mongo.utilities.mongodb_query`: Contains the `MongoQuery` class used to build and represent the final MongoDB query.
+
+These dependencies are crucial for parsing SQL, handling MongoDB-specific data types, and constructing valid MongoDB queries.
+
+## Configuration
+
+This directory does not contain any specific configuration files or environment variables. The behavior of the `MongodbRender` class is determined by the SQL queries it receives and the structure of the MongoDB database it's interacting with.
+
+Here's an example of how the `MongodbRender` class might be used to convert a simple SQL SELECT query to a MongoDB query:
+
+```python
+from mindsdb_sql.parser import ast
+from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
+
+# Create an AST node representing a simple SQL SELECT query
+select_node = ast.Select(
+    targets=[ast.Star()],
+    from_table=ast.Identifier('users'),
+    where=ast.BinaryOperation(
+        op='=',
+        args=[ast.Identifier('age'), ast.Constant(30)]
+    )
+)
+
+# Create an instance of MongodbRender
+renderer = MongodbRender()
+
+# Convert the SQL query to a MongoDB query
+mongo_query = renderer.to_mongo_query(select_node)
+
+# The resulting mongo_query object would represent a MongoDB query like:
+# { "find": "users", "filter": { "age": { "$eq": 30 } } }
+```
+
+This example demonstrates how the `MongodbRender` class takes an SQL AST node and converts it into a MongoDB query, allowing MindsDB to seamlessly interact with MongoDB databases using SQL syntax.

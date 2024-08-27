@@ -1,0 +1,92 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the MendeleyHandler, which is responsible for interacting with the Mendeley API. The tests cover various aspects of the handler's functionality, including connection, query execution, and error handling. The main purpose of these tests is to ensure the reliability and correctness of the MendeleyHandler implementation.
+
+## What does it do?
+The tests in this directory verify that the MendeleyHandler can:
+1. Connect to the Mendeley API successfully
+2. Execute various types of SELECT queries on the Mendeley data
+3. Handle error cases appropriately, such as invalid method names or SQL queries
+4. Retrieve the correct column information for the catalog search data
+
+These tests help ensure that the MendeleyHandler works as expected when integrated into the larger MindsDB system, providing reliable access to Mendeley data for users of the platform.
+
+## Key Files
+The main file in this directory is:
+
+1. `test_mendeley_handler.py`: This file contains a comprehensive set of unit tests for the MendeleyHandler class. It includes tests for:
+   - Connecting to the Mendeley API
+   - Checking the connection status
+   - Executing various SELECT queries
+   - Handling invalid method names and SQL queries
+   - Retrieving column information
+
+The file defines a single test class, `MendeleyHandlerTest`, which inherits from `unittest.TestCase`. This class contains multiple test methods, each focusing on a specific aspect of the MendeleyHandler's functionality.
+
+## Dependencies
+The test file depends on the following modules and classes:
+- `unittest`: Python's built-in unit testing framework
+- `MendeleyHandler`: The main class being tested, which is likely defined in a separate file within the parent directory
+- `RESPONSE_TYPE`: An enumeration used to check the type of response from queries, likely defined in a common utilities module
+
+## Configuration
+The tests use a set of test credentials to create an instance of the MendeleyHandler. These credentials are likely stored in environment variables or a configuration file to keep them secure and separate from the test code.
+
+Here's an example of how the test setup might look:
+
+```python
+@classmethod
+def setUpClass(cls):
+    cls.handler = MendeleyHandler(
+        "test_mendeley",
+        {
+            "client_id": os.environ.get("MENDELEY_CLIENT_ID"),
+            "client_secret": os.environ.get("MENDELEY_CLIENT_SECRET"),
+            "redirect_uri": os.environ.get("MENDELEY_REDIRECT_URI"),
+        },
+    )
+```
+
+This setup allows the tests to run without hardcoding sensitive information directly in the test file.
+
+The tests cover a wide range of scenarios, including:
+
+1. Basic connection and status checks:
+   ```python
+   def test_0_connect(self):
+       self.handler.connect()
+
+   def test_1_check_connection(self):
+       self.handler.check_connection()
+   ```
+
+2. Various SELECT queries to test different aspects of the Mendeley API:
+   ```python
+   def test_2_select(self):
+       query = "SELECT * FROM catalog_search_data WHERE title='Machine Learning'"
+       result = self.handler.native_query(query)
+       self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+   ```
+
+3. Error handling for invalid inputs:
+   ```python
+   def test_10_call_mendeley_api_invalid_method_name(self):
+       with self.assertRaises(NotImplementedError):
+           self.handler.call_mendeley_api("invalid_method")
+   ```
+
+4. Checking column information:
+   ```python
+   def test_14_get_columns(self):
+       columns = self.handler.catalog_search_data.get_columns()
+       expected_columns = [
+           'id', 'title', 'type', 'authors', 'source', 'year', 'identifiers',
+           'keywords', 'abstract', 'link', 'pdf_url'
+       ]
+       self.assertEqual(columns, expected_columns)
+   ```
+
+These tests ensure that the MendeleyHandler can reliably interact with the Mendeley API, handle various query types, and manage error cases appropriately. This comprehensive test suite helps maintain the quality and reliability of the Mendeley integration within the MindsDB ecosystem.

@@ -1,0 +1,77 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Minds Endpoint handler for MindsDB, which integrates the Minds Endpoint API into the MindsDB ecosystem. The handler allows users to interact with various language models through a unified interface, enabling tasks such as text classification, question answering, and embedding generation.
+
+## What does it do?
+The Minds Endpoint handler provides the following functionalities:
+
+1. Authentication and connection to the Minds Endpoint API
+2. Creation and management of ML engines using Minds Endpoint models
+3. Execution of predictions and queries against these models
+4. Support for various language tasks, including sentiment analysis and text generation
+5. Integration with MindsDB's SQL interface for easy model creation and querying
+
+The handler acts as a bridge between MindsDB's SQL-like interface and the Minds Endpoint API, allowing users to leverage powerful language models through familiar SQL syntax.
+
+## Entry points
+The main entry point for the Minds Endpoint handler is the `MindsEndpointHandler` class defined in `minds_endpoint_handler.py`. This class extends the `OpenAIHandler` and customizes it for use with the Minds Endpoint API. Key methods include:
+
+- `create_engine`: Validates API credentials and sets up the connection to Minds Endpoint.
+- `create_validation`: Validates model creation parameters.
+- `predict`: Executes predictions using the specified model.
+
+The `__init__.py` file sets up the handler for use within MindsDB, defining metadata such as the handler's name, type, and version.
+
+## Key Files
+1. `minds_endpoint_handler.py`: Contains the core `MindsEndpointHandler` class, which implements the main functionality of the handler.
+2. `settings.py`: Defines configuration settings for the handler, including the base URL for the Minds Endpoint API.
+3. `__about__.py`: Provides metadata about the handler, such as version and description.
+4. `README.md`: Offers documentation on how to set up and use the Minds Endpoint integration within MindsDB.
+
+## Dependencies
+The handler relies on several external libraries:
+
+1. `openai`: Used for interacting with the OpenAI-compatible Minds Endpoint API.
+2. `pandas`: Utilized for data manipulation and handling prediction inputs/outputs.
+3. `pydantic_settings`: Employed for configuration management in `settings.py`.
+
+These dependencies were chosen to leverage existing OpenAI-compatible APIs, handle data efficiently, and manage configuration in a type-safe manner.
+
+## Configuration
+The handler uses the following configuration options:
+
+1. `minds_endpoint_api_key`: The API key for authenticating with the Minds Endpoint service.
+2. `BASE_URL`: The base URL for the Minds Endpoint API, defined in `settings.py` with a default value of "https://llm.mdb.ai/".
+
+Users can set the API key when creating an ML engine:
+
+```sql
+CREATE ML_ENGINE mindsdb_serve
+FROM minds_endpoint
+USING
+      minds_endpoint_api_key = 'api-key-value'
+```
+
+The handler also supports various model-specific parameters when creating models, such as `model_name` and `prompt_template`.
+
+To illustrate the usage of the handler, here's an example of creating and querying a model for sentiment analysis:
+
+```sql
+-- Create a model
+CREATE MODEL minds_endpoint_model
+PREDICT sentiment
+USING
+   engine = 'mindsdb_serve',
+   model_name = 'mistral-7b',
+   prompt_template = 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}';
+
+-- Query the model
+SELECT text, sentiment
+FROM minds_endpoint_model
+WHERE text = 'I love machine learning!';
+```
+
+This example demonstrates how the handler translates SQL-like syntax into API calls to the Minds Endpoint service, abstracting the complexity of direct API interaction and providing a familiar interface for data scientists and analysts.

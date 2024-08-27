@@ -1,0 +1,141 @@
+---
+title: "huggingface_handler.py"
+---
+
+## High-level description
+The `HuggingFaceHandler` class is a MindsDB integration handler for using Hugging Face's Transformers library. It allows users to load, save, and use pre-trained or fine-tuned Hugging Face models for various NLP tasks like text classification, text generation, translation, summarization, and more.
+
+## Code Structure
+The `HuggingFaceHandler` class interacts with the `transformers` library to load and use models. It uses the `HfApi` to fetch model metadata and the `transformers.pipeline` function to create pipelines for different NLP tasks. The class also interacts with MindsDB's storage mechanisms (`model_storage`, `engine_storage`) to save and load model artifacts.
+
+## References
+This code references the `transformers` library for NLP tasks and the `FINETUNE_MAP` from `mindsdb.integrations.handlers.huggingface_handler.settings` for fine-tuning.
+
+## Symbols
+
+### `HuggingFaceHandler`
+#### Description
+This class handles the interaction with Hugging Face models, including loading, saving, predicting, and fine-tuning.
+
+#### Inputs
+This class doesn't have explicit inputs for its methods. It relies on the arguments passed to its methods and the data provided through dataframes.
+
+#### Outputs
+The class outputs predictions as Pandas DataFrames and can describe model details.
+
+#### Internal Logic
+The class uses the `transformers.pipeline` function to create pipelines for different NLP tasks based on the provided model and task. It handles model loading, saving, and prediction based on the chosen task. The `predict` method routes the input data to the appropriate prediction function based on the model's task.
+
+### `create_validation`
+#### Description
+This static method validates the arguments provided for creating a Hugging Face model handler. It checks if the model exists, if it's a PyTorch model, if the task is supported, and if all required arguments are provided.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column name for prediction. |
+| args | dict | A dictionary containing arguments for model creation, including 'model_name', 'task', 'input_column', and task-specific parameters. |
+| kwargs | dict | Additional keyword arguments. |
+
+#### Outputs
+This method doesn't return any value. It raises an exception if any validation fails.
+
+### `create`
+#### Description
+This method creates a Hugging Face model handler by downloading or loading the specified pre-trained model and saving it to the MindsDB storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column name for prediction. |
+| args | dict | A dictionary containing arguments for model creation, including 'model_name', 'task', 'input_column', and task-specific parameters. |
+| kwargs | dict | Additional keyword arguments. |
+
+#### Outputs
+This method doesn't return any value. It saves the model artifacts to the MindsDB storage.
+
+#### Internal Logic
+The method first checks if the model is already downloaded. If not, it downloads the model using `transformers.pipeline` and saves it to the storage. It also extracts model metadata like `max_length` and `labels` and saves them along with the model.
+
+### `predict_*` methods (e.g., `predict_text_classification`, `predict_text_generation`)
+#### Description
+These methods handle predictions for specific NLP tasks. They take the input data, process it using the loaded Hugging Face pipeline, and format the output as a Pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pipeline | transformers.Pipeline | The loaded Hugging Face pipeline for the specific task. |
+| item | str | The input text data for prediction. |
+| args | dict | A dictionary containing model arguments. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| final | dict | A dictionary containing the prediction result and optionally an explanation. |
+
+#### Internal Logic
+These methods call the appropriate method of the loaded Hugging Face pipeline, passing the input data and relevant arguments. They then format the output from the pipeline into a dictionary containing the prediction and optionally an explanation.
+
+### `predict`
+#### Description
+This method performs predictions on the input DataFrame using the loaded Hugging Face model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | The input DataFrame containing the data for prediction. |
+| args | dict | A dictionary containing model arguments. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pred_df | pandas.DataFrame | A DataFrame containing the predictions and optional explanations. |
+
+#### Internal Logic
+This method first loads the saved model arguments and determines the appropriate prediction function based on the model's task. It then iterates through the input DataFrame, calls the prediction function for each row, and collects the results into a new DataFrame.
+
+### `describe`
+#### Description
+This method provides descriptive information about the loaded Hugging Face model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | str, optional | The specific attribute to describe. If None, returns a list of available attributes. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pandas.DataFrame | A DataFrame containing the requested information. |
+
+#### Internal Logic
+This method retrieves model arguments or metadata based on the requested attribute and returns them as a Pandas DataFrame.
+
+### `finetune`
+#### Description
+This method fine-tunes the loaded Hugging Face model using the provided data and arguments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame, optional | The DataFrame containing the data for fine-tuning. |
+| args | dict, optional | A dictionary containing fine-tuning arguments. |
+
+#### Outputs
+This method doesn't return any value. It updates the saved model artifacts after fine-tuning.
+
+#### Internal Logic
+This method retrieves the appropriate fine-tuning function from `FINETUNE_MAP` based on the model's task. It then creates a `transformers.Trainer` object, trains the model, and saves the fine-tuned model artifacts to the storage.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis. |
+| transformers |  Loading and using Hugging Face models. |
+| huggingface_hub | Interacting with the Hugging Face Model Hub. |
+
+## Error Handling
+The code includes basic error handling using try-except blocks. It catches exceptions during model download, prediction, and fine-tuning, logging the error messages and returning error information in the prediction results.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging messages during model creation, prediction, and fine-tuning.

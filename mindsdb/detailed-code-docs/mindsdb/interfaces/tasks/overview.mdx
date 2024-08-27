@@ -1,0 +1,62 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the core components for task management and execution in the MindsDB system. It includes a base task class, a task monitor for managing and monitoring background tasks, and a task thread for executing specific tasks in separate threads.
+
+## What does it do?
+The code in this directory implements a task management system for MindsDB. It allows for the creation, monitoring, and execution of background tasks, such as triggers or chatbots. The system ensures that tasks are executed in a controlled manner, with proper error handling and lifecycle management.
+
+Here's a simplified workflow:
+
+1. Tasks are created and stored in a database.
+2. The TaskMonitor continuously checks for active tasks.
+3. When a new task is found, the TaskMonitor starts it using a TaskThread.
+4. The TaskThread executes the task (trigger or chatbot) in a separate thread.
+5. The TaskMonitor manages the lifecycle of tasks, stopping them when necessary and handling errors.
+
+This system allows MindsDB to run background processes efficiently, ensuring that long-running tasks don't interfere with the main application and that resources are managed properly.
+
+## Entry points
+The main entry point for this system is the `TaskMonitor` class in `task_monitor.py`. This class is responsible for starting and managing the overall task execution process. The `start()` function at the end of `task_monitor.py` creates and starts a TaskMonitor instance.
+
+The flow of control and data is as follows:
+
+1. `TaskMonitor` queries the database for tasks.
+2. For each task, `TaskMonitor` creates a `TaskThread` (defined in `task_thread.py`).
+3. `TaskThread` executes the specific task logic, which is defined in separate modules (e.g., trigger_task or chatbot_task).
+4. The `BaseTask` class in `task.py` provides a common interface for all tasks, which can be extended for specific task types.
+
+## Dependencies
+The code in this directory relies on several external libraries and internal MindsDB modules:
+
+1. SQLAlchemy: Used for database operations.
+2. Threading module: Used for creating and managing threads.
+3. mindsdb.interfaces.storage.db: Provides database access for task management.
+4. mindsdb.utilities.config.Config: Used for configuration settings.
+5. mindsdb.utilities.log: Used for logging throughout the task management system.
+6. mindsdb.utilities.context: Used for managing context in task execution.
+7. mindsdb.interfaces.triggers.trigger_task: Used for executing trigger tasks.
+8. mindsdb.interfaces.chatbot.chatbot_task: Used for executing chatbot tasks.
+
+These dependencies allow the task management system to interact with the database, handle concurrent execution, and integrate with other parts of the MindsDB system.
+
+## Configuration
+The task management system uses configuration settings from the `mindsdb.utilities.config.Config` class. Key configuration parameters include:
+
+- `MONITOR_INTERVAL_SECONDS`: Controls how often the TaskMonitor checks for tasks.
+- `LOCK_EXPIRED_SECONDS`: Determines when a task lock has expired.
+
+These settings allow for fine-tuning the behavior of the task management system to balance responsiveness and system load.
+
+## Error Handling
+Error handling is a crucial part of this task management system:
+
+1. The `BaseTask` class provides a `set_error` method for updating the task record with error messages.
+2. The `TaskThread` catches and logs any exceptions that occur during task execution, storing the error message in the task record.
+3. The `TaskMonitor` has a main loop that catches and logs exceptions, ensuring the monitor continues running even if individual tasks fail.
+
+This multi-layered approach to error handling ensures that the system remains robust and can recover from various types of failures.
+
+In conclusion, this directory implements a comprehensive task management system for MindsDB, allowing for efficient execution of background tasks with proper lifecycle management, error handling, and resource control.

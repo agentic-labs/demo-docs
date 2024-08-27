@@ -1,0 +1,88 @@
+---
+title: "gui.py"
+---
+
+## High-level description
+This code provides functionality for downloading and updating the GUI (Graphical User Interface) files for MindsDB. It includes methods to download GUI files from an S3 bucket, extract them, and update the local static files with the new version.
+
+## Code Structure
+The main functions in this code are `download_gui` and `update_static`. `download_gui` is responsible for downloading and extracting the GUI files, while `update_static` manages the process of updating the local static files with the new version.
+
+## Symbols
+
+### `download_gui`
+#### Description
+Downloads and extracts GUI files from an S3 bucket to a specified destination.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| destignation | str or Path | The destination path for downloaded files |
+| version | str | The version of the GUI to download |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| success | bool | True if download and extraction were successful, False otherwise |
+
+#### Internal Logic
+1. Constructs the URL for the S3 bucket and the zip file to download.
+2. Downloads the zip file using requests.
+3. Extracts the contents of the zip file to the destination folder.
+4. Moves files to their correct locations and removes temporary files.
+5. Creates a version.txt file with the downloaded version.
+
+### `update_static`
+#### Description
+Updates the static GUI files with a new version.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| gui_version_lv | LooseVersion | The new GUI version to update to |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| success | bool | True if update was successful, False otherwise |
+
+#### Internal Logic
+1. Creates a temporary directory for downloading new files.
+2. Calls `download_gui` to get the new version.
+3. If successful, replaces the old static files with the new ones.
+4. Cleans up temporary directories.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| os | File and directory operations |
+| shutil | High-level file operations |
+| tempfile | Creating temporary directories |
+| pathlib | Path manipulations |
+| zipfile | Working with zip files |
+| requests | Making HTTP requests |
+| mindsdb.utilities.config | Accessing MindsDB configuration |
+| mindsdb.utilities.log | Logging |
+
+## Error Handling
+The code includes basic error handling, logging errors that occur during the download and update process. It returns False if any critical errors occur, allowing the calling function to handle the failure appropriately.
+
+## Logging
+The code uses the MindsDB logging utility to log information about the update process, including when new versions are available and when updates are completed.
+
+## Performance Considerations
+The code includes a commented-out section suggesting the use of concurrent downloads for improved performance. This could be implemented to speed up the download process for multiple resources.
+
+## TODOs
+There's a commented-out section for concurrent downloads that could be implemented for performance improvement:
+```python
+"""
+# to make downloading faster download each resource in a separate thread
+with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    future_to_url = {executor.submit(get_resources, r): r for r in resources}
+    for future in concurrent.futures.as_completed(future_to_url):
+        res = future.result()
+        if res is not None:
+            raise res
+"""
+```

@@ -1,0 +1,301 @@
+---
+title: "twelve_labs_api_client.py"
+---
+
+## High-level description
+The `TwelveLabsAPIClient` class provides a client interface for interacting with the Twelve Labs API. It handles authentication, request construction, response parsing, and error handling for various API operations related to video indexing, searching, and summarization.
+
+## Code Structure
+The `TwelveLabsAPIClient` class encapsulates all the logic for interacting with the Twelve Labs API. It uses the `requests` library for making HTTP requests and the `requests_toolbelt` library for handling multipart form data. The `twelve_labs_handler_config` module provides default configuration values.
+
+## References
+This class references the `twelve_labs_handler_config` module for accessing configuration settings.
+
+## Symbols
+
+### `TwelveLabsAPIClient`
+#### Description
+This class provides methods for interacting with the Twelve Labs API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | str | The Twelve Labs API key. |
+| base_url | str | (Optional) The base URL for the Twelve Labs API. Defaults to the value in the configuration. |
+
+#### Outputs
+This class does not have a return value. It is used to instantiate an object.
+
+#### Internal Logic
+The constructor initializes the API client with the provided API key and base URL. It also sets up default headers for API requests.
+
+### `create_index`
+#### Description
+Creates a new index in Twelve Labs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_name | str | The name of the index to create. |
+| index_options | List[str] | A list of options for the index. |
+| engine_id | str | (Optional) The ID of the engine to use for the index. Defaults to the default engine in the configuration. |
+| addons | List[str] | (Optional) A list of addons to enable for the index. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the created index. |
+
+#### Internal Logic
+This method constructs a JSON payload with the index details and sends a POST request to the `/indexes` endpoint. It then returns the ID of the created index.
+
+### `get_index_by_name`
+#### Description
+Retrieves the ID of an index by its name.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_name | str | The name of the index to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the index, or `None` if not found. |
+
+#### Internal Logic
+This method sends a GET request to the `/indexes` endpoint with the index name as a query parameter. It then extracts and returns the ID of the index from the response.
+
+### `list_videos_in_index`
+#### Description
+Lists all videos within a specific index.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_name | str | The name of the index. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| videos | List[Dict] | A list of dictionaries, each representing a video in the index. |
+
+#### Internal Logic
+This method first retrieves the index ID using `get_index_by_name`. It then sends a GET request to the `/indexes/{index_id}/videos` endpoint to fetch the videos. If there are multiple pages of results, it iterates through them using pagination.
+
+### `_update_video_metadata`
+#### Description
+Updates the metadata of a video in an index.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the index. |
+| video_id | str | The ID of the video. |
+| video_title | str | (Optional) The new title of the video. |
+| metadata | Dict | (Optional) A dictionary containing the metadata to update. |
+
+#### Outputs
+This method does not return any value.
+
+#### Internal Logic
+This method constructs a JSON payload with the updated metadata and sends a PUT request to the `/indexes/{index_id}/videos/{video_id}` endpoint.
+
+### `create_video_indexing_tasks`
+#### Description
+Creates tasks to index videos from either URLs or local files.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the index to add the videos to. |
+| video_urls | List[str] | (Optional) A list of video URLs to index. |
+| video_files | List[str] | (Optional) A list of paths to local video files to index. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_ids | List[str] | A list of IDs for the created indexing tasks. |
+
+#### Internal Logic
+This method iterates through the provided video URLs or file paths and calls `_create_video_indexing_task` for each one. It returns a list of task IDs for all created tasks.
+
+### `_create_video_indexing_task`
+#### Description
+Creates a single video indexing task for a given URL or file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the index to add the video to. |
+| video_url | str | (Optional) The URL of the video to index. |
+| video_file | str | (Optional) The path to the local video file to index. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_id | str | The ID of the created indexing task. |
+
+#### Internal Logic
+This method constructs a request payload with either the video URL or file data and sends a POST request to the `/tasks` endpoint. It then retrieves the task ID from the response and updates the video metadata with a reference to the original URL or file path.
+
+### `poll_for_video_indexing_tasks`
+#### Description
+Monitors the status of video indexing tasks until they are completed.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_ids | List[str] | A list of task IDs to monitor. |
+
+#### Outputs
+This method does not return any value.
+
+#### Internal Logic
+This method iterates through the provided task IDs and periodically fetches the status of each task using `_get_video_indexing_task`. It waits for a specified duration between checks. The loop continues until all tasks are either in the 'ready' state (successful) or an error state.
+
+### `_get_video_indexing_task`
+#### Description
+Retrieves the details of a specific video indexing task.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_id | str | The ID of the task to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task | Dict | A dictionary containing the task details. |
+
+#### Internal Logic
+This method sends a GET request to the `/tasks/{task_id}` endpoint and returns the response data.
+
+### `search_index`
+#### Description
+Searches an index for videos matching a given query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index_id | str | The ID of the index to search. |
+| query | str | The search query. |
+| search_options | List[str] | A list of options to modify the search. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| search_results | Dict | A dictionary containing the search results. |
+
+#### Internal Logic
+This method constructs a JSON payload with the search parameters and sends a POST request to the `/search` endpoint. It handles pagination if there are multiple pages of results and returns the combined search results.
+
+### `summarize_videos`
+#### Description
+Generates summaries for multiple videos.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| video_ids | List[str] | A list of video IDs to summarize. |
+| summarization_type | str | The type of summary to generate (e.g., 'summary', 'chapter', 'highlight'). |
+| prompt | str | The prompt to use for the summarization task. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| summaries | Dict | A dictionary containing the summaries for each video. |
+
+#### Internal Logic
+This method iterates through the provided video IDs and calls `summarize_video` for each one, returning a dictionary of summaries.
+
+### `summarize_video`
+#### Description
+Generates a summary for a single video.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| video_id | str | The ID of the video to summarize. |
+| summarization_type | str | The type of summary to generate (e.g., 'summary', 'chapter', 'highlight'). |
+| prompt | str | The prompt to use for the summarization task. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| summary | Dict | A dictionary containing the video summary. |
+
+#### Internal Logic
+This method constructs a JSON payload with the summarization parameters and sends a POST request to the `/summarize` endpoint. It returns the response data containing the generated summary.
+
+### `_submit_request`
+#### Description
+A private helper method for sending HTTP requests to the Twelve Labs API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| endpoint | str | The API endpoint to send the request to. |
+| headers | Dict | (Optional) Custom headers for the request. |
+| data | Dict | (Optional) Data payload for the request. |
+| method | str | (Optional) The HTTP method to use (defaults to 'GET'). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Dict | The parsed JSON response from the API. |
+
+#### Internal Logic
+This method constructs and sends the HTTP request using the `requests` library based on the provided parameters. It handles different HTTP methods (GET, POST, PUT) and returns the parsed JSON response.
+
+### `_submit_multi_part_request`
+#### Description
+A private helper method for sending multipart form data requests to the Twelve Labs API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| endpoint | str | The API endpoint to send the request to. |
+| headers | Dict | (Optional) Custom headers for the request. |
+| data | Dict | (Optional) Data payload for the request, including file data. |
+| method | str | (Optional) The HTTP method to use (defaults to 'POST'). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Dict | The parsed JSON response from the API. |
+
+#### Internal Logic
+This method uses the `requests_toolbelt` library to encode multipart form data, including file uploads. It then sends the request using the `requests` library and returns the parsed JSON response.
+
+### `_handle_response`
+#### Description
+A private helper method for handling API responses and raising exceptions for errors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | requests.Response | The raw HTTP response object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Dict | The parsed JSON response data if successful. |
+
+#### Internal Logic
+This method checks the HTTP status code of the response. If the request was successful (status code 200 or 201), it parses and returns the JSON response data. Otherwise, it raises an exception with details from the error response.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| requests | Used for making HTTP requests to the Twelve Labs API. |
+| requests_toolbelt | Used for encoding multipart form data, including file uploads. |
+| typing | Used for type hinting. |
+| mindsdb.utilities | Used for logging. |
+| mindsdb.integrations.handlers.twelve_labs_handler.settings | Used for accessing configuration settings. |
+
+## TODOs
+- Change `index_options` to `engine_options`?
+- Support multiple engines per index?
+- Update Exception to be more specific in `poll_for_video_indexing_tasks` and `_handle_response`.
+

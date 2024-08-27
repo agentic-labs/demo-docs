@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the BYOM (Bring Your Own Model) handler for MindsDB. The BYOM handler allows users to integrate their custom machine learning models into the MindsDB ecosystem. It provides functionality for creating, training, predicting, and fine-tuning custom models, supporting both in-process execution and isolated execution in virtual environments.
+
+## What does it do?
+The BYOM handler enables users to:
+1. Upload their own Python code containing a custom machine learning model.
+2. Specify requirements for the model (e.g., required Python packages).
+3. Create and train the model within MindsDB.
+4. Make predictions using the trained model.
+5. Fine-tune the model with new data.
+6. Execute custom functions within an isolated environment.
+
+The handler supports two modes of operation:
+1. "BYOM" mode for traditional machine learning models with train and predict methods.
+2. "custom_function" mode for using it as a container for arbitrary Python functions.
+
+## Entry points
+The main entry point for the BYOM handler is the `BYOMHandler` class defined in `byom_handler.py`. This class inherits from `BaseMLEngine` and implements the core functionality of the handler.
+
+The workflow typically follows these steps:
+1. The handler is initialized with configuration parameters.
+2. Users create a new model or update an existing one using the `create_engine` or `update_engine` methods.
+3. The model is trained using the `create` method.
+4. Predictions are made using the `predict` method.
+5. If needed, the model can be fine-tuned using the `finetune` method.
+
+Data flow:
+- Input data is typically provided as pandas DataFrames.
+- Data is serialized and deserialized using Parquet format for efficient transfer between processes.
+- Model code and requirements are passed as file paths.
+- Results are returned as pandas DataFrames or other Python objects, depending on the operation.
+
+Control flow:
+- The handler determines whether to use in-process execution (`ModelWrapperUnsafe`) or isolated execution (`ModelWrapperSafe`) based on configuration and available system resources.
+- For isolated execution, the handler creates a virtual environment, installs required packages, and communicates with the model process using stdin/stdout.
+
+## Key Files
+1. `byom_handler.py`: Contains the main `BYOMHandler` class, which implements the core functionality of the BYOM handler.
+
+2. `proc_wrapper.py`: Provides utility functions for running Python code in separate processes, handling inter-process communication, and managing model operations like training, prediction, and fine-tuning.
+
+3. `connection_args.py`: Defines the connection arguments required for the BYOM handler, including paths to model code and requirements, and the mode of operation.
+
+4. `__init__.py`: Sets up the handler configuration and imports necessary components.
+
+5. `__about__.py`: Contains metadata information for the BYOM handler, such as version, description, and author details.
+
+## Dependencies
+The BYOM handler relies on several external libraries:
+
+1. pandas (version not specified): Used for data manipulation and DataFrame operations.
+   - Chosen for its powerful data handling capabilities and wide adoption in the data science community.
+
+2. virtualenv (version not specified): Used to create isolated Python environments for model execution.
+   - Chosen for its ability to create lightweight, isolated environments, which is crucial for running user-provided code safely.
+
+3. pyarrow (version not specified): Used for efficient serialization and deserialization of pandas DataFrames.
+   - Chosen for its high-performance implementation of the Apache Arrow columnar memory format, which allows for fast data transfer between processes.
+
+4. pickle (Python standard library): Used for object serialization and deserialization.
+   - Chosen for its ability to serialize complex Python objects, which is necessary for transferring model objects between processes.
+
+## Configuration
+The BYOM handler uses the following configuration options, defined in `connection_args.py`:
+
+1. `code` (ARG_TYPE.PATH): The path to the model code file.
+2. `modules` (ARG_TYPE.PATH): The path to the file containing model requirements (e.g., required Python packages).
+3. `mode` (ARG_TYPE.STR): The mode of operation for the BYOM handler. It can be set to "custom_function" for using it as a container for functions.
+
+These configuration options are used when creating or updating a BYOM engine within MindsDB.
+
+The handler also supports various runtime arguments that can be passed during model training and prediction, allowing for flexible parameterization of custom models.
+
+In summary, the BYOM handler provides a powerful and flexible way to integrate custom machine learning models into MindsDB, with support for isolated execution environments and efficient data transfer between processes. It enables users to leverage their existing models and functions within the MindsDB ecosystem while maintaining security and performance.

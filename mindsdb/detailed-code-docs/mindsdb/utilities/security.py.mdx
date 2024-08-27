@@ -1,0 +1,110 @@
+---
+title: "security.py"
+---
+
+## High-level description
+This file, `mindsdb/utilities/security.py`, contains utility functions for security-related operations in MindsDB. It includes functions for checking private URLs, sanitizing filenames, validating allowed hosts, and verifying crawling sites.
+
+## Symbols
+
+### `is_private_url(url: str)`
+#### Description
+This function checks if a given URL is private by resolving its hostname to an IP address and checking if it's a private IP.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | The URL to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| is_private | bool | True if the URL is private, False otherwise |
+
+#### Internal Logic
+1. Parse the URL to extract the hostname.
+2. If no hostname is found, return True (considering it private).
+3. Resolve the hostname to an IP address.
+4. Check if the IP address is private using `ipaddress.ip_address(ip).is_private`.
+
+### `clear_filename(filename: str) -&gt; str`
+#### Description
+This function sanitizes a filename by removing characters that could be used for path injection.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filename | str | The input filename to sanitize |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sanitized_filename | str | The sanitized filename |
+
+#### Internal Logic
+1. Define a set of bad characters: `\\/:*?"&lt;&gt;|`
+2. Remove each bad character from the filename.
+
+### `is_allowed_host(url)`
+#### Description
+This function checks if a given URL is from an allowed host by comparing its network location against a list of allowed hosts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | The URL to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| is_allowed | bool | True if the URL is from an allowed host, False otherwise |
+
+#### Internal Logic
+1. Get the configuration using `Config()`.
+2. Parse the URL to extract the network location (netloc).
+3. Check if the netloc is in the list of allowed hosts from the configuration.
+
+### `validate_crawling_sites(urls)`
+#### Description
+This function checks if the provided URLs are from allowed sites for web crawling.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| urls | str or list | A single URL or a list of URLs to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| is_valid | bool | True if all URLs are from allowed sites, False otherwise |
+
+#### Internal Logic
+1. Get the configuration using `Config()`.
+2. Extract allowed URLs from the configuration.
+3. Parse allowed URLs to get their network locations.
+4. If no allowed URLs are configured, return True.
+5. Ensure `urls` is a list.
+6. Check if all provided URLs have network locations in the allowed list.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| urllib.parse | For parsing URLs |
+| socket | For resolving hostnames to IP addresses |
+| ipaddress | For checking if an IP address is private |
+| mindsdb.utilities.config | For accessing configuration settings |
+
+## Configuration
+The code relies on configuration options defined elsewhere:
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| file_upload_domains | list | List of allowed domains for file uploads |
+| web_crawling_allowed_sites | list | List of allowed sites for web crawling |
+
+## References
+This code is referenced by:
+1. `mindsdb/api/http/namespaces/file.py` for file upload security checks.
+2. `mindsdb/integrations/handlers/web_handler/web_handler.py` for validating crawling sites.
+3. `mindsdb/integrations/handlers/llama_index_handler/llama_index_handler.py` for validating URLs in web crawling operations.
+
+These security functions play a crucial role in ensuring that MindsDB operates safely when dealing with external URLs and file uploads.

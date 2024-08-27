@@ -1,0 +1,128 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `aerospike_handler` directory contains the implementation of an Aerospike database handler for MindsDB. This handler allows MindsDB to connect to and interact with Aerospike databases, enabling users to perform queries, retrieve schema information, and execute other database operations within the MindsDB ecosystem.
+
+## What does it do?
+The Aerospike handler provides the following functionalities:
+
+1. Establishes connections to Aerospike databases using provided credentials and connection parameters.
+2. Executes SQL-like queries on Aerospike data sets using AQL (Aerospike Query Language).
+3. Retrieves metadata about tables (sets) and columns (bins) in the Aerospike database.
+4. Translates MindsDB's internal query representations into Aerospike-compatible operations.
+5. Processes query results and returns them in a format compatible with MindsDB's expectations.
+
+## Entry points
+The main entry point for the Aerospike handler is the `AerospikeHandler` class defined in `aerospike_handler.py`. This class inherits from `DatabaseHandler` and implements the necessary methods for interacting with Aerospike databases.
+
+The handler is initialized and made available to MindsDB through the `__init__.py` file, which imports the `AerospikeHandler` and sets up the necessary metadata for the integration.
+
+## Key Files
+1. `aerospike_handler.py`: Contains the `AerospikeHandler` class, which is the core implementation of the Aerospike integration. It includes methods for connecting to the database, executing queries, and retrieving schema information.
+
+2. `__init__.py`: Sets up the handler for use within MindsDB, including error handling for import issues and defining metadata such as the handler's name, type, and icon.
+
+3. `connection_args.py`: Defines the structure of connection arguments required to establish a connection to an Aerospike database, including host, port, namespace, and optional authentication details.
+
+4. `__about__.py`: Contains metadata about the Aerospike handler, including its version, description, and licensing information.
+
+5. `README.md`: Provides documentation on how to use the Aerospike handler within MindsDB, including connection syntax and example queries.
+
+## Dependencies
+The Aerospike handler relies on the following main external libraries:
+
+1. `aerospike`: The official Python client for Aerospike databases, used for establishing connections and executing native Aerospike operations.
+
+2. `duckdb`: A high-performance analytical database system, used in this handler for processing query results and performing SQL-like operations on the data retrieved from Aerospike.
+
+3. `pandas`: Used for data manipulation and creating DataFrame representations of query results.
+
+4. `mindsdb_sql`: MindsDB's SQL parsing and AST manipulation library, used for translating SQL queries into Aerospike-compatible operations.
+
+## Configuration
+The Aerospike handler uses the following configuration parameters, defined in `connection_args.py`:
+
+- `user`: Optional username for authentication
+- `password`: Optional password for authentication (treated as secret)
+- `host`: Required hostname or IP address of the Aerospike server
+- `port`: Required TCP/IP port of the Aerospike server
+- `namespace`: Required namespace name for queries in the Aerospike server
+
+These parameters can be provided when creating a new database connection in MindsDB using the following SQL-like syntax:
+
+```sql
+CREATE DATABASE aerospike_db
+WITH ENGINE = "aerospike",
+PARAMETERS = {
+    "user": "test",
+    "password": "password",
+    "host": "localhost",
+    "port": 3000,
+    "namespace": "test"
+};
+```
+
+## Code Snippets and Examples
+
+Here's an example of how the `AerospikeHandler` executes a native query:
+
+```python
+def native_query(self, query: str) -&gt; Response:
+    self.connect()
+    try:
+        # Parse the AQL query
+        parsed_query = parse_aql(query)
+        selected_bins = parsed_query['selected_bins']
+        namespace = parsed_query['namespace']
+        set_name = parsed_query['set']
+
+        # Execute the query using Aerospike's scan operation
+        scan = self.connection.scan(namespace, set_name)
+        scan.select(*selected_bins)
+        records = []
+        for _, _, record in scan.results():
+            records.append(record)
+
+        # Process the result using duckdb if necessary
+        if len(records) &gt; 0:
+            df = pd.DataFrame(records)
+            result = duckdb.query(query, df).df()
+        else:
+            result = pd.DataFrame()
+
+        return Response(RESPONSE_TYPE.TABLE, result)
+    except Exception as e:
+        return Response(RESPONSE_TYPE.ERROR, str(e))
+```
+
+This method demonstrates how the handler translates an AQL query into Aerospike operations, executes the query, and processes the results using duckdb when necessary.
+
+The handler also provides methods for retrieving schema information:
+
+```python
+def get_tables(self) -&gt; Response:
+    self.connect()
+    try:
+        sets = self.connection.info_all('sets')
+        tables = []
+        for node_sets in sets.values():
+            node_sets = node_sets.split(';')
+            for set_info in node_sets:
+                if set_info:
+                    namespace, set_name = set_info.split(':')[:2]
+                    if namespace == self.namespace:
+                        tables.append(set_name)
+        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(tables, columns=['table_name']))
+    except Exception as e:
+        return Response(RESPONSE_TYPE.ERROR, str(e))
+```
+
+This `get_tables` method retrieves a list of all sets (tables) in the specified namespace, demonstrating how the handler interacts with Aerospike's metadata.
+
+## Notes
+- The handler uses a combination of Aerospike's native operations and duckdb for query processing, allowing it to handle both Aerospike-specific queries and more complex SQL-like operations.
+- Error handling is implemented throughout the handler, with most methods returning `Response` objects that include error information when exceptions occur.
+- The handler includes a basic test suite in the `tests` directory, which covers fundamental operations like connecting to the database, executing queries, and retrieving schema information.
+- The implementation assumes that users have a basic understanding of Aerospike concepts such as namespaces, sets, and bins when constructing queries and connection parameters.

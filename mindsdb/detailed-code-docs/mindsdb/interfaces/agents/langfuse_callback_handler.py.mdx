@@ -1,0 +1,144 @@
+---
+title: "langfuse_callback_handler.py"
+---
+
+## High-level description
+This file defines a custom callback handler for Langchain, called `LangfuseCallbackHandler`, which integrates with the Langfuse tracing system. It captures and logs various events during the execution of Langchain tools and chains, providing detailed insights into the agent's decision-making process and performance.
+
+## Code Structure
+The main class `LangfuseCallbackHandler` inherits from `BaseCallbackHandler` and implements several callback methods. Additional utility functions are defined to handle metadata, skills, tags, and tool usage information for Langfuse traces.
+
+## Symbols
+
+### `LangfuseCallbackHandler`
+#### Description
+A custom callback handler for Langchain that integrates with Langfuse for tracing and logging agent executions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| langfuse | Langfuse | Langfuse client instance |
+| trace_id | Optional[str] | ID for the Langfuse trace |
+| observation_id | Optional[str] | ID for the Langfuse observation |
+
+#### Internal Logic
+- Initializes with Langfuse client and optional trace/observation IDs
+- Maintains dictionaries to track spans for chains and actions
+- Implements various callback methods to capture events during agent execution
+
+### `on_tool_start`
+#### Description
+Callback method invoked when a tool starts running.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialized | Dict[str, Any] | Serialized tool information |
+| input_str | str | Input string for the tool |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Retrieves the parent run UUID
+- Updates the action span with metadata including tool name and start time
+
+### `on_tool_end`
+#### Description
+Callback method invoked when a tool finishes running.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output | str | Output of the tool execution |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Retrieves the parent run UUID
+- Updates the action span with the tool output and finish time
+
+### `on_chain_start`
+#### Description
+Callback method invoked when a chain starts running.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| serialized | Dict[str, Any] | Serialized chain information |
+| inputs | Dict[str, Any] | Input data for the chain |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Creates a new span for the chain execution
+- Stores the span in the `chain_uuid_to_span` dictionary
+
+### `on_chain_end`
+#### Description
+Callback method invoked when a chain finishes running.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| outputs | Dict[str, Any] | Output data from the chain |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Retrieves the chain span from the `chain_uuid_to_span` dictionary
+- Updates the span with the chain output and ends it
+
+### `on_agent_action`
+#### Description
+Callback method invoked when an agent takes an action.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| action | Any | The action taken by the agent |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Creates a new span for the agent action
+- Stores the span in the `action_uuid_to_span` dictionary
+
+### `on_agent_finish`
+#### Description
+Callback method invoked when an agent finishes its execution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| finish | Any | The finish state of the agent |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+- Retrieves the action span from the `action_uuid_to_span` dictionary
+- Updates the span with the finish state and ends it
+
+### `auth_check`
+#### Description
+Performs an authentication check with the Langfuse client.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | True if authentication is successful, False otherwise |
+
+### Utility Functions
+
+Several utility functions are defined to handle metadata, skills, tags, and tool usage information for Langfuse traces:
+
+- `get_metadata`: Generates initial metadata from a model's `using` clause.
+- `get_skills`: Retrieves skills from an agent's `skills` attribute.
+- `get_tags`: Retrieves tags from existing Langfuse metadata and environment variables.
+- `get_tool_usage`: Retrieves tool usage information from a Langfuse trace.
+
+## Dependencies
+- `langchain_core.callbacks.base.BaseCallbackHandler`
+- `mindsdb.utilities.log`
+- `mindsdb.interfaces.storage.db`
+
+## Error Handling
+The code includes basic error handling, such as try-except blocks in some methods to handle potential exceptions when processing tool outputs or agent finishes.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging, with the log level set to 'DEBUG'.
+
+This callback handler provides a comprehensive way to trace and log the execution of Langchain agents, offering valuable insights into the decision-making process and performance of AI models integrated with MindsDB.

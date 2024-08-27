@@ -1,0 +1,89 @@
+---
+title: "find.py"
+---
+
+## High-level description
+This code implements a MongoDB-compatible API for MindsDB, specifically handling the 'find' operation. It translates MongoDB queries into SQL-like abstract syntax trees (ASTs), executes them, and formats the results to match MongoDB's response structure.
+
+## Code Structure
+The main class `Responce` (which should be spelled "Response") inherits from `Responder`. It defines when to handle a query and how to process it. The `find_to_ast` function converts MongoDB-style queries to SQL-like ASTs, which are then executed using the `run_sql_command` function.
+
+## References
+This code references other parts of the MindsDB codebase, including:
+- `mindsdb_sql.parser.ast` for SQL AST structures
+- `mindsdb.api.mongo.functions` for helper functions
+- `mindsdb.api.mongo.classes` for the `Responder` base class
+- `mindsdb.api.mongo.utilities.mongodb_ast` for MongoDB to AST conversion
+- `mindsdb.interfaces.jobs.jobs_controller` for job management
+
+## Symbols
+
+### `find_to_ast`
+#### Description
+Converts a MongoDB-style 'find' query to a SQL-like AST.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | dict | The MongoDB-style query |
+| database | str | The database name |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ast_query | AST object | The resulting SQL-like AST |
+
+#### Internal Logic
+1. Determines if the query is a JOIN operation or a single table query.
+2. For JOIN operations, it creates separate ASTs for the main query and the table query, then combines them.
+3. For single table queries, it directly converts the MongoDB query to an AST.
+4. Applies any modifiers to the AST.
+
+### `Responce` class
+#### Description
+Handles 'find' queries in the MongoDB-compatible API.
+
+#### Methods
+
+##### `result`
+###### Description
+Processes the 'find' query and returns the result in MongoDB-compatible format.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | dict | The MongoDB-style query |
+| request_env | dict | Request environment information |
+| mindsdb_env | dict | MindsDB environment information |
+| session | object | Current session object |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | dict | MongoDB-compatible response with cursor and data |
+
+###### Internal Logic
+1. Handles special cases for 'config' and 'system.version' queries.
+2. Converts the query to an AST using `find_to_ast`.
+3. Executes the query using `run_sql_command`.
+4. Formats the result to match MongoDB's response structure, including cursor information.
+5. Adds '_id' fields to 'models' and 'jobs' results.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| bson.int64 | For MongoDB-compatible 64-bit integer representation |
+| mindsdb_sql.parser.ast | For SQL AST structures |
+| mindsdb.api.mongo.functions | Helper functions for MongoDB API |
+| mindsdb.api.mongo.classes | Base classes for MongoDB API |
+| mindsdb.api.mongo.utilities.mongodb_ast | MongoDB to AST conversion |
+| mindsdb.interfaces.jobs.jobs_controller | Job management |
+
+## Error Handling
+The code doesn't implement extensive error handling. It raises `NotImplementedError` for unsupported operations in the `aggregate_to_ast` function (which is defined in a related file).
+
+## Performance Considerations
+The code converts MongoDB queries to SQL-like ASTs, which may have performance implications for complex queries. The use of `run_sql_command` suggests that query execution is delegated to a separate component, which may have its own performance characteristics.
+
+## TODOs
+There is a TODO comment in the related `aggregate_to_ast` function to implement group operations.

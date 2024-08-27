@@ -1,0 +1,103 @@
+---
+title: "task.py"
+---
+
+## High-level description
+This code defines a `Task` class that represents an abstraction for an ML (Machine Learning) task in the MindsDB system. It provides an interface similar to `concurrent.futures.Future` for managing and monitoring the execution of ML tasks using Redis as a backend for task status and data storage.
+
+## Code Structure
+The `Task` class is the main component of this file. It interacts with Redis to manage task status, retrieve results, and handle exceptions. The class uses the `RedisKey` utility and `ML_TASK_STATUS` enum from other parts of the codebase.
+
+## References
+- `mindsdb.utilities.ml_task_queue.utils.RedisKey`
+- `mindsdb.utilities.ml_task_queue.utils.from_bytes`
+- `mindsdb.utilities.ml_task_queue.const.ML_TASK_STATUS`
+
+## Symbols
+
+### Task
+#### Description
+The `Task` class represents an ML task and provides methods to monitor its status, retrieve results, and handle exceptions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| connection | redis.Redis | Redis connection object |
+| redis_key | RedisKey | Redis keys associated with the task |
+
+#### Attributes
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | Redis | Database object |
+| redis_key | RedisKey | Redis keys associated with task |
+| dataframe | DataFrame | Task result |
+| exception | Exception | Task execution runtime exception |
+| _timeout | int | Max time without status updating |
+
+#### Methods
+
+##### subscribe
+###### Description
+Returns the task's status until it is done or failed.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | ML_TASK_STATUS | Task status |
+
+###### Internal Logic
+1. Subscribe to the task's status channel in Redis.
+2. Wait for messages with a timeout.
+3. Process received messages and update task status.
+4. If the task is complete, retrieve and deserialize the result dataframe.
+5. If an error occurred, retrieve and deserialize the exception.
+6. Yield the task status.
+
+##### wait
+###### Description
+Blocks the thread until the task is done or failed.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | ML_TASK_STATUS | Target status to wait for (default: COMPLETE) |
+
+###### Internal Logic
+1. Iterate through task statuses using the `subscribe` method.
+2. If the task is complete, return.
+3. If an error occurred, raise the exception.
+4. If a timeout occurred, raise an exception.
+5. If an unknown status is encountered, raise a KeyError.
+
+##### result
+###### Description
+Waits for the task to complete and returns the result.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dataframe | DataFrame | Task result |
+
+##### add_done_callback
+###### Description
+A placeholder method for compatibility with the `concurrent.futures.Future` interface.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | Callable | Callback function |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| redis | Redis client library for Python |
+| pandas | Data manipulation library, used for DataFrame handling |
+
+## Error Handling
+The `Task` class implements error handling in the `wait` method. It raises exceptions for various error conditions:
+- If the task fails with an exception, it raises that exception.
+- If the task times out, it raises a custom exception.
+- If an unknown task status is encountered, it raises a KeyError.
+
+## Performance Considerations
+The `Task` class uses Redis pub/sub and caching mechanisms for efficient task status monitoring and result retrieval. The `_timeout` attribute (default 30 seconds) controls the maximum time to wait for status updates, which can be adjusted based on specific use cases.

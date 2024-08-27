@@ -1,0 +1,72 @@
+---
+title: "handlers_cacher.py"
+---
+
+## High-level description
+This code defines a `HandlersCache` class, which is a custom dictionary implementation for caching ML handlers. It has a maximum size limit and implements a least recently used (LRU) eviction policy. The file also instantiates a global `handlers_cacher` object of this class.
+
+## Code Structure
+The file contains a single class `HandlersCache` which inherits from `UserDict`. It overrides the `__setitem__` and `__getitem__` methods to implement the caching behavior. At the end of the file, a global instance `handlers_cacher` is created.
+
+## Symbols
+
+### HandlersCache
+#### Description
+A custom dictionary class that implements a cache for ML handlers with a maximum size limit and LRU eviction policy.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| max_size | int | The maximum number of handlers to keep in the cache (default: 5) |
+
+#### Internal Logic
+- The class maintains a dictionary of handlers, where each entry contains the handler object and its last usage timestamp.
+- When adding a new item, if the cache is full, it removes the least recently used item before adding the new one.
+- When retrieving an item, it updates the last usage timestamp.
+
+### __setitem__
+#### Description
+Overrides the dictionary's set item method to implement the caching behavior.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | Any | The key for the handler |
+| value | Any | The handler object to be cached |
+
+#### Internal Logic
+1. If the cache is full (exceeds `max_size`):
+   - Sort the existing items by their last usage timestamp.
+   - Remove the least recently used item.
+2. Add the new item to the cache with the current timestamp.
+
+### __getitem__
+#### Description
+Overrides the dictionary's get item method to update the last usage timestamp when an item is accessed.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | Any | The key for the handler to retrieve |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| handler | object | The cached handler object |
+
+#### Internal Logic
+1. Retrieve the item using the parent class's `__getitem__` method.
+2. Update the last usage timestamp for the retrieved item.
+3. Return the handler object.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| time | Used for getting current timestamp |
+| collections.UserDict | Base class for custom dictionary implementation |
+
+## Performance Considerations
+The `HandlersCache` class implements an LRU eviction policy, which helps maintain a balance between memory usage and quick access to frequently used handlers. The sorting operation in `__setitem__` method has a time complexity of O(n log n), where n is the number of items in the cache. This could potentially become a bottleneck if the cache size is very large, but for the default size of 5, it should not be a significant issue.
+
+## References
+The `handlers_cacher` object created in this file is used in the `learn_process` function in the related file `mindsdb/integrations/libs/ml_handler_process/learn_process.py`. It's used to cache ML handlers created during the learning process, which can help improve performance by reusing handlers for subsequent operations.

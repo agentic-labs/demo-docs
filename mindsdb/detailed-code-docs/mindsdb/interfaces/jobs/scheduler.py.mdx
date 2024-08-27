@@ -1,0 +1,108 @@
+---
+title: "scheduler.py"
+---
+
+## High-level description
+This code implements a job scheduler for MindsDB. It manages the execution of tasks asynchronously, checks the timetable for scheduled jobs, and handles the execution of these jobs either locally or potentially through a microservice.
+
+## Code Structure
+The main components of this code are the `Scheduler` class and the `execute_async` function. The `Scheduler` class manages the overall scheduling process, while `execute_async` handles the actual execution of tasks in a separate thread.
+
+## Symbols
+
+### `execute_async`
+#### Description
+This function runs in a separate thread and executes tasks from a queue.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| q_in | queue.Queue | Input queue for receiving tasks |
+| q_out | queue.Queue | Output queue for signaling task completion |
+
+#### Internal Logic
+1. Continuously retrieves tasks from the input queue
+2. Executes the task using `JobsExecutor().execute_task_local()`
+3. Handles exceptions and signals task completion through the output queue
+
+### `Scheduler`
+#### Description
+This class manages the scheduling and execution of jobs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | dict | Configuration settings (optional) |
+
+#### Internal Logic
+- Initializes queues and a worker thread for task execution
+- Implements methods for stopping the worker thread and monitoring the schedule
+- Checks the timetable periodically and executes due tasks
+- Handles task execution either locally or potentially through a microservice (not implemented)
+
+### `Scheduler.scheduler_monitor`
+#### Description
+Continuously monitors the timetable and triggers task execution.
+
+#### Internal Logic
+1. Periodically calls `check_timetable()`
+2. Handles exceptions and implements a sleep interval with random jitter
+
+### `Scheduler.check_timetable`
+#### Description
+Checks for due tasks and initiates their execution.
+
+#### Internal Logic
+1. Retrieves next tasks using `JobsExecutor().get_next_tasks()`
+2. Executes each task using `execute_task()`
+
+### `Scheduler.execute_task`
+#### Description
+Executes a single task, either locally or potentially through a microservice.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| record_id | int | ID of the task record |
+| exec_method | str | Execution method ('local' or potentially 'microservice') |
+
+#### Internal Logic
+1. For local execution:
+   - Locks the record
+   - Puts the task in the input queue for the worker thread
+   - Waits for task completion, updating the task's timestamp periodically
+2. Microservice execution is not implemented yet
+
+### `start`
+#### Description
+Initializes and starts the scheduler.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| verbose | bool | Verbosity flag (default: False) |
+
+#### Internal Logic
+1. Initializes the scheduler
+2. Starts the scheduler's main loop
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| datetime | Date and time operations |
+| queue | Thread-safe queue implementation |
+| random | Generate random numbers for jitter |
+| threading | Multi-threading support |
+| time | Time-related functions |
+| mindsdb.interfaces.jobs.jobs_controller | JobsExecutor for task execution |
+| mindsdb.interfaces.storage | Database operations |
+| mindsdb.utilities | Logging and configuration |
+
+## Error Handling
+The code implements basic error handling, catching and logging exceptions in the main loop and during task execution. It also handles `KeyboardInterrupt` and `SystemExit` exceptions to allow for graceful shutdown.
+
+## Logging
+The code uses a logger (presumably from `mindsdb.utilities.log`) to log information about scheduler operations, task execution, and errors.
+
+## TODOs
+- Implement microservice execution mode in the `execute_task` method.

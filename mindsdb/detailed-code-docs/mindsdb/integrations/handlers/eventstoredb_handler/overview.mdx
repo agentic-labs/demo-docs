@@ -1,0 +1,75 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the EventStoreDB handler for MindsDB. It provides functionality to integrate EventStoreDB, an event sourcing database, with MindsDB's machine learning capabilities. The handler allows users to connect to EventStoreDB, execute queries, and retrieve data using the Atom Pub Over HTTP API.
+
+## What does it do?
+The EventStoreDB handler enables MindsDB to interact with EventStoreDB as a data source. It treats EventStoreDB streams as tables and JSON Event's data keys as columns. The handler provides the following key functionalities:
+
+1. Establishing and managing connections to EventStoreDB instances.
+2. Executing queries on EventStoreDB streams.
+3. Retrieving metadata about available streams and their columns.
+4. Processing and flattening nested JSON data from events.
+5. Implementing pagination for efficient data retrieval from large streams.
+
+This integration allows users to run machine learning algorithms on their EventStoreDB data directly through MindsDB.
+
+## Entry points
+The main entry point for this handler is the `EventStoreDB` class in the `eventstoredb_handler.py` file. This class inherits from `DatabaseHandler` and implements the core functionality for interacting with EventStoreDB.
+
+The data flow typically follows this pattern:
+1. Connection establishment using the `connect` method.
+2. Query execution or metadata retrieval using methods like `query`, `get_tables`, or `get_columns`.
+3. Data processing and conversion to pandas DataFrames for use in MindsDB.
+
+## Key Files
+1. `eventstoredb_handler.py`: Contains the main `EventStoreDB` class that handles connections, queries, and data retrieval from EventStoreDB.
+
+2. `utils/helpers.py`: Provides utility functions for URL construction, data processing, and authentication. These functions support the main handler in interacting with the EventStoreDB API.
+
+3. `__init__.py`: Sets up the handler for use within MindsDB, including version information and error handling for imports.
+
+4. `__about__.py`: Contains metadata and package information for the EventStoreDB handler.
+
+## Dependencies
+The handler relies on the following external libraries:
+- `requests`: For making HTTP requests to the EventStoreDB API.
+- `pandas`: For data manipulation and creating dataframes.
+- `mindsdb_sql`: For SQL parsing and AST manipulation.
+
+These dependencies are used to interact with the EventStoreDB API, process the retrieved data, and integrate with MindsDB's SQL parsing capabilities.
+
+## Configuration
+The handler uses the following configuration parameters:
+- `host`: The hostname or IP address of the EventStoreDB instance.
+- `port`: The port number for the EventStoreDB API (default is 2113).
+- `user`: The username for authentication.
+- `password`: The password for authentication.
+- `tls`: A boolean indicating whether to use TLS for the connection.
+
+These parameters are typically provided when creating a database connection in MindsDB. For example:
+
+```sql
+CREATE DATABASE securedb
+WITH ENGINE = "eventstoredb",
+PARAMETERS = {
+  "user": "admin",
+  "password": "changeit",
+  "tls": True,
+  "host": "localhost",
+  "port": 2113
+};
+```
+
+It's important to note that the EventStoreDB instance should be configured with:
+- `RunProjections=All` to enable the $streams projection.
+- `EnableAtomPubOverHTTP=True` to allow the handler to connect using the Atom Pub API.
+
+## Limitations and Future Improvements
+1. Stream names are currently limited to characters supported in SQL. Common characters in EventStoreDB stream names like dots and dashes are not supported.
+2. JSON data flattening uses underscores as separators, which is not configurable at the moment.
+3. The handler currently uses the Atom Pub Over HTTP API. There's a TODO note suggesting that once there is better ESDB Python support for gRPC, the integration should be moved from AtomPub to gRPC for improved performance.
+
+In summary, this handler provides a bridge between EventStoreDB and MindsDB, allowing users to leverage MindsDB's machine learning capabilities on their event-sourced data stored in EventStoreDB. It handles the complexities of connecting to EventStoreDB, querying streams, and processing event data into a format suitable for analysis and machine learning tasks.

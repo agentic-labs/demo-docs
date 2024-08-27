@@ -1,0 +1,118 @@
+---
+title: "email_tables.py"
+---
+
+## High-level description
+The `EmailsTable` class in `mindsdb/integrations/handlers/email_handler/email_tables.py` implements an API table for interacting with email data. It allows users to select (read) and insert (send) emails through a connected email account using SQL-like queries.
+
+## Code Structure
+The `EmailsTable` class interacts with the `EmailIngestor` and `EmailSearchOptions` classes to fetch emails based on the provided query. It also uses the `SELECTQueryParser` and `SELECTQueryExecutor` for parsing and executing SELECT queries, and the `INSERTQueryParser` for parsing INSERT queries. The `EmailClient` class (from a related file) is used to establish and manage the connection to the email server.
+
+## References
+- `mindsdb.integrations.handlers.email_handler.email_ingestor.EmailIngestor`
+- `mindsdb.integrations.handlers.email_handler.settings.EmailSearchOptions`
+- `mindsdb.integrations.utilities.handlers.query_utilities.SELECTQueryParser`
+- `mindsdb.integrations.utilities.handlers.query_utilities.SELECTQueryExecutor`
+- `mindsdb.integrations.utilities.handlers.query_utilities.INSERTQueryParser`
+- `mindsdb.integrations.handlers.email_handler.email_client.EmailClient`
+
+## Symbols
+
+### `EmailsTable`
+#### Description
+This class represents an API table for interacting with email data. It inherits from `APITable` and implements the `select` and `insert` methods for querying and sending emails, respectively.
+
+#### Inputs
+- `handler`: An instance of the `EmailHandler` class, providing the connection to the email server.
+
+#### Outputs
+- `EmailsTable` object
+
+#### Internal Logic
+The class initializes by storing the `EmailHandler` and registering itself as an 'emails' table. It defines the `select`, `insert`, and `get_columns` methods for interacting with email data. Additionally, it includes a static method `parse_date` for parsing date strings into datetime objects.
+
+
+### `select`
+#### Description
+This method fetches emails from the connected account based on the provided SQL SELECT query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | An SQL SELECT query in the form of an Abstract Syntax Tree (AST). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| DataFrame | pandas.DataFrame | A DataFrame containing the emails matching the query. |
+
+#### Internal Logic
+1. Parses the SELECT query using `SELECTQueryParser` to extract selected columns, WHERE conditions, ORDER BY conditions, and the result limit.
+2. Constructs an `EmailSearchOptions` object based on the WHERE conditions.
+3. Uses the `EmailIngestor` to fetch emails from the connected account based on the search options.
+4. Applies the remaining SELECT query elements (selected columns, ORDER BY, limit) to the fetched emails DataFrame using `SELECTQueryExecutor`.
+5. Returns the resulting DataFrame.
+
+### `insert`
+#### Description
+This method sends emails through the connected account based on the provided SQL INSERT query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Insert | An SQL INSERT query in the form of an AST. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | None | This method does not return any value. |
+
+#### Internal Logic
+1. Parses the INSERT query using `INSERTQueryParser` to extract the email data to be sent.
+2. Iterates through the extracted email data.
+3. For each email, connects to the email server using the `EmailHandler`.
+4. Sends the email using the `send_email` method of the `EmailClient` object.
+
+### `get_columns`
+#### Description
+This method returns a list of available columns for the Emails table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | None | This method does not take any input parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| columns | list | A list of column names available in the Emails table. |
+
+#### Internal Logic
+This method simply returns a predefined list of column names: `['id', 'body', 'subject', 'to_field', 'from_field', 'datetime']`.
+
+### `parse_date`
+#### Description
+This static method parses a date string into a datetime object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date_str | str | A string representing the date to be parsed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| date | datetime.datetime | A datetime object representing the parsed date. |
+
+#### Internal Logic
+1. Checks if the input is already a datetime object. If so, returns it directly.
+2. Tries to parse the date string using a list of predefined date formats.
+3. If parsing is successful, converts the datetime object to UTC timezone and returns it.
+4. If parsing fails for all formats, raises a ValueError.
+
+
+## Error Handling
+The code raises `ValueError` for unsupported query conditions or invalid date formats. It also logs an error message if the connection to the email server fails.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging errors and warnings.

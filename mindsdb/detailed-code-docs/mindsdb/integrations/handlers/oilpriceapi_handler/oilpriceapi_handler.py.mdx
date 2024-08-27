@@ -1,0 +1,101 @@
+---
+title: "oilpriceapi_handler.py"
+---
+
+## High-level description
+The `OilPriceAPIHandler` class is a plugin for MindsDB that allows users to query data from the OilPriceAPI. It handles connecting to the API, authenticating with an API key, and translating SQL queries into API requests. The handler supports two tables: `latest_price` and `past_day_price`, which provide access to real-time and historical oil price data.
+
+## Code Structure
+The `OilPriceAPIHandler` class inherits from the `APIHandler` class and utilizes the `OilPriceAPIClient` to interact with the OilPriceAPI. It registers two tables, `OilPriceLatestTable` and `OilPricePastDayPriceTable`, which define how to retrieve and structure data from the API. The handler implements methods for connecting to the API, checking the connection, and executing native SQL queries.
+
+## References
+- `mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables`: This module contains the `OilPriceLatestTable` and `OilPricePastDayPriceTable` classes, which define the structure and data retrieval logic for the respective tables.
+- `mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi`: This module contains the `OilPriceAPIClient` class, which handles the low-level interaction with the OilPriceAPI.
+- `mindsdb.integrations.libs.api_handler`: This module contains the `APIHandler` class, which provides the base functionality for integrating external APIs with MindsDB.
+- `mindsdb.integrations.libs.response`: This module contains the `HandlerStatusResponse` class, which is used to return the status of API requests.
+- `mindsdb.utilities.log`: This module provides logging functionality.
+- `mindsdb_sql`: This library is used to parse SQL queries.
+
+## Symbols
+
+### `OilPriceAPIHandler`
+#### Description
+This class handles the integration between MindsDB and the OilPriceAPI. It manages the connection to the API, authenticates using an API key, and translates SQL queries into API requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the handler instance. |
+| **kwargs | dict | Keyword arguments used to configure the handler. This should include `connection_data` with an `api_key`. |
+
+#### Outputs
+This class doesn't directly return any values. It interacts with MindsDB to provide data and respond to queries.
+
+#### Internal Logic
+- Initializes the `OilPriceAPIClient` with the provided API key.
+- Registers two tables: `latest_price` and `past_day_price`, using the `OilPriceLatestTable` and `OilPricePastDayPriceTable` classes respectively.
+- Implements methods for connecting to the API (`connect`), checking the connection (`check_connection`), and executing native SQL queries (`native_query`).
+
+### `connect`
+#### Description
+Establishes a connection to the OilPriceAPI. It attempts to retrieve the latest oil price data to verify the connection and authentication.
+
+#### Inputs
+This method doesn't take any input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resp | `HandlerStatusResponse` | An object indicating the status of the connection attempt. It contains a `success` boolean flag and an optional `error_message`. |
+
+#### Internal Logic
+- Uses the `OilPriceAPIClient` to fetch the latest oil price data.
+- If the API request is successful (status code 200), it sets the `is_connected` flag to True and returns a successful `HandlerStatusResponse`.
+- If the API request fails, it sets the `success` flag to False, populates the `error_message` with the API error, and returns the `HandlerStatusResponse`.
+
+### `check_connection`
+#### Description
+Verifies the existing connection to the OilPriceAPI by attempting to retrieve the latest oil price data.
+
+#### Inputs
+This method doesn't take any input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | `HandlerStatusResponse` | An object indicating the status of the connection check. It contains a `success` boolean flag and an optional `error_message`. |
+
+#### Internal Logic
+- Attempts to fetch the latest oil price data using the `OilPriceAPIClient`.
+- If the API request is successful (status code 200), it sets the `success` flag to True, logs a success message, and updates the `is_connected` flag.
+- If the API request fails, it sets the `success` flag to False, logs an error message with the API error, populates the `error_message`, and updates the `is_connected` flag.
+- If any exception occurs during the process, it logs an error message, sets the `error_message`, and updates the `is_connected` flag accordingly.
+
+### `native_query`
+#### Description
+Receives a raw SQL query string, parses it using the `mindsdb_sql` library, and then executes the query using the `query` method of the `APIHandler` class.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | The raw SQL query string to be executed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+|  | `StatusResponse` | The result of the query execution, which is handled by the `query` method of the `APIHandler` class. |
+
+#### Internal Logic
+- Parses the input SQL query string using the `parse_sql` function from the `mindsdb_sql` library.
+- Calls the `query` method of the parent `APIHandler` class, passing the parsed SQL AST (Abstract Syntax Tree) as an argument.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables | Provides the table definitions for `latest_price` and `past_day_price`. |
+| mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi | Provides the `OilPriceAPIClient` for interacting with the OilPriceAPI. |
+| mindsdb.integrations.libs.api_handler | Provides the base `APIHandler` class for integrating external APIs. |
+| mindsdb.integrations.libs.response | Provides the `HandlerStatusResponse` class for API response handling. |
+| mindsdb.utilities.log | Provides logging functionality. |
+| mindsdb_sql | Provides SQL parsing capabilities. |
+

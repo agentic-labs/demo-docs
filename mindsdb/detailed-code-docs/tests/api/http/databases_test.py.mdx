@@ -1,0 +1,141 @@
+---
+title: "databases_test.py"
+---
+
+## High-level description
+This file contains unit tests for the database-related API endpoints in a MindsDB application. It tests various operations such as creating, retrieving, updating, and deleting databases, as well as handling error cases.
+
+## Code Structure
+The code is structured as a series of pytest test functions, with fixtures used to set up the testing environment. Each test function focuses on a specific API endpoint or functionality related to database operations.
+
+## Symbols
+
+### `app`
+#### Description
+A pytest fixture that initializes the application for testing, setting up a temporary database and migrating it to the latest version.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| app | Flask application | The initialized Flask application for testing |
+
+#### Internal Logic
+1. Saves the current `MINDSDB_DB_CON` environment variable
+2. Creates a temporary directory and sets up a SQLite database
+3. Initializes the database and runs migrations
+4. Initializes the Flask application
+5. Yields the application for testing
+6. Restores the original `MINDSDB_DB_CON` environment variable
+
+### `client`
+#### Description
+A pytest fixture that creates a test client for the Flask application.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| app | Flask application | The initialized Flask application |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | FlaskClient | A test client for the Flask application |
+
+### `test_get_databases`
+#### Description
+Tests the GET /api/databases endpoint to retrieve all databases.
+
+#### Internal Logic
+1. Sends a GET request to /api/databases
+2. Asserts that the response contains two default databases: 'information_schema' and 'mindsdb'
+
+### `test_get_database`
+#### Description
+Tests the GET /api/databases/{database_name} endpoint to retrieve a specific database.
+
+#### Internal Logic
+1. Retrieves the 'mindsdb' database and verifies its structure
+2. Creates a new database integration
+3. Retrieves the newly created database and verifies its structure
+
+### `test_create_database`
+#### Description
+Tests the POST /api/databases endpoint to create a new database.
+
+#### Internal Logic
+1. Sends a POST request to create a new database
+2. Verifies that the response has a 201 status code
+3. Checks that the returned database object matches the expected structure
+
+### `test_create_database_already_exists_abort`
+#### Description
+Tests that creating a database with an existing name results in a 409 Conflict error.
+
+### `test_create_database_no_database_aborts`
+#### Description
+Tests that creating a database without the 'database' key in the request body results in a 400 Bad Request error.
+
+### `test_create_database_no_name_aborts`
+#### Description
+Tests that creating a database without a name results in a 400 Bad Request error.
+
+### `test_create_database_no_engine_aborts`
+#### Description
+Tests that creating a database without an engine results in a 400 Bad Request error.
+
+### `test_update_database_creates_database`
+#### Description
+Tests that updating a non-existent database creates a new one with a 201 Created status.
+
+### `test_update_database`
+#### Description
+Tests the PUT /api/databases/{database_name} endpoint to update an existing database.
+
+#### Internal Logic
+1. Creates a new database
+2. Updates the database with new parameters
+3. Verifies that the updated database matches the expected structure
+
+### `test_update_database_no_database_aborts`
+#### Description
+Tests that updating a database without the 'database' key in the request body results in a 400 Bad Request error.
+
+### `test_delete_database`
+#### Description
+Tests the DELETE /api/databases/{database_name} endpoint to delete a database.
+
+#### Internal Logic
+1. Creates a new database
+2. Deletes the database
+3. Verifies that the deletion was successful with a 204 No Content status
+4. Checks that the deleted database can no longer be retrieved
+
+### `test_delete_database_does_not_exist`
+#### Description
+Tests that deleting a non-existent database results in a 404 Not Found error.
+
+### `test_delete_system_database`
+#### Description
+Tests that attempting to delete a system database (e.g., 'information_schema') results in a 400 Bad Request error.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pytest | Testing framework |
+| tempfile | Creating temporary directories for testing |
+| mindsdb.api.http.initialize | Initializing the Flask application |
+| mindsdb.interfaces.storage | Database initialization |
+| mindsdb.migrations | Database migration |
+| mindsdb.utilities.config | Configuration management |
+
+## Error Handling
+The tests cover various error scenarios, including:
+- Creating databases with missing or invalid parameters
+- Attempting to create duplicate databases
+- Updating non-existent databases
+- Deleting non-existent or system databases
+
+These scenarios are tested to ensure the API returns appropriate HTTP status codes and error messages.

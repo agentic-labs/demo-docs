@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains load testing scripts for MindsDB, specifically focusing on database connections and query execution. The tests are designed to simulate user behavior when interacting with MindsDB Cloud, with a particular emphasis on PostgreSQL database operations.
+
+## What does it do?
+The code in this directory sets up and executes load tests for MindsDB Cloud, simulating multiple users connecting to the service, creating data sources, and running various types of SQL queries. The tests are designed to:
+
+1. Authenticate users with MindsDB Cloud
+2. Create new data sources
+3. Execute SELECT queries on the created integrations
+4. Run native database queries, including aggregations, averages, and grouping operations
+
+These tests help evaluate the performance and reliability of MindsDB Cloud under different levels of concurrent user activity, particularly focusing on database operations related to solar flare data analysis.
+
+## Entry points
+The main entry point for the load tests is the `tests_start.py` file. This file defines the `DBConnectionUser` class, which inherits from Locust's `HttpUser`. It sets up the test environment, handles user authentication, and specifies the tasks to be executed during the load test.
+
+The workflow of the tests is as follows:
+1. `tests_start.py` initializes the test environment and authenticates users.
+2. `tasks.py` defines the `BaseDBConnectionBehavior` class, which outlines the sequence of tasks for database operations.
+3. `test_postgresql.py` specifies the PostgreSQL-specific behavior, including table names and native queries.
+
+## Key Files
+1. `tasks.py`: 
+   - Defines the `BaseDBConnectionBehavior` class
+   - Implements methods for creating data sources and executing queries
+   - Handles error logging and task interruption
+
+2. `test_postgresql.py`:
+   - Defines the `PostgreSQLConnectionBehavior` class
+   - Specifies PostgreSQL-specific attributes and native queries
+
+3. `tests_start.py`:
+   - Sets up the load testing environment
+   - Defines the `DBConnectionUser` class for user simulation
+   - Handles user authentication with MindsDB Cloud
+
+## Dependencies
+The load tests rely on the following key dependencies:
+
+1. Locust: A popular open-source load testing tool. It's used to simulate user behavior and generate load on the system.
+
+2. MindsDB utilities: The tests use MindsDB's logging utility for error reporting.
+
+3. Custom utilities:
+   - `tests.utils.query_generator`: Used to generate SQL queries
+   - `tests.utils.config`: Retrieves configuration values and generates random database names
+
+## Configuration
+The load tests use configuration values stored in environment variables:
+
+1. `INTEGRATIONS_CONFIG`: A JSON-formatted string containing MindsDB Cloud configuration, including:
+   - Host URL
+   - User credentials (username and password)
+
+2. Database configuration: Retrieved from environment variables for creating new data sources.
+
+The `PostgreSQLConnectionBehavior` class also defines several hardcoded queries and table names, which may need to be adjusted for different test scenarios.
+
+Here's an example of how the native queries are defined in `test_postgresql.py`:
+
+```python
+native_query_aggregation = f"SELECT COUNT(*) as total_flares FROM tests.{table_name}"
+native_query_average = f"SELECT AVG(peak_counts) as avg_peak_counts FROM tests.{table_name}"
+native_query_max = f"SELECT MAX(energy) as max_energy FROM tests.{table_name}"
+native_query_grouping = f"SELECT active_region, COUNT(*) as flare_count FROM tests.{table_name} GROUP BY active_region ORDER BY flare_count DESC LIMIT 5"
+```
+
+These queries are designed to analyze solar flare data, performing operations like counting total flares, calculating average peak counts, finding maximum energy, and grouping flare counts by active region.
+
+To improve flexibility, there's a TODO note suggesting that these query values should be read from a `sql_queries.json` file in the future.
+
+The load tests can be customized by adjusting the wait time between tasks (currently set to 5-15 seconds) and modifying the tasks performed by the `PostgreSQLConnectionBehavior` class.
+
+In summary, this directory contains a comprehensive set of load testing scripts for MindsDB Cloud, focusing on PostgreSQL database operations. The tests simulate user authentication, data source creation, and query execution, providing valuable insights into the system's performance under various load conditions.

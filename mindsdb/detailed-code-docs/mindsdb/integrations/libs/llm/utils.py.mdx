@@ -1,0 +1,219 @@
+---
+title: "utils.py"
+---
+
+## High-level description
+This file contains utility functions for working with Large Language Models (LLMs) in MindsDB. It includes functions for preparing prompts, validating data formats for fine-tuning, and configuring different LLM providers such as OpenAI, Anthropic, Anyscale, LiteLLM, Ollama, and Nvidia NIM.
+
+## Code Structure
+The file defines several utility functions and configuration classes. The main functions include `get_completed_prompts` for preparing prompts, `get_llm_config` for configuring different LLM providers, and various functions for validating and formatting data for fine-tuning. The configuration classes inherit from `BaseLLMConfig` and define the specific parameters for each LLM provider.
+
+## Symbols
+
+### `get_completed_prompts`
+#### Description
+This function produces formatted prompts given a template and data in a Pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| base_template | str | String with placeholders for each column in the DataFrame. |
+| df | pd.DataFrame | DataFrame to generate full prompts. |
+| strict | bool | Whether to raise an exception if base_template doesn't contain placeholders. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prompts | List[str] | List of in-filled prompts using `base_template` and relevant columns from `df`. |
+| empty_prompt_ids | np.ndarray | Array with the row indexes where in-fill failed due to missing data. |
+
+#### Internal Logic
+1. Extracts placeholders from the base_template using regex.
+2. Prepares the template by splitting it into parts.
+3. Identifies rows with missing data.
+4. Fills the template with data from the DataFrame.
+5. Returns the completed prompts and the indices of empty prompts.
+
+### `get_llm_config`
+#### Description
+This function returns the configuration for a given LLM provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | str | Name of the provider. |
+| config | Dict | Configuration for the provider. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | BaseLLMConfig | LLMConfig object with the configuration for the provider. |
+
+#### Internal Logic
+1. Sets the temperature within the valid range.
+2. Depending on the provider, creates and returns the appropriate configuration object (e.g., OpenAIConfig, AnthropicConfig, etc.).
+3. Each configuration object is populated with the relevant parameters from the input config.
+
+### `ft_jsonl_validation`
+#### Description
+This function checks a list of dictionaries for compliance with the format usually expected by LLM providers for fine-tuning LLMs that generate chat completions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| items | list | List of JSON lines, each dictionary containing a chat sequence. |
+| messages_col | str | Key in each dictionary to access a sequence of chat messages. |
+| role_key | str | Key that defines the role of each message. |
+| content_key | str | Key that defines the content of each message. |
+| name_key | str | Key that defines the name of each message. |
+| system_key | str | Valid role for each chat message. |
+| user_key | str | Valid role for each chat message. |
+| assistant_key | str | Valid role for each chat message. |
+
+#### Internal Logic
+1. Validates that each item in the list is a dictionary.
+2. Checks that each dictionary has the required 'messages' key with a list of messages.
+3. Calls `ft_chat_format_validation` for each chat sequence.
+
+### `ft_chat_format_validation`
+#### Description
+This function implements a finite state machine to check if a chat has a valid format for fine-tuning an LLM.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chat | list | List of dictionaries, each containing a chat message. |
+| transitions | Optional[Dict] | Dictionary defining valid transitions between chat messages. |
+| system_key | str | Valid role for each chat message. |
+| user_key | str | Valid role for each chat message. |
+| assistant_key | str | Valid role for each chat message. |
+| role_key | str | Key that defines the role of each message. |
+| content_key | str | Key that defines the content of each message. |
+| name_key | str | Key that defines the name of each message. |
+
+#### Internal Logic
+1. Validates the keys in each message.
+2. Checks for the presence of required roles (assistant and user).
+3. Implements a finite state machine to check the order of messages.
+4. Validates the content of each message.
+
+### `ft_formatter`
+#### Description
+This function is the data preparation entry point for chat LLM fine-tuning.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input dataframe containing the data to be formatted. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | List[Dict] | List of formatted chats. |
+
+#### Internal Logic
+1. Determines the format of the input data (code, chat, or question-answer).
+2. Calls the appropriate formatter function based on the determined format.
+3. Returns the formatted data.
+
+### `ft_chat_formatter`
+#### Description
+This function formats chat data for fine-tuning.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input dataframe containing chat data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | List[Dict] | List of formatted chats. |
+
+#### Internal Logic
+1. Sorts the input dataframe based on chat_id and message_id if present.
+2. Handles both JSON format and tabular format inputs.
+3. Aggregates messages into chat sequences.
+4. Validates each chat sequence using `ft_chat_format_validation`.
+
+### `ft_code_formatter`
+#### Description
+This function processes a raw codebase stored as a dataframe and chunks code into triples made of a prefix, middle, and suffix.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input dataframe with a 'code' column. |
+| format | str | Output format ('chat' or 'fim'). |
+| language | str | Programming language of the code. |
+| chunk_size | int | Size of each chunk. |
+| chunk_overlap | int | Overlap between chunks. |
+| chat_sections | Tuple[str, str, str] | Names for the chat sections. |
+| fim_tokens | Tuple[str, str, str] | Tokens for fill-in-the-middle format. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | pd.DataFrame | Formatted code chunks. |
+
+#### Internal Logic
+1. Validates input parameters.
+2. Splits code into chunks using `RecursiveCharacterTextSplitter`.
+3. Formats chunks into prompts based on the specified format.
+4. Returns a dataframe with formatted prompts.
+
+### `ft_cqa_formatter`
+#### Description
+This function formats context-question-answer data for fine-tuning.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input dataframe containing context, question, and answer columns. |
+| question_col | str | Name of the question column. |
+| answer_col | str | Name of the answer column. |
+| instruction_col | str | Name of the instruction column. |
+| context_col | str | Name of the context column. |
+| default_instruction | str | Default instruction if not provided. |
+| default_context | str | Default context if not provided. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | pd.DataFrame | Formatted data for fine-tuning. |
+
+#### Internal Logic
+1. Validates the presence of required columns.
+2. Combines instruction and context into a system message.
+3. Formats data into a chat-like structure with system, user, and assistant roles.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| typing | Type hinting |
+| json | JSON parsing and manipulation |
+| itertools | Iteration tools |
+| re | Regular expressions |
+| numpy | Numerical operations |
+| pandas | Data manipulation |
+| langchain.text_splitter | Text splitting utilities |
+
+## Configuration
+The file defines several configuration classes for different LLM providers:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| OpenAIConfig | class | - | Configuration for OpenAI models |
+| AnthropicConfig | class | - | Configuration for Anthropic models |
+| AnyscaleConfig | class | - | Configuration for Anyscale models |
+| LiteLLMConfig | class | - | Configuration for LiteLLM models |
+| OllamaConfig | class | - | Configuration for Ollama models |
+| NvidiaNIMConfig | class | - | Configuration for Nvidia NIM models |
+| MindsdbConfig | class | - | Configuration for Mindsdb models |
+
+Each configuration class defines specific parameters relevant to its respective LLM provider.
+
+## Error Handling
+The code uses exceptions to handle various error conditions, such as invalid input formats, missing data, or unsupported configurations. These exceptions provide informative error messages to help users identify and resolve issues.
+
+## API/Interface Reference
+This file primarily provides utility functions and does not expose a public API. The main functions (`get_completed_prompts`, `get_llm_config`, `ft_formatter`, etc.) are designed to be used internally by other parts of the MindsDB system that interact with LLMs.

@@ -1,0 +1,166 @@
+---
+title: "scylla_handler.py"
+---
+
+## High-level description
+The `ScyllaHandler` class is a database handler for connecting to and interacting with Scylla databases. It provides methods for establishing connections, executing queries, and retrieving data from Scylla databases. The handler supports both secure and non-secure connections, as well as authentication.
+
+## Code Structure
+The `ScyllaHandler` class inherits from `DatabaseHandler` and implements various methods for database operations. It uses the Cassandra driver for connecting to Scylla databases and executing queries. The class also includes utility methods for downloading secure bundles and preparing query responses.
+
+## Symbols
+
+### ScyllaHandler
+#### Description
+This class handles connections and executions of Scylla database statements. It provides methods for connecting to the database, checking connections, executing queries, and retrieving table information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the handler (optional) |
+| **kwargs | dict | Connection data and other arguments |
+
+#### Internal Logic
+- Initializes connection arguments and session
+- Implements methods for connecting to the database, checking connections, and executing queries
+- Handles secure connections using secure bundles
+- Provides utility methods for downloading secure bundles and preparing query responses
+
+### download_secure_bundle
+#### Description
+Downloads a secure bundle from a given URL and stores it in a temporary file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | URL of the secure bundle to be downloaded |
+| max_size | int | Maximum allowable size of the bundle in bytes (default: 10MB) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| temp_file.name | str | Path to the downloaded secure bundle saved as a temporary file |
+
+#### Internal Logic
+- Sends a GET request to the provided URL
+- Checks the content length against the maximum allowed size
+- Downloads the file in chunks and writes to a temporary file
+- Returns the path to the temporary file
+
+### connect
+#### Description
+Handles the connection to a Scylla keystore.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| session | cassandra.cluster.Session | Connected Scylla session |
+
+#### Internal Logic
+- Checks if already connected
+- Sets up authentication if required
+- Handles secure connections using secure bundles
+- Creates a Cluster object and connects to the specified keyspace
+- Returns the connected session
+
+### check_connection
+#### Description
+Checks the connection to the Scylla database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | StatusResponse | Success status and error message if an error occurs |
+
+#### Internal Logic
+- Attempts to connect to the database
+- Executes a simple query to verify the connection
+- Returns a StatusResponse object with the connection status
+
+### native_query
+#### Description
+Executes a native SQL query on the Scylla database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | The SQL query to run |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Query execution result or error message |
+
+#### Internal Logic
+- Connects to the database
+- Executes the provided query
+- Prepares the response data
+- Returns a Response object with the query result or error message
+
+### query
+#### Description
+Retrieves data from the SQL statement after some preprocessing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ASTNode | The SQL query as an AST node |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Query execution result or error message |
+
+#### Internal Logic
+- Removes table aliases and adjusts field names to comply with Cassandra Query Language
+- Renders the query using SqlalchemyRender
+- Executes the rendered query using native_query method
+
+### get_tables
+#### Description
+Retrieves a list of all tables in the Scylla database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Response | List of tables or error message |
+
+#### Internal Logic
+- Executes a "DESCRIBE TABLES" query
+- Renames the result column to 'table_name'
+- Returns the result as a Response object
+
+### get_columns
+#### Description
+Shows details about a specific table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | Name of the table to describe |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Response | Table details or error message |
+
+#### Internal Logic
+- Executes a "DESCRIBE {table_name}" query
+- Returns the result as a Response object
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| cassandra.cluster | For connecting to Scylla databases |
+| cassandra.auth | For authentication |
+| cassandra.util | For handling Cassandra-specific data types |
+| mindsdb_sql | For SQL parsing and rendering |
+| pandas | For data manipulation |
+| requests | For downloading secure bundles |
+
+## Error Handling
+The code implements error handling in various methods, catching exceptions and returning appropriate error responses. For example, in the `check_connection` method, any exception during connection is caught and returned as an error message in the StatusResponse.
+
+## TODOs
+- Find a way to periodically clean up or delete the temporary files after they have been used to prevent filling up storage over time.
+- Change the healthcheck in the `check_connection` method.

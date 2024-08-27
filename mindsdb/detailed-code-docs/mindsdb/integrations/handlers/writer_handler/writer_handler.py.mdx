@@ -1,0 +1,157 @@
+---
+title: "writer_handler.py"
+---
+
+## High-level description
+The `WriterHandler` class is a MindsDB integration with Writer API LLMs that enables question answering on user-provided data. It handles the creation of embeddings, storage in a vector database, and prediction using the Writer API. The class also includes functionality for evaluating the model's performance.
+
+## Code Structure
+The `WriterHandler` class inherits from `BaseMLEngine` and implements methods for creating, predicting, evaluating, and describing the model. It uses helper classes and functions from related modules for embedding generation, vector storage, and question answering.
+
+## References
+- `WriterEvaluator` from `mindsdb.integrations.handlers.writer_handler.evaluate`
+- `WriterIngestor` from `mindsdb.integrations.handlers.writer_handler.ingest`
+- `QuestionAnswerer` from `mindsdb.integrations.handlers.writer_handler.rag`
+- Various settings and parameters from `mindsdb.integrations.handlers.writer_handler.settings`
+- `BaseMLEngine` from `mindsdb.integrations.libs.base`
+- Dataset utilities from `mindsdb.integrations.utilities.datasets.dataset`
+
+## Symbols
+
+### `extract_llm_params`
+#### Description
+Extracts LLM-specific parameters from the input arguments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | dict | Input arguments containing LLM parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | dict | Updated arguments with LLM parameters extracted |
+
+#### Internal Logic
+1. Initializes an empty dictionary `llm_params`
+2. Iterates through `WriterLLMParameters.model_fields`
+3. If a parameter is found in `args`, it's moved to `llm_params`
+4. Adds `llm_params` to `args` under the key "llm_params"
+5. Returns the updated `args`
+
+### `WriterHandler`
+#### Description
+Main class for handling Writer API LLM integration in MindsDB.
+
+#### Methods
+
+##### `__init__`
+Initializes the WriterHandler instance.
+
+##### `create_validation`
+#### Description
+Validates the creation arguments for the WriterHandler.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | Target column name |
+| args | dict | Arguments for model creation |
+
+#### Internal Logic
+Checks if the "using" key is present in the args dictionary. If not, raises an exception.
+
+##### `create`
+#### Description
+Creates and initializes the Writer model, including embedding generation and vector storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | Target column name |
+| df | pd.DataFrame | Input dataframe |
+| args | dict | Arguments for model creation |
+
+#### Internal Logic
+1. Extracts LLM parameters
+2. Initializes WriterHandlerParameters
+3. Sets up vector store storage path
+4. Handles embedding generation and storage if required
+5. Stores the arguments in the model storage
+
+##### `predict`
+#### Description
+Performs prediction or evaluation based on the input.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input dataframe containing the question |
+| args | dict | Additional arguments |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | pd.DataFrame | Prediction or evaluation results |
+
+#### Internal Logic
+1. Loads stored arguments
+2. Checks if evaluation should be run
+3. Sets up the vector store storage path
+4. Uses QuestionAnswerer to generate a response
+5. Returns the response as a DataFrame
+
+##### `evaluate`
+#### Description
+Evaluates the model's performance using a specified dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | WriterHandlerParameters | Model parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Evaluation results |
+
+#### Internal Logic
+1. Loads and prepares the evaluation dataset
+2. Generates embeddings and stores them in the vector database
+3. Runs the evaluation using WriterEvaluator
+4. Stores the evaluation metrics
+5. Returns the evaluation results as a DataFrame
+
+##### `describe`
+#### Description
+Describes the model or a specific attribute of the model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | str | Optional attribute to describe |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| description | pd.DataFrame | Description of the model or attribute |
+
+#### Internal Logic
+1. Checks the requested attribute
+2. Retrieves and returns the corresponding information from model storage
+3. Raises an error for unsupported attributes
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| mindsdb.integrations.handlers.writer_handler | Writer-specific components |
+| mindsdb.integrations.libs.base | Base class for ML engines |
+| mindsdb.integrations.utilities.datasets | Dataset loading and validation |
+| mindsdb.utilities | Logging utilities |
+
+## Error Handling
+The code implements basic error handling, primarily through raising exceptions for invalid inputs or unsupported operations. For example, in the `create_validation` method, an exception is raised if the required "using" clause is missing.
+
+## Logging
+The code uses the `log` module from `mindsdb.utilities` for logging. It logs information about the execution process, such as when embeddings are being generated or when evaluation is skipped.

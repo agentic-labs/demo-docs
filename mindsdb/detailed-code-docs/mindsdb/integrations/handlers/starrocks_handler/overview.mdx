@@ -1,0 +1,114 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the StarRocks Handler for MindsDB. StarRocks is a next-generation data platform designed for fast and easy data-intensive real-time analytics. The handler extends the functionality of the MySQL connector to interact with StarRocks databases, allowing MindsDB to connect to and query StarRocks servers.
+
+## What does it do?
+The StarRocks Handler enables MindsDB to:
+1. Establish connections to StarRocks databases using specified credentials and connection parameters.
+2. Execute SQL queries on StarRocks databases, including SELECT statements, table creation, and data insertion.
+3. Retrieve metadata about tables and columns from StarRocks databases.
+4. Integrate StarRocks data sources into MindsDB's machine learning and predictive analytics workflows.
+
+The handler leverages the MySQL-compatible interface of StarRocks, allowing it to use much of the existing MySQL handler functionality while providing a specialized interface for StarRocks-specific features.
+
+## Entry points
+The main entry point for the StarRocks Handler is the `StarRocksHandler` class defined in `starrocks_handler.py`. This class inherits from the `MysqlHandler`, indicating that it uses MySQL-compatible functionality as its base.
+
+The `__init__.py` file serves as the module initializer, setting up the handler's metadata and attempting to import the `StarRocksHandler` class. It defines the public interface of the module, including version information, handler type, and error handling for import issues.
+
+## Key Files
+1. `starrocks_handler.py`: Contains the `StarRocksHandler` class, which is the core implementation of the handler. It defines connection arguments and examples specific to StarRocks.
+
+2. `__about__.py`: Defines metadata for the handler, including its version, description, author, and licensing information.
+
+3. `README.md`: Provides documentation on the StarRocks Handler, including a brief description of StarRocks, implementation details, and usage examples.
+
+4. `tests/test_starrocks_handler.py`: Contains unit tests for the StarRocksHandler, verifying its functionality for operations like connection establishment, table creation, data insertion, querying, and metadata retrieval.
+
+## Dependencies
+The StarRocks Handler relies on the following key dependencies:
+- `mindsdb.integrations.handlers.mysql_handler`: The base MySQL handler class that StarRocksHandler extends.
+- `mindsdb.integrations.libs.const`: Provides constants used in defining handler types and argument types.
+- Standard Python libraries: `collections` (for OrderedDict), `unittest` (for testing).
+
+## Configuration
+The handler uses the following connection parameters:
+- `host`: The hostname or IP address of the StarRocks server
+- `port`: The port number for the StarRocks server (default is typically 9030)
+- `user`: The username for authentication
+- `password`: The password for authentication
+- `database`: The name of the database to connect to
+
+These parameters are defined in the `connection_args` OrderedDict in `starrocks_handler.py`.
+
+Example usage to create a connection in MindsDB:
+
+```sql
+CREATE DATABASE starrocks_datasource
+WITH ENGINE = "starrocks",
+PARAMETERS = { 
+  "user": "root",
+  "password": "&lt;p455W0rd&gt;",
+  "host": "localhost",
+  "port": 9030,
+  "database": "starrocks"
+}
+```
+
+## Code Snippets
+
+Here's a snippet from `starrocks_handler.py` showing the definition of connection arguments:
+
+```python
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the StarRocks server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the StarRocks server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the StarRocks server.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the StarRocks server.'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the StarRocks server.'
+    }
+)
+```
+
+This definition ensures that the correct parameters are provided when establishing a connection to a StarRocks database.
+
+The handler's functionality is extensively tested in `test_starrocks_handler.py`. Here's an example of a test method that checks table creation:
+
+```python
+def test_2_create_table(self):
+    query = """
+    CREATE TABLE IF NOT EXISTS LOVER (
+        id INT,
+        name VARCHAR(100),
+        age INT
+    ) ENGINE=OLAP
+    DUPLICATE KEY(id)
+    DISTRIBUTED BY HASH(id) BUCKETS 1
+    PROPERTIES (
+        "replication_allocation" = "tag.location.default: 1"
+    );
+    """
+    result = self.handler.query(query)
+    assert result.type != RESPONSE_TYPE.ERROR
+```
+
+This test ensures that the handler can successfully create a table in the StarRocks database.
+
+In conclusion, the StarRocks Handler provides a robust integration between MindsDB and StarRocks databases, leveraging the MySQL-compatible interface of StarRocks while providing specific functionality for StarRocks features. The handler is well-documented, thoroughly tested, and designed to be easily integrated into the larger MindsDB ecosystem.

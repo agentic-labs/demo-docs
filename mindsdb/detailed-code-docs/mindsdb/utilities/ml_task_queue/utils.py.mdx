@@ -1,0 +1,88 @@
+---
+title: "utils.py"
+---
+
+## High-level description
+This file, `utils.py`, contains utility functions and classes for managing ML tasks in a Redis-based queue system. It provides functionality for serialization, Redis connection management, unique key generation, and status notification for ML tasks.
+
+## Code Structure
+The code defines several utility functions (`to_bytes`, `from_bytes`, `wait_redis_ping`) and two main classes: `RedisKey` for managing unique task keys, and `StatusNotifier` for updating task status in Redis. These components work together to support the ML task queue system.
+
+## Symbols
+
+### `to_bytes(obj: object) -&gt; bytes`
+#### Description
+Converts a Python object to bytes using pickle serialization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | object | The object to be converted to bytes |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | bytes | The serialized object as bytes |
+
+### `from_bytes(b: bytes) -&gt; object`
+#### Description
+Deserializes a bytes object back into a Python object using pickle.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| b | bytes | The bytes to be deserialized |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (return value) | object | The deserialized Python object |
+
+### `wait_redis_ping(db: Database, timeout: int = 30)`
+#### Description
+Waits for a successful Redis ping within the specified timeout period.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | Database | The Redis database object |
+| timeout | int | Maximum time to wait for a successful ping (default: 30 seconds) |
+
+#### Internal Logic
+The function attempts to ping the Redis server every 2 seconds until successful or until the timeout is reached. If unsuccessful, it raises a `RedisConnectionError`.
+
+### `RedisKey`
+#### Description
+A class for generating and managing unique task keys in Redis.
+
+#### Methods
+- `new()`: Creates a new `RedisKey` instance with a unique base key.
+- `__init__(base_key: bytes)`: Initializes the `RedisKey` with a given base key.
+- Properties: `base`, `status`, `dataframe`, `exception` for accessing different key types.
+
+### `StatusNotifier`
+#### Description
+A worker thread that updates task status in Redis with a fixed frequency.
+
+#### Methods
+- `__init__(redis_key: RedisKey, ml_task_status: ML_TASK_STATUS, db, cache)`: Initializes the notifier.
+- `set_status(ml_task_status: ML_TASK_STATUS)`: Updates the current status.
+- `stop()`: Stops the status updating thread.
+- `run()`: Starts updating the status in Redis every 5 seconds.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| time | Time-related functions |
+| pickle | Object serialization |
+| socket | For getting hostname |
+| threading | For multi-threading support |
+| walrus | Redis database interface |
+| redis.exceptions | For handling Redis connection errors |
+| mindsdb.utilities.context | For accessing context information |
+| mindsdb.utilities.ml_task_queue.const | For ML task status constants |
+
+## Error Handling
+The code implements basic error handling, particularly in the `wait_redis_ping` function, which raises a `RedisConnectionError` if the Redis server doesn't respond within the timeout period.
+
+This utility file provides essential functions and classes for the ML task queue system, focusing on data serialization, Redis key management, and status updates. It's designed to work in conjunction with other components of the ML task queue implementation in MindsDB.

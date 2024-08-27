@@ -1,0 +1,106 @@
+---
+title: "binance_tables.py"
+---
+
+## High-level description
+This code defines a `BinanceAggregatedTradesTable` class that handles fetching and processing aggregated trade data from the Binance API. It provides methods to convert SQL queries into API parameters, fetch data in batches, and format the results as a pandas DataFrame.
+
+## Code Structure
+The main class `BinanceAggregatedTradesTable` inherits from `APITable`. It contains methods for fetching data (`_get_batch_klines`), processing SQL conditions (`_get_kline_params_from_conditions`), and handling SELECT queries (`select`). The class also defines constants for default values and limitations.
+
+## Symbols
+
+### BinanceAggregatedTradesTable
+#### Description
+This class represents a table of aggregated trades from Binance. It provides methods to fetch and process trade data based on SQL queries.
+
+#### Internal Logic
+The class uses the Binance API to fetch kline (candlestick) data. It can handle large data requests by splitting them into smaller batches and using a ThreadPoolExecutor for parallel processing.
+
+### _get_batch_klines
+#### Description
+Fetches aggregate trade data in batches and combines the results into a single pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| executor | ThreadPoolExecutor | Executor to use for parallel API calls |
+| total_results | int | Total number of results to fetch |
+| params | Dict | Overall request parameters to be split into batches |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| DataFrame | pd.DataFrame | Combined results of all batch requests |
+
+#### Internal Logic
+1. Calculates the overall time range for the data request
+2. Splits the request into multiple batches based on the API limit
+3. Uses the ThreadPoolExecutor to make parallel API calls
+4. Combines the results from all batches into a single DataFrame
+
+### _get_kline_params_from_conditions
+#### Description
+Converts SQL WHERE conditions into parameters for the Binance API klines endpoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| conditions | List | List of individual SQL WHERE conditions |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| params | Dict | Parameters to use for Binance API call to klines |
+
+#### Internal Logic
+1. Sets default values for interval and limit
+2. Processes conditions related to interval and symbol
+3. Handles conditions for open_time and close_time, converting them to start_time and end_time parameters
+
+### select
+#### Description
+Handles SELECT queries by fetching data from the Binance API and returning it as a pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | Given SQL SELECT query |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| DataFrame | pd.DataFrame | Dataframe representing the Binance API results |
+
+#### Internal Logic
+1. Extracts conditions from the WHERE clause
+2. Converts conditions to API parameters
+3. Determines if batch processing is needed based on the requested number of results
+4. Fetches data using either batch processing or a single API call
+5. Filters and formats the result DataFrame based on the requested columns
+
+### get_columns
+#### Description
+Returns a list of all columns available in the aggregated trades data.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| columns | List[str] | List of column names |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| mindsdb_sql.parser | SQL query parsing |
+| mindsdb.integrations.libs.api_handler | Base class for API handlers |
+| mindsdb.integrations.libs.response | Response handling |
+| mindsdb.integrations.utilities.date_utils | Date and time utilities |
+| mindsdb.integrations.utilities.sql_utils | SQL utility functions |
+| concurrent.futures | Parallel execution of API calls |
+
+## Error Handling
+The code raises `NotImplementedError` for unsupported SQL conditions or operations. It also handles potential empty results by returning an empty DataFrame with the correct columns.
+
+## Performance Considerations
+The class uses batch processing and parallel execution for large data requests, which can significantly improve performance when fetching a large number of records from the Binance API.

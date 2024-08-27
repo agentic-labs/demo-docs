@@ -1,0 +1,101 @@
+---
+title: "helpers.py"
+---
+
+## High-level description
+This file contains helper functions for the OpenAI handler in MindsDB. It includes utilities for retrying API calls with exponential backoff, truncating messages to fit token limits, counting tokens, and retrieving available OpenAI models.
+
+## Code Structure
+The main symbols in this code are standalone functions that work together to support the OpenAI handler's functionality. The `retry_with_exponential_backoff` decorator is used to wrap API calls, while other functions like `truncate_msgs_for_token_limit` and `count_tokens` are used to manage token limits. The `get_available_models` function is used to retrieve available OpenAI models.
+
+## Symbols
+
+### `PendingFT`
+#### Description
+A custom exception class to handle pending fine-tuning status.
+
+### `retry_with_exponential_backoff`
+#### Description
+A decorator that implements exponential backoff for retrying API calls.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| initial_delay | float | Initial delay in seconds |
+| hour_budget | float | Hourly budget in seconds |
+| jitter | bool | Adds randomness to the delay |
+| exponential_base | int | Base for the exponential backoff |
+| wait_errors | tuple | Tuple of errors to retry on |
+| status_errors | tuple | Tuple of status errors to raise |
+
+#### Internal Logic
+1. Defines an inner wrapper function that implements the retry logic.
+2. Calculates the maximum number of retries based on the hour budget.
+3. Attempts to execute the wrapped function, catching and handling specific exceptions.
+4. Implements exponential backoff with optional jitter for retries.
+
+### `truncate_msgs_for_token_limit`
+#### Description
+Truncates a list of messages to fit within a specified token limit.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messages | List[Dict] | List of messages |
+| model_name | Text | Model name |
+| max_tokens | int | Maximum token limit |
+| truncate | Text | Truncate strategy, either 'first' or 'last' |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messages | List[Dict] | Truncated message list |
+
+#### Internal Logic
+1. Determines the appropriate tokenizer based on the model name.
+2. Iteratively removes messages from the list until the token count is within the limit.
+3. Preserves the system priming message (first message) if possible.
+
+### `count_tokens`
+#### Description
+Counts the number of tokens in a list of messages.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messages | List[Dict] | List of messages |
+| encoder | tiktoken.core.Encoding | Tokenizer |
+| model_name | Text | Model name |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| num_tokens | int | Number of tokens in the messages |
+
+### `get_available_models`
+#### Description
+Retrieves a list of available OpenAI models for the given API key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | Text | OpenAI API key |
+| api_base | Text | OpenAI API base URL |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| models | List[Text] | List of available model names |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| openai | Interacting with the OpenAI API |
+| tiktoken | Tokenization for OpenAI models |
+| mindsdb.utilities.profiler | Profiling code execution |
+
+## Error Handling
+The code implements custom error handling through the `retry_with_exponential_backoff` decorator, which catches and retries on specific OpenAI API errors.
+
+## Performance Considerations
+The `truncate_msgs_for_token_limit` and `count_tokens` functions are crucial for managing token limits and optimizing API usage. The `retry_with_exponential_backoff` decorator helps in handling rate limits and temporary failures in API calls.

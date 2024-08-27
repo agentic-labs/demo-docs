@@ -1,0 +1,159 @@
+---
+title: "map_reduce_step.py"
+---
+
+## High-level description
+This code implements a MapReduceStepCall class that executes a MapReduceStep in a SQL query execution pipeline. It handles partitioned data processing and variable-based query execution, allowing for parallel processing of large datasets or multiple query variations.
+
+## Code Structure
+The main class `MapReduceStepCall` inherits from `BaseStepCall` and is bound to `MapReduceStep`. It contains methods for executing the map-reduce step, handling partitioned data, and processing variable-based queries.
+
+## Symbols
+
+### `markQueryVar`
+#### Description
+This function recursively traverses a query's where clause to mark variables for later replacement.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| where | BinaryOperation, UnaryOperation, or Constant | The where clause of a query |
+
+#### Internal Logic
+- Recursively traverses the where clause
+- Marks constants starting with '$var[' as variables
+
+### `replaceQueryVar`
+#### Description
+This function replaces marked variables in a query's where clause with their corresponding values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| where | BinaryOperation, UnaryOperation, or Constant | The where clause of a query |
+| var_value | Any | The value to replace the variable with |
+| var_name | str | The name of the variable to replace |
+
+#### Internal Logic
+- Recursively traverses the where clause
+- Replaces marked variables with their corresponding values
+
+### `join_query_data`
+#### Description
+This function combines two ResultSet objects, adding data from the source to the target.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | ResultSet | The target ResultSet to add data to |
+| source | ResultSet | The source ResultSet to add data from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | ResultSet | The combined ResultSet |
+
+### `MapReduceStepCall`
+#### Description
+This class handles the execution of MapReduceStep in the SQL query execution pipeline.
+
+#### Methods
+
+##### `call`
+###### Description
+Executes the MapReduceStep, handling both partitioned and variable-based execution.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | MultipleSteps | The MapReduceStep to execute |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | ResultSet | The result of the MapReduceStep execution |
+
+###### Internal Logic
+- Determines whether to use partitioned or variable-based execution
+- Calls the appropriate method (_reduce_partition or _reduce_vars)
+
+##### `_reduce_partition`
+###### Description
+Handles partitioned data processing, potentially using multi-threading for improved performance.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | MultipleSteps | The MapReduceStep to execute |
+| partition | int | The partition size |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | ResultSet | The combined result of processing all partitions |
+
+###### Internal Logic
+- Splits input data into partitions
+- Determines the number of threads to use based on configuration and available CPU cores
+- Executes partitions in parallel if multiple threads are available
+- Combines results from all partitions
+
+##### `_exec_partition`
+###### Description
+Executes a single partition of the MapReduceStep.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | The partition data |
+| substeps | list | The steps to execute on the partition |
+| input_idx | int | The index of the input data in steps_data |
+| input_columns | list | The columns of the input data |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sub_data | ResultSet | The result of executing the substeps on the partition |
+
+##### `_reduce_vars`
+###### Description
+Handles variable-based query execution, processing the query multiple times with different variable values.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | MultipleSteps | The MapReduceStep to execute |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | ResultSet | The combined result of all variable-based executions |
+
+###### Internal Logic
+- Extracts variables from input data
+- Executes the query for each set of variable values
+- Combines results from all executions
+
+##### `_fill_vars`
+###### Description
+Replaces variables in a query step with their corresponding values.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | MultipleSteps or FetchDataframeStep | The step to fill variables in |
+| var_group | dict | The variables and their values |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| mindsdb_sql | Provides SQL parsing and planning functionality |
+| mindsdb.api.executor.sql_query.result_set | Provides ResultSet class for handling query results |
+| mindsdb.utilities.config | Provides configuration settings |
+| mindsdb.utilities.context_executor | Provides multi-threading functionality |
+
+## Performance Considerations
+The code implements parallel processing for partitioned data, which can significantly improve performance for large datasets. The number of threads used is determined based on the configuration (cloud or local) and available CPU cores.
+
+## Error Handling
+The code raises specific exceptions (LogicError, ValueError) for invalid inputs or unsupported operations.

@@ -1,0 +1,82 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a tab management system for MindsDB. The main component is the `TabsController` class, which provides functionality for managing user tabs, including creating, modifying, deleting, and retrieving tabs. The system uses a file-based storage mechanism to persist tab data.
+
+## What does it do?
+The tab management system allows users to organize their work within MindsDB by creating and managing tabs. Each tab has an ID, index, name, and content. Users can:
+
+1. Create new tabs with custom names and content
+2. Modify existing tabs, changing their name, content, or position (index)
+3. Delete tabs they no longer need
+4. Retrieve individual tabs or all tabs at once
+
+The system ensures that tabs are stored persistently, so users can access their tabs across different sessions. It also handles tab ordering, automatically adjusting the indices of tabs when necessary.
+
+## Key Files
+1. `tabs_controller.py`: This is the main file containing the `TabsController` class and related helper functions. It implements all the core functionality for tab management.
+
+## Dependencies
+The tab management system relies on the following external libraries and internal modules:
+
+1. `json`: Used for JSON serialization and deserialization of tab data.
+2. `typing`: Provides type hinting for better code readability and maintainability.
+3. `pathlib`: Used for file path operations when working with the file-based storage system.
+4. `mindsdb.utilities`: Provides logging, context, and exception handling utilities.
+5. `mindsdb.interfaces.storage.fs`: Offers file storage operations for persisting tab data.
+
+## Configuration
+The tab management system doesn't appear to use any specific configuration files or environment variables. However, it does use a file-based storage system, which likely relies on a predefined directory structure within the MindsDB application.
+
+Key aspects of the storage system include:
+
+1. Each tab is stored as a separate file with a naming convention of `tab_{id}`.
+2. The system includes a migration function (`_migrate_legacy()`) to convert old single-file tabs storage to the new multiple-file format, ensuring backward compatibility.
+
+## Implementation Details
+
+### TabsController Class
+
+The `TabsController` class is the core of the tab management system. Here's an overview of its main methods:
+
+1. `get_all()`: Retrieves all tabs, including their content.
+2. `get(tab_id: int)`: Retrieves a single tab by its ID.
+3. `add(index: int = None, name: str = 'undefined', content: str = '')`: Adds a new tab with the given index, name, and content.
+4. `modify(tab_id: int, index: int = None, name: str = None, content: str = None)`: Modifies an existing tab, updating its index, name, or content as specified.
+5. `delete(tab_id: int)`: Deletes a tab with the given ID.
+
+The class uses helper methods like `_get_next_tab_id()`, `_get_tabs_files()`, and `_get_tabs_meta()` to manage tab IDs, file storage, and metadata retrieval.
+
+### File Storage
+
+The system uses a `FileStorageFactory` to create file storage instances for each operation. This abstraction allows for potential future changes in the storage mechanism without affecting the core tab management logic.
+
+### Error Handling
+
+The code implements custom error handling, using exceptions like `EntityNotExistsError` for cases where a requested tab doesn't exist. It also includes error logging for issues such as failing to read tab data.
+
+### Performance Considerations
+
+While the file-based storage system provides persistence, it may have performance implications for large numbers of tabs or frequent operations. The tab reordering logic, implemented when adding or modifying tabs, could be costly for a large number of tabs.
+
+Example usage of the `TabsController`:
+
+```python
+tabs_controller = TabsController()
+
+# Add a new tab
+new_tab = tabs_controller.add(name="My New Tab", content="This is the content of my new tab")
+
+# Modify an existing tab
+tabs_controller.modify(tab_id=new_tab['id'], name="Updated Tab Name", content="Updated content")
+
+# Retrieve all tabs
+all_tabs = tabs_controller.get_all()
+
+# Delete a tab
+tabs_controller.delete(tab_id=new_tab['id'])
+```
+
+This tab management system provides a robust and flexible way for MindsDB users to organize their work, with considerations for data persistence, error handling, and backward compatibility with legacy storage formats.

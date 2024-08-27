@@ -1,0 +1,85 @@
+---
+title: "sql.py"
+---
+
+## High-level description
+This code defines a Flask-RESTx namespace for SQL-related API endpoints in MindsDB. It provides two main functionalities: executing SQL queries and listing databases. The code handles query processing, error handling, and profiling of SQL operations.
+
+## Code Structure
+The main symbols in this code are two classes: `Query` and `ListDatabases`, both of which are Flask-RESTx resources. These classes define HTTP endpoints for executing SQL queries and listing databases, respectively. They utilize the `FakeMysqlProxy` class to process SQL queries and interact with the database.
+
+## Symbols
+
+### Query
+#### Description
+This class defines a POST endpoint for executing SQL queries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | string | The SQL query to be executed |
+| context | dict | Optional context information for the query |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query_response | dict | The result of the query execution |
+
+#### Internal Logic
+1. Extracts the query and context from the request
+2. Enables profiling if specified in the context
+3. Creates a `FakeMysqlProxy` instance and sets the context
+4. Processes the query using the proxy
+5. Handles different response types (OK, TABLE, ERROR)
+6. Catches and handles various types of exceptions
+7. Adds context information to the response
+8. Calls the `after_api_query` hook
+
+### ListDatabases
+#### Description
+This class defines a GET endpoint for listing databases and their tables.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| listing_query_response | dict | List of databases and their tables |
+
+#### Internal Logic
+1. Executes a "SHOW DATABASES" query using `FakeMysqlProxy`
+2. For each database, executes a "SHOW TABLES" query
+3. Formats the response as a list of databases with their tables
+4. Handles potential errors during the process
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| flask | Web framework for creating the API |
+| flask_restx | Extension for building REST APIs with Flask |
+| mindsdb.utilities.hooks | Provides hooks for various operations |
+| mindsdb.utilities.profiler | Handles profiling of operations |
+| mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy | Provides a fake MySQL proxy for query processing |
+| mindsdb.api.executor.data_types.response_type | Defines response types for SQL queries |
+| mindsdb.api.executor.exceptions | Provides custom exceptions for the executor |
+| mindsdb.metrics.metrics | Handles API endpoint metrics |
+| mindsdb.utilities.log | Provides logging functionality |
+| mindsdb.utilities.config | Handles configuration settings |
+| mindsdb.utilities.context | Provides context management |
+
+## Error Handling
+The code implements error handling for various scenarios:
+- Catches `ExecutorException` for expected errors
+- Catches `UnknownError` for unclassified errors
+- Catches general `Exception` for unexpected errors
+- Logs unexpected errors with traceback information
+
+## Logging
+The code uses the `log` module from `mindsdb.utilities` for logging error messages.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /query | POST | JSON with "query" and optional "context" | JSON with query result | Execute SQL query |
+| /list_databases | GET | None | JSON with list of databases and tables | List all databases and their tables |
+
+## Performance Considerations
+The code includes profiling capabilities that can be enabled through the context parameter in the query request. This allows for performance monitoring of query execution.

@@ -1,0 +1,101 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Luma handler for MindsDB, which provides an interface to connect to LUMA Events via APIs and pull event data into MindsDB. The handler allows users to interact with Luma's event management platform, enabling them to list events, retrieve event details, and create new events.
+
+## What does it do?
+The Luma handler enables MindsDB to interact with the Luma event management platform. It allows users to:
+
+1. Connect to the Luma API using an API key.
+2. List events from a user's Luma calendar.
+3. Retrieve detailed information about specific events.
+4. Create new events on the Luma platform.
+
+Users can perform these operations using SQL-like queries within MindsDB, which are then translated into appropriate API calls to the Luma platform. This integration allows for seamless incorporation of Luma event data into MindsDB's data processing and machine learning workflows.
+
+## Entry points
+The main entry point for the Luma handler is the `LumaHandler` class defined in `luma_handler.py`. This class sets up the connection to the Luma API and manages the interaction between MindsDB and Luma.
+
+The handler uses the following key components:
+
+1. `LumaClient` (in `luma.py`): Handles direct communication with the Luma API.
+2. `LumaEventsTable` (in `luma_tables.py`): Implements the logic for querying and inserting event data.
+3. `connection_args.py`: Defines the connection arguments required for the Luma API.
+
+The data flow typically follows this pattern:
+1. User issues a SQL query in MindsDB.
+2. `LumaHandler` receives and parses the query.
+3. `LumaEventsTable` processes the query and interacts with `LumaClient`.
+4. `LumaClient` makes the appropriate API calls to Luma.
+5. Results are returned through the handler back to MindsDB.
+
+## Key Files
+1. `luma_handler.py`: Contains the `LumaHandler` class, which is the main interface between MindsDB and the Luma API. It manages the connection and query execution.
+
+2. `luma.py`: Defines the `LumaClient` class, which handles direct communication with the Luma API. It includes methods for authenticating, creating events, retrieving event details, and listing events.
+
+3. `luma_tables.py`: Implements the `LumaEventsTable` class, which provides the logic for executing SELECT and INSERT queries on Luma event data. It translates SQL-like queries into appropriate Luma API calls.
+
+4. `connection_args.py`: Specifies the connection arguments required for the Luma API, primarily the API key.
+
+5. `__init__.py`: Sets up the handler, including version information, connection arguments, and the main handler class.
+
+## Dependencies
+The Luma handler relies on the following external libraries:
+
+1. `requests`: Used for making HTTP requests to the Luma API.
+2. `pandas`: Used for data manipulation and creating DataFrames from API responses.
+3. `mindsdb_sql`: Used for parsing SQL queries.
+
+These dependencies are used to facilitate API communication, data handling, and query processing.
+
+## Configuration
+The Luma handler requires an API key for authentication. This is specified in the `connection_args.py` file:
+
+```python
+connection_args = OrderedDict(
+    api_key={
+        "type": ARG_TYPE.STR,
+        "description": "API Key",
+        "required": True,
+        "label": "API Key",
+        "secret": True
+    }
+)
+```
+
+Users need to provide this API key when creating a database connection in MindsDB:
+
+```sql
+CREATE DATABASE mindsdb_luma
+WITH ENGINE = 'luma',
+PARAMETERS = {
+  "api_key": "your_api_key_here"
+};
+```
+
+The handler uses this API key to authenticate all requests to the Luma API.
+
+## Example Usage
+Here are some example SQL queries that can be used with the Luma handler:
+
+1. List all events:
+```sql
+SELECT * FROM mindsdb_luma.events;
+```
+
+2. Get details of a specific event:
+```sql
+SELECT * FROM mindsdb_luma.events WHERE event_id = "evt-HQ36IFDwncocuGy";
+```
+
+3. Create a new event:
+```sql
+INSERT INTO mindsdb_luma.events (name, start_at, timezone, end_at, require_rsvp_approval, geo_address_json_type, geo_address_json_place_id, geo_address_json_description, geo_latitude, geo_longitude, meeting_url)
+VALUES 
+('New York Party', '2023-12-31T23:59:00Z', 'America/New_York', '2024-01-01T00:01:00Z', False, 'google', 'ChIJmQJIxlVYwokRLgeuocVOGVU', 'Landmark - twin towers', '40.756072', '-73.986834', '');
+```
+
+These queries demonstrate the capability to retrieve event data and create new events using SQL-like syntax, which is then translated into appropriate Luma API calls by the handler.

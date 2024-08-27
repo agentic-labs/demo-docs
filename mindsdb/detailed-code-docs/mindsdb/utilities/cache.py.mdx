@@ -1,0 +1,157 @@
+---
+title: "cache.py"
+---
+
+Here's a high-level description and documentation of the `mindsdb/utilities/cache.py` file:
+
+## High-level description
+
+This file implements caching mechanisms for MindsDB, providing both file-based and Redis-based caching options. It includes utility functions for generating checksums, and classes for managing cache operations. The caching system is designed to store and retrieve data efficiently, with options for size limits and serialization.
+
+## Code Structure
+
+The main components of this file are:
+
+1. Utility functions: `dataframe_checksum`, `json_checksum`, and `str_checksum`
+2. Abstract base class: `BaseCache`
+3. Concrete implementations: `FileCache` and `RedisCache`
+4. Utility class: `NoCache`
+5. Factory function: `get_cache`
+
+These components work together to provide a flexible caching system that can be easily configured and used throughout the MindsDB system.
+
+## Symbols
+
+### `dataframe_checksum(df: pd.DataFrame)`
+#### Description
+Generates a checksum for a pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | The DataFrame to generate a checksum for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| checksum | str | The generated checksum |
+
+### `json_checksum(obj: Union[dict, list])`
+#### Description
+Generates a checksum for a JSON-serializable object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | Union[dict, list] | The object to generate a checksum for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| checksum | str | The generated checksum |
+
+### `str_checksum(obj: str)`
+#### Description
+Generates a SHA256 checksum for a string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | str | The string to generate a checksum for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| checksum | str | The generated SHA256 checksum |
+
+### `class BaseCache(ABC)`
+#### Description
+Abstract base class for cache implementations.
+
+#### Methods
+- `__init__(self, max_size=None, serializer=None)`
+- `set_df(self, name, df)`
+- `get_df(self, name)`
+- `serialize(self, value)`
+- `deserialize(self, value)`
+
+### `class FileCache(BaseCache)`
+#### Description
+File-based cache implementation.
+
+#### Methods
+- `__init__(self, category, path=None, **kwargs)`
+- `clear_old_cache(self)`
+- `file_path(self, name)`
+- `set_df(self, name, df)`
+- `set(self, name, value)`
+- `get_df(self, name)`
+- `get(self, name)`
+- `delete(self, name)`
+- `delete_file(self, path)`
+
+### `class RedisCache(BaseCache)`
+#### Description
+Redis-based cache implementation.
+
+#### Methods
+- `__init__(self, category, connection_info=None, **kwargs)`
+- `clear_old_cache(self, key_added)`
+- `redis_key(self, name)`
+- `set(self, name, value)`
+- `get(self, name)`
+- `delete(self, name)`
+- `delete_key(self, key)`
+
+### `class NoCache`
+#### Description
+A dummy cache class for when caching is disabled.
+
+#### Methods
+- `__init__(self, *args, **kwargs)`
+- `get(self, name)`
+- `set(self, name, value)`
+
+### `get_cache(category, **kwargs)`
+#### Description
+Factory function to create the appropriate cache object based on configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| category | str | The category of the cache |
+| **kwargs | dict | Additional arguments for cache initialization |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cache | BaseCache | The created cache object |
+
+## Dependencies
+- os
+- time
+- abc (Abstract Base Classes)
+- pathlib
+- hashlib
+- typing
+- pandas
+- walrus (Redis client)
+- mindsdb.utilities.config
+- mindsdb.utilities.json_encoder
+- mindsdb.interfaces.storage.fs
+- mindsdb.utilities.context
+
+## Error Handling
+The code includes basic error handling, such as creating directories if they don't exist and handling file operations. However, it relies on the underlying libraries (e.g., Redis) for most error handling.
+
+## Performance Considerations
+- The caching system includes a `max_size` parameter to limit cache size.
+- File-based caching uses a buffer to avoid frequent deletions.
+- Redis-based caching uses sorted sets for efficient key management.
+
+## Notes
+- The caching system supports both in-memory (Redis) and on-disk (File) caching.
+- The choice of caching method is determined by the configuration.
+- The `NoCache` class provides a way to disable caching without changing the code structure.
+
+This caching system is designed to be flexible and efficient, allowing MindsDB to optimize performance by storing frequently accessed data or computation results.

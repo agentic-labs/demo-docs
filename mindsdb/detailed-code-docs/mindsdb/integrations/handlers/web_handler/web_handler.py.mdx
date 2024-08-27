@@ -1,0 +1,95 @@
+---
+title: "web_handler.py"
+---
+
+## High-level description
+This code defines a WebHandler class for crawling and processing web content. It includes a CrawlerTable class for executing SQL-like queries on web data, and utilizes various utility functions for web crawling, content extraction, and data processing.
+
+## Code Structure
+The main components are:
+1. `WebHandler`: The main handler class that registers the `CrawlerTable`.
+2. `CrawlerTable`: Implements the `select` method to process SQL-like queries for web crawling.
+3. Utility functions: Various helper functions for URL validation, web crawling, and content processing.
+
+## Symbols
+
+### WebHandler
+#### Description
+The `WebHandler` class is responsible for handling web crawling operations. It initializes and registers a `CrawlerTable` instance.
+
+#### Internal Logic
+- Initializes with an optional name
+- Registers a `CrawlerTable` instance with the name 'crawler'
+- Implements a `check_connection` method that always returns a successful status
+
+### CrawlerTable
+#### Description
+The `CrawlerTable` class implements the `select` method to process SQL-like queries for web crawling.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | SQL SELECT query represented as an AST |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pd.DataFrame | Dataframe containing the crawled data |
+
+#### Internal Logic
+1. Extracts conditions from the query's WHERE clause
+2. Validates and processes the URL(s) to be crawled
+3. Checks if the provided URL(s) are allowed for web crawling
+4. Ensures a LIMIT clause is specified in the query
+5. Calls `get_all_websites` to perform the actual web crawling
+6. Applies any additional filtering based on the query's targets
+
+### get_all_websites
+#### Description
+This function crawls a list of websites and returns a DataFrame containing the results.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| urls | list | List of URLs to crawl |
+| limit | int | Maximum number of pages to crawl |
+| html | bool | Whether to include HTML content in the results |
+| crawl_depth | int | Depth of crawling from each base URL |
+| filters | List[str] | Regex patterns to filter URLs for crawling |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | DataFrame containing the crawled data |
+
+#### Internal Logic
+1. Initializes an empty dictionary to store crawled data
+2. Uses a ThreadPoolExecutor to crawl URLs in parallel
+3. Calls `get_all_website_links_recursively` for each URL
+4. Converts the resulting dictionary to a DataFrame
+5. Handles any errors that occurred during crawling
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| mindsdb_sql | SQL parsing and processing |
+| requests | HTTP requests for web crawling |
+| BeautifulSoup | HTML parsing |
+| html2text | HTML to Markdown conversion |
+| fitz (PyMuPDF) | PDF processing |
+
+## Error Handling
+The code implements error handling in various places:
+- In `CrawlerTable.select`, it raises exceptions for unsupported query types and missing required clauses
+- In `get_all_website_links`, it catches and logs exceptions that occur during web crawling
+- In `get_all_websites`, it raises an exception if all crawled URLs result in errors
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging. It logs information about the crawling process and any errors that occur during execution.
+
+## Performance Considerations
+- The code uses parallel processing (ThreadPoolExecutor) for crawling multiple URLs simultaneously, which can improve performance for large numbers of URLs.
+- It implements a depth-limited recursive crawling strategy, which helps to control the scope of the crawl and prevent excessive resource usage.
+
+This handler provides a flexible and efficient way to crawl web content and process it using SQL-like queries within the MindsDB ecosystem.

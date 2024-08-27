@@ -1,0 +1,103 @@
+---
+title: "ml_exec_base.py"
+---
+
+Here's a high-level description and documentation of the target file `mindsdb/integrations/libs/ml_exec_base.py`:
+
+## High-level description
+
+This module defines a wrapper for ML engines that abstracts away complexity in MindsDB. It includes the `BaseMLEngineExec` class, which wraps objects inheriting from `BaseMLEngine` and exposes endpoints for database-like operations and ML-specific behaviors. It also includes methods for asynchronous dispatch of learning and prediction processes.
+
+## Code Structure
+
+The main components of this code are:
+
+1. `BaseMLEngineExec` class: The primary wrapper for ML engines.
+2. `learn_process` method: Handles async dispatch of the `learn` method.
+3. `predict_process` method: Handles async dispatch of the `predict` method.
+
+These components interact to provide a unified interface for ML operations within MindsDB.
+
+## Symbols
+
+### BaseMLEngineExec
+
+#### Description
+This class wraps ML engine objects and provides methods for various ML operations like learning, prediction, and model management.
+
+#### Internal Logic
+- Initializes with engine name, integration ID, and handler module.
+- Provides methods for learning, prediction, describing models, and other ML-related operations.
+- Uses a task queue system for asynchronous execution of ML tasks.
+
+### learn
+
+#### Description
+Trains a model given some data-gathering SQL statement.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_name | str | Name of the model |
+| project_name | str | Name of the project |
+| data_integration_ref | Optional[dict] | Reference to data integration |
+| fetch_data_query | Optional[str] | SQL query to fetch training data |
+| problem_definition | Optional[dict] | Definition of the ML problem |
+| join_learn_process | bool | Whether to wait for the learning process to complete |
+| label | Optional[str] | Label for the model |
+| is_retrain | bool | Whether this is a retraining operation |
+| set_active | bool | Whether to set the model as active after training |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictor_record | db.Predictor | Database record of the created predictor |
+
+#### Internal Logic
+1. Creates a validation for the model.
+2. Creates a predictor record in the database.
+3. Dispatches an asynchronous learning task.
+4. Optionally waits for the learning process to complete.
+
+### predict
+
+#### Description
+Generates predictions with a model and input data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_name | str | Name of the model |
+| df | pd.DataFrame | Input data for prediction |
+| pred_format | str | Format of the prediction output |
+| project_name | Optional[str] | Name of the project |
+| version | Optional[int] | Version of the model |
+| params | Optional[dict] | Additional parameters for prediction |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | pd.DataFrame | Prediction results |
+
+#### Internal Logic
+1. Retrieves the predictor record from the database.
+2. Dispatches an asynchronous prediction task.
+3. Processes the prediction results and returns them.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| sqlalchemy | Database operations |
+| mindsdb.utilities.config | Configuration management |
+| mindsdb.interfaces.storage.db | Database interface |
+| mindsdb.utilities.hooks | Hooks for various operations |
+| mindsdb.utilities.ml_task_queue | ML task queue management |
+
+## Error Handling
+The class uses a context manager `_catch_exception` to handle exceptions in its methods. It wraps exceptions in `MLEngineException` for consistent error handling.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging operations and errors.
+
+This documentation provides an overview of the main components and functionalities of the `ml_exec_base.py` file. It serves as a wrapper for ML engines in MindsDB, providing a unified interface for various ML operations and handling asynchronous task execution.

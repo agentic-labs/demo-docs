@@ -1,0 +1,368 @@
+---
+title: "chromadb_handler.py"
+---
+
+## High-level description
+The `ChromaDBHandler` class in `chromadb_handler.py` provides a handler for interacting with a ChromaDB vector database. It implements methods for connecting to the database, managing collections (tables), and executing queries like insert, select, update, and delete. This handler is designed to work with both persistent ChromaDB instances and those accessed via HTTP.
+
+## Code Structure
+The `ChromaDBHandler` class is the main component, inheriting from `VectorStoreHandler`. It uses `HandlerStorage` for managing persistent storage if configured. The `_get_chromadb()` function attempts to dynamically import `chromadb` and handle potential SQLite compatibility issues.
+
+## References
+- `mindsdb.integrations.libs.response`: Used for defining response types and structures returned by the handler's methods.
+- `mindsdb.integrations.libs.vectordatabase_handler`: Defines base classes and enums like `FilterCondition`, `FilterOperator`, `TableField`, and `VectorStoreHandler` that are crucial for the handler's functionality.
+- `mindsdb.interfaces.storage.model_fs`: Utilizes `HandlerStorage` for managing persistent storage of the ChromaDB data.
+
+## Symbols
+
+### `get_chromadb`
+#### Description
+This function attempts to import the `chromadb` library. It includes a workaround for compatibility with older Python versions (&lt; 3.10) by trying to import `pysqlite3` and replacing the `sqlite3` module if necessary. This is done because ChromaDB might face issues with the standard `sqlite3` module in certain environments.
+
+#### Inputs
+None
+
+#### Outputs
+- `chromadb` module if import is successful.
+- Raises an `ImportError` if `chromadb` cannot be imported.
+
+#### Internal Logic
+1. Checks the Python version. If it's less than 3.10, it attempts to import `pysqlite3`.
+2. If `pysqlite3` is successfully imported, it replaces the `sqlite3` module in `sys.modules` with `pysqlite3`.
+3. Attempts to import `chromadb`.
+4. Returns the imported `chromadb` module if successful.
+5. Raises an `ImportError` with a message if the import fails.
+
+### `ChromaDBHandler`
+#### Description
+This class handles the interaction with a ChromaDB database. It allows connecting to the database, managing collections, and executing queries. It supports both persistent ChromaDB instances and those accessed through an HTTP client.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the vector store. |
+| **kwargs | dict | Keyword arguments that may include 'integration_id' and 'connection_data'. |
+
+#### Outputs
+A `ChromaDBHandler` instance.
+
+#### Internal Logic
+- Initializes the handler by setting up storage, connection parameters, and connecting to the database.
+- Uses `validate_connection_parameters` to process and validate connection details.
+- Employs `_get_client` to determine and return the appropriate ChromaDB client (persistent or HTTP).
+- Implements methods for connecting, disconnecting, checking the connection, and synchronizing data with persistent storage.
+
+### `ChromaDBHandler.validate_connection_parameters`
+#### Description
+Validates the connection parameters provided during initialization. It ensures the parameters adhere to the `ChromaHandlerConfig` structure and sets up the persistent directory if configured.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the vector store. |
+| **kwargs | dict | Keyword arguments containing connection details. |
+
+#### Outputs
+- A validated `ChromaHandlerConfig` object.
+
+#### Internal Logic
+1. Retrieves connection data from `kwargs`.
+2. Creates a `ChromaHandlerConfig` object using the provided connection data.
+3. If `persist_directory` is set in the config and the storage is not temporal:
+    - Constructs the full persistence directory path using `HandlerStorage`.
+
+### `ChromaDBHandler._get_client`
+#### Description
+Determines and returns the appropriate ChromaDB client based on the configured connection parameters. It either returns a persistent client if `persist_directory` is set or an HTTP client otherwise.
+
+#### Inputs
+None
+
+#### Outputs
+- A `chromadb.PersistentClient` if `persist_directory` is configured.
+- A `chromadb.HttpClient` if connecting via HTTP.
+
+#### Internal Logic
+1. Retrieves the client configuration.
+2. If `persist_directory` is set in the configuration:
+    - Returns a `chromadb.PersistentClient` using the specified directory.
+3. Otherwise:
+    - Returns a `chromadb.HttpClient` with the configured host and port.
+
+### `ChromaDBHandler._sync`
+#### Description
+Synchronizes the local data with the persistent storage if `persist_directory` is configured. This ensures that changes made to the database are reflected in the persistent storage.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Side Effects
+- Synchronizes the contents of the `persist_directory` with the `HandlerStorage`.
+
+### `ChromaDBHandler.connect`
+#### Description
+Establishes a connection to the ChromaDB database using the configured client.
+
+#### Inputs
+None
+
+#### Outputs
+- The connected ChromaDB client object.
+
+#### Internal Logic
+1. Checks if a connection is already established. If so, returns the existing client.
+2. Retrieves the appropriate ChromaDB client using `_get_client`.
+3. Sets the `is_connected` flag to `True`.
+4. Returns the connected client.
+5. If an exception occurs during connection, sets `is_connected` to `False` and re-raises the exception.
+
+### `ChromaDBHandler.disconnect`
+#### Description
+Closes the connection to the ChromaDB database.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+1. Checks if a connection is already closed. If so, does nothing.
+2. Sets the `_client` to `None` and `is_connected` to `False`.
+
+### `ChromaDBHandler.check_connection`
+#### Description
+Checks the connection to the ChromaDB database by sending a heartbeat request.
+
+#### Inputs
+None
+
+#### Outputs
+- A `HandlerStatusResponse` object indicating the connection status.
+
+#### Internal Logic
+1. Creates a `HandlerStatusResponse` object with `success` set to `False`.
+2. Sends a heartbeat request to the ChromaDB client.
+3. If the heartbeat is successful, sets the `success` flag in the response to `True`.
+4. If an exception occurs, logs the error and sets the `error_message` in the response.
+5. Disconnects from the database if the connection was established only for checking.
+6. Returns the `HandlerStatusResponse` object.
+
+### `ChromaDBHandler._get_chromadb_operator`
+#### Description
+Translates internal `FilterOperator` enums to their corresponding ChromaDB query operators.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| operator | FilterOperator | The filter operator to translate. |
+
+#### Outputs
+- A string representing the equivalent ChromaDB operator.
+- Raises an `Exception` if the operator is not supported.
+
+### `ChromaDBHandler._translate_metadata_condition`
+#### Description
+Translates a list of `FilterCondition` objects, specifically those related to metadata, into a dictionary format suitable for ChromaDB queries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| conditions | List[FilterCondition] | A list of filter conditions. |
+
+#### Outputs
+- A dictionary representing the translated metadata conditions for ChromaDB, or `None` if no relevant conditions are found.
+
+### `ChromaDBHandler.select`
+#### Description
+Retrieves data from the specified collection (table) in ChromaDB based on the provided criteria. It supports both general queries and similarity search based on embedding vectors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to query. |
+| columns | List[str] | A list of columns to retrieve. Defaults to None, which retrieves all columns. |
+| conditions | List[FilterCondition] | A list of filter conditions to apply. |
+| offset | int | The offset for pagination. Defaults to None. |
+| limit | int | The maximum number of records to retrieve. Defaults to None. |
+
+#### Outputs
+- A pandas DataFrame containing the retrieved data.
+
+#### Internal Logic
+1. Retrieves the specified collection from ChromaDB.
+2. Translates metadata conditions using `_translate_metadata_condition`.
+3. Identifies and separates vector filter conditions for similarity search.
+4. If a vector filter is present, performs a similarity search using `collection.query`.
+5. Otherwise, performs a general get query using `collection.get`.
+6. Constructs a dictionary containing the retrieved data, including IDs, content, metadata, embeddings, and distances (if applicable).
+7. Projects the data based on the specified columns.
+8. Returns a pandas DataFrame from the constructed data dictionary.
+
+### `ChromaDBHandler.insert`
+#### Description
+Inserts data into the specified ChromaDB collection. It handles the conversion of data to a suitable format for ChromaDB and performs the insertion.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to insert into. |
+| data | pd.DataFrame | A pandas DataFrame containing the data to insert. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Inserts the provided data into the specified ChromaDB collection.
+- Synchronizes the data with persistent storage using `_sync`.
+
+### `ChromaDBHandler.upsert`
+#### Description
+This method simply calls the `insert` method, effectively treating upserts as inserts in ChromaDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection. |
+| data | pd.DataFrame | The data to upsert. |
+
+#### Outputs
+None
+
+#### Internal Logic
+Calls the `insert` method.
+
+### `ChromaDBHandler.update`
+#### Description
+Updates data in the specified ChromaDB collection. It retrieves the collection and updates records based on their IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to update. |
+| data | pd.DataFrame | A pandas DataFrame containing the data to update. |
+| key_columns | List[str] | A list of columns to use as keys for updating. Defaults to None. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Updates the data in the specified ChromaDB collection.
+- Synchronizes the data with persistent storage using `_sync`.
+
+### `ChromaDBHandler.delete`
+#### Description
+Deletes data from the specified ChromaDB collection based on the provided conditions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to delete from. |
+| conditions | List[FilterCondition] | A list of filter conditions to identify records for deletion. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Deletes data from the specified ChromaDB collection.
+- Synchronizes the data with persistent storage using `_sync`.
+
+### `ChromaDBHandler.create_table`
+#### Description
+Creates a new collection in the ChromaDB database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to create. |
+| if_not_exists | bool | If True, the creation is skipped if the collection already exists. Defaults to True. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Creates a new collection in the ChromaDB database.
+- Synchronizes the data with persistent storage using `_sync`.
+
+### `ChromaDBHandler.drop_table`
+#### Description
+Deletes a collection from the ChromaDB database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the collection to delete. |
+| if_exists | bool | If True, no error is raised if the collection doesn't exist. Defaults to True. |
+
+#### Outputs
+None
+
+#### Side Effects
+- Deletes the specified collection from the ChromaDB database.
+- Synchronizes the data with persistent storage using `_sync`.
+
+### `ChromaDBHandler.get_tables`
+#### Description
+Retrieves a list of collections present in the ChromaDB database.
+
+#### Inputs
+None
+
+#### Outputs
+- A `HandlerResponse` containing a DataFrame with the list of collection names.
+
+#### Internal Logic
+1. Retrieves the list of collections from the ChromaDB client.
+2. Constructs a pandas DataFrame containing the collection names.
+3. Returns a `HandlerResponse` with the DataFrame.
+
+### `ChromaDBHandler.get_columns`
+#### Description
+Returns a fixed set of columns that are supported by the ChromaDB handler. It first checks if the specified table exists.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the table (collection). |
+
+#### Outputs
+- A `HandlerResponse` containing a DataFrame with column information if the table exists.
+- A `HandlerResponse` with an error message if the table doesn't exist.
+
+#### Internal Logic
+1. Attempts to retrieve the specified collection from ChromaDB.
+2. If the collection exists, it calls the superclass method to return the standard set of columns.
+3. If the collection doesn't exist, it returns a `HandlerResponse` with an error message.
+
+## Side Effects
+- The `ChromaDBHandler` class interacts with external ChromaDB instances, either persistent or via HTTP, which can lead to data modifications in those instances.
+- The `_sync` method synchronizes data with persistent storage, which can result in file system changes.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| chromadb | Core library for interacting with ChromaDB vector databases |
+| pandas | Used for data manipulation and DataFrame operations |
+| pysqlite3 | Optional dependency for SQLite compatibility in older Python versions |
+
+## Error Handling
+- The handler implements various error checks and raises exceptions for invalid operations or configurations.
+- Connection errors are caught and logged, with appropriate status responses returned.
+- Unsupported filter operators or query types result in exceptions being raised.
+
+## Logging
+- The handler uses a logger named `logger` for logging various operations and errors.
+- Connection errors and warnings about potential compatibility issues are logged.
+
+## Performance Considerations
+- The handler supports both in-memory (persistent) and HTTP-based ChromaDB clients, which can have different performance characteristics.
+- Large data insertions or updates might require careful management of memory and network resources, especially for HTTP-based clients.
+- The `_sync` method, which synchronizes data with persistent storage, could potentially be a performance bottleneck for frequent write operations.
+
+## TODOs
+There are no explicit TODOs in the provided code.
+
+This comprehensive documentation covers the main functionalities, internal logic, and important considerations for the ChromaDBHandler class and its associated methods. It provides a clear understanding of how the handler interacts with ChromaDB, manages data operations, and handles various scenarios such as connection management and error handling.

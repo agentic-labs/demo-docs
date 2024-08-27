@@ -1,0 +1,60 @@
+---
+title: "openbb_tables.py"
+---
+
+## High-level description
+The `openbb_tables.py` file defines a function `create_table_class` that dynamically generates API table classes for interacting with the OpenBB Platform. These classes handle SQL queries, translate them into API calls, and return the results as pandas DataFrames.
+
+## Code Structure
+The `create_table_class` function takes metadata about OpenBB functions and returns a dynamically generated `AnyTable` class. This class inherits from `APITable` and implements methods like `select` to handle SQL queries. The `select` method extracts parameters from the query, calls the OpenBB function, and processes the results.
+
+## References
+- `mindsdb.api.executor.utilities.sql.query_df`: Executes a SQL query on a DataFrame using DuckDB.
+- `mindsdb.integrations.libs.api_handler.APITable`: Base class for API table handlers.
+- `mindsdb.integrations.utilities.date_utils.parse_local_date`: Parses a date string in the local timezone.
+- `mindsdb.integrations.utilities.sql_utils`: Provides utilities for extracting conditions, projecting, filtering, and sorting DataFrames.
+
+## Symbols
+
+### `create_table_class`
+#### Description
+Dynamically creates an API table class for a given OpenBB Platform function. This class handles SQL queries related to the function and returns the results as a pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| params_metadata | dict | Metadata about the OpenBB function's parameters. |
+| response_metadata | dict | Metadata about the OpenBB function's response structure. |
+| obb_function | callable | The OpenBB function to call. |
+| func_docs | str | Documentation URL for the OpenBB function. |
+| provider | str | Optional provider for the OpenBB function. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| AnyTable | class | A dynamically generated class that inherits from `APITable` and handles SQL queries for the given OpenBB function. |
+
+#### Internal Logic
+1. Extracts mandatory fields from `params_metadata`.
+2. Defines the `AnyTable` class inheriting from `APITable`.
+3. Implements `_get_params_from_conditions` to extract API parameters from SQL WHERE conditions.
+4. Implements `select` to handle SQL SELECT queries:
+    - Extracts conditions, limit, and order by clauses.
+    - Converts date/time conditions to appropriate API parameters.
+    - Calls the OpenBB function with extracted parameters.
+    - Processes the result DataFrame:
+        - Resets index if it's a DatetimeIndex.
+        - Sorts, limits, and filters the DataFrame based on the query.
+        - Projects the requested columns.
+    - Handles errors and raises exceptions with informative messages.
+5. Defines `get_columns` to return the list of columns from `response_metadata`.
+
+## Error Handling
+The `select` method includes extensive error handling for various scenarios:
+- Missing mandatory arguments in the WHERE clause.
+- Unsupported OR conditions.
+- API call errors, including missing credentials and table not found.
+- Invalid column names in the SELECT clause.
+- General exceptions during API call or data processing.
+
+For each error type, it raises an exception with a user-friendly message and, where applicable, provides guidance on resolving the issue, including referencing the OpenBB function documentation.

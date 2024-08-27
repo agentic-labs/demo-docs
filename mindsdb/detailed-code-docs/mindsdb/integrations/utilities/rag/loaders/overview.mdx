@@ -1,0 +1,89 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains implementations for loading various types of data into vector stores for use in a Retrieval-Augmented Generation (RAG) system. It includes two main components: a FileLoader for handling different file formats, and a VectorStoreLoader for managing vector stores. These utilities are designed to facilitate the process of ingesting and organizing data for efficient retrieval in natural language processing tasks.
+
+## What does it do?
+The code in this directory provides functionality to:
+
+1. Load and process various file types (PDF, CSV, HTML, Markdown, plain text) into a unified document representation.
+2. Create, load, and manage vector stores, specifically supporting Chroma and PGVector types.
+3. Integrate with embedding models to create vector representations of data.
+4. Fetch data from databases and load it into vector stores.
+5. Provide both eager and lazy loading options for file processing.
+6. Offer a flexible and extensible framework for working with different data sources and vector store types in a RAG system.
+
+In simpler terms, this code acts as a smart data ingestion and organization system. It takes various types of information (from files or databases) and stores them in a way that makes it easy for AI models to quickly search and retrieve relevant data. This enhances the AI's ability to find and use the right information when answering questions or generating content.
+
+## Key Files
+1. `file_loader.py`: Implements the `FileLoader` class, which handles loading and processing various file types into a unified document representation.
+
+2. `vector_store_loader.py`: Contains the `VectorStoreLoader` and `VectorStoreFactory` classes, responsible for creating and managing vector stores.
+
+## Dependencies
+The code relies on several external libraries and frameworks:
+
+1. langchain_community.document_loaders: Provides loaders for different file types.
+2. langchain_core.documents.base: Defines the Document class for representing loaded content.
+3. langchain_core.embeddings: Used for working with embedding models.
+4. langchain_community.vectorstores: Provides implementations for Chroma and PGVector vector stores.
+5. pydantic: Used for data validation and settings management.
+6. pandas: Utilized for efficient data manipulation, especially when loading data from databases.
+7. sqlalchemy: Employed for database operations and connections.
+
+These dependencies were chosen for their robustness, efficiency, and compatibility with the overall RAG system architecture.
+
+## Configuration
+The `VectorStoreLoader` uses a `VectorStoreConfig` object for configuration, which includes settings such as:
+
+- The type of vector store to use (Chroma or PGVector)
+- Connection details for databases (when using PGVector)
+- Paths or identifiers for persistent storage (when using Chroma)
+
+The `FileLoader` doesn't require specific configuration but determines the appropriate loader based on file extensions.
+
+Here's an example of how the `VectorStoreLoader` might be used:
+
+```python
+from langchain_core.embeddings import SomeEmbeddingModel
+from pydantic import BaseModel
+
+class VectorStoreConfig(BaseModel):
+    type: str
+    connection_string: str = None
+    persist_directory: str = None
+
+# Create an embedding model
+embedding_model = SomeEmbeddingModel()
+
+# Create a configuration
+config = VectorStoreConfig(type="pgvector", connection_string="postgresql://user:pass@localhost/db")
+
+# Create and load the vector store
+loader = VectorStoreLoader(embedding_model=embedding_model, config=config)
+vector_store = loader.load()
+
+# Use the vector store for operations
+results = vector_store.similarity_search("some query")
+```
+
+And here's an example of using the `FileLoader`:
+
+```python
+from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
+
+# Create a FileLoader instance
+file_loader = FileLoader("path/to/your/file.pdf")
+
+# Eager loading
+documents = file_loader.load()
+
+# Lazy loading
+for document in file_loader.lazy_load():
+    # Process each document
+    pass
+```
+
+These utilities provide a flexible and powerful foundation for data ingestion and organization in a RAG system, supporting various data sources and vector store types.

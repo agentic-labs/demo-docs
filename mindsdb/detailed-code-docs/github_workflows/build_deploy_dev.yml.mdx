@@ -1,0 +1,87 @@
+---
+title: "build_deploy_dev.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file, named "Build and deploy to dev", is designed to automate the process of building Docker images, deploying them to development environments, and running integration tests for pull requests targeting the main branch of a project. It's triggered by pull request events and uses various custom actions and reusable workflows to accomplish its tasks.
+
+## Code Structure
+The workflow is composed of four main jobs: `get-deploy-labels`, `build`, `build_cache`, and `deploy`, with an additional `run_tests` job. These jobs are interconnected, with some depending on the outputs or completion of others.
+
+## Symbols
+
+### `get-deploy-labels` job
+#### Description
+This job identifies deployment environments based on labels attached to the pull request.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deploy-envs | JSON array | List of deployment environments extracted from PR labels |
+
+#### Internal Logic
+1. Checks out the MindsDB GitHub Actions repository
+2. Uses a custom action to extract deployment labels from the pull request
+
+### `build` job
+#### Description
+This job builds Docker images based on a bake file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| git-sha | string | The SHA of the pull request head commit |
+
+#### Internal Logic
+1. Checks out the current repository at the pull request head commit
+2. Checks out the MindsDB GitHub Actions repository
+3. Uses a custom Docker bake action to build and push images
+
+### `build_cache` job
+#### Description
+This job builds and pushes Docker image layers to a cache repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| git-sha | string | The SHA of the pull request head commit |
+
+#### Internal Logic
+1. Checks out the current repository at the pull request head commit
+2. Checks out the MindsDB GitHub Actions repository
+3. Uses a custom Docker bake cache action to build and cache image layers
+
+### `deploy` job
+#### Description
+This job calls a reusable deployment workflow to deploy the built images.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deploy-envs | JSON array | List of deployment environments |
+| image-tag | string | The SHA of the pull request head commit |
+
+#### Internal Logic
+Uses a reusable workflow (`deploy.yml`) to handle the deployment process
+
+### `run_tests` job
+#### Description
+This job runs integration tests against the deployed environment.
+
+#### Internal Logic
+Uses a reusable workflow (`test_on_deploy.yml`) to run integration tests
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checking out repositories |
+| mindsdb/github-actions | Custom actions for various tasks |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| concurrency.group | string | ${{ github.workflow_ref }} | Defines the concurrency group for the workflow |
+| concurrency.cancel-in-progress | boolean | true | Cancels in-progress runs of the same workflow |
+
+## TODOs
+- TODO: Run integration tests against the deployed environment

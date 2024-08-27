@@ -1,0 +1,133 @@
+---
+title: "google_user_oauth_utilities.py"
+---
+
+## High-level description
+This code implements a `GoogleUserOAuth2Manager` class that handles OAuth2 authentication for Google services. It manages the process of obtaining, refreshing, and storing OAuth2 credentials for a user, supporting both local file-based and URL-based credential sources.
+
+## Code Structure
+The `GoogleUserOAuth2Manager` class contains methods for managing the OAuth2 flow, including downloading secret files, executing the authentication flow, and saving credentials. The main entry point is the `get_oauth2_credentials` method, which orchestrates the entire authentication process.
+
+## Symbols
+
+### GoogleUserOAuth2Manager
+#### Description
+A class that manages the OAuth2 authentication process for Google services.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| handler_stroage | str | Storage handler for managing configuration files |
+| scopes | list | List of OAuth2 scopes required for the application |
+| credentials_file | str | Optional path to a local credentials file |
+| credentials_url | str | Optional URL to download credentials from |
+| code | str | Optional authorization code for OAuth2 flow |
+
+#### Internal Logic
+1. Initializes instance variables with provided inputs.
+2. Implements methods for various stages of the OAuth2 process.
+
+### get_oauth2_credentials
+#### Description
+The main method that orchestrates the OAuth2 authentication process.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| creds | Credentials | Google OAuth2 credentials object |
+
+#### Internal Logic
+1. Checks for existing credentials in the storage.
+2. If credentials are invalid or non-existent, initiates the authorization process.
+3. Downloads or copies the secret file if necessary.
+4. Refreshes expired credentials or obtains new ones through the OAuth2 flow.
+5. Saves the new credentials to storage.
+
+### _download_secret_file
+#### Description
+Downloads or copies the secret file containing OAuth2 client information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| secret_file | str | Path to save the secret file |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| success | bool | True if the file was successfully obtained, False otherwise |
+
+#### Internal Logic
+1. Attempts to download the file from `credentials_url` if provided.
+2. If unsuccessful or not provided, tries to copy from `credentials_file`.
+
+### _execute_google_auth_flow
+#### Description
+Executes the Google OAuth2 authorization flow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| secret_file | str | Path to the secret file |
+| scopes | list | List of OAuth2 scopes |
+| code | str | Optional authorization code |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| creds | Credentials | Google OAuth2 credentials object |
+
+#### Internal Logic
+1. Creates a Flow object from the secret file.
+2. Sets the redirect URI.
+3. If a code is provided, exchanges it for credentials.
+4. If no code is provided, generates an authorization URL and raises an AuthException.
+
+### _save_credentials_to_file
+#### Description
+Saves the OAuth2 credentials to a file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| creds | Credentials | Google OAuth2 credentials object |
+| file_path | str | Path to save the credentials |
+
+#### Internal Logic
+Converts the credentials to a dictionary and saves it as JSON.
+
+### _convert_credentials_to_dict
+#### Description
+Converts a Credentials object to a dictionary.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| credentials | Credentials | Google OAuth2 credentials object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cred_dict | dict | Dictionary representation of the credentials |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| os | File and path operations |
+| json | JSON encoding and decoding |
+| requests | HTTP requests for downloading credentials |
+| datetime | Date and time operations |
+| flask | Web framework for handling requests |
+| shutil | File copying |
+| google_auth_oauthlib | Google OAuth2 flow implementation |
+| google.oauth2.credentials | Google OAuth2 credentials management |
+| google.auth.transport.requests | Google Auth request handling |
+
+## Error Handling
+The code implements basic error handling:
+- Raises `ValueError` if no valid credentials file or URL is found.
+- Raises `AuthException` when authorization is required, providing an authorization URL.
+- Logs errors when failing to download credentials from the URL.
+
+## Logging
+The code uses a logger (obtained from `mindsdb.utilities.log`) to log debug and error messages throughout the authentication process.

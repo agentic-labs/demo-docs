@@ -1,0 +1,71 @@
+---
+title: "auth.py"
+---
+
+## High-level description
+This code provides functionality for retrieving AWS metadata and registering an OAuth client for AWS Marketplace instances. It includes two main functions: `get_aws_meta_data()` to fetch AWS instance metadata, and `register_oauth_client()` to register a new OAuth client if one doesn't exist or if the instance's public hostname has changed.
+
+## Symbols
+
+### `get_aws_meta_data()`
+#### Description
+This function retrieves AWS metadata for the current instance by making HTTP requests to the AWS metadata service.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| aws_meta_data | dict | A dictionary containing AWS metadata including public-hostname, ami-id, and instance-id |
+
+#### Internal Logic
+1. Initialize a dictionary with keys for public-hostname, ami-id, and instance-id.
+2. For each key, make an HTTP GET request to the AWS metadata service URL.
+3. If the request is successful (status code 200), store the response text in the dictionary.
+4. If the instance-id is not retrieved, raise an exception indicating it's not an AWS environment.
+5. Return the populated metadata dictionary.
+
+#### Error Handling
+Raises an exception if the instance-id is not retrieved, indicating that the environment is not AWS.
+
+### `register_oauth_client()`
+#### Description
+This function registers a new OAuth client for AWS Marketplace instances if one doesn't exist or if the instance's public hostname has changed.
+
+#### Internal Logic
+1. Get the current configuration and AWS metadata.
+2. Compare the current public hostname with the stored one.
+3. If the hostname has changed or there's no client ID, register a new OAuth client:
+   a. Prepare a JSON payload with client details.
+   b. Send a POST request to the OAuth server to register the client.
+   c. If successful, update the configuration with the new client ID and secret.
+
+#### Side Effects
+- Makes HTTP requests to external services (AWS metadata service and OAuth server).
+- Updates the application configuration if a new OAuth client is registered.
+
+#### Error Handling
+Raises an exception if the OAuth server responds with a non-200 status code.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| requests | Used for making HTTP requests to AWS metadata service and OAuth server |
+| textwrap | Used for formatting multiline strings in the OAuth client registration payload |
+| mindsdb.utilities.config | Provides access to the application configuration |
+
+## Configuration
+The code relies on the application configuration, accessed through the `Config` class. It reads and updates the following configuration options:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| aws_meta_data | dict | Stores AWS instance metadata |
+| auth.oauth.server_host | str | The hostname of the OAuth server |
+| auth.oauth.client_id | str | The OAuth client ID |
+| auth.oauth.client_secret | str | The OAuth client secret |
+
+## Error Handling
+The code implements basic error handling:
+- In `get_aws_meta_data()`, it raises an exception if the instance-id is not retrieved.
+- In `register_oauth_client()`, it raises an exception if the OAuth server responds with a non-200 status code.
+
+## Performance Considerations
+The code makes multiple HTTP requests to external services, which can impact performance. Consider implementing caching mechanisms or rate limiting to avoid excessive requests, especially for the AWS metadata service.

@@ -1,0 +1,80 @@
+---
+title: "aggregate.py"
+---
+
+## High-level description
+This code implements an aggregation responder for MongoDB-like queries in MindsDB. It converts MongoDB's aggregation pipeline to SQL AST (Abstract Syntax Tree) and executes the query using MindsDB's SQL execution engine.
+
+## Code Structure
+The main components are the `aggregate_to_ast` function, which converts MongoDB aggregation queries to SQL AST, and the `Responce` class, which handles the aggregation request and returns the result.
+
+## Symbols
+
+### `aggregate_to_ast(query, database)`
+#### Description
+Converts a MongoDB aggregation query to a SQL AST representation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | dict | The MongoDB aggregation query |
+| database | str | The database name |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ast_query | AST object | The SQL AST representation of the query |
+
+#### Internal Logic
+1. Extracts the collection name from the query.
+2. Processes the pipeline steps, focusing on `$match`, `$project`, `$sort`, `$skip`, `$limit`, and `$out` operations.
+3. Converts the query to a `find` query if possible, then to SQL AST using `find_to_ast`.
+4. Handles `$out` operation by wrapping the query in `Insert` or `CreateTable` AST nodes.
+
+### `class Responce(Responder)`
+#### Description
+Handles MongoDB aggregation requests and returns the result.
+
+#### Methods
+
+##### `result(self, query, request_env, mindsdb_env, session)`
+###### Description
+Processes the aggregation request and returns the result.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | dict | The MongoDB query |
+| request_env | dict | Request environment |
+| mindsdb_env | dict | MindsDB environment |
+| session | object | Session object |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | dict | The query result in MongoDB cursor format |
+
+###### Internal Logic
+1. Extracts database and collection information from the query.
+2. Handles `$match` and `$collStats` operations.
+3. Converts the query to SQL AST using `aggregate_to_ast`.
+4. Executes the SQL command using `run_sql_command`.
+5. Returns the result in MongoDB cursor format.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| bson.int64 | For handling 64-bit integers |
+| mindsdb_sql.parser.ast | For AST node types |
+| mindsdb.api.mongo.classes | For Responder base class |
+| mindsdb.api.mongo.functions | For helper functions |
+| mindsdb.api.mongo.responders.find | For find_to_ast function |
+| mindsdb.api.mongo.classes.query_sql | For run_sql_command function |
+
+## Error Handling
+The code raises `NotImplementedError` for unsupported aggregation operations and `ValueError` for specific unsupported queries (e.g., `$collStats`).
+
+## TODOs
+- Implement group operation in the aggregation pipeline.
+
+This code provides a bridge between MongoDB's aggregation queries and MindsDB's SQL-based execution engine, allowing users to perform aggregations on MindsDB data using MongoDB-like syntax.

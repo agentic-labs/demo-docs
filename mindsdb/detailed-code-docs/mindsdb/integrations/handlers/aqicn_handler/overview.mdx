@@ -1,0 +1,90 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the World Air Quality Index (AQICN) handler for MindsDB. It provides an interface to connect to the AQICN API and retrieve air quality data for various locations. The handler allows users to query air quality information based on user location, city, latitude/longitude coordinates, and network stations.
+
+## What does it do?
+The AQICN handler enables MindsDB to interact with the World Air Quality Index API, allowing users to:
+1. Fetch air quality data for a user's current location
+2. Retrieve air quality information for specific cities
+3. Get air quality metrics based on latitude and longitude coordinates
+4. Access air quality data for particular network stations
+
+Users can create a database connection to the AQICN API using their API key and then execute SQL-like queries to retrieve air quality information. The handler translates these queries into appropriate API calls and returns the results in a structured format.
+
+## Entry points
+The main entry point for this handler is the `AQICNHandler` class defined in `aqicn_handler.py`. This class inherits from `APIHandler` and implements the necessary methods to connect to the AQICN API, check the connection status, and execute queries.
+
+The handler uses several table classes defined in `aqicn_tables.py` to handle different types of air quality data queries:
+- `AQByUserLocationTable`: For querying air quality data based on the user's location
+- `AQByCityTable`: For retrieving air quality information for specific cities
+- `AQByLatLngTable`: For fetching air quality data based on latitude and longitude coordinates
+- `AQByNetworkStationTable`: For accessing air quality information from specific network stations
+
+## Key Files
+1. `aqicn_handler.py`: Contains the main `AQICNHandler` class that manages the connection to the AQICN API and handles query execution.
+2. `aqicn_tables.py`: Defines the table classes for different types of air quality data queries.
+3. `aqicn.py`: Implements the `AQIClient` class, which directly interacts with the AQICN API.
+4. `connection_args.py`: Specifies the connection arguments required for the AQICN API, primarily the API key.
+5. `__init__.py`: Sets up the handler metadata and imports necessary components.
+6. `__about__.py`: Contains metadata information about the handler, such as version and description.
+
+## Dependencies
+The AQICN handler relies on the following main dependencies:
+- `requests`: Used for making HTTP requests to the AQICN API
+- `pandas`: For data manipulation and creating DataFrames from API responses
+- `mindsdb_sql`: Used for parsing SQL queries
+- `mindsdb.integrations.libs.api_handler`: Provides the base `APIHandler` class
+- `mindsdb.integrations.libs.response`: For handling status responses
+
+## Configuration
+The handler requires an API key for authentication with the AQICN service. This key is specified as a connection argument when creating a database connection in MindsDB. The connection arguments are defined in `connection_args.py`:
+
+```python
+connection_args = OrderedDict(
+    {
+        "api_key": {
+            "type": ARG_TYPE.STR,
+            "description": "API key",
+            "required": True,
+            "label": "api_key",
+            "secret": True,
+        }
+    }
+)
+```
+
+Users need to provide their AQICN API key when creating a database connection in MindsDB.
+
+## Example Usage
+Here's an example of how to use the AQICN handler in MindsDB:
+
+1. Create a database connection:
+```sql
+CREATE DATABASE mindsdb_aqicn
+WITH ENGINE = 'aqicn',
+PARAMETERS = {
+  "api_key": "your_api_key_here"
+};
+```
+
+2. Query air quality data for a specific city:
+```sql
+SELECT * FROM mindsdb_aqicn.air_quality_city WHERE city = "Bangalore";
+```
+
+3. Get air quality data based on coordinates:
+```sql
+SELECT * FROM mindsdb_aqicn.air_quality_lat_lng WHERE lat = "12.938539" AND lng = "77.5901";
+```
+
+4. Retrieve air quality data for the user's current location:
+```sql
+SELECT * FROM mindsdb_aqicn.air_quality_user_location;
+```
+
+These queries will be processed by the handler, which will make the appropriate API calls to the AQICN service and return the results as structured data.
+
+The AQICN handler provides a powerful interface for integrating real-time air quality data into MindsDB, allowing users to incorporate this information into their data analysis and machine learning workflows.

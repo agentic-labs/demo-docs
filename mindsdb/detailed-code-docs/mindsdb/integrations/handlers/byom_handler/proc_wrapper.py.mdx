@@ -1,0 +1,182 @@
+---
+title: "proc_wrapper.py"
+---
+
+## High-level description
+This code implements utility functions for the 'Bring Your Own Model' (BYOM) engine in MindsDB. It provides functionality to wrap and run Python code in separate processes, communicate with the parent process using stdin/stdout, and handle various operations like training, prediction, and fine-tuning of custom models.
+
+## Code Structure
+The code defines several utility functions and an enumeration class `BYOM_METHOD`. The main function `main()` orchestrates the execution flow based on the received method type. Other functions handle data encoding/decoding, module importing, and model class discovery.
+
+## Symbols
+
+### `BYOM_METHOD` (Enum)
+#### Description
+An enumeration class defining the different methods that can be executed in the BYOM engine.
+
+#### Enum Values
+- CHECK: 1
+- TRAIN: 2
+- PREDICT: 3
+- FINETUNE: 4
+- DESCRIBE: 5
+- FUNC_CALL: 6
+
+### `pd_encode(df)`
+#### Description
+Encodes a pandas DataFrame to a Parquet format.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | The DataFrame to encode |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoded | bytes | The encoded DataFrame in Parquet format |
+
+### `pd_decode(encoded)`
+#### Description
+Decodes a Parquet-encoded DataFrame back to a pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoded | bytes | The Parquet-encoded DataFrame |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | The decoded DataFrame |
+
+### `encode(obj)`
+#### Description
+Encodes an object using pickle serialization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | Any | The object to encode |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoded | bytes | The pickle-encoded object |
+
+### `decode(encoded)`
+#### Description
+Decodes a pickle-encoded object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoded | bytes | The pickle-encoded object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | Any | The decoded object |
+
+### `return_output(obj)`
+#### Description
+Encodes and writes an object to stdout, then exits the process.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | Any | The object to return as output |
+
+### `get_input()`
+#### Description
+Reads and decodes input from stdin.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| obj | Any | The decoded input object |
+
+### `import_string(code, module_name='model')`
+#### Description
+Imports a string as a Python module.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| code | str | The Python code to import |
+| module_name | str | The name to give the imported module (default: 'model') |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| module | types.ModuleType | The imported module |
+
+### `find_model_class(module)`
+#### Description
+Finds the first class in the module that contains both 'predict' and 'train' methods.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| module | types.ModuleType | The module to search for the model class |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cls | type | The found model class, or None if not found |
+
+### `get_methods_info(module)`
+#### Description
+Retrieves information about all methods in the module, including input parameters and output types.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| module | types.ModuleType | The module to analyze |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| methods | dict | A dictionary containing method information |
+
+### `check_module(module, mode)`
+#### Description
+Checks the module and returns information about its methods based on the specified mode.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| module | types.ModuleType | The module to check |
+| mode | str | The mode of operation ('custom_function' or 'BYOM') |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| info | dict | A dictionary containing module information |
+
+### `main()`
+#### Description
+The main function that orchestrates the execution of the BYOM engine based on the received method type.
+
+#### Internal Logic
+1. Redirects stdout to stderr
+2. Gets input parameters
+3. Imports the provided code as a module
+4. Executes the appropriate method based on the input (CHECK, TRAIN, PREDICT, FINETUNE, DESCRIBE, or FUNC_CALL)
+5. Returns the result or raises a NotImplementedError for unknown methods
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| io | For BytesIO operations |
+| sys | For system-level operations |
+| pickle | For object serialization |
+| inspect | For introspection of Python objects |
+| enum | For creating enumeration classes |
+| pandas | For DataFrame operations |
+| pyarrow | For Parquet encoding/decoding |
+
+## Error Handling
+The code includes basic error handling, such as raising exceptions for unimplemented methods or when unable to find the model class. More specific error handling is implemented within the individual method executions.
+
+This code serves as a crucial component in the BYOM engine, allowing for flexible execution of custom models within a controlled environment while maintaining communication with the parent process.

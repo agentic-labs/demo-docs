@@ -1,0 +1,99 @@
+---
+title: "prepare.sql"
+---
+
+## High-level description
+This SQL script sets up a database table for rental properties, creates a secure user with SSL requirements, and loads data from a CSV file into the table. It's designed to initialize a MySQL database with rental data and secure access configurations.
+
+## Symbols
+
+### CREATE TABLE rentals
+#### Description
+Creates a table named 'rentals' to store information about rental properties.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| number_of_rooms | INT | Number of rooms in the rental property |
+| number_of_bathrooms | INT | Number of bathrooms in the rental property |
+| sqft | varchar(25) | Square footage of the rental property |
+| location | varchar(25) | Location of the rental property |
+| days_on_market | INT | Number of days the property has been on the market |
+| initial_price | FLOAT | Initial listing price of the rental property |
+| neighborhood | varchar(25) | Neighborhood of the rental property |
+| rental_price | FLOAT | Actual rental price of the property |
+
+#### Internal Logic
+The table is created with eight columns, each representing different attributes of a rental property. The use of different data types (INT, varchar, FLOAT) ensures appropriate storage and handling of the various property characteristics.
+
+### CREATE USER 'ssl_user'@'172.17.0.1'
+#### Description
+Creates a new MySQL user with SSL requirements for secure connections.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ssl_user | string | Username for the new user |
+| 172.17.0.1 | string | IP address from which the user is allowed to connect |
+| ssl | string | Password for the new user |
+
+#### Internal Logic
+The user is created with a specific username, password, and allowed connection IP. The `REQUIRE SSL` clause ensures that the user must use SSL for connections.
+
+### GRANT ALL ON *.*
+#### Description
+Grants all privileges on all databases and tables to the newly created user.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ssl_user | string | Username of the user to grant privileges to |
+| 172.17.0.1 | string | IP address of the user |
+
+### FLUSH PRIVILEGES
+#### Description
+Reloads the privileges from the grant tables in the MySQL database.
+
+### ALTER USER 'ssl_user'@'172.17.0.1' REQUIRE X509
+#### Description
+Modifies the SSL requirements for the user to require X509 certificate authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ssl_user | string | Username of the user to modify |
+| 172.17.0.1 | string | IP address of the user |
+
+### LOAD DATA INFILE
+#### Description
+Loads data from a CSV file into the 'rentals' table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| '/home_rentals.csv' | string | Path to the CSV file containing rental data |
+
+#### Internal Logic
+The command specifies the CSV file format:
+- Columns are terminated by commas
+- Values may be optionally enclosed by double quotes
+- Double quotes are used as the escape character
+- Lines are terminated by newline characters
+- The first line of the file (likely headers) is ignored
+
+## Side Effects
+- Creates a new table in the database
+- Creates a new user with specific SSL requirements
+- Modifies database privileges
+- Loads external data into the database
+
+## Dependencies
+This script assumes the existence of a MySQL database server and a CSV file named 'home_rentals.csv' in the specified location.
+
+## Security Considerations
+The script implements several security measures:
+1. Creates a user that requires SSL for connections
+2. Further restricts the user to require X509 certificate authentication
+3. Limits the user's connections to a specific IP address (172.17.0.1)
+
+These measures help ensure secure access to the database, particularly important when dealing with potentially sensitive rental data.

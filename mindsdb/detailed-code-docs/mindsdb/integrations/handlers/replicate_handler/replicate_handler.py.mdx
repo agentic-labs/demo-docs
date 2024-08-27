@@ -1,0 +1,174 @@
+---
+title: "replicate_handler.py"
+---
+
+## High-level description
+This code defines a `ReplicateHandler` class, which is a machine learning engine handler for integrating Replicate's AI models into MindsDB. It provides functionality for creating, validating, and making predictions using Replicate models, as well as describing the model's features.
+
+## Code Structure
+The `ReplicateHandler` class inherits from `BaseMLEngine` and implements several methods for interacting with Replicate models. The main methods include `create_validation`, `create`, `predict`, `describe`, and several helper methods for handling API keys and schema retrieval.
+
+## Symbols
+
+### ReplicateHandler
+#### Description
+A class that handles the integration of Replicate models with MindsDB, providing methods for model creation, validation, prediction, and description.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column for predictions |
+| df | Optional[pd.DataFrame] | Input data for predictions |
+| args | Optional[Dict] | Additional arguments for model creation or prediction |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | pd.DataFrame | Prediction results |
+
+#### Internal Logic
+- Validates input arguments and model details
+- Stores model configuration
+- Makes predictions using the Replicate API
+- Handles different types of model outputs (e.g., LLM, image generation)
+- Retrieves and processes model schema information
+
+### create_validation
+#### Description
+A static method that validates the input arguments for creating a Replicate model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column |
+| args | dict | Arguments for model creation |
+
+#### Internal Logic
+- Checks for the presence of required arguments (model_name, version)
+- Validates the API key and model details with the Replicate API
+- Raises exceptions for missing or incorrect information
+
+### create
+#### Description
+Creates and stores the model configuration for later use.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column |
+| df | Optional[pd.DataFrame] | Input data (not used in this method) |
+| args | Optional[Dict] | Arguments for model creation |
+
+#### Internal Logic
+- Extracts relevant arguments from the input
+- Stores the configuration in the model storage
+
+### predict
+#### Description
+Makes predictions using the Replicate model based on input data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input data for predictions |
+| args | Optional[Dict] | Additional arguments for prediction |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | pd.DataFrame | Prediction results |
+
+#### Internal Logic
+- Extracts prediction parameters and model configuration
+- Validates input parameters against the model schema
+- Sets up the Replicate API client
+- Applies the prediction function to each row of the input data
+- Processes and formats the prediction results
+
+### describe
+#### Description
+Provides information about the model's features or available tables.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | Optional[str] | The attribute to describe (e.g., "features") |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| description | pd.DataFrame | Description of the requested attribute |
+
+#### Internal Logic
+- If the attribute is "features", returns the model schema
+- Otherwise, returns a list of available tables (only "features" in this case)
+
+### _get_replicate_api_key
+#### Description
+Retrieves the Replicate API key from various possible sources.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | dict | Arguments that may contain the API key |
+| strict | bool | Whether to raise an exception if the key is not found |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | str | The Replicate API key |
+
+#### Internal Logic
+- Checks for the API key in the following order:
+  1. Provided at model creation
+  2. Provided at engine creation
+  3. REPLICATE_API_KEY environment variable
+  4. replicate.api_key setting in config.json
+- Raises an exception if the key is not found and strict mode is enabled
+
+### _get_schema
+#### Description
+Retrieves the schema information for the Replicate model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| only_keys | bool | Whether to return only the parameter keys |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| schema | pd.DataFrame or list | Schema information or list of parameter keys |
+
+#### Internal Logic
+- Sets up the Replicate API client
+- Retrieves the model and version information
+- Extracts the schema from the OpenAPI specification
+- Processes and formats the schema information
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| replicate | Interacting with the Replicate API |
+| pandas | Data manipulation and DataFrame operations |
+| mindsdb.integrations.libs.base | Base class for ML engines |
+| mindsdb.utilities.config | Configuration management |
+
+## Error Handling
+The code implements error handling for various scenarios, such as:
+- Missing or incorrect input arguments
+- Invalid API keys
+- Unsupported model parameters
+- Failures in retrieving model information or making predictions
+
+Exceptions are raised with descriptive error messages to help users identify and resolve issues.
+
+## API/Interface Reference
+The main interface for this handler is through the `predict` method, which takes a DataFrame of input data and returns a DataFrame of predictions. The `describe` method can be used to get information about the model's features.
+
+```python
+predict(df: pd.DataFrame, args: Optional[Dict] = None) -&gt; pd.DataFrame
+describe(attribute: Optional[str] = None) -&gt; pd.DataFrame
+```
+
+These methods are typically called by the MindsDB framework rather than directly by users.

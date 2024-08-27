@@ -1,0 +1,158 @@
+---
+title: "s3_handler.py"
+---
+
+Here's a comprehensive documentation for the S3Handler class:
+
+## High-level description
+The S3Handler class is responsible for handling connections and executing SQL statements on AWS S3. It allows users to interact with S3 objects as if they were database tables, supporting operations like SELECT, INSERT, UPDATE, and DELETE.
+
+## Code Structure
+The S3Handler class inherits from DatabaseHandler and implements various methods to connect to S3, execute queries, and manage data. It uses DuckDB as an intermediary to interact with S3 objects, creating temporary tables for query execution.
+
+## References
+- DatabaseHandler
+- HandlerStatusResponse
+- HandlerResponse
+- RESPONSE_TYPE
+- ASTNode
+
+## Symbols
+
+### S3Handler
+#### Description
+This class handles connection and execution of SQL statements on AWS S3.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | Text | The name of the handler instance |
+| connection_data | Optional[Dict] | The connection data required to connect to the AWS (S3) account |
+| kwargs | Dict | Arbitrary keyword arguments |
+
+#### Internal Logic
+1. Initializes connection parameters and state variables.
+2. Implements methods for connecting to S3, executing queries, and managing data.
+3. Uses DuckDB as an intermediary to interact with S3 objects.
+
+### connect
+#### Description
+Establishes a connection to the AWS (S3) account via DuckDB.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| connection | DuckDBPyConnection | A connection object to the AWS (S3) account |
+
+#### Internal Logic
+1. Checks if already connected.
+2. Validates mandatory connection parameters.
+3. Connects to S3 via DuckDB and configures credentials.
+
+### check_connection
+#### Description
+Checks the status of the connection to the S3 bucket.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | StatusResponse | An object containing the success status and an error message if an error occurs |
+
+#### Internal Logic
+1. Attempts to connect to S3 using boto3.
+2. Checks if the bucket exists and is in the expected region.
+3. Returns a StatusResponse object with the connection status.
+
+### native_query
+#### Description
+Executes a SQL query on the specified table (object) in the S3 bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | Text | The SQL query to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | A response object containing the result of the query or an error message |
+
+#### Internal Logic
+1. Connects to S3 via DuckDB.
+2. Creates a temporary table from the S3 object if it doesn't exist.
+3. Executes the query on the temporary table.
+4. For SELECT queries, returns the result as a pandas DataFrame.
+5. For other queries, writes the updated table back to S3.
+
+### query
+#### Description
+Executes a SQL query represented by an ASTNode and retrieves the data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ASTNode | An ASTNode representing the SQL query to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The response from the `native_query` method, containing the result of the SQL query execution |
+
+#### Internal Logic
+1. Extracts the S3 object key from the query.
+2. Checks if the file format is supported and if the file exists in the S3 bucket.
+3. Creates a valid table name from the object key.
+4. Modifies the query to use the temporary table name.
+5. Calls `native_query` to execute the modified query.
+
+### get_tables
+#### Description
+Retrieves a list of tables (objects) in the S3 bucket.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | A response object containing the list of tables and views, formatted as per the `Response` class |
+
+#### Internal Logic
+1. Lists objects in the S3 bucket using boto3.
+2. Filters objects to include only supported file formats.
+3. Returns the list of objects as table names.
+
+### get_columns
+#### Description
+Retrieves column details for a specified table (object) in the S3 bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | Text | The name of the table for which to retrieve column information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | A response object containing the column details, formatted as per the `Response` class |
+
+#### Internal Logic
+1. Executes a SELECT query to fetch a sample of data from the specified table.
+2. Extracts column names and data types from the result.
+3. Returns the column information as a Response object.
+
+## Side Effects
+- Creates temporary tables in DuckDB for query execution.
+- Writes data back to S3 after non-SELECT queries.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| boto3 | Interacting with AWS S3 |
+| duckdb | Executing SQL queries on S3 objects |
+| pandas | Handling data in DataFrame format |
+
+## Error Handling
+- Raises ValueError for invalid connection parameters or unsupported file formats.
+- Catches and logs exceptions during query execution and connection checks.
+
+## Performance Considerations
+- Creates temporary tables in DuckDB for each query, which may impact performance for frequent queries on large datasets.
+- Writes the entire table back to S3 after each non-SELECT query, which could be inefficient for large tables with small updates.

@@ -1,0 +1,97 @@
+---
+title: "neuralforecast_handler.py"
+---
+
+## High-level description
+This code implements a NeuralForecastHandler class, which integrates the Nixtla NeuralForecast library for time series forecasting using neural networks. It provides methods for creating and training models, making predictions, and describing the model's characteristics.
+
+## Code Structure
+The NeuralForecastHandler class inherits from BaseMLEngine and contains methods for creating models, making predictions, and describing the model. It uses utility functions from time_series_utils.py for data transformation and handling hierarchical forecasts.
+
+## Symbols
+
+### NeuralForecastHandler
+#### Description
+This class handles the integration of the NeuralForecast library with MindsDB. It provides methods for creating, training, and using neural network models for time series forecasting.
+
+#### Internal Logic
+The class uses temporary directories to store model data and implements methods for creating models, making predictions, and describing the model's characteristics.
+
+### create
+#### Description
+Creates and trains a NeuralForecast model based on the provided data and arguments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column to predict |
+| df | DataFrame | The input data for training |
+| args | dict | Additional arguments for model creation |
+
+#### Internal Logic
+1. Extracts and validates time series settings and arguments
+2. Prepares the data for training, including handling hierarchical data if specified
+3. Trains the model using either AutoNHITS or NHITS based on the specified arguments
+4. Saves the trained model and its arguments to storage
+
+### predict
+#### Description
+Makes forecasts using the trained NeuralForecast model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | The input data for prediction |
+| args | dict | Additional arguments for prediction (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| results_df | DataFrame | The forecast results |
+
+#### Internal Logic
+1. Loads the saved model and its arguments
+2. Transforms the input data to the required format
+3. Makes predictions using the loaded model
+4. Handles hierarchical reconciliation if specified
+5. Transforms the results back to the original format
+
+### describe
+#### Description
+Provides information about the trained model and its characteristics.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | str | The specific attribute to describe (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| description | DataFrame | The requested model information |
+
+#### Internal Logic
+Returns different information based on the requested attribute:
+- "model": Returns model name, frequency, and hierarchy information
+- "features": Returns information about the input features and target
+- "info": Returns model accuracies, inputs, and outputs
+- If no attribute is specified, returns a list of available tables
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| sklearn.metrics | For calculating R2 score |
+| dill | For serialization of complex objects |
+| pandas | For data manipulation |
+| tempfile | For creating temporary directories |
+| mindsdb.integrations.libs.base | For the BaseMLEngine class |
+| mindsdb.integrations.utilities.time_series_utils | For time series-specific utility functions |
+| neuralforecast | For the NeuralForecast, NHITS, and AutoNHITS models |
+| ray.tune.search.hyperopt | For hyperparameter optimization |
+| hierarchicalforecast.core | For hierarchical reconciliation (optional) |
+
+## Error Handling
+The code includes basic error handling, such as asserting that time series settings are provided and handling the optional hierarchicalforecast dependency.
+
+## Performance Considerations
+The code allows for automatic hyperparameter tuning using AutoNHITS, which can be computationally expensive. The number of trials for this tuning can be controlled via the 'n_auto_trials' parameter.

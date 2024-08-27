@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the LanceDBHandler, which is part of the MindsDB integration with LanceDB. The tests are designed to verify the functionality of various operations provided by the LanceDBHandler, including database connection, table creation, data insertion, querying, and deletion.
+
+## What does it do?
+The test suite in this directory performs a series of checks to ensure that the LanceDBHandler correctly interacts with a LanceDB database. It simulates typical workflows that a user might perform when using LanceDB through MindsDB, such as:
+
+1. Connecting to the database
+2. Creating new tables
+3. Inserting data into tables, including vector embeddings and metadata
+4. Querying data with filters
+5. Performing vector similarity searches
+6. Deleting data from tables
+7. Retrieving table schema information
+8. Listing all tables in the database
+9. Dropping tables
+
+These tests help ensure that the LanceDBHandler functions correctly and maintains compatibility with the LanceDB database system.
+
+## Key Files
+The main file in this directory is:
+
+- `test_lancedb_handler.py`: This file contains the `LanceDBHandlerTest` class, which is a comprehensive test suite for the LanceDBHandler. It includes multiple test methods, each focusing on a specific aspect of the handler's functionality.
+
+## Dependencies
+The test suite relies on the following external libraries and internal modules:
+
+1. `unittest`: The standard Python testing framework used to structure and run the tests.
+2. `pandas`: Used for creating and manipulating data frames, which are used to simulate data insertion and retrieval.
+3. `mindsdb.api.executor.data_types.response_type`: Provides constants for response types used in assertions.
+4. `mindsdb.integrations.handlers.lancedb_handler.lancedb_handler`: Contains the LanceDBHandler class being tested.
+5. `mindsdb.integrations.libs.vectordatabase_handler`: Provides FilterCondition and FilterOperator classes for constructing query filters.
+
+## Configuration
+The test suite uses a simple configuration for connecting to LanceDB:
+
+```python
+connection_data = {'persist_directory': '~/lancedb'}
+```
+
+This configuration specifies the directory where LanceDB will persist its data. In a real-world scenario, this might be adjusted based on the specific LanceDB setup.
+
+## Code Snippets and Examples
+
+Here's an example of how the test suite creates a table and inserts data:
+
+```python
+def test_2_create_table(self):
+    result = self.handler.create_table('test_table', {'id': 'int', 'embedding': 'vector', 'metadata': 'json'})
+    assert result.type != RESPONSE_TYPE.ERROR
+
+def test_3_insert_into_table(self):
+    data = {
+        'id': [1, 2, 3],
+        'embedding': [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]],
+        'metadata': [{'text': 'hello'}, {'text': 'world'}, {'text': 'lancedb'}]
+    }
+    df = pd.DataFrame(data)
+    result = self.handler.insert('test_table', df)
+    assert result.type != RESPONSE_TYPE.ERROR
+```
+
+This code demonstrates how the test suite verifies the creation of a table with specific column types, including a vector column for embeddings and a JSON column for metadata. It then inserts sample data into this table using a pandas DataFrame.
+
+Another important feature tested is the vector similarity search:
+
+```python
+def test_5_vector_distance(self):
+    search_vector = [1.0, 2.0, 3.0]
+    result = self.handler.select('test_table', columns=['id', 'metadata'], vector=search_vector, n_results=2)
+    assert result.type == RESPONSE_TYPE.TABLE
+    assert 'distance' in result.data_frame.columns
+```
+
+This test checks if the LanceDBHandler can perform a vector similarity search and return the results along with a distance measure.
+
+The test suite provides comprehensive coverage of the LanceDBHandler's functionality, ensuring that it correctly interfaces with LanceDB and handles various operations as expected. This is crucial for maintaining the reliability and correctness of the MindsDB integration with LanceDB.

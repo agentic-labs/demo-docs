@@ -1,0 +1,163 @@
+---
+title: "altibase_handler.py"
+---
+
+## High-level description
+This code defines an `AltibaseHandler` class, which is a database handler for connecting to and interacting with Altibase databases. It provides methods for establishing connections, executing queries, and retrieving database metadata using both JDBC and ODBC drivers.
+
+## Code Structure
+The `AltibaseHandler` class inherits from `DatabaseHandler` and implements various methods for database operations. It supports two connection methods: JDBC and ODBC, and provides functionality for executing native queries, parsing SQL, and retrieving table and column information.
+
+## Symbols
+
+### AltibaseHandler
+#### Description
+This class handles connections and executions of Altibase database statements. It supports both JDBC and ODBC connections and provides methods for querying and metadata retrieval.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the particular handler instance |
+| connection_data | Optional[dict] | Parameters for connecting to the database |
+
+#### Internal Logic
+1. Initializes connection parameters from the provided `connection_data`.
+2. Implements methods for connecting, disconnecting, checking connections, and executing queries.
+3. Provides methods for retrieving table and column information from the database.
+
+### connect
+#### Description
+Establishes a connection to the Altibase database using either ODBC or JDBC, depending on the provided connection parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| connection | Connection | The established database connection |
+
+#### Internal Logic
+1. Checks if a connection already exists.
+2. Calls either `connect_with_odbc()` or `connect_with_jdbc()` based on the presence of a DSN.
+3. Sets `self.is_connected` to `True` upon successful connection.
+
+### connect_with_odbc
+#### Description
+Establishes a connection to the Altibase database using ODBC.
+
+#### Internal Logic
+1. Constructs the connection string using the provided DSN and other connection parameters.
+2. Attempts to connect using `pyodbc.connect()`.
+3. Sets `self.is_connected` to `True` upon successful connection.
+
+### connect_with_jdbc
+#### Description
+Establishes a connection to the Altibase database using JDBC.
+
+#### Internal Logic
+1. Constructs the JDBC URL and determines the JDBC driver class.
+2. Attempts to connect using `jdbcconnector.connect()` with various combinations of parameters.
+3. Sets `self.is_connected` to `True` upon successful connection.
+
+### disconnect
+#### Description
+Closes the existing database connection.
+
+#### Internal Logic
+1. Checks if a connection exists.
+2. Attempts to close the connection using `self.connection.close()`.
+3. Sets `self.is_connected` to `False` upon successful disconnection.
+
+### check_connection
+#### Description
+Checks the connection to the database and returns a status response.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| responseCode | StatusResponse | The status of the connection attempt |
+
+#### Internal Logic
+1. Attempts to connect to the database.
+2. Sets the success status and error message in the `StatusResponse`.
+3. Disconnects if the connection was established only for checking.
+
+### native_query
+#### Description
+Executes a raw SQL query on the database and returns the result.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | The SQL query to execute |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The query execution result |
+
+#### Internal Logic
+1. Establishes a connection if not already connected.
+2. Executes the query using a cursor.
+3. Fetches the results and creates a pandas DataFrame if applicable.
+4. Handles exceptions and returns appropriate response types.
+
+### query
+#### Description
+Executes a query represented as an Abstract Syntax Tree (AST) or a string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ASTNode or str | The query to execute |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The query execution result |
+
+#### Internal Logic
+1. Converts the AST to a string if necessary.
+2. Calls `native_query()` with the query string.
+
+### get_tables
+#### Description
+Retrieves a list of tables in the database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The list of tables |
+
+#### Internal Logic
+Executes a SQL query to fetch table names, IDs, and types from the system tables.
+
+### get_columns
+#### Description
+Retrieves a list of columns for a specified table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | The name of the table |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The list of columns and their data types |
+
+#### Internal Logic
+Executes a SQL query to fetch column names and data types for the specified table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| jaydebeapi | Used for JDBC connections |
+| mindsdb_sql | Used for SQL parsing |
+| pandas | Used for data manipulation and creating DataFrames |
+| pyodbc | Used for ODBC connections |
+| numpy | Used for array operations |
+
+## Error Handling
+The code implements error handling using try-except blocks in various methods. Errors are logged using the `logger` object, and appropriate error responses are returned when exceptions occur.
+
+## Logging
+The code uses a logger object (`logger`) to log error messages throughout the class methods.

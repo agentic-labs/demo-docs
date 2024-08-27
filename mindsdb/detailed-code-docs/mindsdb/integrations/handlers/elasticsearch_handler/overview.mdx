@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the ElasticsearchHandler, which is responsible for integrating Elasticsearch with MindsDB. It provides functionality to connect to Elasticsearch servers, execute SQL queries, and retrieve metadata about indices and their fields.
+
+## What does it do?
+The ElasticsearchHandler enables MindsDB to:
+1. Connect to Elasticsearch servers, both self-hosted and cloud-based instances.
+2. Execute SQL queries on Elasticsearch indices.
+3. Retrieve a list of available indices (tables) from Elasticsearch.
+4. Fetch metadata about fields (columns) for specific indices.
+5. Handle pagination for large result sets.
+6. Provide error handling and connection status checks.
+
+This integration allows users to use MindsDB's AI capabilities with data stored in Elasticsearch, enabling advanced analytics and machine learning on Elasticsearch data.
+
+## Entry points
+The main entry point for this handler is the `ElasticsearchHandler` class defined in `elasticsearch_handler.py`. This class inherits from `DatabaseHandler` and implements methods for connecting, querying, and retrieving metadata from Elasticsearch.
+
+The handler is initialized and configured in the `__init__.py` file, which sets up the necessary metadata and imports the `Handler` class.
+
+## Key Files
+1. `elasticsearch_handler.py`: Contains the `ElasticsearchHandler` class, which is the core of the integration. It implements methods for connecting to Elasticsearch, executing queries, and retrieving metadata.
+
+2. `__init__.py`: Sets up the handler configuration, including version, description, and connection arguments.
+
+3. `connection_args.py`: Defines the connection arguments required for establishing a connection to Elasticsearch, including options for both self-hosted and cloud-based instances.
+
+4. `__about__.py`: Contains metadata about the handler, such as version, author, and license information.
+
+5. `README.md`: Provides documentation on how to use the Elasticsearch integration with MindsDB, including prerequisites, connection instructions, and usage examples.
+
+## Dependencies
+The ElasticsearchHandler relies on the following main dependencies:
+
+1. `elasticsearch`: The official Elasticsearch Python client library, used for connecting to and querying Elasticsearch servers.
+2. `pandas`: Used for creating DataFrames from query results.
+3. `mindsdb_sql`: Utilized for SQL parsing and rendering.
+4. `es.elastic.sqlalchemy`: Provides `ESDialect` for SQL rendering specific to Elasticsearch.
+
+## Configuration
+The handler uses the following configuration options:
+
+1. `hosts`: The host name(s) or IP address(es) of the Elasticsearch server(s).
+2. `cloud_id`: The unique ID for a hosted Elasticsearch cluster on Elasticsearch Service.
+3. `user`: The username for authentication.
+4. `password`: The password for authentication.
+5. `api_key`: The API key for authentication.
+
+These configuration options are defined in `connection_args.py` and are used to establish connections to Elasticsearch servers.
+
+## Code Snippets
+Here's an example of how the `ElasticsearchHandler` executes a native SQL query:
+
+```python
+def native_query(self, query: str) -&gt; Response:
+    self.connect()
+    try:
+        result = self.es.sql.query(body={"query": query})
+        columns = [{"name": col["name"], "type": col["type"]} for col in result["columns"]]
+        data = result["rows"]
+        
+        while "_next" in result:
+            result = self.es.sql.query(body={"cursor": result["_next"]})
+            data.extend(result["rows"])
+        
+        df = pd.DataFrame(data, columns=[col["name"] for col in columns])
+        return Response(RESPONSE_TYPE.TABLE, df)
+    except Exception as e:
+        log.error(f'Error running query: {query}')
+        return Response(RESPONSE_TYPE.ERROR, str(e))
+```
+
+This method demonstrates how the handler executes SQL queries, handles pagination for large result sets, and returns the results as a pandas DataFrame.
+
+The ElasticsearchHandler provides a robust integration between MindsDB and Elasticsearch, allowing users to leverage MindsDB's AI capabilities on their Elasticsearch data. The handler's design follows MindsDB's integration patterns, ensuring consistency and ease of use within the MindsDB ecosystem.

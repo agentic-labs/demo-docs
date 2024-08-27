@@ -1,0 +1,169 @@
+---
+title: "views_test.py"
+---
+
+## High-level description
+This file contains unit tests for the HTTP API views related to database views in MindsDB. It tests various endpoints for creating, updating, deleting, and retrieving views, including error handling for different scenarios.
+
+## Code Structure
+The code is structured as a series of pytest test functions, each testing a specific API endpoint or scenario. The tests use a temporary SQLite database and a Flask test client to simulate HTTP requests to the API.
+
+## Symbols
+
+### `app`
+#### Description
+A pytest fixture that initializes a Flask application with a temporary SQLite database for testing purposes.
+
+#### Internal Logic
+1. Stores the original `MINDSDB_DB_CON` environment variable.
+2. Creates a temporary directory for the test database.
+3. Sets up a SQLite database connection string.
+4. Initializes the database and runs migrations.
+5. Initializes the Flask app with the test configuration.
+6. Yields the app for testing.
+7. Restores the original `MINDSDB_DB_CON` environment variable after tests.
+
+### `client`
+#### Description
+A pytest fixture that creates a test client for the Flask application.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| app | Flask | The Flask application fixture |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | FlaskClient | A test client for the Flask application |
+
+### `test_get_view_project_not_found_abort`
+#### Description
+Tests the API response when trying to get views for a non-existent project.
+
+#### Internal Logic
+1. Sends a GET request to '/api/projects/zoopy/views'.
+2. Asserts that the response status is 404.
+
+### `test_get_view_not_found`
+#### Description
+Tests the API response when trying to get a non-existent view.
+
+#### Internal Logic
+1. Sends a GET request to '/api/projects/mindsdb/views/vroom'.
+2. Asserts that the response status is 404.
+
+### `test_create_view`
+#### Description
+Tests the creation of a new view through the API.
+
+#### Internal Logic
+1. Prepares view data.
+2. Sends a POST request to '/api/projects/mindsdb/views' with the view data.
+3. Asserts that the response status is 201 (Created).
+4. Verifies that the returned view data matches the expected structure.
+
+### `test_create_view_project_not_found_abort`
+#### Description
+Tests the API response when trying to create a view in a non-existent project.
+
+#### Internal Logic
+1. Prepares view data.
+2. Sends a POST request to '/api/projects/muhproject/views' with the view data.
+3. Asserts that the response status is 404.
+
+### `test_create_view_already_exists_abort`
+#### Description
+Tests the API response when trying to create a view with a name that already exists.
+
+#### Internal Logic
+1. Creates a view.
+2. Attempts to create another view with the same name.
+3. Asserts that the second request returns a 409 (Conflict) status.
+
+### `test_create_view_no_view_aborts`
+#### Description
+Tests the API response when trying to create a view without providing the 'view' key in the request data.
+
+#### Internal Logic
+1. Sends a POST request with incomplete data.
+2. Asserts that the response status is 400.
+
+### `test_create_view_no_name_aborts`
+#### Description
+Tests the API response when trying to create a view without providing a name.
+
+#### Internal Logic
+1. Sends a POST request with view data missing the 'name' field.
+2. Asserts that the response status is 400.
+
+### `test_create_view_no_query_aborts`
+#### Description
+Tests the API response when trying to create a view without providing a query.
+
+#### Internal Logic
+1. Sends a POST request with view data missing the 'query' field.
+2. Asserts that the response status is 400.
+
+### `test_update_view`
+#### Description
+Tests updating an existing view through the API.
+
+#### Internal Logic
+1. Creates a view.
+2. Sends a PUT request to update the view's query.
+3. Asserts that the response status is 200.
+4. Verifies that the returned view data matches the expected updated structure.
+
+### `test_update_view_creates`
+#### Description
+Tests that updating a non-existent view creates a new view.
+
+#### Internal Logic
+1. Sends a PUT request for a non-existent view.
+2. Asserts that the response status is 201 (Created).
+3. Verifies that the returned view data matches the expected structure.
+
+### `test_update_view_no_view_aborts`
+#### Description
+Tests the API response when trying to update a view without providing the 'view' key in the request data.
+
+#### Internal Logic
+1. Sends a PUT request with incomplete data.
+2. Asserts that the response status is 400.
+
+### `test_delete_view`
+#### Description
+Tests deleting a view through the API.
+
+#### Internal Logic
+1. Creates a view.
+2. Verifies the view exists.
+3. Sends a DELETE request to remove the view.
+4. Asserts that the response status is 204 (No Content).
+5. Verifies that the view no longer exists.
+
+### `test_delete_view_does_not_exist`
+#### Description
+Tests the API response when trying to delete a non-existent view.
+
+#### Internal Logic
+1. Sends a DELETE request for a non-existent view.
+2. Asserts that the response status is 404.
+
+### `test_delete_view_project_not_found`
+#### Description
+Tests the API response when trying to delete a view from a non-existent project.
+
+#### Internal Logic
+1. Sends a DELETE request for a view in a non-existent project.
+2. Asserts that the response status is 404.
+
+## Dependencies
+The test file depends on the following modules and fixtures:
+- pytest
+- tempfile (TemporaryDirectory)
+- mindsdb.api.http.initialize (initialize_app)
+- mindsdb.migrations (migrate)
+- mindsdb.interfaces.storage (db)
+- mindsdb.utilities.config (Config)

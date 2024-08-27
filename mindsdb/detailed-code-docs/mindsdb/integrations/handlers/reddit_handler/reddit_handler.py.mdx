@@ -1,0 +1,121 @@
+---
+title: "reddit_handler.py"
+---
+
+## High-level description
+The `RedditHandler` class is an API handler for interacting with the Reddit API. It allows users to connect to Reddit, check the connection status, and execute native queries to retrieve data from Reddit, specifically comments and submissions.
+
+## Code Structure
+The `RedditHandler` class inherits from the `APIHandler` class and utilizes two custom table classes, `CommentTable` and `SubmissionTable`, to handle data retrieval and interaction with specific Reddit data types. The `connect` method establishes a connection to the Reddit API, while `check_connection` verifies the connection status. The `native_query` method parses and executes native queries, delegating the actual data retrieval to the appropriate table class methods.
+
+## References
+This code references the following symbols:
+- `APIHandler` (from `mindsdb.integrations.libs.api_handler`)
+- `HandlerStatusResponse`, `HandlerResponse`, `RESPONSE_TYPE` (from `mindsdb.integrations.libs.response`)
+- `Config` (from `mindsdb.utilities.config`)
+- `log` (from `mindsdb.utilities`)
+- `CommentTable`, `SubmissionTable` (from `.reddit_tables`)
+
+## Symbols
+### `RedditHandler`
+#### Description
+This class handles interactions with the Reddit API, including connecting to the API, checking the connection status, and executing native queries to retrieve data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Optional. The name of the handler. |
+| **kwargs | dict | Keyword arguments for configuring the handler. This includes `connection_data` which should contain the Reddit API credentials. |
+
+#### Outputs
+This class does not directly return any output. It interacts with the Reddit API and returns data through its methods.
+
+#### Internal Logic
+- The constructor initializes the handler by setting up connection arguments, creating instances of `CommentTable` and `SubmissionTable`, and registering them with the handler.
+- The `connect` method authenticates with the Reddit API using the provided credentials and returns the `praw.Reddit` instance.
+- The `check_connection` method tests the connection to the Reddit API and returns a `HandlerStatusResponse` indicating the connection status.
+- The `native_query` method parses the native query string, identifies the requested method and parameters, and calls the corresponding method to retrieve data. It then returns the data as a `HandlerResponse` object.
+
+### `connect`
+#### Description
+This method establishes a connection to the Reddit API using the provided credentials.
+
+#### Inputs
+This method does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| reddit | praw.Reddit | An instance of the `praw.Reddit` class representing the authenticated connection to the Reddit API. |
+
+#### Internal Logic
+- Checks if a connection is already established. If so, returns the existing `praw.Reddit` instance.
+- If not connected, creates a new `praw.Reddit` instance using the client ID, client secret, and user agent provided during initialization.
+- Sets the `is_connected` flag to `True`.
+- Returns the `praw.Reddit` instance.
+
+### `check_connection`
+#### Description
+This method verifies if the connection to the Reddit API is active.
+
+#### Inputs
+This method does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HandlerStatusResponse | An object containing the status of the connection attempt. |
+
+#### Internal Logic
+- Creates a `HandlerStatusResponse` object with `success` initially set to `False`.
+- Attempts to connect to Reddit and fetch user details using `reddit.user.me()`.
+- If successful, sets `response.success` to `True`.
+- If an exception occurs, sets `response.error_message` to the error message and logs the error.
+- If the connection fails and `is_connected` is still `True`, sets `is_connected` to `False`.
+- Returns the `HandlerStatusResponse` object.
+
+### `native_query`
+#### Description
+This method parses and executes native queries against the Reddit API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query_string | str | The native query string to be executed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HandlerResponse | An object containing the result of the query execution. |
+
+#### Internal Logic
+- Parses the `query_string` to extract the method name and parameters.
+- Based on the method name, calls the corresponding method (`get_submission` or `get_subreddit`) to retrieve data.
+- If the method name is not supported, raises a `ValueError`.
+- Returns a `HandlerResponse` object containing the retrieved data as a pandas DataFrame.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| praw | Used to interact with the Reddit API. |
+| pandas | Used to process and manipulate data in DataFrames. |
+
+## Configuration
+The `RedditHandler` class reads configuration options from three sources (in order of precedence):
+1. **Keyword Arguments:** Configuration passed directly to the constructor via the `connection_data` argument in `kwargs`.
+2. **Environment Variables:** Environment variables prefixed with `REDDIT_` (e.g., `REDDIT_CLIENT_ID`).
+3. **Configuration File:** The `config.py` file, specifically the `reddit_handler` section.
+
+The following options can be configured:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| client_id | str | None | The client ID for your Reddit app. |
+| client_secret | str | None | The client secret for your Reddit app. |
+| user_agent | str | None | The user agent string to use when making requests to the Reddit API. |
+
+## Error Handling
+- The `check_connection` method catches any exception raised during the connection attempt and sets the error message in the `HandlerStatusResponse` object.
+- The `native_query` method raises a `ValueError` if the requested method name is not supported.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module for logging. Errors encountered during the connection attempt in the `check_connection` method are logged with the `ERROR` level.

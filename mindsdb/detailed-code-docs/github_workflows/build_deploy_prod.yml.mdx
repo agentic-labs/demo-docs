@@ -1,0 +1,88 @@
+---
+title: "build_deploy_prod.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file defines the process for building and deploying a release of the MindsDB project. It is triggered when a new release is published and handles version checking, PyPI publishing, Docker image building, deployment to production, and running integration tests.
+
+## Code Structure
+The workflow is composed of several jobs that run sequentially or in parallel, depending on their dependencies. The main jobs include version checking, PyPI deployment, Docker image building, deployment to production, and running integration tests.
+
+## Jobs
+
+### check-version
+#### Description
+This job checks if the version defined in the GitHub release is valid.
+
+#### Internal Logic
+1. Checks out the code
+2. Sets up Python
+3. Runs a Python script to check the version
+
+### deploy_to_pypi
+#### Description
+This job publishes the new release to PyPI.
+
+#### Internal Logic
+1. Sets up Python
+2. Installs dependencies
+3. Builds the package
+4. Uploads the package to PyPI using Twine
+
+### build
+#### Description
+This job builds Docker images based on a bake file and pushes them to DockerHub and ECR.
+
+#### Internal Logic
+1. Logs in to Docker
+2. Checks out MindsDB GitHub Actions
+3. Uses a custom action to build and push Docker images
+
+### build_cache
+#### Description
+This job builds Docker images and pushes the layers to a cache repository.
+
+#### Internal Logic
+1. Checks out MindsDB GitHub Actions
+2. Uses a custom action to build and cache Docker images
+
+### deploy
+#### Description
+This job triggers the deployment workflow for the production environment.
+
+#### Internal Logic
+Uses a reusable workflow to deploy to production with specific parameters
+
+### trigger_dd_extension_release
+#### Description
+This job triggers a workflow in a private repository to deploy the Docker Desktop extension.
+
+#### Internal Logic
+1. Sets up environment variables
+2. Triggers a workflow in the mindsdb-docker-extension repository
+
+### run_tests
+#### Description
+This job runs integration tests after deployment.
+
+#### Internal Logic
+Uses a reusable workflow to run integration tests
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checking out code repositories |
+| actions/setup-python | Setting up Python environment |
+| docker/login-action | Logging in to Docker |
+| convictional/trigger-workflow-and-wait | Triggering external workflows |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| CI_PYTHON_VERSION | string | N/A | Python version used for CI, defined in repository variables |
+
+## Error Handling
+The workflow uses the `if` condition to skip certain jobs if the actor is 'mindsdbadmin'. It also uses `needs` to ensure job dependencies are met before execution.
+
+## TODOs
+- Run integration tests against the deployed environment (commented out in the workflow)

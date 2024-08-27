@@ -1,0 +1,68 @@
+---
+title: "settings.py"
+---
+
+## High-level description
+This code defines a `ConnectionConfig` class using Pydantic for MySQL database connection configuration. It provides flexibility in specifying connection details either through a URL or individual parameters, ensuring that all necessary information is provided for establishing a database connection.
+
+## Symbols
+
+### ConnectionConfig
+#### Description
+A Pydantic model that represents the configuration for a MySQL database connection. It allows specifying connection details either through a URL or individual parameters (host, port, user, password, database).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | AnyUrl | Optional. The connection URL for the MySQL database. |
+| host | str | Optional. The hostname of the MySQL server. |
+| port | int | Optional. The port number for the MySQL server. Defaults to 3306. |
+| user | str | Optional. The username for authentication. |
+| password | str | Optional. The password for authentication. |
+| database | str | Optional. The name of the database to connect to. |
+
+#### Internal Logic
+1. The class uses Pydantic's `model_validator` to implement custom validation logic.
+2. It checks if either a valid URL is provided or all individual parameters are present.
+3. If a URL is provided, it parses the URL to extract individual components.
+4. If individual parameters are provided, it ensures all required fields are present.
+5. The `url` field is removed from the final values to prevent conflicts with MySQL connector.
+
+### check_db_params
+#### Description
+A method validator that ensures either a valid URL is provided or all individual connection parameters are present. It also parses the URL if provided to populate individual fields.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cls | type | The class itself (automatically provided by Pydantic). |
+| values | dict | The dictionary of field values to be validated. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| values | dict | The validated and possibly modified dictionary of field values. |
+
+#### Internal Logic
+1. Checks if either `url` or all individual parameters (`host`, `user`, `password`, `database`) are provided.
+2. If `url` is provided, it parses the URL using `urlparse` and extracts individual components.
+3. Populates individual fields with values from the URL, falling back to provided individual parameters if not present in the URL.
+4. Removes the `url` field from the final values to avoid conflicts with MySQL connector.
+5. If individual parameters are provided without a URL, it ensures all required fields are present.
+
+## Configuration
+The `ConnectionConfig` class includes a nested `Config` class with the following options:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| str_min_length | int | 1 | Minimum length for string fields. |
+| str_strip_whitespace | bool | True | Strips whitespace from string fields. |
+
+## TODOs
+- The code includes a TODO comment: "For now validate AnyURL since MySQLDsn wasn't working". This suggests that there might be a plan to use a more specific MySQL DSN (Data Source Name) validator in the future.
+
+## Error Handling
+The code implements custom error handling through value validation:
+- Raises a `ValueError` if neither a valid URL nor all required individual parameters are provided.
+- Raises a `ValueError` if individual parameters are provided without a URL and any required field is missing.
+
+This error handling ensures that the configuration always contains sufficient information to establish a database connection.

@@ -1,0 +1,72 @@
+---
+title: "context_executor.py"
+---
+
+## High-level description
+This code defines a custom thread pool executor and a function for executing tasks in parallel threads. It's designed to handle context variables and manage task execution efficiently, particularly for scenarios where input tasks are provided as a generator to avoid overwhelming system memory.
+
+## Code Structure
+The code consists of two main components:
+1. `ContextThreadPoolExecutor`: A custom thread pool executor that handles context variables.
+2. `execute_in_threads`: A function that manages the execution of tasks in parallel threads.
+
+These components work together to provide a flexible and efficient way to execute tasks in parallel while maintaining context and managing memory usage.
+
+## Symbols
+
+### `ContextThreadPoolExecutor`
+#### Description
+A custom thread pool executor that extends `ThreadPoolExecutor` to handle copying context variables to threads created by the executor.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| max_workers | int | Optional. The maximum number of worker threads to use. |
+
+#### Internal Logic
+- Copies the current context using `contextvars.copy_context()`.
+- Initializes the parent `ThreadPoolExecutor` with a custom initializer method.
+- The initializer method sets the copied context for each worker thread.
+
+### `execute_in_threads`
+#### Description
+A generator function that executes tasks in parallel threads, managing the queue size and yielding results as they become available.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| func | callable | The function to execute in threads. |
+| tasks | generator or iterable | The list of inputs for the function. |
+| thread_count | int | Optional. The number of threads to use (default: 3). |
+| queue_size_k | float | Optional. The factor to determine queue size relative to thread count (default: 1.5). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | generator | Yields the results of the executed tasks. |
+
+#### Internal Logic
+1. Creates a `ContextThreadPoolExecutor` with the specified thread count.
+2. Calculates the queue size based on the thread count and `queue_size_k`.
+3. Converts the input tasks to an iterator if it's not already a generator.
+4. Enters a loop to manage task execution:
+   - Submits new tasks to the executor up to the queue size.
+   - Yields results of completed tasks.
+   - Removes completed tasks from the futures list.
+   - Sleeps briefly to avoid excessive CPU usage.
+5. Shuts down the executor when all tasks are completed.
+
+## Performance Considerations
+- The code uses a thread pool to execute tasks in parallel, which can improve performance for I/O-bound operations.
+- The queue size management helps to control memory usage by limiting the number of tasks in the queue at any given time.
+- The use of generators allows for efficient processing of large datasets without loading everything into memory at once.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| time | Used for adding small delays in the execution loop. |
+| types | Used to check if the input tasks are a generator. |
+| concurrent.futures | Provides the ThreadPoolExecutor base class. |
+| contextvars | Used for copying and managing context variables across threads. |
+
+This code is particularly useful for scenarios where you need to execute a large number of tasks in parallel while maintaining context and managing memory efficiently. It's designed to work well with both finite lists of tasks and potentially infinite generators of tasks.

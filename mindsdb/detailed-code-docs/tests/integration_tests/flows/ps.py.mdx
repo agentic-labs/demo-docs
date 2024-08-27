@@ -1,0 +1,134 @@
+---
+title: "ps.py"
+---
+
+## High-level description
+This file contains utility functions for working with network connections and processes, primarily focused on checking and waiting for port usage. It provides cross-platform support for retrieving network connections and offers functions to check if specific ports are in use by child processes.
+
+## Code Structure
+The code defines several interconnected functions that work together to provide functionality for checking port usage and process information. The main functions are `net_connections()`, `is_port_in_use()`, `wait_func_is_true()`, `wait_port()`, `get_listen_ports()`, and `is_pid_listen_port()`.
+
+## Symbols
+
+### `net_connections()`
+#### Description
+This function provides a cross-platform interface similar to `psutil.net_connections()`. It retrieves all network connections for all processes on the system.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| all_connections | list | A list of named tuples containing connection information |
+
+#### Internal Logic
+1. If the platform is Linux, it directly uses `psutil.net_connections()`.
+2. For other platforms, it iterates through all processes, retrieves their connections, and creates a custom named tuple (`Pconn`) that includes the process ID.
+3. It handles exceptions for processes that cannot be accessed or no longer exist.
+
+### `is_port_in_use(port_num)`
+#### Description
+Checks if any child process of the current process is using the specified port.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| port_num | int | The port number to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | True if the port is in use, False otherwise |
+
+#### Internal Logic
+1. Gets the current process and all its child processes.
+2. Retrieves all network connections using `net_connections()`.
+3. Filters connections to only include those from child processes with a 'LISTEN' status.
+4. Checks if the specified port is in the list of used ports.
+
+### `wait_func_is_true(func, timeout, *args, **kwargs)`
+#### Description
+A generic function that waits for a given function to return True within a specified timeout.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| func | callable | The function to check |
+| timeout | float | Maximum time to wait in seconds |
+| *args, **kwargs | various | Arguments to pass to the function |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | The final result of the function call |
+
+#### Internal Logic
+1. Calls the provided function with given arguments.
+2. If the result is False, it waits for 2 seconds and tries again.
+3. Repeats this process until the function returns True or the timeout is reached.
+
+### `wait_port(port_num, timeout)`
+#### Description
+Waits for a specific port to be in use within a given timeout.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| port_num | int | The port number to wait for |
+| timeout | float | Maximum time to wait in seconds |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | True if the port is in use within the timeout, False otherwise |
+
+#### Internal Logic
+Calls `wait_func_is_true()` with `is_port_in_use()` as the function to check.
+
+### `get_listen_ports(pid)`
+#### Description
+Retrieves all listening ports for a given process ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pid | int | The process ID to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ports | list | A list of port numbers the process is listening on |
+
+#### Internal Logic
+1. Attempts to get the process object using the provided PID.
+2. Retrieves all connections for the process.
+3. Extracts and returns the local address ports from the connections.
+4. Returns an empty list if any exception occurs.
+
+### `is_pid_listen_port(pid, port)`
+#### Description
+Checks if a specific process is listening on a given port.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pid | int | The process ID to check |
+| port | int | The port number to check |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | True if the process is listening on the port, False otherwise |
+
+#### Internal Logic
+1. Gets all listening ports for the given PID using `get_listen_ports()`.
+2. Checks if the specified port is in the list of listening ports.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| sys | Used for platform-specific operations |
+| time | Used for time-related operations in wait functions |
+| collections.namedtuple | Used to create a custom named tuple for connection information |
+| psutil | Used for process and system monitoring |
+
+## Error Handling
+The code implements basic error handling, primarily using try-except blocks to catch exceptions related to process access (`psutil.AccessDenied`, `psutil.ZombieProcess`, `psutil.NoSuchProcess`). In most cases, exceptions are silently ignored, and the functions continue execution or return default values.

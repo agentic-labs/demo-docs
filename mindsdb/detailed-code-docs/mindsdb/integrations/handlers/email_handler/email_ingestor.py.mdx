@@ -1,0 +1,89 @@
+---
+title: "email_ingestor.py"
+---
+
+## High-level description
+The `EmailIngestor` class is responsible for fetching emails using an `EmailClient` and parsing them into a structured DataFrame. It performs preprocessing on the email body, particularly extracting visible text from HTML content and handling different character encodings.
+
+## Code Structure
+The `EmailIngestor` class uses an `EmailClient` instance to interact with the email server and retrieve emails. It also relies on the `EmailSearchOptions` class to define the search criteria for fetching emails. The `_ingest_email_row` method processes individual email rows, while the `ingest` method orchestrates the overall ingestion process.
+
+## References
+- `mindsdb.integrations.handlers.email_handler.email_client.EmailClient`
+- `mindsdb.integrations.handlers.email_handler.settings.EmailSearchOptions`
+
+## Symbols
+
+### `EmailIngestor`
+#### Description
+This class handles the ingestion of emails from an email client, parsing them into a DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| email_client | `EmailClient` | An instance of the `EmailClient` class for interacting with the email server. |
+| search_options | `EmailSearchOptions` | An instance of the `EmailSearchOptions` class defining the email search criteria. |
+
+#### Outputs
+None
+
+#### Internal Logic
+The class initializes with an `EmailClient` and `EmailSearchOptions`. It defines methods for preprocessing HTML content, ingesting individual email rows, and orchestrating the overall ingestion process.
+
+### `_is_tag_visible`
+#### Description
+This private method checks if an HTML tag is visible, excluding tags within specific elements like `&lt;style&gt;`, `&lt;script&gt;`, `&lt;head&gt;`, etc.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| element | `bs4.element.Tag` | The HTML tag element to check for visibility. |
+
+#### Outputs
+`bool` - True if the tag is visible, False otherwise.
+
+#### Internal Logic
+The method checks the tag's parent element and its type. If the parent is in the list of non-visible elements or if the element itself is a comment, it returns False. Otherwise, it returns True.
+
+### `_preprocess_raw_html`
+#### Description
+This private method preprocesses raw HTML content to extract visible text.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| html | `str` | The raw HTML content to preprocess. |
+
+#### Outputs
+`str` - The extracted visible text from the HTML.
+
+#### Internal Logic
+The method uses BeautifulSoup to parse the HTML. It finds all text elements, filters them for visibility using `_is_tag_visible`, and joins the visible text with newline characters.
+
+### `_ingest_email_row`
+#### Description
+This private method ingests a single email row from a DataFrame and returns a dictionary containing relevant information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| row | `pd.Series` | A single row from a DataFrame representing an email. |
+
+#### Outputs
+`dict` - A dictionary containing the parsed email data.
+
+#### Internal Logic
+The method first checks if the email body is in HTML format. If so, it preprocesses the HTML to extract visible text. It then handles different character encodings for the email body, attempting to decode it as UTF-8 by default and falling back to ignoring illegal characters if necessary. Finally, it constructs a dictionary containing the email ID, body, subject, recipient, sender, and date.
+
+### `ingest`
+#### Description
+This method orchestrates the ingestion of emails from the email client, parsing them into a DataFrame.
+
+#### Inputs
+None
+
+#### Outputs
+`pd.DataFrame` - A DataFrame containing the ingested email data.
+
+#### Internal Logic
+The method first uses the `EmailClient` to search for emails based on the provided `search_options`. It then iterates through each email row in the resulting DataFrame, calling `_ingest_email_row` to parse the email data. Finally, it constructs a new DataFrame from the parsed email data and performs some additional processing on the 'datetime' column, replacing "(UTC)" with an empty string and converting it to a datetime object with UTC timezone.

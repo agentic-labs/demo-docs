@@ -1,0 +1,100 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `empress_handler` directory contains the implementation of the Empress Embedded handler for MindsDB. This handler allows MindsDB to interact with Empress Embedded, a relational database management system designed for embedded environments. The handler provides functionality to connect to Empress Embedded databases, execute queries, and manage data operations.
+
+## What does it do?
+The Empress Embedded handler enables MindsDB to:
+1. Establish connections to Empress Embedded databases using ODBC.
+2. Execute SQL queries against Empress Embedded databases.
+3. Retrieve metadata about tables and columns in the database.
+4. Perform data operations such as creating tables, inserting data, and dropping tables.
+5. Handle connection management, including connecting, disconnecting, and checking connection status.
+
+## Entry points
+The main entry point for the Empress Embedded handler is the `EmpressHandler` class defined in `empress_handler.py`. This class inherits from `DatabaseHandler` and implements the necessary methods for interacting with Empress Embedded databases.
+
+The handler is initialized and used through MindsDB's integration system, which utilizes the metadata and connection arguments defined in `__init__.py` and `connection_args.py`.
+
+## Key Files
+1. `empress_handler.py`: Contains the `EmpressHandler` class, which is the core implementation of the handler. It provides methods for connecting to the database, executing queries, and retrieving metadata.
+
+2. `connection_args.py`: Defines the connection arguments required to establish a connection with an Empress Embedded server, including host, port, user, password, server, and database.
+
+3. `__init__.py`: Exports the handler and its metadata, including version, name, type, and connection arguments.
+
+4. `__about__.py`: Contains package metadata such as version, description, and author information.
+
+5. `tests/test_empress_handler.py`: Includes unit tests for the `EmpressHandler` class, verifying its functionality for various database operations.
+
+## Dependencies
+The Empress Embedded handler relies on the following main dependencies:
+
+1. `pyodbc`: Used for connecting to and interacting with the Empress Embedded database through ODBC.
+2. `pandas`: Utilized for handling query results as dataframes.
+3. `mindsdb_sql`: Employed for parsing SQL queries and rendering Abstract Syntax Trees (ASTs).
+
+## Configuration
+The handler uses the following connection arguments for configuration:
+
+- `host`: IP Address or hostname of the Empress Embedded server
+- `port`: Port for TCPIP connection
+- `user`: Username for database authentication
+- `password`: Password for database authentication
+- `server`: Server name to connect to
+- `database`: Database name to connect to
+
+These arguments are defined in `connection_args.py` and are used to establish a connection to the Empress Embedded database.
+
+## Code Snippets
+
+Here's an example of how to create a connection to an Empress Embedded database using MindsDB:
+
+```sql
+CREATE DATABASE empress_db
+WITH ENGINE='empress',
+PARAMETERS={
+    "host": "127.0.0.1",
+    "port": "6322",
+    "user": "admin",
+    "password": "password",
+    "server": "test_server",
+    "database": "test_db"
+};
+```
+
+Once connected, you can execute queries against the Empress Embedded database:
+
+```sql
+SELECT * FROM empress_db.test_table;
+```
+
+The `EmpressHandler` class in `empress_handler.py` handles these operations internally. For example, the `query` method processes SQL queries:
+
+```python
+def query(self, query: ASTNode) -&gt; HandlerResponse:
+    query_str = SQLQuery(query)
+    return self.native_query(query_str)
+```
+
+This method takes an AST representation of a SQL query, converts it to a string, and then executes it using the `native_query` method.
+
+The handler also includes methods for retrieving metadata, such as `get_tables` and `get_columns`:
+
+```python
+def get_tables(self) -&gt; HandlerResponse:
+    q = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
+    result = self.native_query(q)
+    return result
+
+def get_columns(self, table_name: str) -&gt; HandlerResponse:
+    q = f"SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{table_name}'"
+    result = self.native_query(q)
+    return result
+```
+
+These methods allow MindsDB to introspect the structure of the Empress Embedded database, which is crucial for various operations and integrations.
+
+In summary, the Empress Embedded handler provides a comprehensive interface for MindsDB to interact with Empress Embedded databases, enabling a wide range of data operations and analysis capabilities.

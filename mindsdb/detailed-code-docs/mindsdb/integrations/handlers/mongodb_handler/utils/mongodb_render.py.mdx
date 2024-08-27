@@ -1,0 +1,125 @@
+---
+title: "mongodb_render.py"
+---
+
+## High-level description
+This code defines a `MongodbRender` class that converts SQL queries represented as Abstract Syntax Tree (AST) nodes to MongoDB queries. It supports SELECT and UPDATE statements, handling various SQL clauses like WHERE, ORDER BY, LIMIT, and OFFSET, and translates them into equivalent MongoDB operations.
+
+## Code Structure
+The main class `MongodbRender` contains methods to convert different types of SQL queries and clauses to MongoDB query format. It uses the `MongoQuery` class from the `mindsdb.api.mongo.utilities.mongodb_query` module to build and represent the final MongoDB query.
+
+## Symbols
+
+### `MongodbRender`
+#### Description
+This class is responsible for rendering SQL queries as MongoDB queries.
+
+#### Methods
+
+### `to_mongo_query`
+#### Description
+Converts an SQL query represented as an ASTNode to a MongoQuery instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| node | ASTNode | An ASTNode representing the SQL query to be converted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| MongoQuery | MongoQuery | The converted MongoDB query |
+
+#### Internal Logic
+- Checks the type of the input node (Select or Update)
+- Calls the appropriate method (select or update) based on the node type
+
+### `update`
+#### Description
+Converts an UPDATE statement to a MongoQuery instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| node | Update | An ASTNode representing the SQL Update statement |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| MongoQuery | MongoQuery | The converted MongoDB query |
+
+#### Internal Logic
+- Extracts the collection name from the node
+- Processes the WHERE clause using `handle_where` method
+- Creates an update operation with the extracted filters and update values
+
+### `select`
+#### Description
+Converts a SELECT statement to a MongoQuery instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| node | Select | An ASTNode representing the SQL Select statement |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| MongoQuery | MongoQuery | The converted MongoDB query |
+
+#### Internal Logic
+- Extracts the collection name from the node
+- Processes various parts of the SELECT statement (WHERE, GROUP BY, ORDER BY, LIMIT, OFFSET)
+- Builds a MongoDB aggregation pipeline based on the processed parts
+- Creates a MongoQuery instance with the built pipeline
+
+### `handle_where`
+#### Description
+Converts a BinaryOperation node representing a WHERE clause to a dictionary of MongoDB query filters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| node | BinaryOperation | A BinaryOperation node representing the SQL WHERE clause |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dict | Dict | The converted MongoDB query filters |
+
+#### Internal Logic
+- Recursively processes the BinaryOperation node
+- Handles various operators (AND, OR, comparison operators)
+- Converts SQL conditions to equivalent MongoDB query syntax
+
+### `where_element_convert`
+#### Description
+Converts a WHERE element to the corresponding MongoDB query element.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| node | Union[Identifier, Latest, Constant, TypeCast] | The WHERE element to be converted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Any | Any | The converted MongoDB query element |
+
+#### Internal Logic
+- Handles different types of WHERE elements (Identifier, Latest, Constant, TypeCast)
+- Converts date strings to datetime objects for date-related queries
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| datetime | For handling date and time operations |
+| typing | For type hinting |
+| bson.objectid | For handling MongoDB ObjectId |
+| mindsdb_sql.parser.ast | For working with SQL AST nodes |
+| mindsdb.api.mongo.utilities.mongodb_query | For creating MongoQuery instances |
+
+## Error Handling
+The code raises NotImplementedError for unsupported operations or node types. It also raises RuntimeError for unsupported date formats in WHERE clauses.
+
+This code is part of a larger system that allows MindsDB to interface with MongoDB, translating SQL queries into MongoDB queries. It's crucial for enabling SQL-based interactions with MongoDB databases within the MindsDB ecosystem.

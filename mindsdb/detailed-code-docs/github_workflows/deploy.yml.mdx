@@ -1,0 +1,67 @@
+---
+title: "deploy.yml"
+---
+
+## High-level description
+This GitHub Actions workflow file defines a reusable workflow for deploying MindsDB to different environments. It triggers a deployment process in a private repository, handles concurrency to prevent multiple deployments to the same environment, and sends Slack notifications about the deployment status.
+
+## Code Structure
+The workflow consists of a single job named `trigger_deploy` that runs on a custom runner (`mdb-dev`). It uses a matrix strategy to deploy to multiple environments and includes steps for checking out code, setting up environment variables, sending Slack notifications, and triggering the actual deployment in a private repository.
+
+## Symbols
+
+### `on`
+#### Description
+Defines the triggers and inputs for the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| deploy-envs | string | Required. JSON string of deployment environments |
+| image-tag | string | Required. Tag of the image to be deployed |
+| prod | boolean | Optional. Whether this is a production deployment (default: false) |
+
+#### Secrets
+| Name | Description |
+|:-----|:------------|
+| SLACK_DEPLOYMENTS_CHANNEL_ID | Required. Slack channel ID for deployment notifications |
+| REPO_DISPATCH_PAT_TOKEN | Required. GitHub Personal Access Token for triggering workflows in private repos |
+
+### `jobs.trigger_deploy`
+#### Description
+The main job that handles the deployment process.
+
+#### Internal Logic
+1. Runs only if the actor is not 'mindsdbadmin'
+2. Uses a matrix strategy to deploy to multiple environments
+3. Sets up environment and URL for each deployment
+4. Implements concurrency control to prevent multiple deployments to the same environment
+5. Checks out MindsDB GitHub Actions repository
+6. Sets up environment variables
+7. Sends a Slack notification for deployment start
+8. Triggers a workflow in a private repository for actual deployment
+9. Sends a Slack notification for deployment finish (success or failure)
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checking out code repositories |
+| FranzDiebold/github-env-vars-action@v2 | Setting up environment variables |
+| convictional/trigger-workflow-and-wait@v1.6.5 | Triggering and waiting for a workflow in another repository |
+
+## Error Handling
+The workflow uses the `if: always()` condition on the final Slack notification step to ensure that a notification is sent even if the deployment fails.
+
+## Logging
+The workflow uses Slack notifications to log the start and end of the deployment process, including the deployment status and environment details.
+
+## API/Interface Reference
+This workflow is designed to be called from other workflows using the `workflow_call` event. It expects the following inputs and secrets:
+
+| Input/Secret | Type | Description |
+|:-------------|:-----|:------------|
+| deploy-envs | input | JSON string of deployment environments |
+| image-tag | input | Tag of the image to be deployed |
+| prod | input | Boolean indicating if it's a production deployment |
+| SLACK_DEPLOYMENTS_CHANNEL_ID | secret | Slack channel ID for notifications |
+| REPO_DISPATCH_PAT_TOKEN | secret | GitHub PAT for triggering workflows |

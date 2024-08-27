@@ -1,0 +1,101 @@
+---
+title: "server.py"
+---
+
+Here's a comprehensive documentation for the provided code in the target file:
+
+## High-level description
+This code implements a MongoDB-compatible server using Python's socketserver module. It handles various MongoDB wire protocol operations, including OP_QUERY, OP_MSG, and OP_INSERT. The server is designed to work with MindsDB, providing a way to interact with MindsDB's AI models and databases using MongoDB protocols.
+
+## Code Structure
+The code defines several classes that work together to handle MongoDB protocol operations:
+
+1. `MongoServer`: The main server class that initializes the server and sets up request handlers.
+2. `MongoRequestHandler`: Handles incoming client connections and processes requests.
+3. `OperationResponder`: An abstract base class for different operation responders.
+4. `OpInsertResponder`, `OpMsgResponder`, `OpQueryResponder`: Concrete implementations of OperationResponder for different MongoDB operations.
+
+These classes interact with each other to process incoming requests, execute the appropriate operations, and send responses back to the client.
+
+## Symbols
+
+### `MongoServer`
+#### Description
+The main server class that initializes the MongoDB-compatible server and sets up the environment for handling requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | dict | Configuration dictionary for the server |
+
+#### Internal Logic
+1. Initializes the server with the provided host and port from the configuration.
+2. Sets up the MindsDB environment with various controllers (model, integration, project, database).
+3. Creates a `RespondersCollection` and adds various responders for different MongoDB operations.
+
+### `MongoRequestHandler`
+#### Description
+Handles incoming client connections and processes MongoDB protocol requests.
+
+#### Internal Logic
+1. Initializes an SSL context if the first byte indicates a TLS connection.
+2. Reads incoming messages, processes them using the appropriate responder, and sends back the response.
+3. Handles various MongoDB operations (OP_QUERY, OP_MSG, OP_INSERT) using the corresponding responders.
+
+### `OperationResponder`
+#### Description
+An abstract base class for different operation responders.
+
+#### Methods
+- `handle`: Abstract method to handle the specific operation.
+- `to_bytes`: Abstract method to convert the response to bytes.
+
+### `OpInsertResponder`
+#### Description
+Handles MongoDB OP_INSERT operations.
+
+#### Internal Logic
+1. Decodes the insert message and finds the matching responder.
+2. Executes the operation and returns the result.
+
+### `OpMsgResponder`
+#### Description
+Handles MongoDB OP_MSG operations (used in MongoDB versions &gt; 3.6).
+
+#### Internal Logic
+1. Decodes the OP_MSG format, including sections and documents.
+2. Finds the matching responder and executes the operation.
+3. Converts the response to the appropriate OP_MSG format.
+
+### `OpQueryResponder`
+#### Description
+Handles MongoDB OP_QUERY operations (used in any MongoDB shell version).
+
+#### Internal Logic
+1. Decodes the query message, including namespace and query documents.
+2. Finds the matching responder and executes the operation.
+3. Converts the response to the appropriate OP_REPLY format.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| socketserver | Provides the base server implementation |
+| socket | Used for low-level socket operations |
+| struct | Used for packing and unpacking binary data |
+| bson | Handles BSON encoding and decoding |
+| numpy | Used for numerical operations |
+| datetime | Handles date and time operations |
+
+## Error Handling
+The code implements basic error handling, catching exceptions in the `get_answer` method of `MongoRequestHandler`. Errors are logged and returned to the client as error responses in the appropriate MongoDB protocol format.
+
+## Logging
+The code uses a logger named `logger` for debugging and error logging throughout the server implementation.
+
+## TODOs
+There are several TODO comments in the code, indicating areas for potential improvement or features to be implemented:
+- Adding proper flags handling in `OpMsgResponder.to_bytes`
+- Implementing proper cursor handling and pagination
+- Adding proper sequence IDs for replies
+
+This MongoDB-compatible server implementation allows MindsDB to interact with MongoDB clients and tools, providing a familiar interface for working with AI models and databases within the MindsDB ecosystem.

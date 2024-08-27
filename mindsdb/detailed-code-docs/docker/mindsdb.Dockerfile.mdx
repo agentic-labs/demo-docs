@@ -1,0 +1,86 @@
+---
+title: "mindsdb.Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for creating a Docker image for MindsDB, an AI SQL Server. It optimizes the build process by separating dependency installation, development environment setup, and creating a final lightweight production image.
+
+## Code Structure
+The Dockerfile consists of four main stages: `deps`, `build`, `dev`, and the final production stage. Each stage builds upon the previous one, optimizing the build process and creating specialized images for different purposes.
+
+## Symbols
+
+### Stage: deps
+#### Description
+This stage prepares a minimal file structure containing only the necessary files for installing MindsDB dependencies.
+
+#### Internal Logic
+1. Copies all files to the container
+2. Removes all files except requirements files
+3. Deletes empty directories
+4. Copies setup.py, default_handlers.txt, README.md, and mindsdb/__about__.py
+
+### Stage: build
+#### Description
+This stage installs MindsDB and its dependencies based on the minimal file structure from the `deps` stage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| EXTRAS | ARG | Additional packages to install |
+
+#### Internal Logic
+1. Installs system dependencies
+2. Copies files from the `deps` stage
+3. Installs MindsDB and its dependencies
+4. Installs additional packages if EXTRAS is provided
+5. Copies all MindsDB code and reinstalls the package
+
+### Stage: dev
+#### Description
+This stage builds upon the `build` stage to create a development environment with additional tools and dependencies.
+
+#### Internal Logic
+1. Installs additional system packages
+2. Installs development dependencies from requirements/requirements-dev.txt
+3. Copies a configuration file
+4. Sets environment variables and exposes ports
+5. Defines the entrypoint command
+
+### Final Stage (Production)
+#### Description
+This is the final, lightweight production image that contains only the necessary components to run MindsDB.
+
+#### Internal Logic
+1. Uses a slim Python base image
+2. Installs minimal system dependencies
+3. Copies installed Python packages from the `build` stage
+4. Copies configuration and MindsDB code
+5. Sets environment variables and exposes ports
+6. Defines the entrypoint command
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| python:3.10 | Base image for building and running MindsDB |
+| python:3.10-slim | Lightweight base image for the final production stage |
+| freetds-dev | Required to build pymssql on arm64 for mssql_handler |
+| libpq5 | PostgreSQL client library |
+| freetds-bin | FreeTDS command-line tools |
+| curl | Command-line tool for transferring data |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| EXTRAS | ARG | None | Additional packages to install in the build stage |
+| PYTHONUNBUFFERED | ENV | 1 | Disables Python output buffering |
+| MINDSDB_DOCKER_ENV | ENV | 1 | Indicates that MindsDB is running in a Docker environment |
+
+## API/Interface Reference
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| 47334/tcp | - | Exposed port for MindsDB HTTP API |
+| 47335/tcp | - | Exposed port for MindsDB MySQL API |
+| 47336/tcp | - | Exposed port for MindsDB MongoDB API |
+
+The entrypoint command starts MindsDB with HTTP, MySQL, and MongoDB APIs enabled.

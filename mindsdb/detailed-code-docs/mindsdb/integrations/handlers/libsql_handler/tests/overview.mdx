@@ -1,0 +1,107 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the LibSQLHandler, which is part of the MindsDB integrations module. The tests are designed to verify the functionality of the LibSQLHandler class, which is responsible for interacting with a LibSQL database.
+
+## What does it do?
+The test suite in this directory performs a series of checks to ensure that the LibSQLHandler can correctly:
+
+1. Establish a connection to a LibSQL database
+2. Create tables in the database
+3. Insert data into tables
+4. Execute SELECT queries and retrieve data
+5. Fetch metadata about tables and columns in the database
+
+These tests simulate the typical workflow of using the LibSQLHandler, starting from connecting to the database and progressing through various database operations. This ensures that all major functionalities of the handler are working as expected.
+
+## Key Files
+The main file in this directory is:
+
+1. `test_libsql_handler.py`: This file contains the `LibSQLHandlerTest` class, which is a collection of unit tests for the LibSQLHandler. Each test method in this class focuses on a specific aspect of the handler's functionality.
+
+## Dependencies
+The test suite relies on the following dependencies:
+
+1. `unittest`: The Python standard library's unit testing framework, used to structure and run the tests.
+2. `mindsdb.integrations.handlers.libsql_handler.libsql_handler`: Contains the `LibSQLHandler` class that is being tested.
+3. `mindsdb.api.executor.data_types.response_type`: Provides the `RESPONSE_TYPE` enum used to verify the types of responses returned by the handler.
+
+## Configuration
+The tests use a specific configuration for the LibSQLHandler:
+
+```python
+kwargs = {"db_file": "file:memdb1?mode=memory&cache=shared"}
+```
+
+This configuration sets up an in-memory SQLite database for testing purposes, ensuring that the tests don't interfere with any existing databases and can run in isolation.
+
+## Key Concepts and Functionality
+
+### Test Setup
+The `setUpClass` method is used to initialize the test environment:
+
+```python
+@classmethod
+def setUpClass(cls):
+    kwargs = {"db_file": "file:memdb1?mode=memory&cache=shared"}
+    cls.handler = LibSQLHandler('test_libsql_handler', **kwargs)
+```
+
+This creates a shared instance of the LibSQLHandler that is used across all test methods.
+
+### Connection Testing
+The `test_0_check_connection` method verifies that the handler can successfully connect to the database:
+
+```python
+def test_0_check_connection(self):
+    assert self.handler.check_connection()
+```
+
+### Table Creation
+The `test_1_create_table` method tests the ability to create a new table in the database:
+
+```python
+def test_1_create_table(self):
+    res = self.handler.native_query("CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+    assert res.type is RESPONSE_TYPE.OK
+```
+
+### Data Insertion
+The `test_2_insert_rows` method checks if the handler can insert data into the created table:
+
+```python
+def test_2_insert_rows(self):
+    res = self.handler.native_query("INSERT INTO user (name, age) VALUES ('John Doe', 30), ('Jane Doe', 28)")
+    assert res.type is RESPONSE_TYPE.OK
+```
+
+### Data Querying
+The `test_3_native_query_select` method verifies that the handler can execute SELECT queries and retrieve data:
+
+```python
+def test_3_native_query_select(self):
+    res = self.handler.native_query("SELECT * FROM user")
+    assert res.type is RESPONSE_TYPE.TABLE
+```
+
+### Metadata Retrieval
+The `test_4_get_tables` and `test_5_get_columns` methods test the handler's ability to retrieve metadata about the database structure:
+
+```python
+def test_4_get_tables(self):
+    res = self.handler.get_tables()
+    assert res.type is not RESPONSE_TYPE.ERROR
+
+def test_5_get_columns(self):
+    res = self.handler.get_columns('user')
+    assert res.type is not RESPONSE_TYPE.ERROR
+```
+
+These tests ensure that the handler can correctly fetch information about tables and columns in the database.
+
+## Error Handling
+The test suite uses assertions to verify the expected behavior of the LibSQLHandler. If any assertion fails, it will raise an `AssertionError`, indicating a test failure. This helps identify any issues in the handler's implementation or unexpected changes in its behavior.
+
+In conclusion, this test suite provides comprehensive coverage of the LibSQLHandler's functionality, ensuring that it can perform all necessary database operations correctly and handle metadata retrieval as expected. The use of an in-memory database for testing allows for fast and isolated test execution, making it easier to maintain and extend the handler's capabilities.

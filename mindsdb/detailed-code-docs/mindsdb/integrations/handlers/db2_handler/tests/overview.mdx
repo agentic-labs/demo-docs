@@ -1,0 +1,99 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the DB2Handler class, which is responsible for interacting with IBM DB2 databases. The tests are designed to verify the functionality of various operations provided by the DB2Handler, including connection establishment, table management, and query execution.
+
+## What does it do?
+The test suite in this directory performs a series of checks to ensure that the DB2Handler can:
+
+1. Connect to a DB2 database successfully
+2. Drop an existing table
+3. Create a new table
+4. Retrieve a list of tables from the database
+5. Execute a SELECT query and retrieve results
+6. Check the connection status
+
+These tests simulate the typical workflow of interacting with a DB2 database, ensuring that the handler can perform basic database operations correctly and handle potential errors appropriately.
+
+## Key Files
+The main file in this directory is:
+
+1. `test_db2_handler.py`: This file contains the `DB2HandlerTest` class, which is a subclass of `unittest.TestCase`. It defines a series of test methods that systematically check different aspects of the DB2Handler's functionality.
+
+## Dependencies
+The test suite relies on the following dependencies:
+
+1. `unittest`: Python's built-in testing framework, used to structure and run the tests.
+2. `DB2Handler`: The main class being tested, which is responsible for DB2 database interactions.
+3. `RESPONSE_TYPE`: An enumeration used to categorize the types of responses returned by the DB2Handler.
+
+## Configuration
+The tests use a hardcoded configuration for connecting to a test DB2 database. The connection details are:
+
+```python
+connection_data = {
+    "host": "localhost",
+    "port": 50000,
+    "database": "testdb",
+    "user": "db2inst1",
+    "password": "password"
+}
+```
+
+These details are used to initialize the DB2Handler instance for testing. In a production environment, it would be more secure and flexible to use environment variables or a configuration file for these sensitive details.
+
+## Code Snippets and Examples
+
+Here's an example of how the tests are structured:
+
+```python
+class DB2HandlerTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        connection_data = {
+            "host": "localhost",
+            "port": 50000,
+            "database": "testdb",
+            "user": "db2inst1",
+            "password": "password"
+        }
+        cls.handler = DB2Handler('test_db2', connection_data)
+
+    def test_0_connect(self):
+        self.handler.connect()
+
+    def test_1_drop_table(self):
+        res = self.handler.native_query("DROP TABLE IF EXISTS LOVE")
+        assert res.type != RESPONSE_TYPE.ERROR
+
+    # ... more test methods ...
+```
+
+Each test method focuses on a specific operation, such as connecting to the database, dropping a table, or executing a query. The tests use assertions to verify that the operations complete successfully and return the expected results.
+
+For example, the test for executing a SELECT query looks like this:
+
+```python
+def test_4_select_query(self):
+    query = "SELECT * FROM AUTHORS"
+    res = self.handler.native_query(query)
+    assert res.type == RESPONSE_TYPE.TABLE
+```
+
+This test executes a SELECT query on the "AUTHORS" table and checks that the response type is a table, indicating that the query was successful and returned data.
+
+## Notes
+
+1. The tests are designed to run in a specific order, as indicated by their numeric prefixes (e.g., `test_0_connect`, `test_1_drop_table`). This ensures that operations are performed in a logical sequence, such as connecting to the database before attempting to create or query tables.
+
+2. The test suite assumes the existence of an "AUTHORS" table in the test database. It's important to ensure that this table exists in the test environment for the SELECT query test to pass.
+
+3. The tests do not include cleanup operations (e.g., dropping the created table after tests). In a more comprehensive test suite, it would be beneficial to add teardown methods to clean up the test database after the tests have run.
+
+4. Error handling in the tests is primarily done through assertions. If an operation fails or returns an unexpected result, the test will raise an AssertionError.
+
+5. The connection data used in the test is for a local DB2 instance. In a real-world scenario, these details would typically be stored securely and not hard-coded in the test file.
+
+This test suite provides a solid foundation for ensuring the reliability and correctness of the DB2Handler implementation. It covers the basic operations that would be expected when interacting with a DB2 database, helping to catch potential issues early in the development process.

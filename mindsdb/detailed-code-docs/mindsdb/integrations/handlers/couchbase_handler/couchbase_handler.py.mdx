@@ -1,0 +1,161 @@
+---
+title: "couchbase_handler.py"
+---
+
+## High-level description
+The `CouchbaseHandler` class is a database handler for Couchbase, implementing the `DatabaseHandler` interface. It manages connections to Couchbase clusters, executes queries, and provides methods for retrieving table and column information.
+
+## Code Structure
+The `CouchbaseHandler` class inherits from `DatabaseHandler` and implements several methods for connecting to Couchbase, executing queries, and retrieving database information. The main symbols (methods) in the code interact with the Couchbase cluster and bucket objects to perform various operations.
+
+## Symbols
+
+### `CouchbaseHandler`
+#### Description
+This class handles connections and executions of Couchbase statements. It initializes the connection data and provides methods for connecting, disconnecting, checking connections, and executing queries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the handler |
+| **kwargs | dict | Additional keyword arguments, including connection_data |
+
+#### Internal Logic
+- Initializes connection data, scope, bucket name, and cluster object
+- Provides methods for connecting, disconnecting, and checking connections
+- Implements query execution and database information retrieval
+
+___
+
+### `connect`
+#### Description
+Sets up the connection to the Couchbase cluster using the provided connection data.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cluster | Cluster | The connected Couchbase cluster object |
+
+#### Internal Logic
+- Creates a PasswordAuthenticator using the provided credentials
+- Sets up ClusterOptions with the authenticator
+- Applies the 'wan_development' profile if connecting to a Couchbase Capella cluster
+- Connects to the cluster and waits until it's ready
+- Updates the connection status
+
+___
+
+### `disconnect`
+#### Description
+Closes any existing connections to the Couchbase cluster.
+
+#### Internal Logic
+- Updates the connection status based on the cluster's connected state
+
+___
+
+### `check_connection`
+#### Description
+Checks the connection to the Couchbase bucket and returns a status response.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | StatusResponse | The connection status and error message if applicable |
+
+#### Internal Logic
+- Attempts to connect to the cluster
+- Returns a success status if connected, or an error message if connection fails
+- Handles disconnection if necessary
+
+___
+
+### `native_query`
+#### Description
+Executes a raw query against Couchbase and returns the results.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | Raw Couchbase query |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Query results or error message |
+
+#### Internal Logic
+- Connects to the cluster and retrieves the specified bucket and scope
+- Executes the query and processes the results into a pandas DataFrame
+- Handles exceptions and returns appropriate responses
+
+___
+
+### `query`
+#### Description
+Executes a query represented as an AST (abstract syntax tree) by converting it to a string and calling `native_query`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ASTNode | SQL query represented as AST |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Query results or error message |
+
+___
+
+### `get_tables`
+#### Description
+Retrieves a list of collections in the Couchbase bucket.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | DataFrame containing collection names |
+
+#### Internal Logic
+- Connects to the cluster and retrieves the specified bucket
+- Iterates through all scopes and collections to get unique collection names
+- Returns the collection names as a DataFrame
+
+___
+
+### `get_columns`
+#### Description
+Retrieves the columns (fields) of a specified collection (table) in the Couchbase bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | Name of the collection |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | DataFrame containing field names and types |
+
+#### Internal Logic
+- Connects to the cluster and retrieves the specified bucket and scope
+- Executes a query to fetch a single document from the specified collection
+- Extracts field names and types from the document
+- Returns the field information as a DataFrame
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and DataFrame creation |
+| urllib.parse | URL parsing for connection string |
+| couchbase | Couchbase SDK for Python |
+| mindsdb.integrations.libs.base | Base classes for database handlers |
+| mindsdb.utilities | Logging utilities |
+| mindsdb_sql.parser.ast.base | AST node representation |
+| mindsdb.integrations.libs.response | Response classes for handler operations |
+
+## Error Handling
+The code implements error handling for connection timeouts, keyspace not found errors, and general Couchbase exceptions. These are caught and returned as appropriate error responses.
+
+## TODOs
+- Check the timeout value with the SDK default time

@@ -1,0 +1,85 @@
+---
+title: "tasks.py"
+---
+
+## High-level description
+This code defines a `BaseDBConnectionBehavior` class for load testing database connections in MindsDB. It uses the Locust framework to simulate user behavior, performing tasks such as creating a new data source, running SELECT queries, and executing native database queries.
+
+## Code Structure
+The `BaseDBConnectionBehavior` class inherits from `SequentialTaskSet` and defines methods for initializing the test environment, creating a data source, and executing various database queries. The class uses a query generator and configuration utilities to create and run queries against a randomly generated database.
+
+## Symbols
+
+### BaseDBConnectionBehavior
+#### Description
+A class that defines a sequence of tasks for load testing database connections in MindsDB. It sets up the test environment, creates a new data source, and executes various types of queries.
+
+#### Internal Logic
+1. Initializes the test environment in the `on_start` method.
+2. Creates a new data source using the `create_new_datasource` method.
+3. Defines two tasks: `select_integration_query` and `run_native_query` for executing different types of queries.
+4. Uses a private `__post_query` method to send HTTP POST requests to the MindsDB API.
+
+### on_start
+#### Description
+Initializes the test environment for each simulated user.
+
+#### Internal Logic
+1. Creates a new query generator instance.
+2. Generates a random database name.
+3. Calls `create_new_datasource` to set up a new data source.
+
+### __post_query
+#### Description
+A private method that sends HTTP POST requests to the MindsDB API to execute SQL queries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | The SQL query to be executed |
+
+#### Internal Logic
+1. Sends a POST request to '/api/sql/query' with the query as JSON payload.
+2. Checks for successful response and absence of errors.
+3. Logs errors and fires a Locust event in case of exceptions.
+4. Interrupts the task set if an error occurs.
+
+### create_new_datasource
+#### Description
+Creates a new data source using configuration from environment variables.
+
+#### Internal Logic
+1. Retrieves database configuration from environment variables.
+2. Generates a create database query using the query generator.
+3. Executes the query using `__post_query`.
+
+### select_integration_query
+#### Description
+A task that performs a SELECT query from the created integration.
+
+#### Internal Logic
+Executes a simple SELECT query on the created database and table.
+
+### run_native_query
+#### Description
+A task that runs native database select queries.
+
+#### Internal Logic
+Iterates through predefined native queries and executes them using the created database.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| locust | Provides the SequentialTaskSet and task decorators for load testing |
+| tests.utils.query_generator | Generates SQL queries |
+| tests.utils.config | Retrieves configuration values and generates random database names |
+| mindsdb.utilities.log | Provides logging functionality |
+
+## Error Handling
+The code implements basic error handling in the `__post_query` method. It catches exceptions, logs errors, and fires Locust events to record failed requests. In case of an error, it interrupts the task set with the option to reschedule.
+
+## Logging
+The code uses MindsDB's logging utility to log error messages when queries fail to execute.
+
+## TODOs
+The code contains no explicit TODOs or notes for future improvements.

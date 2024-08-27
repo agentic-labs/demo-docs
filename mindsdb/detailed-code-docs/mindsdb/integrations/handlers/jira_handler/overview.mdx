@@ -1,0 +1,74 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Jira handler for MindsDB. It provides functionality to connect to and interact with Jira, an issue tracking and project management tool, allowing users to query Jira project data using SQL-like syntax within the MindsDB ecosystem.
+
+## What does it do?
+The Jira handler enables MindsDB to:
+1. Establish a connection to a Jira instance using provided credentials.
+2. Execute SQL-like queries on Jira project data.
+3. Fetch and process Jira issues, including support for selecting specific columns, ordering results, and limiting the number of returned items.
+4. Translate SQL queries into Jira Query Language (JQL) for efficient data retrieval.
+5. Handle the connection lifecycle, including connecting, disconnecting, and checking connection status.
+
+This integration allows users to treat Jira project data as a database table within MindsDB, making it possible to perform data analysis, apply machine learning models, and combine Jira data with other data sources supported by MindsDB.
+
+## Entry points
+The main entry point for this handler is the `JiraHandler` class in `jira_handler.py`. This class manages the connection to Jira and provides methods for executing queries. The `JiraProjectsTable` class in `jira_table.py` handles the actual processing of SQL queries and interaction with the Jira API.
+
+The data flow typically follows this path:
+1. User creates a connection to Jira using the `CREATE DATABASE` SQL command in MindsDB.
+2. SQL queries are sent to the `JiraHandler`.
+3. The `JiraHandler` passes these queries to the `JiraProjectsTable` for processing.
+4. `JiraProjectsTable` translates the SQL query into Jira API calls, fetches the data, and returns it as a pandas DataFrame.
+
+## Key Files
+1. `jira_handler.py`: Contains the `JiraHandler` class, which is the main interface for the Jira integration. It handles connection management and query execution.
+
+2. `jira_table.py`: Implements the `JiraProjectsTable` class, which processes SQL queries, interacts with the Jira API, and returns the results as a pandas DataFrame.
+
+3. `__init__.py`: Initializes the Jira handler module and handles importing the `JiraHandler` class.
+
+4. `__about__.py`: Contains metadata about the Jira handler package, including version information and descriptions.
+
+## Dependencies
+The Jira handler relies on the following key external libraries:
+- `atlassian-python-api`: Used for interacting with the Jira API. This library provides a Python interface to Jira's REST API.
+- `pandas`: Used for data manipulation and analysis, particularly in processing and returning query results.
+- `mindsdb_sql`: Used for parsing SQL queries.
+- `requests`: Used for making HTTP requests to the Jira API.
+
+## Configuration
+To use the Jira handler, users need to provide the following configuration parameters:
+- `jira_url`: The URL of the Jira instance.
+- `jira_api_token`: An API token for authenticating with the Jira instance.
+- `project`: The Jira project name to query.
+
+These parameters are used when creating a connection to Jira within MindsDB using the `CREATE DATABASE` SQL command.
+
+Example usage:
+```sql
+CREATE DATABASE jira_source
+WITH
+engine='Jira',
+parameters={
+    "jira_url": "https://jira.example.com",
+    "jira_api_token": "Bearer &lt;your-jira-api-token&gt;",
+    "project": "EXAMPLEPROJECT"   
+};
+```
+
+After creating the connection, users can query Jira project data using standard SQL syntax:
+
+```sql
+SELECT key, summary, status
+FROM jira_source.project
+ORDER BY key ASC
+LIMIT 10
+```
+
+This query would return the key, summary, and status of the first 10 issues in the specified Jira project, ordered by their key.
+
+The Jira handler supports basic SQL operations such as column selection, ordering, and limiting results. It translates these SQL operations into appropriate Jira API calls and JQL queries for efficient data retrieval.

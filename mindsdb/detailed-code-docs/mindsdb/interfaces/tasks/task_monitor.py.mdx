@@ -1,0 +1,157 @@
+---
+title: "task_monitor.py"
+---
+
+## High-level description
+This code defines a `TaskMonitor` class responsible for managing and monitoring background tasks in a MindsDB system. It continuously checks for active tasks, starts new tasks, stops completed or outdated tasks, and ensures proper task locking and unlocking mechanisms.
+
+## Code Structure
+The main class `TaskMonitor` contains methods for starting, stopping, and checking tasks. It uses a `TaskThread` class (imported from `task_thread.py`) to run individual tasks. The code interacts with a database through the `db` module for task management and uses configuration settings from the `Config` class.
+
+## References
+- `mindsdb.interfaces.storage.db`: Used for database operations
+- `mindsdb.utilities.config.Config`: Used for configuration settings
+- `task_thread.TaskThread`: Used to create and manage individual task threads
+
+## Symbols
+
+### TaskMonitor
+#### Description
+A class that monitors and manages tasks in the MindsDB system.
+
+#### Internal Logic
+1. Initializes with an empty dictionary of active tasks
+2. Starts a continuous loop to check tasks at regular intervals
+3. Manages task lifecycle: starting, stopping, and monitoring active tasks
+4. Handles task locking and unlocking to prevent concurrent execution
+
+### TaskMonitor.start()
+#### Description
+Initializes the database connection and starts the main monitoring loop.
+
+#### Internal Logic
+1. Initializes the database connection
+2. Enters an infinite loop to continuously check tasks
+3. Handles exceptions and system exit signals
+
+### TaskMonitor.stop_all_tasks()
+#### Description
+Stops all active tasks managed by the monitor.
+
+#### Internal Logic
+Iterates through all active tasks and calls `stop_task()` for each.
+
+### TaskMonitor.check_tasks()
+#### Description
+Checks the status of all tasks and manages their lifecycle.
+
+#### Internal Logic
+1. Queries the database for active tasks
+2. Starts new tasks that are not yet active
+3. Stops tasks that are no longer allowed or have died
+4. Reloads tasks if necessary
+5. Updates the alive time for running tasks
+
+### TaskMonitor._lock_task(task)
+#### Description
+Attempts to lock a task for execution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task | db.Tasks | The task to be locked |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | bool | True if the task was successfully locked, False otherwise |
+
+#### Internal Logic
+1. Generates a unique run identifier
+2. Checks if the task is already locked by this process
+3. Locks the task if it's not locked or if the previous lock has expired
+4. Updates the task's alive time in the database
+
+### TaskMonitor._set_alive(task_id)
+#### Description
+Updates the alive time for a running task.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_id | int | The ID of the task to update |
+
+#### Internal Logic
+Queries the current timestamp and updates the task's alive time in the database.
+
+### TaskMonitor._unlock_task(task_id)
+#### Description
+Unlocks a task in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_id | int | The ID of the task to unlock |
+
+#### Internal Logic
+Sets the task's alive time to None in the database.
+
+### TaskMonitor.start_task(task)
+#### Description
+Starts a new task if it can be locked.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task | db.Tasks | The task to be started |
+
+#### Internal Logic
+1. Attempts to lock the task
+2. If successful, creates a new TaskThread and starts it
+3. Adds the task to the active tasks dictionary
+
+### TaskMonitor.stop_task(task_id)
+#### Description
+Stops a running task and removes it from the active tasks list.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_id | int | The ID of the task to stop |
+
+#### Internal Logic
+1. Stops the task thread
+2. Waits for the thread to join (with a timeout)
+3. Removes the task from the active tasks dictionary
+4. Unlocks the task in the database
+
+### start(verbose=False)
+#### Description
+Creates a TaskMonitor instance and starts it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| verbose | bool | Unused parameter (possibly for future use) |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| datetime | Used for time-related operations |
+| os | Used to get process ID |
+| socket | Used to get hostname |
+| time | Used for sleep operations |
+| sqlalchemy | Used for database operations |
+| mindsdb.interfaces.storage.db | Database interface |
+| mindsdb.utilities.log | Logging utility |
+| mindsdb.utilities.config.Config | Configuration management |
+| task_thread.TaskThread | Task execution thread |
+
+## Error Handling
+The main loop in the `start()` method catches and logs exceptions, ensuring the monitor continues running even if individual tasks fail.
+
+## Logging
+The code uses a logger (from `mindsdb.utilities.log`) to log error messages and other important information.
+
+## Performance Considerations
+The monitor uses a sleep interval (`MONITOR_INTERVAL_SECONDS`) to control how often it checks for tasks, balancing responsiveness with system load. The `LOCK_EXPIRED_SECONDS` constant is used to determine when a task lock has expired, allowing for recovery from crashed processes.

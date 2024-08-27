@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a PyPI (Python Package Index) handler for MindsDB. It provides functionality to interact with PyPI data, specifically focusing on package download statistics. The handler allows users to query various aspects of package downloads, including recent statistics, overall downloads, and breakdowns by Python version and operating system.
+
+## What does it do?
+The PyPI handler enables MindsDB users to:
+1. Connect to PyPI's statistics API
+2. Query recent download data for specific packages
+3. Retrieve overall download statistics
+4. Get download information filtered by Python major and minor versions
+5. Obtain system-specific download data
+
+Users can interact with this data using SQL-like queries, which are then translated into appropriate API calls to PyPI's statistics service. The handler processes the returned data and presents it in a tabular format, making it easy to analyze and integrate with other MindsDB functionalities.
+
+## Entry points
+The main entry point for this handler is the `PyPIHandler` class defined in `pypi_handler.py`. This class inherits from `APIHandler` and sets up the necessary connections and table structures for interacting with PyPI data.
+
+The data flow typically follows this pattern:
+1. User submits a SQL query to MindsDB
+2. `PyPIHandler` processes the query and routes it to the appropriate table class
+3. The table class (e.g., `PyPIRecentTable`) constructs the necessary API request
+4. The `PyPI` class in `api.py` makes the actual HTTP request to PyPI's stats API
+5. The response is processed and returned as a pandas DataFrame
+6. The result is sent back to the user through MindsDB's interface
+
+## Key Files
+1. `pypi_handler.py`: Contains the `PyPIHandler` class, which is the main interface for the handler. It manages connections and routes queries to the appropriate table classes.
+
+2. `api.py`: Defines the `PyPI` class, which handles direct interactions with the PyPI Stats API. It provides methods for different types of queries (recent, overall, by Python version, by system) and converts API responses to pandas DataFrames.
+
+3. `pypi_tables.py`: Implements various table classes (`PyPIRecentTable`, `PyPIOverallTable`, etc.) that handle specific types of queries. These classes parse SQL-like queries and use the `PyPI` class to fetch and process data.
+
+4. `__init__.py`: Sets up the handler for use within MindsDB, including error handling for imports and defining metadata like the handler's name and type.
+
+5. `__about__.py`: Contains metadata about the PyPI handler, including its version, description, and author information.
+
+## Dependencies
+The handler relies on several external libraries:
+- `pandas`: For data manipulation and DataFrame operations
+- `requests`: For making HTTP requests to the PyPI Stats API
+- `numpy`: Used in conjunction with pandas for data processing
+- `mindsdb_sql`: For parsing SQL queries
+
+These dependencies are used to efficiently process and present PyPI data in a format that integrates well with MindsDB's ecosystem.
+
+## Configuration
+The PyPI handler does not require specific configuration files or environment variables. It is designed to work out-of-the-box with PyPI's public stats API. Users can create a connection to the PyPI data source using a simple SQL command:
+
+```sql
+CREATE DATABASE pypi_datasource
+WITH ENGINE = 'pypi';
+```
+
+After this, users can query the various tables provided by the handler, such as `recent`, `overall`, `python_major`, `python_minor`, and `system`. Each table has specific parameters that can be used in the WHERE clause to filter data:
+
+- `recent`: Requires a `package` name and optional `period` (day, week, month)
+- `overall`: Requires a `package` name and optional `mirrors` boolean
+- `python_major` and `python_minor`: Require a `package` name and optional `version`
+- `system`: Requires a `package` name and optional `os`
+
+Example query:
+```sql
+SELECT *
+FROM pypi_datasource.recent
+WHERE package = 'mindsdb' AND period = 'day';
+```
+
+This handler provides a powerful interface for MindsDB users to analyze Python package download statistics, enabling data-driven decisions and insights into package popularity and usage trends.

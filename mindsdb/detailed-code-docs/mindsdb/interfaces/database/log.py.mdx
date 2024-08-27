@@ -1,0 +1,189 @@
+---
+title: "log.py"
+---
+
+Here's a comprehensive documentation for the provided code in the target file:
+
+## High-level description
+This code defines the structure and functionality of the 'log' database in MindsDB. It includes table definitions for LLM (Language Model) logs and job history, as well as a controller class to manage these tables and execute queries against them.
+
+## Code Structure
+The code defines abstract base classes `LogTable` and `LogDBController`, and concrete implementations `LLMLogTable` and `JobsHistoryTable`. The `LogDBController` class manages these tables and provides methods for querying them.
+
+## Symbols
+
+### `LogTable`
+#### Description
+An abstract base class for table entities in the internal 'log' database.
+
+#### Attributes
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the table |
+| deletable | bool | Whether the table can be deleted |
+| visible | bool | Whether the table should be visible in GUI sidebar |
+| kind | str | Type of the table/view |
+
+#### Methods
+##### `_get_base_subquery()`
+###### Description
+Abstract method to get a query that returns the table from the internal database.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | Select | 'select' query that returns the table |
+
+##### `company_id_comparison()`
+###### Description
+Static method to make a statement for 'safe' comparison of company_id of two tables.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_a | str | Name of first table |
+| table_b | str | Name of second table |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | BinaryOperation | Statement that can be used for 'safe' comparison |
+
+### `LLMLogTable`
+#### Description
+Concrete implementation of `LogTable` for LLM logs.
+
+#### Attributes
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the table ('llm_log') |
+| columns | list | List of column names |
+| types_map | dict | Mapping of column names to their data types |
+
+#### Methods
+##### `_get_base_subquery()`
+###### Description
+Implements the abstract method to get a query that returns the LLM log table.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | Select | 'select' query that returns the LLM log table |
+
+### `JobsHistoryTable`
+#### Description
+Concrete implementation of `LogTable` for job history.
+
+#### Attributes
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the table ('jobs_history') |
+| columns | list | List of column names |
+| types_map | dict | Mapping of column names to their data types |
+
+#### Methods
+##### `_get_base_subquery()`
+###### Description
+Implements the abstract method to get a query that returns the job history table.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | Select | 'select' query that returns the job history table |
+
+### `LogDBController`
+#### Description
+Controller class for managing and querying the log database tables.
+
+#### Methods
+##### `__init__()`
+###### Description
+Initializes the controller with the available tables.
+
+##### `get_list()`
+###### Description
+Returns a list of all available log tables.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | List[LogTable] | List of available log tables |
+
+##### `get()`
+###### Description
+Retrieves a specific log table by name.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the table to retrieve |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | LogTable | The requested log table |
+
+##### `get_tables()`
+###### Description
+Returns an OrderedDict of all available tables.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | OrderedDict | OrderedDict of available tables |
+
+##### `get_tables_rows()`
+###### Description
+Returns a list of TablesRow objects for all available tables.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | List[TablesRow] | List of TablesRow objects |
+
+##### `query()`
+###### Description
+Executes a query against the log database.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | Select | The query to execute |
+| native_query | str | A native SQL query string (optional) |
+| session | object | Database session (optional) |
+| return_as | str | Format to return results in ('split' or other) |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return | Union[pd.DataFrame, Tuple[pd.DataFrame, list]] | Query results |
+
+#### Internal Logic
+The `query` method performs the following steps:
+1. Parses the query if a native query string is provided.
+2. Validates that the query is a SELECT statement and targets only one table in the log database.
+3. Replaces the query's FROM clause with the base subquery of the target log table.
+4. Executes the query against the database.
+5. Casts the result columns to their proper types.
+6. Returns the results in the requested format.
+
+## Dependencies
+- pandas
+- mindsdb_sql
+- sqlalchemy
+- mindsdb.utilities.functions
+- mindsdb.api.executor.utilities.sql
+- mindsdb.utilities.exception
+- mindsdb.interfaces.storage.db
+- mindsdb.utilities.context
+- mindsdb.api.executor.datahub.classes.tables_row
+
+## Error Handling
+The code uses exceptions to handle errors, such as when a requested table doesn't exist or when an invalid query is provided.
+
+## Performance Considerations
+The code uses SQLAlchemy for database operations, which provides efficient query execution. However, the performance may depend on the size of the log tables and the complexity of the queries executed against them.
+
+___
+
+This documentation provides a comprehensive overview of the log database implementation in MindsDB, including its structure, main components, and functionality. It should help developers understand how to interact with and extend the log database system.

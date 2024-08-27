@@ -1,0 +1,169 @@
+---
+title: "leonardo_ai_handler.py"
+---
+
+## High-level description
+This code defines the `LeonardoAIHandler` class, which is an integration handler for Leonardo AI within MindsDB. It allows users to generate images based on text prompts using Leonardo AI's generative models.
+
+## Code Structure
+The `LeonardoAIHandler` class inherits from `BaseMLEngine` and implements methods for creating models, making predictions, and managing API interactions with Leonardo AI. It uses a combination of MindsDB's storage utilities and Leonardo AI's API to handle model creation, image generation, and data management.
+
+## Symbols
+
+### `LeonardoAIHandler`
+#### Description
+This class serves as the main interface for integrating Leonardo AI's image generation capabilities into MindsDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *args | Any | Variable length argument list |
+| **kwargs | Any | Arbitrary keyword arguments |
+
+#### Internal Logic
+1. Initializes with default values for Leonardo AI API base URL, rate limit, and batch size.
+2. Implements methods for creating models, making predictions, and managing API interactions.
+
+### `LeonardoAIHandler.create`
+#### Description
+Creates a new model instance for Leonardo AI integration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column name |
+| args | Optional[Dict] | Additional arguments for model creation |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Internal Logic
+1. Validates the presence of a "USING" clause in the arguments.
+2. Stores the arguments in the model storage.
+3. Retrieves and validates the API key.
+4. Checks the connection to Leonardo AI API.
+5. Validates the specified model or uses a default model.
+
+### `LeonardoAIHandler.predict`
+#### Description
+Generates images based on text prompts using the Leonardo AI model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input data containing text prompts |
+| args | Optional[Dict] | Additional arguments for prediction |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result_df | pd.DataFrame | DataFrame containing generated image URLs |
+
+#### Internal Logic
+1. Prepares prompts using the input data and prompt template.
+2. Calls `predict_answer` method to generate images for each prompt.
+3. Returns a DataFrame with the generated image URLs.
+
+### `LeonardoAIHandler._get_leonardo_api_key`
+#### Description
+Retrieves the Leonardo AI API key from various possible sources.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | Dict | Arguments containing potential API key |
+| engine_storage | HandlerStorage | Storage for engine-related data |
+| strict | bool | Whether to raise an exception if API key is not found |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_key | str | The retrieved API key |
+
+#### Internal Logic
+Checks for the API key in the following order:
+1. Provided at model creation
+2. Provided at engine creation
+3. LEONARDO_API_KEY environment variable
+4. leonardo.api_key setting in config.json
+
+### `LeonardoAIHandler._get_platform_model`
+#### Description
+Retrieves available Leonardo AI models based on the provided API key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | Dict | Arguments containing the API key |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_ids | List[str] | List of available model IDs |
+
+#### Internal Logic
+1. Retrieves the API key.
+2. Makes a GET request to Leonardo AI API to fetch available models.
+3. Extracts and returns the model IDs from the API response.
+
+### `LeonardoAIHandler.predict_answer`
+#### Description
+Generates images based on the given prompts using Leonardo AI API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prompts | List[str] | List of text prompts for image generation |
+| **kwargs | Any | Additional keyword arguments |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| img_urls | pd.DataFrame | DataFrame containing generated image URLs |
+
+#### Internal Logic
+1. Retrieves API key and model settings.
+2. Sends a POST request to Leonardo AI API to initiate image generation.
+3. Waits for 15 seconds to allow for image generation.
+4. Sends a GET request to retrieve the generated image URLs.
+5. Returns a DataFrame with the image URLs.
+
+### `LeonardoAIHandler.describe`
+#### Description
+Provides metadata about the Leonardo AI model and its configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | Optional[str] | Specific attribute to describe |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| description | pd.DataFrame | DataFrame containing model metadata |
+
+#### Internal Logic
+1. Retrieves model arguments and settings.
+2. Returns different metadata based on the requested attribute (features, metadata, or general information).
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| requests | Making HTTP requests to Leonardo AI API |
+| pandas | Data manipulation and storage |
+| mindsdb.integrations.libs.base | Base class for ML engines |
+| mindsdb.integrations.libs.llm.utils | Utility functions for LLM integrations |
+| mindsdb.utilities | Logging and configuration utilities |
+| mindsdb.interfaces.storage.model_fs | Model storage utilities |
+
+## Error Handling
+The code includes basic error handling for API connection issues and invalid model specifications. It raises exceptions with informative messages when errors occur during model creation or API interactions.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /api/rest/v1/me | GET | - | User info | Validates API key |
+| /api/rest/v1/platformModels | GET | - | Available models | Retrieves available Leonardo AI models |
+| /api/rest/v1/generations | POST | Generation payload | Generation job info | Initiates image generation |
+| /api/rest/v1/generations/{generation_id} | GET | - | Generated image URLs | Retrieves generated image URLs |
+
+The code interacts with Leonardo AI's REST API to perform image generation tasks.

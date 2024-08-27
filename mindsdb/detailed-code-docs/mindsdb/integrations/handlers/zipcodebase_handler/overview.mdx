@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the ZipCodeBase handler for MindsDB. It provides an interface to connect to the ZipCodeBase API and import zipcode data into MindsDB. The handler allows users to perform various operations related to zip codes, such as searching for locations, finding codes within a radius, and retrieving codes by city or state.
+
+## What does it do?
+The ZipCodeBase handler enables MindsDB to interact with the ZipCodeBase API, allowing users to:
+
+1. Search for location information based on zip codes
+2. Find zip codes within a specified radius of a given zip code
+3. Retrieve zip codes for a specific city or state
+4. Get a list of states/provinces for a specified country
+5. Check the remaining number of API requests available
+
+Users can perform these operations using SQL queries within MindsDB, which are then translated into appropriate API calls to ZipCodeBase.
+
+## Entry points
+The main entry point for this handler is the `ZipCodeBaseHandler` class defined in `zipcodebase_handler.py`. This class inherits from `APIHandler` and sets up the necessary tables and manages the connection to the ZipCodeBase service.
+
+The handler uses the `ZipCodeBaseClient` class (defined in `zipcodebase.py`) to interact with the ZipCodeBase API. This client encapsulates the API key and provides methods for various API operations.
+
+The `zipcodebase_tables.py` file defines several API table classes that handle different types of queries to the ZipCodeBase API. These classes are used by the `ZipCodeBaseHandler` to process SQL queries and return the appropriate data.
+
+## Key Files
+1. `zipcodebase_handler.py`: Contains the `ZipCodeBaseHandler` class, which is the main handler for interacting with the ZipCodeBase API.
+2. `zipcodebase.py`: Defines the `ZipCodeBaseClient` class, which provides an interface to interact with the ZipCodeBase API.
+3. `zipcodebase_tables.py`: Contains API table classes for handling different types of queries to the ZipCodeBase API.
+4. `connection_args.py`: Defines the connection arguments required for the ZipCodeBase handler, including the API key.
+5. `__init__.py`: Sets up essential attributes and imports for the ZipCodeBase integration.
+
+## Dependencies
+The ZipCodeBase handler relies on the following external libraries:
+- `requests`: Used to send HTTP requests to the ZipCodeBase API
+- `pandas`: Used for data manipulation and analysis
+- `mindsdb_sql`: Used for parsing SQL queries
+- `mindsdb.integrations.libs.api_handler`: Provides the base `APIHandler` class
+- `mindsdb.integrations.utilities.handlers.query_utilities`: Offers query parsing and execution utilities
+
+## Configuration
+The handler requires an API key for authentication with the ZipCodeBase service. This key is specified in the `connection_args.py` file:
+
+```python
+connection_args = OrderedDict(
+    api_key={
+        "type": ARG_TYPE.PWD,
+        "description": "API key for ZipCodeBase API",
+        "required": True,
+        "label": "API Key",
+        "secret": True
+    }
+)
+```
+
+Users need to provide this API key when creating a database connection to the ZipCodeBase handler in MindsDB.
+
+Example usage:
+
+```sql
+CREATE DATABASE mindsdb_zipcodebase
+WITH ENGINE = 'zipcodebase',
+PARAMETERS = {
+  "api_key": "your_api_key_here"
+};
+```
+
+Once the connection is established, users can query the ZipCodeBase data using SQL. For example:
+
+```sql
+SELECT * FROM mindsdb_zipcodebase.code_to_location WHERE codes="10005";
+```
+
+This query would return location information for the zip code 10005.
+
+The handler supports various types of queries, each corresponding to a different ZipCodeBase API endpoint. These are implemented as separate table classes in `zipcodebase_tables.py`, allowing for a flexible and extensible structure to handle different types of zip code-related queries.

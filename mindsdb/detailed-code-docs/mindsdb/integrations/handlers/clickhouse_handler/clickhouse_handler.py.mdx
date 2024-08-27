@@ -1,0 +1,144 @@
+---
+title: "clickhouse_handler.py"
+---
+
+## High-level description
+The `ClickHouseHandler` class is a database handler for ClickHouse, a column-oriented database management system. It provides methods to connect to a ClickHouse database, execute queries, and retrieve information about tables and columns. The handler supports both native and HTTP protocols for connection.
+
+## Code Structure
+The `ClickHouseHandler` class inherits from `DatabaseHandler` and implements various methods for database operations. It uses SQLAlchemy for database connection and query execution. The class also utilizes the `SqlalchemyRender` for query rendering and `HandlerResponse` for formatting query results.
+
+## References
+- `mindsdb.integrations.libs.base.DatabaseHandler`
+- `mindsdb.integrations.libs.response.HandlerStatusResponse`
+- `mindsdb.integrations.libs.response.HandlerResponse`
+- `mindsdb.integrations.libs.response.RESPONSE_TYPE`
+- `mindsdb_sql.parser.ast.base.ASTNode`
+- `mindsdb_sql.render.sqlalchemy_render.SqlalchemyRender`
+
+## Symbols
+
+### ClickHouseHandler
+#### Description
+This class handles connections and executions of ClickHouse statements. It provides methods for connecting to the database, executing queries, and retrieving database information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the handler |
+| connection_data | dict | Connection details for the ClickHouse database |
+
+#### Internal Logic
+1. Initializes connection parameters and SQLAlchemy renderer
+2. Implements methods for connecting, disconnecting, and checking connection status
+3. Provides methods for executing native queries and parsed AST queries
+4. Implements methods for retrieving table lists and column information
+
+### connect
+#### Description
+Establishes a connection to the ClickHouse database using SQLAlchemy.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| connection | Connection | SQLAlchemy Connection object |
+
+#### Internal Logic
+1. Constructs the connection URL based on the protocol (native or HTTP)
+2. Creates an SQLAlchemy engine and establishes a raw connection
+3. Sets the connection status and stores the connection object
+
+### check_connection
+#### Description
+Checks the status of the connection to the ClickHouse database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | StatusResponse | Object containing success status and error message |
+
+#### Internal Logic
+1. Attempts to connect to the database
+2. Executes a simple query to verify the connection
+3. Returns a StatusResponse object with the connection status
+
+### native_query
+#### Description
+Executes a raw SQL query on the ClickHouse database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | SQL query to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Object containing query result or error message |
+
+#### Internal Logic
+1. Connects to the database
+2. Executes the query using a cursor
+3. Fetches the result and converts it to a pandas DataFrame
+4. Returns a Response object with the query result or error message
+
+### query
+#### Description
+Executes a parsed SQL query (ASTNode) on the ClickHouse database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ASTNode | Parsed SQL query |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Object containing query result or error message |
+
+#### Internal Logic
+1. Renders the ASTNode query to a SQL string using SqlalchemyRender
+2. Calls the native_query method with the rendered SQL string
+
+### get_tables
+#### Description
+Retrieves a list of all tables in the ClickHouse database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Object containing table names |
+
+#### Internal Logic
+1. Executes a "SHOW TABLES" query
+2. Renames the result column to "table_name"
+3. Returns a Response object with the table list
+
+### get_columns
+#### Description
+Retrieves column information for a specified table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | Name of the table |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Object containing column information |
+
+#### Internal Logic
+1. Executes a "DESCRIBE" query for the specified table
+2. Returns a Response object with the column information
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| sqlalchemy | Database connection and query execution |
+| clickhouse_sqlalchemy | ClickHouse-specific SQLAlchemy dialect |
+| pandas | Data manipulation and storage |
+| mindsdb_sql | SQL parsing and rendering |
+
+## Error Handling
+The code implements error handling using try-except blocks, catching SQLAlchemy errors and logging them. Errors are returned as part of the Response objects with appropriate error messages and types.

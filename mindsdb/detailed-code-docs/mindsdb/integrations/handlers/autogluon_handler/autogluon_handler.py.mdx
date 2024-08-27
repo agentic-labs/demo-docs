@@ -1,0 +1,110 @@
+---
+title: "autogluon_handler.py"
+---
+
+## High-level description
+This code defines the `AutoGluonHandler` class, which is an integration handler for the AutoGluon machine learning library within the MindsDB ecosystem. It provides functionality to create and train models, make predictions, and describe the model arguments.
+
+## Code Structure
+The `AutoGluonHandler` class inherits from `BaseMLEngine` and implements methods for creating models, making predictions, and describing model arguments. It uses the AutoGluon TabularPredictor for both classification and regression tasks.
+
+## Symbols
+
+### AutoGluonHandler
+#### Description
+A handler class for integrating AutoGluon with MindsDB. It provides methods for creating models, making predictions, and describing model arguments.
+
+#### Inputs
+None specific to the class initialization.
+
+#### Internal Logic
+The class implements three main methods:
+1. `create`: Creates and trains an AutoGluon model.
+2. `predict`: Makes predictions using a trained AutoGluon model.
+3. `describe`: Provides information about the model arguments.
+
+___
+
+### `create`
+#### Description
+Creates and trains an AutoGluon model based on the input data and configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target column name for prediction |
+| df | Optional[pd.DataFrame] | The input DataFrame for training |
+| args | Optional[dict] | Additional arguments for model configuration |
+
+#### Internal Logic
+1. Determines the task type (classification or regression) based on the target column's data type.
+2. Creates the appropriate configuration (ClassificationConfig or RegressionConfig).
+3. Initializes an AutoGluon TabularPredictor.
+4. Fits the model using the input DataFrame and configuration.
+5. Saves the trained model and arguments to storage.
+
+___
+
+### `predict`
+#### Description
+Makes predictions using a trained AutoGluon model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | Optional[pd.DataFrame] | The input DataFrame for prediction |
+| args | Optional[dict] | Additional arguments for prediction (unused) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | The input DataFrame with predictions added |
+
+#### Internal Logic
+1. Loads the trained model from storage.
+2. Removes the '__mindsdb_row_id' column from the input DataFrame.
+3. Makes predictions using the loaded model.
+4. Adds the predictions to the input DataFrame under the target column name.
+5. Returns the DataFrame with predictions.
+
+___
+
+### `describe`
+#### Description
+Provides information about the model arguments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| attribute | Optional[str] | The specific attribute to describe (only 'args' is supported) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | A DataFrame containing the model arguments |
+
+#### Internal Logic
+1. Retrieves the model arguments from storage.
+2. If the attribute is 'args', returns a DataFrame with the arguments as key-value pairs.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| typing | Provides type hinting |
+| dill | Used for serialization and deserialization of the model |
+| pandas | Handles DataFrame operations |
+| autogluon.tabular | Provides the TabularPredictor for model training and prediction |
+| type_infer.api | Used for inferring data types |
+| mindsdb.integrations.libs.base | Provides the BaseMLEngine class |
+| mindsdb.utilities | Provides logging functionality |
+| .config | Imports ClassificationConfig and RegressionConfig |
+
+## Error Handling
+The code implements basic error handling by raising an exception when an unsupported task type is encountered in the `create` method.
+
+```python
+else:
+    raise Exception('This task is not supported!')
+```
+
+This ensures that only classification and regression tasks are supported by the handler.

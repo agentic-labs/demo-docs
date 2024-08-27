@@ -1,0 +1,90 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `dremio_handler` directory contains the implementation of a handler for integrating Dremio, a data lakehouse platform, with MindsDB. This handler allows MindsDB to connect to, query, and interact with Dremio data sources. The implementation includes connection management, query execution, and metadata retrieval functionalities.
+
+## What does it do?
+The Dremio handler enables MindsDB to:
+1. Establish and manage connections to Dremio servers
+2. Execute SQL queries on Dremio data sources
+3. Retrieve metadata about tables and columns in Dremio
+4. Handle authentication and session management with Dremio's API
+5. Convert query results into pandas DataFrames for further processing in MindsDB
+
+This integration allows users to leverage Dremio's data lakehouse capabilities within MindsDB's machine learning and AI workflows.
+
+## Entry points
+The main entry point for this handler is the `DremioHandler` class in `dremio_handler.py`. This class inherits from `DatabaseHandler` and implements the core functionality for interacting with Dremio. The `__init__.py` file sets up the handler and defines metadata such as version, description, and connection arguments.
+
+## Key Files
+1. `dremio_handler.py`: Contains the `DremioHandler` class, which implements methods for connecting to Dremio, executing queries, and retrieving metadata.
+2. `connection_args.py`: Defines the connection arguments required for establishing a connection to a Dremio server.
+3. `__about__.py`: Contains metadata information for the Dremio handler, including version, description, and author details.
+4. `README.md`: Provides documentation on the Dremio handler, its implementation, and usage instructions.
+
+## Dependencies
+The Dremio handler relies on the following external libraries:
+- `requests`: Used for making HTTP requests to the Dremio API
+- `pandas`: Used for handling data in DataFrame format
+- `mindsdb_sql`: Used for SQL parsing and rendering
+- `sqlalchemy_dremio`: Provides the Dremio dialect for SQLAlchemy
+
+These dependencies are chosen to facilitate API communication, data manipulation, and SQL operations specific to Dremio.
+
+## Configuration
+The handler uses the following connection arguments:
+- `host`: The hostname or IP address of the Dremio server
+- `port`: The port number on which Dremio is running (default is 9047)
+- `username`: The username for authentication
+- `password`: The password for authentication
+
+These arguments are defined in `connection_args.py` and are used to establish a connection to the Dremio server.
+
+Example configuration:
+```sql
+CREATE DATABASE dremio_datasource
+WITH
+engine='dremio',
+parameters={
+    "host": "localhost",
+    "port": 9047,
+    "username": "username",
+    "password": "password"
+};
+```
+
+## Implementation Details
+
+### Connection Management
+The `DremioHandler` class manages connections to Dremio using the following methods:
+- `connect()`: Authenticates with Dremio and sets up the session
+- `disconnect()`: Closes the connection
+- `check_connection()`: Verifies if the connection is active
+
+### Query Execution
+Queries are executed using the `native_query()` method, which follows these steps:
+1. Submits the SQL job to Dremio
+2. Polls the job status until completion
+3. Retrieves and processes the job results
+4. Returns the results as a pandas DataFrame or an error message
+
+Example query execution:
+```python
+query = "SELECT * FROM my_dataset LIMIT 10"
+result = handler.native_query(query)
+```
+
+### Metadata Retrieval
+The handler provides methods to retrieve metadata:
+- `get_tables()`: Returns a list of accessible tables in Dremio
+- `get_columns()`: Retrieves column information for a specified table
+
+### Error Handling
+The handler implements error handling by catching exceptions and returning appropriate error responses using the `HandlerResponse` class.
+
+### Testing
+The `tests` directory contains unit tests for the `DremioHandler` class, covering basic functionality such as connection checking, query execution, and metadata retrieval.
+
+In conclusion, the Dremio handler provides a robust integration between MindsDB and Dremio, enabling users to leverage Dremio's data lakehouse capabilities within MindsDB's AI and machine learning workflows. The handler's implementation ensures efficient connection management, query execution, and metadata retrieval while handling errors gracefully.

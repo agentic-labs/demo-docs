@@ -1,0 +1,54 @@
+---
+title: "2022-09-29_cada7d2be947_json_storage.py"
+---
+
+## High-level description
+This code represents an Alembic migration script for a database schema change in the MindsDB project. It introduces a new `json_storage` table and migrates data from the `json_ai` column in the `predictor` table to this new table. The migration also includes a downgrade function to revert these changes.
+
+## Code Structure
+The script defines two main functions: `upgrade()` and `downgrade()`. These functions contain the logic for applying and reverting the database schema changes, respectively. The script also includes necessary imports and revision identifiers used by Alembic.
+
+## Symbols
+
+### `upgrade()`
+#### Description
+This function performs the database schema upgrade by creating a new `json_storage` table, migrating data from the `predictor` table, and then dropping the `json_ai` column from the `predictor` table.
+
+#### Internal Logic
+1. Creates the `json_storage` table with specified columns.
+2. Establishes a database connection and session.
+3. Retrieves data from the `predictor` table.
+4. For each row in the `predictor` table:
+   - Attempts to parse the `json_ai` column.
+   - If successful and non-empty, creates a new record in the `json_storage` table.
+5. Commits the session to save the migrated data.
+6. Drops the `json_ai` column from the `predictor` table.
+
+### `downgrade()`
+#### Description
+This function reverts the changes made by the `upgrade()` function, restoring the database schema to its previous state.
+
+#### Internal Logic
+1. Adds the `json_ai` column back to the `predictor` table.
+2. Establishes a database connection and session.
+3. Retrieves data from the `json_storage` table for predictors.
+4. For each row in the `json_storage` table:
+   - Finds the corresponding record in the `predictor` table.
+   - Updates the `json_ai` column with the stored content.
+5. Commits the session to save the restored data.
+6. Drops the `json_storage` table.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| json | For parsing JSON data |
+| alembic | For database migration operations |
+| sqlalchemy | For database operations and ORM |
+| mindsdb.interfaces.storage.db | For database models |
+| mindsdb.interfaces.storage.fs | For resource group constants |
+
+## Error Handling
+The script includes basic error handling in the `upgrade()` function, where it catches and ignores exceptions when parsing JSON data from the `predictor` table. This ensures that the migration continues even if some JSON data is invalid.
+
+## Performance Considerations
+The script performs bulk data migration, which could be slow for large datasets. It uses SQLAlchemy ORM for database operations, which might have performance implications for very large tables.

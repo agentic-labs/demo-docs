@@ -1,0 +1,47 @@
+---
+title: "wizards.py"
+---
+
+## High-level description
+This code defines a utility function `make_ssl_cert` that generates a self-signed SSL certificate and private key. The function creates a certificate suitable for use in secure communications, particularly for MindsDB's MongoDB API server.
+
+## Symbols
+
+### `make_ssl_cert`
+#### Description
+This function generates a self-signed SSL certificate and private key, writing both to a specified file path. It uses the `cryptography` library to create an RSA key pair and an X.509 certificate.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| file_path | str | The path where the generated private key and certificate will be saved |
+
+#### Internal Logic
+1. Generate an RSA private key with a 2048-bit key size.
+2. Create an X.509 name with MindsDB-specific attributes.
+3. Build an X.509 certificate with the following properties:
+   - Valid for 10 years before and after the current date
+   - Self-signed (issuer and subject are the same)
+   - Marked as a Certificate Authority (CA) with no path length constraint
+4. Serialize the private key and certificate to PEM format.
+5. Write both the private key and certificate to the specified file path.
+
+#### Side Effects
+- Writes a new file containing the private key and certificate to the specified `file_path`.
+
+#### Performance Considerations
+- The RSA key generation and certificate creation process can be computationally intensive, especially for larger key sizes. However, this function is typically called infrequently (e.g., during server setup), so the performance impact is minimal in the context of the application's overall operation.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| cryptography | Used for SSL certificate and key generation |
+| datetime | Used for certificate validity period calculations |
+
+## Error Handling
+This function does not implement explicit error handling. Errors that may occur (e.g., file writing errors, cryptography library errors) will propagate to the caller.
+
+## Usage Context
+Based on the related code snippet (mindsdb/api/mongo/server.py), this function is used in the `MongoRequestHandler._init_ssl` method to generate a temporary SSL certificate for secure MongoDB connections. The certificate is created on-the-fly when a TLS connection is detected, allowing the MindsDB MongoDB API to support secure connections without requiring pre-configured certificates.
+
+This approach provides a convenient way to enable SSL/TLS support in the MindsDB MongoDB API server, especially useful for development or testing environments where obtaining and managing official SSL certificates might be impractical.

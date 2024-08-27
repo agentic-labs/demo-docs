@@ -1,0 +1,94 @@
+---
+title: "statsforecast_handler.py"
+---
+
+## High-level description
+This code implements a StatsForecastHandler class, which integrates the Nixtla StatsForecast library for time series forecasting with classical methods into MindsDB. It provides functionality for creating, training, and making predictions with various time series models, including support for hierarchical forecasting.
+
+## Code Structure
+The main class `StatsForecastHandler` inherits from `BaseMLEngine` and implements methods for creating models, making predictions, and describing the model. It uses several utility functions defined at the module level for data transformation, model selection, and result processing.
+
+## Symbols
+
+### `get_season_length(frequency)`
+#### Description
+Infers the best season length from the given frequency parameter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| frequency | str | Time series frequency (e.g., 'H', 'M', 'Q') |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| season_length | int | Inferred season length |
+
+#### Internal Logic
+Uses a dictionary to map common frequency strings to their corresponding season lengths. If the frequency is not found, it defaults to 1 (no seasonality).
+
+### `get_insample_cv_results(model_args, df)`
+#### Description
+Performs in-sample cross-validation for the specified models.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_args | dict | Model arguments including model name, frequency, and horizon |
+| df | DataFrame | Input data for cross-validation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| results_df | DataFrame | Cross-validation results for each model |
+
+#### Internal Logic
+Creates StatsForecast models based on the specified arguments, performs cross-validation, and returns the fitted values.
+
+### `choose_model(model_args, results_df)`
+#### Description
+Selects the best performing model based on cross-validation results.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_args | dict | Model arguments |
+| results_df | DataFrame | Cross-validation results |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model | StatsForecast model | The chosen model instance |
+
+#### Internal Logic
+If 'auto' is specified as the model name, it selects the best model based on cross-validation performance. Otherwise, it returns the specified model.
+
+### `StatsForecastHandler`
+#### Description
+Main class for handling StatsForecast integration with MindsDB.
+
+#### Methods
+
+##### `create(self, target, df, args={})`
+Creates and trains the StatsForecast model.
+
+##### `predict(self, df, args={})`
+Makes forecasts using the trained StatsForecast model.
+
+##### `describe(self, attribute=None)`
+Provides information about the model, features, and performance.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| dill | Object serialization |
+| statsforecast | Time series forecasting models |
+| sklearn.metrics | Model evaluation metrics |
+| hierarchicalforecast | Hierarchical forecasting (optional) |
+
+## Error Handling
+The code includes basic error handling, such as asserting that time series settings are specified in the query. It also handles the optional dependency on `hierarchicalforecast` gracefully.
+
+## Performance Considerations
+The code uses efficient libraries like StatsForecast for time series modeling, which should provide good performance for most use cases. However, for very large datasets or complex hierarchical structures, performance may be impacted.

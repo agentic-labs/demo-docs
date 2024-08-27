@@ -1,0 +1,86 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the YouTube handler for MindsDB, which provides integration with the YouTube API. It allows users to interact with YouTube data, including comments, channels, and videos, using SQL-like queries through MindsDB's interface.
+
+## What does it do?
+The YouTube handler enables MindsDB users to:
+1. Connect to the YouTube API using OAuth2 authentication.
+2. Query YouTube comments for specific videos or channels.
+3. Retrieve information about YouTube channels.
+4. Fetch details about YouTube videos, including transcripts.
+5. Insert comments or replies to YouTube videos (where permitted).
+
+Users can perform these operations using SQL-like syntax, which the handler translates into appropriate YouTube API calls. The results are then formatted into pandas DataFrames for easy consumption and analysis within MindsDB.
+
+## Entry points
+The main entry point for the YouTube handler is the `YoutubeHandler` class in `youtube_handler.py`. This class manages the connection to the YouTube API and orchestrates the interactions between MindsDB and the YouTube data.
+
+The handler registers three main tables:
+1. `comments`: Managed by `YoutubeCommentsTable` in `youtube_tables.py`
+2. `channels`: Managed by `YoutubeChannelsTable` in `youtube_tables.py`
+3. `videos`: Managed by `YoutubeVideosTable` in `youtube_tables.py`
+
+These tables act as interfaces for querying and manipulating YouTube data. The flow of data typically goes from a user's SQL query, through the `YoutubeHandler`, to the appropriate table class, which then interacts with the YouTube API and returns the results.
+
+## Key Files
+1. `youtube_handler.py`: Contains the `YoutubeHandler` class, which is the main interface between MindsDB and the YouTube API. It handles authentication, connection management, and query routing.
+
+2. `youtube_tables.py`: Defines the table classes (`YoutubeCommentsTable`, `YoutubeChannelsTable`, `YoutubeVideosTable`) that implement the logic for interacting with specific YouTube data types.
+
+3. `__init__.py`: Sets up the handler for use within MindsDB, defining metadata such as the handler's name, type, and version.
+
+4. `__about__.py`: Contains metadata about the YouTube handler package, including version and description.
+
+## Dependencies
+The YouTube handler relies on several external libraries:
+- `googleapiclient.discovery`: For building the YouTube API client.
+- `mindsdb_sql`: For parsing SQL queries.
+- `pandas`: For data manipulation and storage.
+- `youtube_transcript_api`: For fetching video transcripts.
+
+The handler also uses MindsDB's internal libraries for API handling, configuration management, and utility functions.
+
+## Configuration
+The YouTube handler requires the following configuration:
+- `youtube_api_token`: A YouTube API key for authentication.
+- `credentials_url` or `credentials_file`: OAuth2 credentials for accessing the YouTube API.
+- `scopes`: OAuth2 scopes for YouTube API access (default provided).
+
+Users can set these configurations when creating a new database connection in MindsDB:
+
+```sql
+CREATE DATABASE mindsdb_youtube
+WITH ENGINE = 'youtube',
+PARAMETERS = {
+  "youtube_api_token": "&lt;your-youtube-api-key-token&gt;"
+};
+```
+
+## Example Usage
+After setting up the connection, users can query YouTube data using SQL-like syntax:
+
+1. Fetch comments for a specific video:
+```sql
+SELECT * FROM mindsdb_youtube.comments
+WHERE video_id = "raWFGQ20OfA"
+LIMIT 5;
+```
+
+2. Get information about a YouTube channel:
+```sql
+SELECT * FROM mindsdb_youtube.channels
+WHERE channel_id = "UC-...";
+```
+
+3. Retrieve details about a video:
+```sql
+SELECT * FROM mindsdb_youtube.videos
+WHERE video_id = "id";
+```
+
+These queries are processed by the handler, which translates them into appropriate YouTube API calls and returns the results in a tabular format.
+
+The YouTube handler provides a powerful interface for integrating YouTube data analysis into MindsDB workflows, allowing users to combine YouTube insights with other data sources and machine learning models within the MindsDB ecosystem.

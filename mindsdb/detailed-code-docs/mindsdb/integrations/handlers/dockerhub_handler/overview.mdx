@@ -1,0 +1,69 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a DockerHub handler for MindsDB. It provides interfaces to connect to DockerHub via APIs and pull repository data into MindsDB. The handler allows users to query DockerHub data such as repository images, tags, and organization settings using SQL-like syntax within the MindsDB framework.
+
+## What does it do?
+The DockerHub handler enables MindsDB users to:
+1. Authenticate with DockerHub using username and password.
+2. Retrieve summaries of images for specific repositories.
+3. Get detailed information about repository images and tags.
+4. Fetch organization settings from DockerHub.
+5. Execute SQL-like queries on DockerHub data within MindsDB.
+
+The handler translates SQL queries into appropriate API calls to DockerHub, fetches the data, and returns it in a structured format that can be used within MindsDB for further analysis or integration with other data sources.
+
+## Entry points
+The main entry point for the DockerHub handler is the `DockerHubHandler` class defined in `dockerhub_handler.py`. This class inherits from `APIHandler` and implements the necessary methods to connect to DockerHub, check the connection status, and execute queries.
+
+The data flow typically follows this pattern:
+1. User creates a connection to DockerHub using MindsDB SQL syntax.
+2. User executes a SQL query against the DockerHub data.
+3. The `DockerHubHandler` parses the query and routes it to the appropriate table class in `dockerhub_tables.py`.
+4. The table class uses the `DockerHubClient` from `dockerhub.py` to make API calls to DockerHub.
+5. The retrieved data is processed and returned as a pandas DataFrame.
+
+## Key Files
+1. `dockerhub_handler.py`: Contains the `DockerHubHandler` class, which is the main interface between MindsDB and the DockerHub API.
+2. `dockerhub.py`: Implements the `DockerHubClient` class, which handles low-level API interactions with DockerHub.
+3. `dockerhub_tables.py`: Defines various table classes that represent different DockerHub resources and implement query execution logic.
+4. `connection_args.py`: Specifies the connection arguments required for authenticating with DockerHub.
+5. `__init__.py`: Sets up the handler for use within the MindsDB framework.
+
+## Dependencies
+The DockerHub handler relies on the following key external libraries:
+- `requests` (version not specified): Used for making HTTP requests to the DockerHub API.
+- `pandas` (version not specified): Used for data manipulation and creating DataFrames from API responses.
+- `mindsdb_sql` (version not specified): Used for parsing SQL queries.
+
+Internal dependencies include various MindsDB libraries for handler implementation, API handling, and query utilities.
+
+## Configuration
+The DockerHub handler uses the following configuration parameters:
+- `username`: DockerHub username for authentication.
+- `password`: DockerHub password for authentication.
+
+These parameters are defined in `connection_args.py` and are used to establish a connection to DockerHub when creating a database in MindsDB.
+
+Example usage:
+```sql
+CREATE DATABASE mindsdb_dockerhub
+WITH ENGINE = 'dockerhub',
+PARAMETERS = {
+  "username": "user",
+  "password": "pass"
+};
+```
+
+The handler supports various SQL queries on different DockerHub resources. For example:
+
+```sql
+SELECT * FROM mindsdb_dockerhub.repo_images_summary 
+WHERE namespace="docker" AND repository="trusted-registry-nginx";
+
+SELECT * FROM mindsdb_dockerhub.org_settings where organization="docker";
+```
+
+These queries are translated into appropriate API calls to DockerHub, and the results are returned as structured data within MindsDB.

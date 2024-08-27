@@ -1,0 +1,164 @@
+---
+title: "agents_controller.py"
+---
+
+## High-level description
+This code defines the `AgentsController` class, which handles CRUD (Create, Read, Update, Delete) operations for Agents in the MindsDB system. It interacts with the database to manage agent records, including their associated skills and models.
+
+## Code Structure
+The `AgentsController` class contains methods for creating, retrieving, updating, and deleting agents. It also includes methods for checking model providers and getting completions from agents. The class interacts with other controllers like `ProjectController`, `SkillsController`, and `ModelController`.
+
+## Symbols
+
+### AgentsController
+#### Description
+This class manages CRUD operations for Agents in the MindsDB system.
+
+#### Internal Logic
+- Initializes with optional controllers for projects, skills, and models.
+- Provides methods for agent management (add, get, update, delete).
+- Handles model provider checking and agent completions.
+
+### check_model_provider
+#### Description
+Checks if a model exists and gets its provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_name | str | The name of the model |
+| provider | str | The provider to check (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model | dict | The model object |
+| provider | str | The provider of the model |
+
+#### Internal Logic
+- Attempts to get the model from the model controller.
+- If not found, determines the provider based on the model name or given provider.
+- Validates the provider against supported providers.
+
+### get_agent
+#### Description
+Retrieves an agent by name from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent_name | str | The name of the agent |
+| project_name | str | The name of the containing project |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent | db.Agents | The database agent object |
+
+### add_agent
+#### Description
+Adds a new agent to the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the new agent |
+| project_name | str | The containing project |
+| model_name | str | The name of the existing ML model |
+| skills | List[str] | List of existing skill names |
+| provider | str | The provider of the model (optional) |
+| params | Dict[str, str] | Parameters for running the agent |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent | db.Agents | The created agent |
+
+#### Internal Logic
+- Checks if the agent already exists.
+- Validates the model and skills.
+- Creates a new agent record in the database.
+- Associates the agent with the given skills.
+
+### update_agent
+#### Description
+Updates an existing agent in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent_name | str | The name of the agent to update |
+| project_name | str | The containing project |
+| name | str | The updated name of the agent (optional) |
+| model_name | str | The name of the existing ML model (optional) |
+| skills_to_add | List[str] | List of skill names to add (optional) |
+| skills_to_remove | List[str] | List of skill names to remove (optional) |
+| provider | str | The provider of the model (optional) |
+| params | Dict[str, str] | Parameters to use when running the agent (optional) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent | db.Agents | The updated agent |
+
+#### Internal Logic
+- Retrieves the existing agent.
+- Updates the agent's properties if provided.
+- Adds or removes skills as specified.
+- Updates the agent's parameters.
+
+### delete_agent
+#### Description
+Deletes an agent from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent_name | str | The name of the agent to delete |
+| project_name | str | The name of the containing project |
+
+#### Internal Logic
+- Retrieves the agent to delete.
+- Sets the `deleted_at` timestamp to mark it as deleted.
+
+### get_completion
+#### Description
+Queries an agent to get a completion.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| agent | db.Agents | Existing agent to get completion from |
+| messages | List[Dict[str, str]] | Chat history to send to the agent |
+| project_name | str | Project the agent belongs to |
+| tools | List[BaseTool] | Tools to use while getting the completion (optional) |
+| stream | bool | Whether to stream the response |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Union[Iterator[object], pd.DataFrame] | Completion as a DataFrame or iterator of completion chunks |
+
+#### Internal Logic
+- Creates a `LangchainAgent` instance.
+- Calls the appropriate method based on whether streaming is requested.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| datetime | For handling timestamps |
+| typing | For type hinting |
+| langchain_core.tools | For using BaseTool |
+| sqlalchemy | For database operations |
+| pandas | For data manipulation |
+| mindsdb.interfaces.model.functions | For handling predictor-related functions |
+| mindsdb.interfaces.storage.db | For database models |
+| mindsdb.interfaces.model.model_controller | For interacting with models |
+| mindsdb.interfaces.skills.skills_controller | For managing skills |
+| mindsdb.interfaces.database.projects | For project-related operations |
+| mindsdb.utilities.context | For context management |
+
+## Error Handling
+The class raises `ValueError` exceptions for various error conditions, such as when an agent already exists or when a skill or model is not found.
+
+This documentation provides a comprehensive overview of the `AgentsController` class and its main functionalities. It covers the purpose of the class, its main methods, and how it interacts with other components of the MindsDB system.

@@ -1,0 +1,142 @@
+---
+title: "chatbot_controller.py"
+---
+
+## High-level description
+This file contains the `ChatBotController` class, which handles CRUD (Create, Read, Update, Delete) operations for chatbots at the database level. It provides methods to manage chatbots, including creating, retrieving, updating, and deleting chatbots, as well as listing all chatbots within a project.
+
+## Code Structure
+The `ChatBotController` class is the main component of this file. It interacts with the database to perform operations on chatbot records. The class uses the `ProjectController` and `AgentsController` for project and agent-related operations, respectively. The `db.ChatBots` model is used to represent chatbot records in the database.
+
+## Symbols
+
+### `ChatBotController`
+#### Description
+This class handles CRUD operations for chatbots at the database level.
+
+#### Internal Logic
+- Initializes with `ProjectController` and `AgentsController` instances.
+- Uses SQLAlchemy ORM to interact with the database.
+- Implements methods for creating, retrieving, updating, and deleting chatbots.
+- Handles project-specific operations and validations.
+
+### `get_chatbot`
+#### Description
+Retrieves a chatbot by name within a specific project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chatbot_name | str | The name of the chatbot |
+| project_name | str | The name of the containing project (default: 'mindsdb') |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bot_obj | dict | A dictionary containing chatbot information |
+
+#### Internal Logic
+1. Retrieves the project using `ProjectController`.
+2. Queries the database for the chatbot using a join between `ChatBots` and `Tasks` tables.
+3. Fetches additional information like database names and agent details.
+4. Constructs and returns a dictionary with chatbot information.
+
+### `get_chatbots`
+#### Description
+Retrieves all chatbots within a specific project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| project_name | str | The name of the containing project (default: 'mindsdb') |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bots | List[dict] | A list of dictionaries containing chatbot information |
+
+#### Internal Logic
+1. Queries the database for all chatbots in the specified project.
+2. Fetches additional information like database names and agent details for each chatbot.
+3. Constructs and returns a list of dictionaries with chatbot information.
+
+### `add_chatbot`
+#### Description
+Adds a new chatbot to the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the new chatbot |
+| project_name | str | The containing project |
+| model_name | str | The name of the existing ML model the chatbot will use |
+| agent_name | str | The name of the existing agent the chatbot will use |
+| database_id | int | The ID of the existing database the chatbot will use |
+| is_running | bool | Whether or not to start the chatbot right after creation |
+| params | Dict[str, str] | Parameters to use when running the chatbot |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bot | db.ChatBots | The created chatbot database object |
+
+#### Internal Logic
+1. Validates input parameters and checks for existing chatbots with the same name.
+2. Creates a new `ChatBots` record in the database.
+3. Creates a corresponding `Tasks` record for the chatbot.
+4. Commits the changes to the database.
+
+### `update_chatbot`
+#### Description
+Updates an existing chatbot in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chatbot_name | str | The name of the existing chatbot to update |
+| project_name | str | The containing project (default: 'mindsdb') |
+| name | str | The updated name of the chatbot |
+| model_name | str | The name of the existing ML model the chatbot will use |
+| agent_name | str | The name of the existing agent the chatbot will use |
+| database_id | int | The ID of the existing database the chatbot will use |
+| is_running | bool | Whether or not the chatbot will run after update |
+| params | Dict[str, str] | Parameters to use when running the chatbot |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| existing_chatbot_rec | db.ChatBots | The updated chatbot database object |
+
+#### Internal Logic
+1. Retrieves the existing chatbot record from the database.
+2. Updates the chatbot record with the provided parameters.
+3. Updates the corresponding `Tasks` record if necessary.
+4. Merges the new parameters with existing ones.
+5. Commits the changes to the database.
+
+### `delete_chatbot`
+#### Description
+Deletes a chatbot from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| chatbot_name | str | The name of the chatbot to delete |
+| project_name | str | The name of the containing project (default: 'mindsdb') |
+
+#### Internal Logic
+1. Retrieves the chatbot record from the database.
+2. Deletes the corresponding `Tasks` record.
+3. Deletes the chatbot record from the database.
+4. Commits the changes to the database.
+
+## Dependencies
+- `mindsdb.interfaces.agents.agents_controller`: AgentsController
+- `mindsdb.interfaces.database.projects`: ProjectController
+- `mindsdb.interfaces.storage`: db
+- `mindsdb.utilities.context`: context
+- `mindsdb.api.executor.controllers.session_controller`: SessionController
+- `mindsdb.utilities.config`: Config
+
+## Error Handling
+The class uses exceptions to handle errors, such as when a chatbot is not found or when there are conflicts with existing chatbots. These exceptions are typically caught and handled in the higher-level API layers.

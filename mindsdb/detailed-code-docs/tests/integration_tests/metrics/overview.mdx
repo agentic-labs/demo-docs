@@ -1,0 +1,83 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This file contains integration tests for the metrics functionality in MindsDB. It focuses on testing HTTP metrics, specifically checking if metrics are correctly updated after making an API request and if the multiprocess directory for Prometheus is properly populated.
+
+## Code Structure
+The main test class `TestMetrics` inherits from `HTTPHelperMixin` and uses pytest fixtures. It contains utility functions for retrieving and waiting for specific metrics, and a test method for HTTP metrics.
+
+## Symbols
+
+### `_get_metrics()`
+#### Description
+Retrieves the current metrics from the MindsDB HTTP API.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | str | The raw metrics text from the API |
+
+#### Internal Logic
+1. Retrieves configuration from `Config()`
+2. Constructs the metrics URL
+3. Makes a GET request to the metrics endpoint
+4. Returns the response text
+
+### `_wait_for_metric(name: str, labels: Dict[str, str], value: str, timeout: datetime.timedelta = None)`
+#### Description
+Waits for a specific metric to appear with the given labels and value, or until the timeout is reached.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the metric to wait for |
+| labels | Dict[str, str] | The labels to match for the metric |
+| value | str | The expected value of the metric |
+| timeout | datetime.timedelta | The maximum time to wait (default: 30 seconds) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| return value | bool | True if the metric is found, False if timeout is reached |
+
+#### Internal Logic
+1. Sets a default timeout of 30 seconds if not provided
+2. Enters a loop that continues until the timeout is reached
+3. Retrieves current metrics
+4. Parses the metrics text line by line
+5. Checks if the metric name, labels, and value match the expected values
+6. Returns True if a match is found, otherwise sleeps for 0.5 seconds and continues the loop
+7. Returns False if the timeout is reached without finding a match
+
+### `TestMetrics`
+#### Description
+A test class for checking metrics functionality in MindsDB.
+
+#### Internal Logic
+Contains a single test method `test_http_metrics` that:
+1. Checks if the `PROMETHEUS_MULTIPROC_DIR` environment variable is set
+2. Makes an API request to `/projects/mindsdb/models`
+3. Waits for the `mindsdb_rest_api_latency_seconds_count` metric to be updated
+4. Verifies that the multiprocess directory for Prometheus is populated
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pytest | Testing framework |
+| requests | Making HTTP requests |
+| mindsdb.utilities.config | Accessing MindsDB configuration |
+| tests.utils.http_test_helpers | HTTP testing utilities |
+
+## Configuration
+The test uses the following configuration options:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| OVERRIDE_CONFIG | dict | {'tasks': {'disable': True}, 'jobs': {'disable': True}} | Configuration overrides for the test |
+| API_LIST | list | ["http"] | List of APIs to enable for the test |
+
+## TODOs
+- Refactor common fixtures out of conftest.
+
+This test file is crucial for ensuring that the metrics functionality in MindsDB is working correctly, particularly for HTTP API requests. It verifies that metrics are being updated and stored properly, which is essential for monitoring and performance analysis of the MindsDB system.

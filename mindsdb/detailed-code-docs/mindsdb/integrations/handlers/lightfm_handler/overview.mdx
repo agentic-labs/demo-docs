@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the LightFM handler for MindsDB, which integrates the LightFM recommender system library into the MindsDB framework. The handler provides functionality for creating, training, and using recommender models, as well as evaluating their performance.
+
+## What does it do?
+The LightFM handler allows users to create and use recommendation models within MindsDB. It supports both user-item and item-item collaborative filtering recommendations. The handler processes interaction data (such as user ratings or purchase history) to train a LightFM model, which can then be used to generate personalized recommendations for users or find similar items.
+
+Key functionalities include:
+1. Creating and training LightFM models using user-item interaction data.
+2. Generating user-item recommendations (e.g., recommending products to users).
+3. Generating item-item recommendations (e.g., finding similar products).
+4. Evaluating model performance using metrics like AUC, precision, and recall.
+5. Providing model descriptions and insights.
+
+## Entry points
+The main entry point for the LightFM handler is the `LightFMHandler` class in `lightfm_handler.py`. This class inherits from `BaseMLEngine` and implements the core functionality for integrating LightFM with MindsDB. The handler uses helper functions from `helpers.py` for generating recommendations and relies on the `ModelParameters` class in `settings.py` for handling model parameters.
+
+The data flow typically follows this pattern:
+1. User provides interaction data and model parameters.
+2. `LightFMHandler.create()` preprocesses the data and trains the model.
+3. `LightFMHandler.predict()` generates recommendations using the trained model.
+4. `LightFMHandler.describe()` provides information about the model and its performance.
+
+## Key Files
+1. `lightfm_handler.py`: Contains the main `LightFMHandler` class, which implements the core functionality for creating, predicting, and describing recommender models.
+
+2. `helpers.py`: Provides helper functions for generating user-item and item-item recommendations, as well as utility functions for mapping between user/item IDs and their corresponding indices in the model.
+
+3. `settings.py`: Defines the `ModelParameters` class using Pydantic, which specifies default parameters for the LightFM recommendation model.
+
+4. `__init__.py`: Sets up the handler integration with MindsDB, defining metadata and importing necessary components.
+
+5. `__about__.py`: Contains metadata information for the MindsDB LightFM Recommender handler, including version, description, and licensing information.
+
+## Dependencies
+The LightFM handler relies on several external libraries:
+- `lightfm`: The core library for building and training the recommender model.
+- `numpy`: Used for numerical operations and array manipulations.
+- `pandas`: Used for data manipulation and creating DataFrames.
+- `scipy`: Used for sparse matrix operations.
+- `dill`: Used for serializing and deserializing Python objects.
+- `pydantic`: Used for data validation and settings management.
+- `dataprep_ml`: Used for preprocessing recommender system data.
+
+## Configuration
+The LightFM handler uses the `ModelParameters` class in `settings.py` to define configurable parameters for the recommendation model. The main configurable options are:
+
+1. `learning_rate`: Controls the step size during model training (default: 0.05).
+2. `loss`: Specifies the loss function used in the LightFM model (default: "warp").
+3. `epochs`: Determines the number of training epochs (default: 10).
+
+Users can override these default values when creating a model using the `USING` syntax in MindsDB SQL queries.
+
+Additional configuration options are available when creating a model:
+- `item_id`: Column name in input data that contains item IDs.
+- `user_id`: Column name in input data that contains user IDs.
+- `threshold`: Threshold for interaction scores (if present in input data).
+- `n_recommendations`: Number of recommendations to return.
+- `evaluation`: Boolean flag to run evaluation and store metrics (default: false).
+
+Example usage:
+```sql
+CREATE MODEL lightfm_demo
+FROM mysql_demo_db (SELECT * FROM movie_lens_ratings)
+PREDICT movieId
+USING
+  engine='lightfm',
+  item_id='movieId',
+  user_id='userId',
+  threshold=4,
+  n_recommendations=10,
+  evaluation=true;
+```
+
+This integration provides a powerful and flexible way to create and use recommendation models within MindsDB, leveraging the capabilities of the LightFM library for collaborative filtering tasks.

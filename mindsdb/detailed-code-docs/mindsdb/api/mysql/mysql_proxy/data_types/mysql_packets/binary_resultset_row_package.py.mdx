@@ -1,0 +1,65 @@
+---
+title: "binary_resultset_row_package.py"
+---
+
+## High-level description
+This code defines a `BinaryResultsetRowPacket` class that implements the binary protocol for MySQL result set rows. It encodes data from various column types into a binary format suitable for transmission in the MySQL protocol.
+
+## Code Structure
+The main class `BinaryResultsetRowPacket` inherits from `Packet`. It contains methods for setting up the packet data, encoding date values, and generating the packet body. The class uses constants from the `TYPES` class (imported from another module) to determine how to encode different data types.
+
+## Symbols
+
+### BinaryResultsetRowPacket
+#### Description
+This class represents a binary result set row packet in the MySQL protocol. It encodes various data types into a binary format suitable for transmission.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | list | The row data to be encoded |
+| columns | list | Metadata about the columns in the result set |
+
+#### Internal Logic
+1. Initializes the packet with a header byte and null bitmap.
+2. Encodes each column value based on its type:
+   - Handles numeric types (DOUBLE, LONGLONG, LONG, FLOAT, YEAR)
+   - Encodes date and time types (DATE, TIMESTAMP, DATETIME)
+   - Encodes string types
+3. Generates the final packet body by concatenating all encoded values.
+
+### encode_date
+#### Description
+Encodes date and datetime values into the binary format required by the MySQL protocol.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| val | str or pd.Timestamp | The date/datetime value to encode |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoded_date | bytes | The binary-encoded date/datetime value |
+
+#### Internal Logic
+1. Parses the input value to determine if it's a date or datetime.
+2. Encodes year, month, and day for all date types.
+3. Additionally encodes hour, minute, second, and microsecond for datetime types.
+4. Prepends the length of the encoded data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| datetime | Handling date and time operations |
+| struct | Packing binary data |
+| pandas | Handling Timestamp objects |
+| mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum | Datum class for string encoding |
+| mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet | Base Packet class |
+| mindsdb.api.mysql.mysql_proxy.libs.constants.mysql | MySQL type constants |
+
+## Error Handling
+The code raises exceptions for unsupported column types with the message "Column with type {col_type} cant be encripted".
+
+## Performance Considerations
+The code uses efficient binary packing with the `struct` module for numeric and date/time types, which should provide good performance for large result sets.

@@ -1,0 +1,79 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a controller for managing user-defined functions (UDFs) in MindsDB, specifically designed to work with the BYOM (Bring Your Own Model) handler. The main functionality is provided in the `controller.py` file, which defines classes and utilities for mapping Python types to DuckDB types, creating DuckDB functions from user-defined methods, and managing the registration of these functions within a DuckDB connection.
+
+## What does it do?
+The code in this directory enables MindsDB to integrate custom functions defined by users into its database operations. It acts as a bridge between user-defined Python functions and DuckDB, allowing these functions to be used within SQL queries. The system performs the following key tasks:
+
+1. Maps Python data types to their equivalent DuckDB types.
+2. Creates wrapper functions that can be used by DuckDB to call user-defined Python functions.
+3. Manages BYOM (Bring Your Own Model) engines and their associated methods.
+4. Prepares and registers user-defined functions for use with DuckDB connections.
+
+This functionality allows users to extend MindsDB's capabilities by incorporating their own custom logic and models into database operations, enhancing the flexibility and power of data analysis and manipulation within the MindsDB ecosystem.
+
+## Key Files
+The directory contains two main files:
+
+1. `__init__.py`: This file is empty, serving as a Python package initializer.
+
+2. `controller.py`: This is the core file of the directory, containing all the logic for managing user-defined functions. It includes the following key components:
+
+   - `python_to_duckdb_type`: A function that maps Python types to DuckDB types.
+   - `function_maker`: A utility function that creates lambda functions to wrap other functions.
+   - `BYOMFunctionsController`: A class that manages BYOM engines and methods, providing an interface for interacting with user-defined functions.
+   - `DuckDBFunctions`: A class that handles the creation and registration of DuckDB functions based on BYOM methods.
+
+## Dependencies
+The code relies on the following external dependencies:
+
+1. `duckdb.typing`: Used for DuckDB type definitions. This is crucial for mapping Python types to their DuckDB equivalents.
+
+2. `mindsdb.interfaces.storage.model_fs`: Imports the `HandlerStorage` class, which is used for managing BYOM handlers. This dependency is part of the MindsDB ecosystem and is essential for interfacing with the BYOM functionality.
+
+## Configuration
+The code does not explicitly use configuration files or environment variables. However, it does rely on the MindsDB session configuration, which is passed to the `BYOMFunctionsController` during initialization. This session likely contains information about the MindsDB environment and user settings.
+
+## Code Examples
+
+Here's an example of how the `python_to_duckdb_type` function maps Python types to DuckDB types:
+
+```python
+def python_to_duckdb_type(py_type):
+    if py_type == 'str':
+        return duckdb.typing.VARCHAR
+    elif py_type == 'int':
+        return duckdb.typing.BIGINT
+    elif py_type == 'float':
+        return duckdb.typing.DOUBLE
+    elif py_type == 'bool':
+        return duckdb.typing.BOOLEAN
+    else:
+        return duckdb.typing.VARCHAR
+```
+
+The `BYOMFunctionsController` class provides methods for interacting with BYOM engines and methods. Here's an example of the `method_call` method:
+
+```python
+def method_call(self, engine, method_name, args):
+    engine_obj = self.get_engines()[engine]
+    method = self.get_methods(engine)[method_name]
+    return method(engine_obj, *args)
+```
+
+The `DuckDBFunctions` class prepares and registers functions for use with DuckDB. Here's a snippet from the `check_function` method:
+
+```python
+def check_function(self, node):
+    engine, method = node.split('.')
+    method_obj = self.controller.get_methods(engine)[method]
+    arg_types = [python_to_duckdb_type(arg) for arg in method_obj.args]
+    return_type = python_to_duckdb_type(method_obj.return_type)
+    func = function_maker(len(arg_types), lambda *args: self.controller.method_call(engine, method, args))
+    return func, arg_types, return_type
+```
+
+These examples illustrate how the code manages the integration between user-defined Python functions and DuckDB, enabling seamless use of custom functions within MindsDB's SQL environment.

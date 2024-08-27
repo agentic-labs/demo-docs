@@ -1,0 +1,53 @@
+---
+title: "join_step.py"
+---
+
+## High-level description
+This code implements a `JoinStepCall` class that handles the execution of a join operation between two result sets in a SQL query. It supports joining regular data as well as prediction data, adapting the join condition based on the nature of the data being joined.
+
+## Code Structure
+The `JoinStepCall` class inherits from `BaseStepCall` and is bound to the `JoinStep` from the SQL planner. The main functionality is implemented in the `call` method, which processes the join operation based on the input data and join conditions.
+
+## Symbols
+
+### JoinStepCall
+#### Description
+A class that handles the execution of a join operation between two result sets in a SQL query.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | JoinStep | The join step to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | ResultSet | The result of the join operation |
+
+#### Internal Logic
+1. Retrieve left and right data from the steps_data dictionary.
+2. Determine if either dataset is a prediction.
+3. If dealing with prediction data:
+   - Use `__mindsdb_row_id` for joining.
+   - Copy row IDs between datasets if necessary.
+   - Set join type based on which side is the prediction.
+4. For regular data:
+   - Adapt the join condition to use the correct column names.
+5. Prepare the data for joining by converting to dataframes with prefixed column names.
+6. Construct and execute a SQL query to perform the join.
+7. Process the result and return a new ResultSet.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| numpy | Used for handling NaN values |
+| mindsdb_sql | Provides SQL parsing and rendering functionality |
+| mindsdb.api.executor.sql_query.result_set | Provides ResultSet class for handling query results |
+| mindsdb.api.executor.utilities.sql | Provides utility function for querying dataframes |
+| mindsdb.api.executor.exceptions | Provides custom exceptions |
+
+## Error Handling
+The code raises a `RuntimeError` if it's unable to find a row ID when joining prediction data. It also raises a `NotSupportedYet` exception if trying to join tables without a condition for non-prediction data.
+
+## Performance Considerations
+The code uses DuckDB (through the `query_df_with_type_infer_fallback` function) to perform the actual join operation, which is generally efficient for in-memory operations on dataframes.

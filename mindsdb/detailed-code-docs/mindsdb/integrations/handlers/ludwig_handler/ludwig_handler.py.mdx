@@ -1,0 +1,108 @@
+---
+title: "ludwig_handler.py"
+---
+
+## High-level description
+This code implements a `LudwigHandler` class, which is an integration with the Ludwig declarative ML library. It provides functionality to create and train machine learning models using Ludwig's auto_train feature, and to make predictions using the trained models.
+
+## Code Structure
+The `LudwigHandler` class inherits from `BaseMLEngine` and implements two main methods: `create` for training a model and `predict` for making predictions. It also uses a `RayConnection` context manager for handling Ray cluster connections.
+
+## Symbols
+
+### LudwigHandler
+#### Description
+A class that integrates the Ludwig declarative ML library with MindsDB. It provides methods for creating (training) models and making predictions.
+
+#### Inputs
+None specific to the class initialization.
+
+#### Internal Logic
+The class implements two main methods:
+
+1. `create`: Trains a model using Ludwig's auto_train feature.
+2. `predict`: Makes predictions using a trained model.
+
+It also includes a static method `_call_model` for processing predictions.
+
+___
+
+### create
+#### Description
+Creates and trains a model using Ludwig's auto_train feature.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target variable for prediction |
+| df | Optional[pd.DataFrame] | The input dataset for training |
+| args | Optional[dict] | Additional arguments for model creation |
+
+#### Internal Logic
+1. Extracts 'using' arguments from the input args.
+2. Sets up a user configuration for hyperparameter optimization.
+3. Uses a `RayConnection` context to run auto_train.
+4. Stores the best model, data type dictionary, and accuracy metrics.
+
+___
+
+### predict
+#### Description
+Makes predictions using a trained Ludwig model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | The input data for prediction |
+| args | Optional[dict] | Additional arguments for prediction (unused) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | pd.DataFrame | DataFrame containing the original input data and predictions |
+
+#### Internal Logic
+1. Loads the stored model.
+2. Uses a `RayConnection` context to call the model for predictions.
+3. Processes and formats the predictions using the `_call_model` method.
+
+___
+
+### _call_model
+#### Description
+A static method that processes model predictions and formats the output.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | The input data for prediction |
+| model | Ludwig model | The trained Ludwig model |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| joined | pd.DataFrame | DataFrame containing the original input data and formatted predictions |
+
+#### Internal Logic
+1. Makes predictions using the input model.
+2. Formats the prediction column names.
+3. Adds an explanation column (currently set to None).
+4. Joins the predictions with the original input data.
+5. Renames columns if necessary to avoid conflicts.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| typing | Type hinting |
+| dill | Object serialization |
+| dask | Parallel computing |
+| pandas | Data manipulation |
+| ludwig.automl | Auto ML functionality |
+| mindsdb.integrations.libs.base | Base class for ML engines |
+| .utils | RayConnection context manager |
+
+## TODOs
+1. Filter out incompatible use cases (e.g., time series won't work currently)
+2. Enable custom values via `args` (mindful of local vs cloud)
+
+This code provides a comprehensive integration of the Ludwig library with MindsDB, allowing for automated model training and prediction using Ludwig's capabilities within the MindsDB ecosystem.

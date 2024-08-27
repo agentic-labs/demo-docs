@@ -1,0 +1,77 @@
+---
+title: "command_packet.py"
+---
+
+## High-level description
+This code defines the `CommandPacket` class, which is responsible for parsing and handling various MySQL command packets. It extends the `Packet` class and implements specific logic for different MySQL commands, such as query execution, prepared statement handling, and database operations.
+
+## Code Structure
+The `CommandPacket` class inherits from the `Packet` class and contains methods for reading and parsing different types of MySQL command packets. The main methods are `_read_byte`, `read_params`, and `setup`, which work together to process the incoming packet data.
+
+## Symbols
+
+### CommandPacket
+#### Description
+The `CommandPacket` class represents a MySQL command packet and provides functionality to parse and handle various types of commands.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| length | int | Length of the packet |
+| count_header | int | Sequence number of the packet |
+| body | str | Packet body content |
+
+#### Internal Logic
+1. The `setup` method initializes the packet based on the input parameters.
+2. It determines the command type from the first byte of the body.
+3. Depending on the command type, it parses the remaining data accordingly:
+   - For query and prepare statements, it extracts the SQL query.
+   - For execute statements, it reads statement ID, flags, and parameters.
+   - For other commands, it extracts relevant information (e.g., database name, statement ID).
+4. The `read_params` method is used to parse parameters for prepared statements.
+
+### _read_byte
+#### Description
+A helper method to read a single byte from the buffer.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| buffer | bytes | The input buffer to read from |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| b | int | The read byte as an integer |
+| buffer | bytes | The remaining buffer after reading the byte |
+
+### read_params
+#### Description
+Reads and parses parameters for prepared statements.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| buffer | bytes | The input buffer containing parameter data |
+| num_params | int | Number of parameters to read |
+
+#### Internal Logic
+1. Reads the null-map to determine which parameters are NULL.
+2. Reads the send-type byte to determine if type information is included.
+3. If type information is present, reads the type and sign for each parameter.
+4. Parses each parameter based on its type and adds it to the `parameters` list.
+
+## Dependencies
+The code relies on the following external modules and internal classes:
+| Dependency | Purpose |
+|:-----------|:--------|
+| struct | For binary data handling |
+| math | For mathematical operations |
+| Packet | Base class for packet handling |
+| Datum | For data type handling |
+| COMMANDS, TYPES | Constant values for MySQL commands and data types |
+
+## Error Handling
+The code raises exceptions for unsupported parameter types in the `read_params` method.
+
+This code is a crucial part of the MySQL protocol implementation, handling various command types and prepared statement execution in the MindsDB server.

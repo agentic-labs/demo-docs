@@ -1,0 +1,135 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains classes and utilities for implementing a MongoDB-compatible API in MindsDB. It includes components for handling MongoDB queries, managing authentication sessions, and executing SQL commands within the MindsDB environment.
+
+## What does it do?
+The code in this directory provides the following functionalities:
+
+1. Handles MongoDB-like queries and generates appropriate responses.
+2. Manages a collection of responders for different types of MongoDB operations.
+3. Implements SCRAM-SHA-1 and SCRAM-SHA-256 authentication mechanisms for MongoDB compatibility.
+4. Manages authentication sessions for the MongoDB-like API.
+5. Executes SQL commands within the MindsDB environment, bridging the gap between MongoDB queries and SQL operations.
+
+## Entry points
+The main entry points for this directory are:
+
+1. `responder.py`: Defines the base `Responder` class for handling MongoDB-like queries.
+2. `responder_collection.py`: Implements the `RespondersCollection` class to manage multiple responders.
+3. `session.py`: Contains the `Session` class for managing authentication sessions.
+4. `scram.py`: Implements the `Scram` class for SCRAM authentication.
+5. `query_sql.py`: Provides the `run_sql_command` function to execute SQL commands in MindsDB.
+
+The `__init__.py` file serves as the package initializer, exposing key classes for easy import.
+
+## Key Files
+
+### responder.py
+This file defines the `Responder` base class, which is crucial for handling MongoDB-like queries. It provides a flexible structure for matching incoming queries and generating appropriate responses. The class contains two main methods:
+
+1. `match`: Determines if the responder can handle a given query.
+2. `handle`: Generates a response for a matched query.
+
+Example usage:
+```python
+class CustomResponder(Responder):
+    def __init__(self):
+        super().__init__(
+            when={'operation': 'find'},
+            result=lambda query, args, env, session: {'result': 'Custom find operation'}
+        )
+
+responder = CustomResponder()
+if responder.match({'operation': 'find', 'collection': 'users'}):
+    result = responder.handle(query, args, env, session)
+```
+
+### responder_collection.py
+This file implements the `RespondersCollection` class, which manages a collection of responders. It provides methods to add responders and find matching responders for given queries. The main methods are:
+
+1. `add`: Adds a new responder to the collection.
+2. `find_match`: Finds a matching responder for a given query.
+
+Example usage:
+```python
+collection = RespondersCollection()
+collection.add(
+    when={'operation': 'insert'},
+    result={'status': 'inserted'}
+)
+responder = collection.find_match({'operation': 'insert', 'document': {'name': 'John'}})
+```
+
+### session.py
+The `Session` class in this file manages authentication sessions for the MongoDB-like API. It initializes with configuration and environment details and provides methods for SCRAM authentication. Key methods include:
+
+1. `init_scram`: Initializes the SCRAM authentication mechanism.
+2. `get_salted_password`: Retrieves the salted password for a given username.
+
+Example usage:
+```python
+server_env = {'config': {'api': {'mongodb': {'user': 'admin', 'password': 'secret'}}}}
+session = Session(server_env)
+session.init_scram('sha256')
+salt, salted_password = session.get_salted_password('admin')
+```
+
+### scram.py
+This file implements the `Scram` class, which handles the server-side SCRAM-SHA-1 and SCRAM-SHA-256 authentication mechanisms for MongoDB. It provides methods for processing client messages and performing cryptographic operations. Key methods include:
+
+1. `process_client_first_message`: Processes the first message from the client.
+2. `process_client_second_message`: Processes the second message and verifies the client's proof.
+3. `salt_password`: Generates a salted password using PBKDF2.
+
+Example usage:
+```python
+scram = Scram('sha256', get_salted_password_func)
+server_first_message = scram.process_client_first_message(client_first_message)
+server_final_message = scram.process_client_second_message(client_second_message)
+```
+
+### query_sql.py
+This file contains the `run_sql_command` function, which executes SQL commands in the MindsDB environment. It creates a SQL session, sets up the database, executes the command, and returns the result data.
+
+Example usage:
+```python
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
+
+result = run_sql_command(request_env, ast_query)
+```
+
+## Dependencies
+The code in this directory relies on the following external libraries and frameworks:
+
+1. `pymongo` (version not specified): Used for MongoDB-related utilities.
+2. `mindsdb` (version not specified): Core MindsDB functionality.
+3. Standard Python libraries: `base64`, `hashlib`, `hmac`, `os`.
+
+## Configuration
+The configuration for this MongoDB-compatible API is typically provided through the `server_mindsdb_env` dictionary, which contains server environment variables and configuration. Key configuration items include:
+
+1. MongoDB API user credentials (username and password).
+2. Authentication method (SCRAM-SHA-1 or SCRAM-SHA-256).
+3. MindsDB environment settings.
+
+Example configuration structure:
+```python
+server_mindsdb_env = {
+    'config': {
+        'api': {
+            'mongodb': {
+                'user': 'admin',
+                'password': 'secret'
+            }
+        }
+    },
+    'mindsdb_env': {
+        # MindsDB-specific environment settings
+    }
+}
+```
+
+This directory provides a comprehensive set of tools for implementing a MongoDB-compatible API within MindsDB, handling authentication, query processing, and SQL command execution. It allows MindsDB to interact with MongoDB clients while leveraging its own SQL-based backend.

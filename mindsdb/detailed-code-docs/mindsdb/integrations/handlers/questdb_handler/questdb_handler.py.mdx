@@ -1,0 +1,110 @@
+---
+title: "questdb_handler.py"
+---
+
+## High-level description
+This code defines a `QuestDBHandler` class that extends the `PostgresHandler` to handle connections and execute statements for QuestDB, a time-series database. It provides methods for listing tables, retrieving column information, and inserting data into QuestDB using its specific ingestion protocol.
+
+## Code Structure
+The `QuestDBHandler` class inherits from `PostgresHandler` and overrides or adds methods specific to QuestDB operations. It uses the `questdb.ingress.Sender` for data insertion and relies on the `HandlerResponse` class from `mindsdb.integrations.libs.response` for formatting responses.
+
+## References
+- `mindsdb.integrations.handlers.postgres_handler.Handler`
+- `mindsdb.integrations.libs.response.HandlerResponse`
+- `mindsdb.integrations.libs.response.RESPONSE_TYPE`
+- `mindsdb.utilities.log`
+
+## Symbols
+
+### QuestDBHandler
+#### Description
+A handler class for QuestDB operations, extending the PostgreSQL handler with QuestDB-specific functionality.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the handler instance |
+| **kwargs | dict | Additional arguments passed to the parent class constructor |
+
+#### Internal Logic
+- Initializes the parent PostgresHandler with the given name and arguments.
+- Provides methods for getting tables, columns, and inserting data specific to QuestDB.
+
+### get_tables
+#### Description
+Retrieves a list of all tables in the QuestDB database.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HandlerResponse | Response containing the list of tables |
+
+#### Internal Logic
+Executes the "SHOW TABLES" query using the parent class's `native_query` method.
+
+### get_columns
+#### Description
+Retrieves information about columns for a specific table in QuestDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | Name of the table to get column information for |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HandlerResponse | Response containing column information |
+
+#### Internal Logic
+Executes a query to select all information from the `tables()` function for the specified table name.
+
+### qdb_connect
+#### Description
+Creates a connection to QuestDB using the QuestDB-specific ingress protocol.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sender | questdb.ingress.Sender | A Sender object for QuestDB ingestion |
+
+#### Internal Logic
+- Constructs a configuration string using the connection arguments.
+- Creates and returns a `Sender` object using the configuration.
+
+### insert
+#### Description
+Inserts data from a pandas DataFrame into a QuestDB table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| table_name | str | Name of the table to insert data into |
+| df | pandas.DataFrame | DataFrame containing the data to be inserted |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HandlerResponse | Response indicating success or failure of the insertion |
+
+#### Internal Logic
+- Connects to QuestDB using `qdb_connect`.
+- Identifies a datetime column in the DataFrame.
+- Uses the QuestDB Sender to insert the DataFrame data into the specified table.
+- Returns a success response if insertion is successful, or an error response if an exception occurs.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pandas | Data manipulation and analysis |
+| numpy | Numerical operations and dtype checking |
+| questdb.ingress | QuestDB-specific ingestion protocol |
+
+## Error Handling
+The `insert` method includes error handling:
+- It catches exceptions during the insertion process.
+- Logs the error using the logger.
+- Returns a `HandlerResponse` with an ERROR type, including the error message.
+
+## TODOs
+- Check the dialect for QuestDB (as mentioned in the class docstring).

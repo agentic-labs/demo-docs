@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains files for setting up a custom MySQL database Docker image. It includes a Dockerfile for building the image and SQL scripts for initializing the database with a specific schema and data. The setup is designed to create a secure database environment for storing and managing rental property information.
+
+## What does it do?
+This directory sets up a Docker container with a MySQL database specifically configured for handling rental property data. Here's what it does in simple terms:
+
+1. Creates a Docker image based on the official MySQL image.
+2. Sets up an initial database named 'test'.
+3. Creates a table called 'rentals' to store information about rental properties, including details like number of rooms, bathrooms, square footage, location, and price.
+4. Creates a secure user account that requires SSL encryption to connect to the database.
+5. Loads rental property data from a CSV file into the 'rentals' table.
+
+This setup allows for easy deployment of a pre-configured database with rental data, which could be used by a property management system or a rental listing website.
+
+## Key Files
+
+1. Dockerfile
+   - Purpose: Defines how to build the custom MySQL Docker image.
+   - Key features:
+     - Uses the official MySQL image as a base
+     - Sets up an initial database named 'test'
+     - Copies SQL scripts and a CSV file into the image
+
+2. sql-scripts/init.sql
+   - Purpose: Initializes the database schema and loads data.
+   - Key features:
+     - Creates the 'rentals' table
+     - Sets up a secure user with SSL requirements
+     - Loads data from a CSV file into the 'rentals' table
+
+3. home_rentals.csv (referenced, not shown in the directory listing)
+   - Purpose: Contains the rental property data to be loaded into the database.
+
+## Dependencies
+The main dependency for this setup is the official MySQL Docker image. The Dockerfile uses this as its base image:
+
+```dockerfile
+FROM mysql
+```
+
+This ensures that the container has a fully functional MySQL server installed and configured according to best practices.
+
+## Configuration
+The configuration for this MySQL setup is primarily done through the Dockerfile and the SQL initialization script. Here are the key configuration points:
+
+1. Database Name:
+   Set in the Dockerfile using an environment variable:
+   ```dockerfile
+   ENV MYSQL_DATABASE test
+   ```
+
+2. Database Schema:
+   Defined in the `init.sql` script, which creates the 'rentals' table with the following structure:
+   ```sql
+   CREATE TABLE rentals (
+     number_of_rooms INT,
+     number_of_bathrooms INT,
+     sqft varchar(25),
+     location varchar(25),
+     days_on_market INT,
+     initial_price FLOAT,
+     neighborhood varchar(25),
+     rental_price FLOAT
+   );
+   ```
+
+3. Secure User:
+   Created in the `init.sql` script with specific SSL requirements:
+   ```sql
+   CREATE USER 'ssl_user'@'172.17.0.1' IDENTIFIED BY 'ssl';
+   GRANT ALL ON *.* TO 'ssl_user'@'172.17.0.1';
+   ALTER USER 'ssl_user'@'172.17.0.1' REQUIRE X509;
+   ```
+
+4. Data Initialization:
+   The `init.sql` script loads data from the `home_rentals.csv` file into the 'rentals' table:
+   ```sql
+   LOAD DATA INFILE '/home_rentals.csv' 
+   INTO TABLE rentals 
+   FIELDS TERMINATED BY ',' 
+   OPTIONALLY ENCLOSED BY '"' 
+   ESCAPED BY '"' 
+   LINES TERMINATED BY '\n' 
+   IGNORE 1 ROWS;
+   ```
+
+This configuration creates a secure MySQL environment with a pre-defined schema and initial data, all packaged in a Docker container for easy deployment and scaling.

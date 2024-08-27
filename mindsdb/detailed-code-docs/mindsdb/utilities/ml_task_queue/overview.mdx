@@ -1,0 +1,61 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a machine learning task queue system for MindsDB, using Redis as a backend. The system is designed to manage and distribute ML tasks across multiple instances, allowing for efficient load balancing and distributed processing.
+
+## What does it do?
+The ML task queue system in this directory performs the following functions:
+
+1. Task Management: It allows MindsDB to queue machine learning tasks such as learning, prediction, fine-tuning, and model updates.
+
+2. Distributed Processing: The system enables MindsDB to be split into separate modules for parsing/planning/execution (PPE) and machine learning (ML) in a distributed environment.
+
+3. Load Balancing: By ordering tasks and limiting the load, it helps manage resource utilization across multiple MindsDB instances.
+
+4. Task Status Tracking: It provides mechanisms to monitor the status of tasks, from waiting to completion or error states.
+
+5. Data Transfer: The system handles the transfer of dataframes and other necessary data between different components using Redis streams and key-value storage.
+
+6. Asynchronous Execution: It allows for asynchronous execution of ML tasks, with the ability to retrieve results and handle exceptions.
+
+## Entry points
+The main entry points for this system are:
+
+1. `producer.py`: Contains the `MLTaskProducer` class, which is responsible for adding ML tasks to the Redis queue.
+
+2. `consumer.py`: Implements the `MLTaskConsumer` class, which consumes and executes ML tasks from the Redis queue.
+
+3. `task.py`: Defines the `Task` class, which represents an abstraction for an ML task and provides an interface similar to `concurrent.futures.Future` for managing and monitoring task execution.
+
+The system's workflow typically involves:
+1. A producer adding tasks to the queue using `MLTaskProducer.apply_async()`.
+2. One or more consumers listening for and executing tasks using `MLTaskConsumer.run()`.
+3. The calling code monitoring task status and retrieving results using the `Task` class methods.
+
+## Key Files
+1. `base.py`: Defines the `BaseRedisQueue` class, which provides a foundation for Redis-based queue implementations.
+
+2. `const.py`: Contains constants and enumerations used throughout the ML task queue system, including task types and statuses.
+
+3. `utils.py`: Provides utility functions and classes for serialization, Redis key management, and status notification.
+
+## Dependencies
+The ML task queue system relies on the following key external libraries:
+
+1. Redis (via `walrus` library): Used as the backend for the task queue system. It handles task distribution, data storage, and inter-process communication.
+
+2. Pandas: Used for handling dataframes in task payloads and results.
+
+3. psutil: Utilized for system and process utilities, particularly for monitoring CPU usage in the consumer.
+
+## Configuration
+The ML task queue can be configured using either a JSON configuration file or environment variables. Key configuration options include:
+
+- Queue type (must be "redis")
+- Redis host, port, database, username, and password
+
+Environment variables for configuration follow the pattern `MINDSDB_ML_QUEUE_*` (e.g., `MINDSDB_ML_QUEUE_HOST`).
+
+This ML task queue system provides MindsDB with a robust and scalable solution for managing machine learning tasks in a distributed environment, leveraging Redis for efficient task distribution and data transfer.

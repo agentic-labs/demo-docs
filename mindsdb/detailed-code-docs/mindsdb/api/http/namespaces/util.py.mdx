@@ -1,0 +1,106 @@
+---
+title: "util.py"
+---
+
+## High-level description
+This file contains utility functions and API endpoints for the MindsDB HTTP server. It provides functionality for checking server status, managing telemetry, validating JSON AI, updating the GUI, and handling various system-level operations.
+
+## Code Structure
+The code is organized into several Flask-RESTx Resource classes, each handling different utility endpoints. These classes use decorators for API documentation and metrics tracking. The file also includes helper functions for checking active tasks and managing telemetry.
+
+## Symbols
+
+### `get_active_tasks()`
+#### Description
+This function checks for active tasks (learn, predict, analyze) by examining process marks in temporary directories.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | dict | A dictionary indicating the status of learn, predict, and analyze tasks |
+
+#### Internal Logic
+1. Initializes a response dictionary with all tasks set to False.
+2. Checks if the operating system is POSIX-compatible.
+3. For each process type, it checks for process marks in the corresponding temporary directory.
+4. Sets the task status to True if any process marks are found.
+
+### `Ping` (Resource)
+#### Description
+A simple endpoint to check if the server is available.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | string | Always returns "ok" |
+
+### `PingMLTaskQueue` (Resource)
+#### Description
+Checks if the ML tasks queue process is alive.
+
+#### Internal Logic
+1. Looks for a process mark file ending with 'ml_task_consumer'.
+2. If found, attempts to get the process status using psutil.
+3. Returns 200 if the process is alive, 404 otherwise.
+
+### `ReadinessProbe` (Resource)
+#### Description
+Checks if the server is ready for work by verifying that no active tasks are running.
+
+#### Internal Logic
+1. Calls `get_active_tasks()` to check for active tasks.
+2. Returns 503 if any task is active, 200 otherwise.
+
+### `PingNative` (Resource)
+#### Description
+Checks if the server uses native processing for learn or analyze tasks.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tasks | dict | The result of `get_active_tasks()` |
+
+### `Telemetry` (Resource)
+#### Description
+Manages telemetry settings for the server.
+
+#### Internal Logic
+- GET: Returns the current telemetry status (enabled/disabled).
+- POST: Enables or disables telemetry based on the provided action.
+
+### `ValidateJsonAI` (Resource)
+#### Description
+Validates JSON AI by attempting to convert it to code.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| json_ai | JSON | The JSON AI to validate |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| code | string | The generated code if validation is successful |
+| error | string | Error message if validation fails |
+
+### `UpdateGui` (Resource)
+#### Description
+Triggers an update of the GUI static files.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| os | File system operations |
+| tempfile | Temporary file and directory handling |
+| pathlib | Object-oriented filesystem paths |
+| psutil | Process and system utilities |
+| flask | Web framework |
+| flask_restx | RESTful API extension for Flask |
+
+## Error Handling
+The code uses HTTP error responses (e.g., 404, 503) to indicate various error conditions. The `http_error` function from `mindsdb.api.http.utils` is used to generate these responses.
+
+## Logging
+No explicit logging is implemented in this file, but it's likely that the `api_endpoint_metrics` decorator handles some form of logging or metrics collection.
+
+This utility file provides essential functionality for the MindsDB HTTP server, including health checks, telemetry management, and GUI updates. It interacts with the file system and process management to determine the server's state and handle various utility operations.

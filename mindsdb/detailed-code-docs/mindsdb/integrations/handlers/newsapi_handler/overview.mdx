@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a handler for integrating the News API with MindsDB. The handler allows users to query and retrieve news articles through MindsDB's SQL interface, providing a seamless way to access news data for analysis and machine learning tasks.
+
+## What does it do?
+The NewsAPI handler enables users to:
+1. Connect to the News API using an API key.
+2. Execute SQL queries to retrieve news articles based on various criteria such as keywords, sources, dates, and languages.
+3. Sort and limit results according to relevance, popularity, or publication date.
+4. Integrate news data into MindsDB's machine learning workflows for tasks like sentiment analysis, topic modeling, or trend prediction.
+
+The handler translates SQL queries into appropriate News API requests, handles pagination, and formats the results into a tabular structure compatible with MindsDB's data processing pipeline.
+
+## Entry points
+The main entry point for the NewsAPI handler is the `NewsAPIHandler` class in `newsapi_handler.py`. This class manages the connection to the News API and processes queries. The `NewsAPIArticleTable` class within the same file handles the specifics of SELECT queries for news articles.
+
+The `__init__.py` file sets up the handler for use within MindsDB, defining metadata such as the handler's name, type, and icon.
+
+## Key Files
+1. `newsapi_handler.py`: Contains the core implementation of the NewsAPI handler, including the `NewsAPIHandler` and `NewsAPIArticleTable` classes.
+2. `connection_args.py`: Defines the connection arguments required for authenticating with the News API.
+3. `__about__.py`: Provides metadata about the handler package.
+4. `README.md`: Offers documentation on how to use the NewsAPI handler within MindsDB.
+
+## Dependencies
+The handler relies on the following external libraries:
+- `newsapi-python`: A Python client for the News API, used to make API requests.
+- `pandas`: Used for data manipulation and creating DataFrames from API responses.
+- `mindsdb_sql`: Utilized for SQL parsing and query handling.
+
+## Configuration
+The handler is configured primarily through the API key provided during connection. This key is specified in the `connection_args.py` file:
+
+```python
+connection_args = OrderedDict(
+    api_key={
+        'type': ARG_TYPE.STR,
+        'description': 'The API key for accessing the News API.',
+        'secret': True
+    }
+)
+```
+
+Users can set up the connection to the News API in MindsDB using a SQL command like:
+
+```sql
+CREATE DATABASE newsAPI
+WITH ENGINE = 'newsapi'
+PARAMETERS = {
+    "api_key": "Your api key"
+};
+```
+
+## Example Usage
+Once connected, users can query news articles using SQL. For example:
+
+```sql
+SELECT *
+FROM newsAPI.article
+WHERE query = 'Python'
+AND sources = "bbc-news"
+AND publishedAt &gt;= "2021-03-23" AND publishedAt &lt;= "2023-04-23"
+LIMIT 4;
+```
+
+This query would retrieve up to 4 articles about Python from BBC News published between March 23, 2021, and April 23, 2023.
+
+The handler supports various query parameters, including:
+- `query`: Keywords to search for in article titles and bodies.
+- `sources`: Specific news sources to include.
+- `domains`: Domains to restrict the search to.
+- `exclude_domains`: Domains to exclude from results.
+- `searchIn`: Fields to restrict the search to (title, description, content).
+- `language`: Language of the articles.
+- `publishedAt`: Date range for article publication.
+
+Results can be ordered by relevancy, popularity, or publication date using the `ORDER BY` clause.
+
+## Error Handling
+The handler implements error handling for various scenarios, including:
+- Invalid API keys
+- Missing required parameters (e.g., search query)
+- Invalid sources or domains
+- Unsupported sorting columns
+
+Errors are propagated as exceptions, which are then handled by MindsDB's query execution system to provide meaningful feedback to the user.
+
+In conclusion, the NewsAPI handler provides a robust and flexible interface for integrating news data into MindsDB, enabling users to leverage current events and media content in their machine learning and data analysis workflows.

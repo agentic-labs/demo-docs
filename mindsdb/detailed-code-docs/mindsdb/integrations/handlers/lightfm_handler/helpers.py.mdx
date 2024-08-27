@@ -1,0 +1,107 @@
+---
+title: "helpers.py"
+---
+
+## High-level description
+This code provides helper functions for working with the LightFM recommendation model. It includes functions to get user-item and item-item recommendations, as well as utility functions for mapping between user/item IDs and their corresponding indices in the model.
+
+## Code Structure
+The code consists of three main functions: `get_item_user_idx`, `get_user_item_recommendations`, and `get_item_item_recommendations`. These functions work together to generate recommendations using the LightFM model and handle the mapping between user/item IDs and their internal indices.
+
+## Symbols
+
+### `get_item_user_idx`
+#### Description
+This function generates arrays of item and user indices based on the provided item and user IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| args | dict | A dictionary containing mapping information |
+| n_users | int | Number of users |
+| n_items | int | Number of items |
+| item_ids | list | Optional list of item IDs |
+| user_ids | list | Optional list of user IDs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| item_idxs | numpy.array | Array of item indices |
+| user_idxs | numpy.array | Array of user indices |
+
+#### Internal Logic
+The function handles four cases:
+1. Both item_ids and user_ids are provided
+2. Only item_ids are provided
+3. Only user_ids are provided
+4. Neither item_ids nor user_ids are provided
+
+For each case, it generates appropriate arrays of item and user indices using numpy operations.
+
+### `get_user_item_recommendations`
+#### Description
+This function generates user-item recommendations using the LightFM model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| n_users | int | Number of users |
+| n_items | int | Number of items |
+| args | dict | A dictionary containing mapping information and other parameters |
+| item_ids | list | List of item IDs |
+| user_ids | list | List of user IDs |
+| model | lightfm.LightFM | The trained LightFM model |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| user_item_recommendations_df | pandas.DataFrame | DataFrame containing user-item recommendations with scores |
+
+#### Internal Logic
+1. Get item and user indices using `get_item_user_idx`
+2. Predict scores using the LightFM model
+3. Create a DataFrame with user indices, item indices, and scores
+4. Group by user, sort by score, and select top N recommendations
+5. Map indices back to user and item IDs
+6. Return the final DataFrame with user IDs, item IDs, and scores
+
+### `get_item_item_recommendations`
+#### Description
+This function generates item-item recommendations (similar items) using the LightFM model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model | lightfm.LightFM | The trained LightFM model |
+| args | dict | A dictionary containing mapping information and other parameters |
+| item_ids | list | Optional list of item IDs to get recommendations for |
+| item_features | numpy.array | Optional item features matrix |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| similar_items_df | pandas.DataFrame | DataFrame containing item-item recommendations with scores |
+
+#### Internal Logic
+1. Filter item IDs if provided
+2. For each item:
+   a. Get item representations from the model
+   b. Calculate cosine similarity scores
+   c. Normalize scores
+   d. Select top N similar items
+   e. Create a DataFrame for the item's recommendations
+3. Concatenate all item recommendation DataFrames
+4. Map item indices back to item IDs
+5. Return the final DataFrame with item IDs and similarity scores
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| lightfm | Used for the LightFM recommendation model |
+| numpy | Used for numerical operations and array manipulations |
+| pandas | Used for data manipulation and creating DataFrames |
+
+## TODOs
+- In the `get_item_item_recommendations` function:
+  - Ensure it's not slow across larger data
+  - Break into smaller functions

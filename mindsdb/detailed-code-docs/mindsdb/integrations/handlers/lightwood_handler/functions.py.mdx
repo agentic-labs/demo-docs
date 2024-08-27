@@ -1,0 +1,156 @@
+---
+title: "functions.py"
+---
+
+Here's a detailed documentation of the target file:
+
+## High-level description
+This file contains functions for managing and executing machine learning models using the Lightwood library within the MindsDB framework. It includes functionality for generating problem definitions, creating and training models, and handling remote learning processes.
+
+## Code Structure
+The code is organized into several main functions:
+1. `create_learn_mark` and `delete_learn_mark`: Manage process markers for learning tasks.
+2. `run_generate`: Generates a problem definition and JsonAI configuration.
+3. `run_fit`: Fits a Lightwood predictor to the given data.
+4. `run_learn_remote`: Handles remote learning processes.
+5. `run_learn`: Orchestrates the entire learning process.
+6. `run_finetune`: Finetunes an existing model with new data.
+
+These functions interact with the database (`db`) to store and retrieve model information, and use the `FileStorage` class for managing model files.
+
+## References
+- `mindsdb.integrations.libs.const.PREDICTOR_STATUS`
+- `mindsdb.interfaces.storage.db`
+- `mindsdb.interfaces.storage.fs.FileStorage`
+- `mindsdb.interfaces.storage.json.get_json_storage`
+- `mindsdb.utilities.profiler`
+- `lightwood` library
+
+## Symbols
+
+### `create_learn_mark()`
+#### Description
+Creates a marker file for the current learning process.
+
+#### Internal Logic
+- Creates a directory for learn process markers if it doesn't exist.
+- Creates a file named after the current process ID.
+
+### `delete_learn_mark()`
+#### Description
+Deletes the marker file for the current learning process.
+
+#### Internal Logic
+- Removes the file named after the current process ID if it exists.
+
+### `run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = None)`
+#### Description
+Generates a problem definition and JsonAI configuration for a given dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | Input data for the model |
+| predictor_id | int | ID of the predictor |
+| model_storage | object | Storage object for the model |
+| args | dict | Additional arguments for the generation process |
+
+#### Internal Logic
+1. Sets the training state to "Generating problem definition".
+2. Processes and merges various configuration options from `args` and `json_ai_override`.
+3. Creates a `ProblemDefinition` object.
+4. Generates a `JsonAI` configuration.
+5. Generates code from the `JsonAI` configuration.
+6. Stores the generated code and `JsonAI` configuration in the database and JSON storage.
+
+### `run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -&gt; None`
+#### Description
+Fits a Lightwood predictor to the given data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictor_id | int | ID of the predictor |
+| df | pd.DataFrame | Input data for training |
+| model_storage | object | Storage object for the model |
+
+#### Internal Logic
+1. Sets the predictor status to "TRAINING".
+2. Creates a Lightwood predictor from the stored code.
+3. Trains the predictor on the input data.
+4. Saves the trained predictor to file storage.
+5. Updates the predictor record with model analysis and training time information.
+6. Sets the final training state to "Complete".
+
+### `run_learn_remote(df: DataFrame, predictor_id: int) -&gt; None`
+#### Description
+Handles remote learning processes by sending data to a remote training URL.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | Input data for training |
+| predictor_id | int | ID of the predictor |
+
+#### Internal Logic
+1. Serializes the input DataFrame.
+2. Sends a POST request to the remote training URL with the serialized data.
+3. Updates the predictor record with the training status or error message.
+
+### `run_learn(df: DataFrame, args: dict, model_storage) -&gt; None`
+#### Description
+Orchestrates the entire learning process for a model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | Input data for training |
+| args | dict | Arguments for the learning process |
+| model_storage | object | Storage object for the model |
+
+#### Internal Logic
+1. Checks if the input data is valid.
+2. Sets the training start time.
+3. Calls `run_generate` to create the problem definition and JsonAI configuration.
+4. Calls `run_fit` to train the model.
+5. Sets the predictor status to "COMPLETE" and records the training stop time.
+
+### `run_finetune(df: DataFrame, args: dict, model_storage)`
+#### Description
+Finetunes an existing model with new data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | New data for finetuning |
+| args | dict | Arguments for the finetuning process |
+| model_storage | object | Storage object for the model |
+
+#### Internal Logic
+1. Validates the input data and base model status.
+2. Sets the predictor status to "FINETUNING".
+3. Loads the base predictor from file storage.
+4. Adjusts the predictor with the new data.
+5. Saves the finetuned predictor to file storage.
+6. Updates the predictor record with new model analysis and status.
+
+## Error Handling
+The code uses try-except blocks to catch and handle exceptions, particularly in the `run_fit` and `run_finetune` functions. Errors are logged and stored in the predictor record's data field.
+
+## Logging
+The code uses a logger named `logger` for error logging.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| lightwood | Machine learning model creation and training |
+| pandas | Data manipulation and analysis |
+| mindsdb.utilities.profiler | Performance profiling |
+| mindsdb.interfaces.storage | Database and file storage operations |
+
+## Performance Considerations
+The code uses the `@profiler.profile()` decorator on several functions, indicating that performance monitoring is important for these operations. The `run_fit` function, in particular, may be computationally intensive as it involves training a machine learning model.
+
+---
+
+This documentation provides a comprehensive overview of the file's contents, structure, and functionality. It should help engineers and technical PMs understand the purpose and implementation of the machine learning model management within the MindsDB framework.

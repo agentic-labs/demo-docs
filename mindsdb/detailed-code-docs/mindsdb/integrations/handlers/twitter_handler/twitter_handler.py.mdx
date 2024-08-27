@@ -1,0 +1,162 @@
+---
+title: "twitter_handler.py"
+---
+
+Here's a comprehensive documentation for the `twitter_handler.py` file:
+
+## High-level description
+This file implements a Twitter API handler for MindsDB, allowing users to interact with Twitter data through SQL queries. It provides functionality to search for tweets, create tweets, and manage Twitter API connections.
+
+## Code Structure
+The main components of this code are:
+1. `TweetsTable`: A class that handles operations on tweets (select and insert).
+2. `TwitterHandler`: The main handler class that manages the connection to the Twitter API and registers the `TweetsTable`.
+
+These classes work together to provide a seamless interface between MindsDB and the Twitter API, allowing users to query and manipulate Twitter data using SQL-like syntax.
+
+## Symbols
+
+### TweetsTable
+#### Description
+This class extends `APITable` and provides methods to select and insert tweets using the Twitter API.
+
+#### Methods
+
+##### select
+###### Description
+Handles SELECT queries for tweets.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Select | The SELECT query to be processed |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | pd.DataFrame | DataFrame containing the queried tweets |
+
+###### Internal Logic
+1. Extracts conditions from the query's WHERE clause.
+2. Processes query parameters like limit, start/end time, and tweet ID ranges.
+3. Calls the Twitter API to search for tweets.
+4. Applies filters and formatting to the results.
+
+##### insert
+###### Description
+Handles INSERT queries to create new tweets.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Insert | The INSERT query to be processed |
+
+###### Internal Logic
+1. Extracts column names and values from the query.
+2. Processes the tweet text, splitting it into multiple tweets if necessary.
+3. Handles media uploads if a media URL is provided.
+4. Posts the tweet(s) using the Twitter API.
+
+##### get_columns
+###### Description
+Returns the list of available columns for the tweets table.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| columns | List[str] | List of column names |
+
+### TwitterHandler
+#### Description
+This class extends `APIHandler` and manages the connection to the Twitter API, as well as registering the `TweetsTable`.
+
+#### Methods
+
+##### __init__
+###### Description
+Initializes the TwitterHandler, setting up connection arguments and registering the TweetsTable.
+
+##### create_connection
+###### Description
+Creates a connection to the Twitter API using either v1 or v2 of the API.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api_version | int | The version of the Twitter API to use (1 or 2) |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| api | tweepy.API or tweepy.Client | The Twitter API client |
+
+##### connect
+###### Description
+Authenticates with the Twitter API using the stored credentials.
+
+##### check_connection
+###### Description
+Checks if the connection to the Twitter API is valid.
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | StatusResponse | The status of the connection |
+
+##### native_query
+###### Description
+Executes a native query against the Twitter API.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query_string | str | The native query string |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | The query results |
+
+##### call_twitter_api
+###### Description
+Calls the Twitter API with the given method and parameters, handling pagination and data processing.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| method_name | str | The name of the Twitter API method to call |
+| params | dict | The parameters for the API call |
+| filters | list | Optional filters to apply to the results |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | The processed results as a DataFrame |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| tweepy | Interacting with the Twitter API |
+| pandas | Data manipulation and storage |
+| mindsdb_sql | SQL parsing and query handling |
+| mindsdb.utilities | Logging and configuration |
+| mindsdb.integrations.libs.api_handler | Base classes for API handling |
+
+## Error Handling
+The code implements error handling for various scenarios, such as:
+- Invalid API credentials
+- Rate limiting
+- Connection errors
+- Unsupported query operations
+
+Errors are logged and propagated through the `StatusResponse` and `Response` objects.
+
+## Logging
+The code uses the MindsDB logging utility to log errors and debug information.
+
+## Performance Considerations
+- The code implements pagination for Twitter API calls to handle large result sets efficiently.
+- It uses expansions and field specifications to optimize the data retrieval from the Twitter API.
+- Filters are applied both at the API level (when possible) and post-retrieval to minimize data transfer and processing.
+
+This Twitter handler provides a robust interface between MindsDB and the Twitter API, allowing users to query and manipulate Twitter data using SQL-like syntax while handling the complexities of API authentication, pagination, and data processing behind the scenes.

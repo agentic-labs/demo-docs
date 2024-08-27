@@ -1,0 +1,86 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the HubSpot handler for MindsDB. It provides an interface to connect to HubSpot via its API and interact with HubSpot data within MindsDB. The handler supports operations on Companies, Contacts, and Deals tables, allowing users to perform SQL-like queries on HubSpot data.
+
+## What does it do?
+The HubSpot handler enables MindsDB users to:
+1. Connect to their HubSpot account using an access token.
+2. Query HubSpot data (Companies, Contacts, and Deals) using SQL-like syntax.
+3. Perform CRUD (Create, Read, Update, Delete) operations on HubSpot data.
+4. Integrate HubSpot data with other data sources and AI models within MindsDB.
+
+For example, users can select companies from HubSpot, insert new contacts, update deal information, or delete companies, all using familiar SQL syntax within MindsDB.
+
+## Entry points
+The main entry point for the HubSpot handler is the `HubspotHandler` class in `hubspot_handler.py`. This class initializes the connection to HubSpot and manages the interaction between MindsDB and the HubSpot API.
+
+The data flow typically follows this path:
+1. User issues a SQL query in MindsDB targeting the HubSpot database.
+2. The `HubspotHandler` receives and parses the query.
+3. Depending on the query type, it delegates the operation to the appropriate table class (`CompaniesTable`, `ContactsTable`, or `DealsTable`) in `hubspot_tables.py`.
+4. The table class interacts with the HubSpot API to perform the requested operation.
+5. Results are returned to the user through MindsDB.
+
+## Key Files
+1. `hubspot_handler.py`: Contains the `HubspotHandler` class, which is the main interface between MindsDB and HubSpot. It handles connection management and query routing.
+
+2. `hubspot_tables.py`: Implements the `CompaniesTable`, `ContactsTable`, and `DealsTable` classes. These classes handle the specific CRUD operations for each HubSpot object type, translating SQL queries into HubSpot API calls.
+
+3. `__init__.py`: Sets up the handler for integration with MindsDB, including metadata like the handler name and type.
+
+4. `__about__.py`: Contains metadata about the HubSpot handler package, such as version and author information.
+
+## Dependencies
+The HubSpot handler relies on the following main external libraries:
+- `hubspot-api-client`: Used to interact with the HubSpot API. This library provides a Python interface to HubSpot's REST API.
+- `pandas`: Used for data manipulation and creating DataFrames from API responses.
+- `mindsdb_sql`: Used for parsing SQL queries within the MindsDB ecosystem.
+
+## Configuration
+To use the HubSpot handler, users need to provide an access token for authentication. This is done when creating a new database connection in MindsDB:
+
+```sql
+CREATE DATABASE hubspot_datasource
+WITH ENGINE = 'hubspot',
+PARAMETERS = {
+  "access_token": "your_hubspot_access_token_here"
+};
+```
+
+The access token can be obtained from the HubSpot Private Apps page in the user's HubSpot account.
+
+## Example Usage
+After setting up the connection, users can interact with HubSpot data using SQL queries. Here are some examples:
+
+1. Querying Companies:
+```sql
+SELECT name, industry
+FROM hubspot_datasource.companies
+WHERE city = 'New York'
+ORDER BY name
+LIMIT 5
+```
+
+2. Inserting a new Contact:
+```sql
+INSERT INTO hubspot_datasource.contacts(email, firstname, lastname)
+VALUES('john.doe@example.com', 'John', 'Doe')
+```
+
+3. Updating a Deal:
+```sql
+UPDATE hubspot_datasource.deals
+SET amount = 10000
+WHERE dealname = 'Big Sale Q4'
+```
+
+4. Deleting a Company:
+```sql
+DELETE FROM hubspot_datasource.companies
+WHERE name = 'Obsolete Corp'
+```
+
+These queries are translated by the handler into appropriate HubSpot API calls, allowing users to work with HubSpot data using familiar SQL syntax within the MindsDB environment.

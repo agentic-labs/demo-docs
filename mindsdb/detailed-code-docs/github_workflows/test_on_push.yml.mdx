@@ -1,0 +1,88 @@
+---
+title: "test_on_push.yml"
+---
+
+## High-level description
+This GitHub Actions workflow, named "Test on Push", is designed to run various tests and checks on the codebase when a pull request is opened against the main branch or when manually triggered. It includes static code checks, installation checks, and unit tests across different Python versions and operating systems.
+
+## Code Structure
+The workflow is divided into several jobs: `changes`, `code_checking`, `matrix_prep`, `check_install`, and `unit_tests`. These jobs are interconnected, with some depending on the outputs of others to determine whether they should run and what environments to test against.
+
+## Jobs
+
+### changes
+#### Description
+This job filters changed files to determine if any non-documentation files were modified.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| not-docs | boolean | Indicates if any non-documentation files were changed |
+
+#### Internal Logic
+Uses the `dorny/paths-filter` action to check if any files outside of the `docs/` directory or non-markdown files were changed.
+
+### code_checking
+#### Description
+Runs static code checks on the codebase.
+
+#### Internal Logic
+1. Checks out the code and sets up Python.
+2. Runs a script to check for `print()` statements.
+3. Identifies changed files.
+4. Runs pre-commit checks on changed files.
+5. Checks requirements files for consistency.
+
+### matrix_prep
+#### Description
+Prepares a matrix of test environments based on a JSON file.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| matrix | JSON | A matrix of test environments |
+
+#### Internal Logic
+Uses the `JoshuaTheMiller/conditional-build-matrix` action to generate a matrix based on the current branch.
+
+### check_install
+#### Description
+Verifies that the package can be installed via pip in various environments.
+
+#### Internal Logic
+1. Sets up Python according to the matrix.
+2. Builds the package.
+3. Attempts to install the package from the built distribution.
+
+### unit_tests
+#### Description
+Runs unit tests across different Python versions and operating systems.
+
+#### Internal Logic
+1. Sets up Python according to the matrix.
+2. Installs dependencies and the package with various optional components.
+3. Runs unit tests for different components.
+4. Runs handler-specific tests and submits coverage reports to Coveralls.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checking out the code repository |
+| actions/setup-python | Setting up Python environment |
+| dorny/paths-filter | Filtering changed files |
+| pre-commit/action | Running pre-commit checks |
+| JoshuaTheMiller/conditional-build-matrix | Generating test matrix |
+| coveralls | Submitting code coverage reports |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| CI_PYTHON_VERSION | string | N/A | Python version used for CI |
+
+## Error Handling
+The workflow uses conditional steps and job dependencies to handle potential failures. If any job fails, subsequent dependent jobs will not run.
+
+## Logging
+The workflow uses GitHub Actions' built-in logging. Each step's output is logged and can be viewed in the GitHub Actions interface.
+
+This workflow provides a comprehensive set of checks and tests to ensure code quality and functionality across various environments before merging changes into the main branch.

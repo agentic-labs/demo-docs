@@ -1,0 +1,85 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Ray Serve handler for MindsDB. Ray Serve is a scalable model-serving library, and this handler integrates it with MindsDB, allowing users to create, predict, and describe models using Ray Serve endpoints for training and prediction.
+
+## What does it do?
+The Ray Serve handler enables MindsDB to interact with machine learning models deployed using Ray Serve. It provides the following main functionalities:
+
+1. Model Creation: It sends training data to a specified Ray Serve endpoint to create and train a model.
+2. Prediction: It sends input data to a Ray Serve endpoint to get predictions from the trained model.
+3. Model Description: It provides information about the model's configuration, including the training and prediction URLs.
+
+This integration allows users to leverage the scalability and flexibility of Ray Serve within the MindsDB ecosystem, enabling them to deploy and use custom machine learning models seamlessly.
+
+## Key Files
+
+1. `ray_serve_handler.py`: This is the main implementation file containing the `RayServeHandler` class. It defines the core functionality for creating models, making predictions, and describing the model configuration.
+
+2. `__init__.py`: This file serves as the entry point for the Ray Serve handler. It imports the `RayServeHandler` class and sets up metadata for the handler, including version, description, and type.
+
+3. `__about__.py`: This file contains metadata and package information for the MindsDB Ray Serve handler, including the package name, version, description, and licensing information.
+
+4. `example.md`: This file provides a comprehensive guide on how to use the Ray Serve handler with MindsDB, including code examples for setting up a Ray Serve model and interacting with it through MindsDB.
+
+## Dependencies
+The Ray Serve handler relies on the following external libraries:
+
+1. Ray Serve: The core library for deploying scalable machine learning models.
+2. FastAPI: Used in the example for creating the API endpoints for the Ray Serve model.
+3. requests: Used for making HTTP requests to the Ray Serve endpoints.
+4. pandas: Used for data manipulation and DataFrame operations.
+
+## Configuration
+The Ray Serve handler uses the following configuration parameters:
+
+1. `train_url`: The URL of the Ray Serve endpoint for training the model.
+2. `predict_url`: The URL of the Ray Serve endpoint for making predictions.
+
+These parameters are specified when creating a model using the Ray Serve handler in MindsDB.
+
+## Code Snippets
+
+Here's an example of how to create a model using the Ray Serve handler in MindsDB:
+
+```sql
+CREATE MODEL mindsdb.rayserve_model
+FROM integration_name (SELECT * FROM table_name)
+PREDICT target
+USING 
+engine='ray_serve',
+train_url='http://ray_serve_url:port/my_model/train',
+predict_url='http://ray_serve_url:port/my_model/predict';
+```
+
+And here's how to make predictions using the created model:
+
+```sql
+SELECT input_col, target_col
+FROM rayserve_model
+WHERE input_col=some_value;
+```
+
+The `RayServeHandler` class in `ray_serve_handler.py` handles these operations by sending HTTP requests to the specified Ray Serve endpoints. For example, the `create` method sends a POST request to the training endpoint:
+
+```python
+response = requests.post(
+    train_url,
+    json={"df": df.to_json(), "target": target},
+    headers={"Content-Type": "application/json"},
+)
+```
+
+Similarly, the `predict` method sends a POST request to the prediction endpoint:
+
+```python
+response = requests.post(
+    predict_url,
+    json={"df": df.to_json()},
+    headers={"Content-Type": "application/json"},
+)
+```
+
+These methods handle the communication between MindsDB and the Ray Serve endpoints, allowing seamless integration of custom machine learning models deployed with Ray Serve into the MindsDB ecosystem.

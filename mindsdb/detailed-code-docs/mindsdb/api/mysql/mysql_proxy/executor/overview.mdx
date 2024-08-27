@@ -1,0 +1,68 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the executor component of the MySQL proxy in MindsDB's MySQL API. The executor is responsible for parsing, preparing, and executing SQL queries within the MindsDB environment. It serves as a crucial intermediary between the MySQL protocol handling and the actual query execution logic.
+
+## What does it do?
+The executor in this directory performs several key functions:
+
+1. Query Parsing: It takes SQL queries and parses them using either MindsDB's custom SQL dialect or the standard MySQL dialect.
+
+2. Query Preparation: For complex queries or those with parameters, it prepares the statements for efficient execution.
+
+3. Query Execution: It executes both simple queries and prepared statements, interfacing with MindsDB's internal query execution engine.
+
+4. Result Management: After query execution, it manages and formats the results for return to the client.
+
+5. Session Management: It handles session-specific operations like changing the default database.
+
+6. Error Handling: It catches and processes various SQL-related errors, providing meaningful feedback to the client.
+
+This component essentially acts as the brain of the MySQL proxy, interpreting and executing SQL commands within the MindsDB ecosystem.
+
+## Key Files
+
+### mysql_executor.py
+This file contains the main `Executor` class, which is the core of the execution logic. Key features include:
+
+- `Executor.parse`: Parses SQL statements using either MindsDB or MySQL dialect.
+- `Executor.stmt_prepare`: Prepares SQL statements for execution, handling parameterized queries.
+- `Executor.stmt_execute`: Executes prepared statements with provided parameter values.
+- `Executor.query_execute`: Executes SQL queries directly.
+- `Executor.do_execute`: Internal method that performs the actual execution of parsed queries.
+
+The `Executor` class interacts with other components like `SessionController` and `ExecuteCommands` to manage the full lifecycle of query execution.
+
+### __init__.py
+This file serves as an initializer for the `executor` package. It imports and exposes the `Executor` class from `mysql_executor.py`, making it easily accessible for other parts of the application.
+
+## Dependencies
+The executor relies on several key dependencies:
+
+1. mindsdb_sql: Used for SQL parsing and planning. This custom SQL parser allows MindsDB to interpret and process SQL queries.
+
+2. mindsdb.utilities.profiler: Employed for performance profiling of critical methods like `query_execute` and `parse`.
+
+3. mindsdb.api.executor: Provides SQL execution components, likely including the `ExecuteCommands` class used by the `Executor`.
+
+4. mindsdb.api.mysql.mysql_proxy.utilities: Offers MySQL-specific utilities to handle protocol-related tasks.
+
+5. mindsdb.utilities.log: Used for logging debug and error information throughout the execution process.
+
+These dependencies allow the executor to integrate seamlessly with both MindsDB's custom functionality and standard MySQL operations.
+
+## Configuration
+While there are no explicit configuration files mentioned, the `Executor` class is initialized with a `SessionController` and a `MysqlProxy` instance, suggesting that configuration might be handled at a higher level and passed down to the executor.
+
+The executor also supports changing the default database for a session, which could be considered a form of runtime configuration:
+
+```python
+def change_default_db(self, new_db: str) -&gt; None:
+    self.session.database = new_db
+```
+
+This method allows for dynamic adjustment of the execution context based on client requests.
+
+In conclusion, the executor component plays a critical role in MindsDB's MySQL proxy, serving as the bridge between SQL queries received from clients and MindsDB's internal query execution engine. It handles the complexities of SQL parsing, preparation, and execution while maintaining session state and managing errors.

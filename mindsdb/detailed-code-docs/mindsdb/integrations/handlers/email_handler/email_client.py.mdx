@@ -1,0 +1,132 @@
+---
+title: "email_client.py"
+---
+
+## High-level description
+The `EmailClient` class provides functionality to interact with an email server using IMAP and SMTP protocols. It allows users to log in to a mailbox, search for emails based on various criteria, send emails, and log out from the server.
+
+## Code Structure
+The `EmailClient` class encapsulates all the email-related operations. It uses the `EmailConnectionDetails` class to store connection information and the `EmailSearchOptions` class to define search parameters. The `search_email` method utilizes these classes to fetch and filter emails from the server.
+
+## References
+- `mindsdb.integrations.handlers.email_handler.settings.EmailSearchOptions`: Used to define email search criteria.
+- `mindsdb.integrations.handlers.email_handler.settings.EmailConnectionDetails`: Used to store email connection details.
+- `mindsdb.utilities.log`: Used for logging purposes.
+
+## Symbols
+
+### `EmailClient`
+#### Description
+This class handles interactions with an email server using IMAP and SMTP protocols.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| connection_data | `EmailConnectionDetails` | An object containing email connection details like email address, password, IMAP and SMTP server addresses, and port. |
+
+#### Outputs
+This class doesn't directly return any values. It provides methods to interact with an email server.
+
+#### Internal Logic
+The class initializes by establishing connections to the IMAP and SMTP servers using the provided connection details. It provides methods for:
+- `select_mailbox`: Logs in to the specified mailbox on the IMAP server.
+- `logout`: Logs out from both the IMAP and SMTP servers.
+- `send_email`: Sends an email with the given subject and body to the specified address.
+- `search_email`: Searches for emails based on the provided `EmailSearchOptions` and returns the results as a Pandas DataFrame.
+
+### `select_mailbox`
+#### Description
+Logs in to the specified mailbox on the IMAP server. Defaults to the INBOX.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| mailbox | str | The name of the mailbox to select. Defaults to 'INBOX'. |
+
+#### Outputs
+This method doesn't return any value. It sets the internal state of the `EmailClient` to the selected mailbox.
+
+#### Internal Logic
+1. Attempts to log in to the IMAP server using the credentials provided during `EmailClient` initialization.
+2. If the login is successful, it selects the specified mailbox.
+3. If either login or mailbox selection fails, it raises a ValueError with a descriptive message.
+
+### `logout`
+#### Description
+Logs out from both the IMAP and SMTP servers.
+
+#### Inputs
+This method doesn't take any inputs.
+
+#### Outputs
+This method doesn't return any value. It closes the connections to the IMAP and SMTP servers.
+
+#### Internal Logic
+1. Attempts to log out from the IMAP server.
+2. Logs an error message if the logout process fails.
+3. Attempts to quit the SMTP server connection.
+4. Logs an error message if quitting the SMTP server fails.
+
+### `send_email`
+#### Description
+Sends an email with the given subject and body to the specified address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| to_addr | str | The email address to send the email to. |
+| subject | str | The subject of the email. |
+| body | str | The body of the email. |
+
+#### Outputs
+This method doesn't return any value. It sends the email and logs the action.
+
+#### Internal Logic
+1. Creates a MIMEMultipart message object.
+2. Sets the sender, recipient, and subject headers of the email.
+3. Attaches the body of the email as plain text.
+4. Starts a TLS connection with the SMTP server.
+5. Logs in to the SMTP server using the provided credentials.
+6. Sends the email message.
+7. Logs a confirmation message.
+
+### `search_email`
+#### Description
+Searches for emails based on the provided `EmailSearchOptions` and returns the results as a Pandas DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| options | `EmailSearchOptions` | An object containing the search criteria for emails. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | `pd.DataFrame` | A Pandas DataFrame containing the emails matching the search criteria. |
+
+#### Internal Logic
+1. Selects the mailbox specified in the `options` object.
+2. Constructs an IMAP search query based on the provided search criteria.
+3. Executes the search query on the IMAP server.
+4. Iterates through the search results (email IDs).
+5. Fetches each email using its ID.
+6. Parses the email headers and body.
+7. Appends the extracted information to a list.
+8. Converts the list of email data into a Pandas DataFrame.
+9. Returns the DataFrame.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| imaplib | Interacting with IMAP servers to fetch emails. |
+| email | Parsing and constructing email messages. |
+| smtplib | Sending emails via SMTP. |
+| datetime | Working with dates and times for email filtering. |
+| pandas | Creating and manipulating DataFrames for storing email data. |
+| mindsdb.utilities.log | Logging events and errors. |
+
+## Error Handling
+The code includes basic error handling using `try-except` blocks. It raises `ValueError` for issues like incorrect login credentials or invalid mailbox names. For general exceptions during email searching, it raises a generic `Exception`.
+
+## Logging
+The code uses the `mindsdb.utilities.log` module to log events like successful logins, mailbox selections, sent emails, and errors encountered during the process.

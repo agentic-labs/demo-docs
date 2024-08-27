@@ -1,0 +1,164 @@
+---
+title: "tools.py"
+---
+
+## High-level description
+This code defines various tools and utilities for integrating MindsDB with LangChain, particularly for executing database queries, retrieving metadata, and performing write operations. It also includes functionality for summarizing large outputs and setting up standard and custom tools for use in LangChain agents.
+
+## Code Structure
+The code is organized into several main components:
+1. Individual tool definitions (e.g., `get_exec_call_tool`, `get_exec_metadata_tool`, `get_mdb_write_tool`)
+2. A setup function for standard tools (`_setup_standard_tools`)
+3. A main setup function for collecting and configuring all tools (`setup_tools`)
+4. Helper functions for summarizing large outputs (`summarize_if_overflowed`)
+
+These components work together to provide a flexible toolset for LangChain agents to interact with MindsDB and perform various operations.
+
+## Symbols
+
+### `get_exec_call_tool`
+#### Description
+Creates a tool for executing MindsDB queries and returning the results.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| llm | LLM | Language model for summarization |
+| executor | Executor | MindsDB command executor |
+| model_kwargs | dict | Model configuration parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| mdb_exec_call_tool | Callable | Function to execute MindsDB queries |
+
+#### Internal Logic
+1. Parses and executes the given SQL query using MindsDB's executor
+2. Formats the result data as a string
+3. Summarizes the output if it exceeds the token limit
+
+### `get_exec_metadata_tool`
+#### Description
+Creates a tool for retrieving metadata about MindsDB integrations and tables.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| llm | LLM | Language model for summarization |
+| executor | Executor | MindsDB command executor |
+| model_kwargs | dict | Model configuration parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| mdb_exec_metadata_call | Callable | Function to retrieve MindsDB metadata |
+
+#### Internal Logic
+1. Parses the input query to determine the requested metadata
+2. Retrieves integration or table metadata using MindsDB's data handler
+3. Formats the metadata as a string
+4. Summarizes the output if it exceeds the token limit
+
+### `get_mdb_write_tool`
+#### Description
+Creates a tool for executing write operations in MindsDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| executor | Executor | MindsDB command executor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| mdb_write_call | Callable | Function to execute MindsDB write operations |
+
+#### Internal Logic
+1. Parses the input query as an INSERT statement
+2. Executes the INSERT statement using MindsDB's executor
+3. Returns a success message or an error description
+
+### `_setup_standard_tools`
+#### Description
+Sets up standard tools for use with LangChain agents.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tools | List[str] | List of tool names to set up |
+| llm | LLM | Language model for tool creation |
+| model_kwargs | dict | Model configuration parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| all_standard_tools | List[Tool] | List of configured LangChain tools |
+
+#### Internal Logic
+1. Creates MindsDB read, metadata, and write tools
+2. Sets up Python REPL and Google Serper API tools if requested
+3. Configures each tool with appropriate name, function, and description
+
+### `setup_tools`
+#### Description
+Main function for setting up all tools, including standard and custom tools.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| llm | LLM | Language model for tool creation |
+| model_kwargs | dict | Model configuration parameters |
+| pred_args | dict | Prediction arguments |
+| default_agent_tools | List[str] | Default tools to use |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tools | List[Tool] | List of all configured tools |
+
+#### Internal Logic
+1. Separates standard and custom tools
+2. Sets up standard tools using `_setup_standard_tools`
+3. Adds Google Serper API tool if API key is provided
+4. Adds custom tools defined by the user
+5. Returns the complete list of configured tools
+
+### `summarize_if_overflowed`
+#### Description
+Summarizes large outputs that exceed the token limit using a map-reduce approach.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | str | Input data to summarize |
+| llm | LLM | Language model for summarization |
+| max_tokens | int | Maximum number of tokens allowed |
+| budget_multiplier | float | Multiplier for token budget (default: 0.8) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | str | Summarized or original data |
+
+#### Internal Logic
+1. Checks if the input data exceeds the token limit
+2. If exceeded, splits the data into chunks
+3. Applies a map-reduce chain to summarize the content
+4. Returns the summarized data or the original if not exceeding the limit
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| tiktoken | For tokenizing and counting tokens in text |
+| langchain | For various LLM-related utilities and tools |
+| mindsdb_sql | For parsing SQL queries |
+| mindsdb.integrations.utilities.rag | For RAG pipeline functionality |
+| mindsdb.interfaces.skills.skill_tool | For accessing MindsDB command executor |
+| mindsdb.interfaces.storage | For database operations |
+| mindsdb.utilities | For logging |
+
+## Error Handling
+The code implements try-except blocks in various tools to catch and report errors, returning error messages that can be processed by the LangChain agent.
+
+## Logging
+The code uses MindsDB's logging utility to log information and errors throughout the execution of various tools and functions.

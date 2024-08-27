@@ -1,0 +1,97 @@
+---
+title: "file.py"
+---
+
+## High-level description
+This code defines a Flask-RESTx API for managing file uploads and deletions in MindsDB. It provides endpoints for listing files, uploading new files (including from URLs), and deleting existing files. The code includes security measures and handles various file formats, including archives.
+
+## Code Structure
+The code defines two main classes: `FilesList` and `File`, both of which are Flask-RESTx resources. These classes handle GET, PUT, and DELETE operations for files. The code also imports various utility functions from other parts of MindsDB for security, logging, and file handling.
+
+## Symbols
+
+### FilesList
+#### Description
+This class handles the GET request to list all files.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| files | list | A list of files managed by MindsDB |
+
+#### Internal Logic
+It calls the `get_files()` method of the `file_controller` to retrieve the list of files.
+
+### File
+#### Description
+This class handles PUT and DELETE requests for individual files.
+
+#### PUT method
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | MindsDB's name for the file |
+| file | file object | The file to be uploaded (in multipart/form-data) |
+| original_file_name | str | Optional original name of the file |
+| source_type | str | Type of source (e.g., "url") |
+| source | str | URL of the file (if source_type is "url") |
+
+##### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | str | Empty string if successful |
+| status_code | int | 200 if successful, error code otherwise |
+
+##### Internal Logic
+1. Handles multipart/form-data or JSON input
+2. Checks if the file already exists
+3. If the source is a URL, downloads the file
+4. Handles zip and tar.gz archives by extracting them
+5. Saves the file using the `file_controller`
+
+#### DELETE method
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | MindsDB's name for the file to be deleted |
+
+##### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| status | str | Empty string if successful |
+| status_code | int | 200 if successful, error code otherwise |
+
+##### Internal Logic
+Calls the `delete_file()` method of the `file_controller` to delete the specified file.
+
+## Side Effects
+- Creates and deletes temporary directories
+- Modifies the file system by saving and deleting files
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| flask | Web framework |
+| flask_restx | RESTful API extension for Flask |
+| multipart | Handling multipart/form-data |
+| requests | Making HTTP requests |
+
+## Error Handling
+The code uses the `http_error` function to return appropriate error responses for various scenarios, such as file already existing, invalid URLs, or errors during file operations.
+
+## Security Considerations
+1. Uses `is_allowed_host` to check if the URL is from an allowed host
+2. Implements `is_private_url` check for cloud environments
+3. Limits file size to 100MB for cloud environments
+4. Uses `clear_filename` to remove potentially dangerous characters from filenames
+5. Implements `safe_extract` for tar.gz files to prevent path traversal attacks
+
+## Performance Considerations
+- Uses streaming for file downloads to handle large files efficiently
+- Extracts archives in a temporary directory to avoid excessive memory usage
+
+## TODOs
+There are no explicit TODOs in the code.

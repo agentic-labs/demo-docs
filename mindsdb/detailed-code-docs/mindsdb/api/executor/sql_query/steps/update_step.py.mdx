@@ -1,0 +1,63 @@
+---
+title: "update_step.py"
+---
+
+## High-level description
+This code defines the `UpdateToTableCall` class, which is responsible for executing SQL UPDATE statements in MindsDB. It handles both direct updates and updates with subqueries, mapping the input data to the appropriate columns and executing the update operation on the target database.
+
+## Code Structure
+The `UpdateToTableCall` class inherits from `BaseStepCall` and is bound to the `UpdateToTable` step. The main functionality is implemented in the `call` method, which processes the update command, prepares the query, and executes it on the target database.
+
+## Symbols
+
+### UpdateToTableCall
+#### Description
+This class handles the execution of SQL UPDATE statements, supporting both direct updates and updates with subqueries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | UpdateToTable | The update step containing the update command and related information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | ResultSet | An empty ResultSet object |
+
+#### Internal Logic
+1. Determine the integration name and table name from the step information.
+2. Get the database connection using the integration name.
+3. Process the update command based on whether it has keys or not:
+   - If keys are present, create a WHERE clause and update columns based on the input data.
+   - If no keys are present, use the update command as is and process any subqueries.
+4. Prepare the UPDATE query with the appropriate columns and conditions.
+5. If there's input data from a subquery, map the input fields to the query parameters.
+6. Execute the UPDATE query for each row in the input data, if applicable.
+
+#### Performance Considerations
+The method executes an UPDATE query for each row in the input data when processing subqueries, which may impact performance for large datasets.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| mindsdb_sql.parser.ast | Provides AST classes for SQL parsing |
+| mindsdb_sql.planner.steps | Contains the UpdateToTable step class |
+| mindsdb_sql.planner.utils | Provides query traversal utility |
+| mindsdb.api.executor.sql_query.result_set | Contains the ResultSet class for handling query results |
+| mindsdb.api.executor.exceptions | Provides custom exception classes |
+
+## Error Handling
+The code raises `WrongArgumentError` exceptions in the following cases:
+- When no key columns are found in the update statement
+- When no columns for update are found in the result data
+- When a subselect in the update statement doesn't have an alias
+- When a field from the input data is not found in the update statement
+
+## API/Interface Reference
+The main interface is the `call` method of the `UpdateToTableCall` class:
+
+| Method | Input | Output | Description |
+|:-------|:------|:-------|:------------|
+| call | UpdateToTable step | ResultSet | Executes the UPDATE operation and returns an empty ResultSet |
+
+This method is likely called by the SQL query executor when processing an UPDATE statement in the query plan.

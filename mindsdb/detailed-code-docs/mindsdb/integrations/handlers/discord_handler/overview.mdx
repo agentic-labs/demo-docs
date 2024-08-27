@@ -1,0 +1,116 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the Discord handler for MindsDB, which enables integration with the Discord messaging platform. The handler allows users to interact with Discord channels, send messages, and retrieve message data through SQL-like queries within the MindsDB ecosystem.
+
+## What does it do?
+The Discord handler provides the following functionalities:
+1. Establishes a connection to Discord using a bot token.
+2. Retrieves messages from specified Discord channels.
+3. Sends messages to Discord channels.
+4. Translates SQL-like queries into Discord API calls.
+5. Handles data formatting between MindsDB and Discord's data structures.
+
+These capabilities allow MindsDB users to interact with Discord as if it were a database, enabling them to perform data analysis, automate messaging, and integrate Discord data with other data sources and AI models within MindsDB.
+
+## Entry points
+The main entry point for the Discord handler is the `DiscordHandler` class in `discord_handler.py`. This class inherits from `APIHandler` and implements the core functionality for interacting with the Discord API.
+
+The data flow typically follows this pattern:
+1. User issues a SQL query to MindsDB targeting the Discord handler.
+2. The query is parsed and routed to the appropriate method in `DiscordHandler` or `MessagesTable`.
+3. The handler translates the query into one or more Discord API calls.
+4. Results from the API are processed and returned to the user in a tabular format.
+
+## Key Files
+1. `discord_handler.py`: Contains the `DiscordHandler` class, which is the core of the integration. It handles connection management, API calls, and query execution.
+
+2. `discord_tables.py`: Defines the `MessagesTable` class, which implements SQL-like operations for Discord messages. It translates SELECT and INSERT queries into Discord API operations.
+
+3. `__init__.py`: Initializes the Discord handler, importing necessary components and defining metadata like version and description.
+
+4. `__about__.py`: Contains metadata about the Discord handler package, including version, author, and license information.
+
+## Dependencies
+The Discord handler relies on the following key external libraries:
+- `requests`: For making HTTP requests to the Discord API.
+- `pandas`: For data manipulation and creating DataFrames from API responses.
+- `mindsdb_sql`: For parsing SQL queries.
+
+Internal dependencies include various MindsDB utilities and base classes for API handling and response formatting.
+
+## Configuration
+The Discord handler requires a bot token for authentication, which is provided during the creation of the handler instance. This token is used in all API calls to Discord.
+
+Example configuration:
+```sql
+CREATE DATABASE discord_datasource
+WITH ENGINE = 'discord',
+PARAMETERS = {
+  "token": "{YOUR_DISCORD_BOT_TOKEN}"
+};
+```
+
+The handler supports the following operations:
+- Retrieving messages from specified channels.
+- Sending messages to channels.
+- Filtering messages based on various criteria like timestamp, author, and content.
+
+## Code Snippets and Examples
+
+1. Connecting to Discord:
+```python
+def connect(self):
+    if self.is_connected:
+        return None
+    try:
+        url = f"{self.base_url}/users/@me"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        self.is_connected = True
+        return self.connection_check_response()
+    except Exception as e:
+        return self.connection_check_response(False, str(e))
+```
+
+2. Retrieving messages:
+```python
+def call_discord_api(self, operation, params, filters=None):
+    if operation == 'get_messages':
+        url = f"{self.base_url}/channels/{params['channel_id']}/messages"
+        response = requests.get(url, headers=self.headers, params=params)
+        response.raise_for_status()
+        messages = response.json()
+        # Process messages and create DataFrame
+        # ...
+    elif operation == 'send_message':
+        url = f"{self.base_url}/channels/{params['channel_id']}/messages"
+        response = requests.post(url, headers=self.headers, json={'content': params['content']})
+        response.raise_for_status()
+        message = response.json()
+        # Create DataFrame from sent message
+        # ...
+    else:
+        raise ValueError(f"Unsupported operation: {operation}")
+```
+
+3. Handling SQL queries:
+```python
+def select(self, query: ast.Select):
+    params = {'limit': 100}
+    filters = []
+    for f in query.where or []:
+        if isinstance(f, ast.BinaryOperation):
+            if f.op == '=' and f.args[0].parts[-1] == 'channel_id':
+                params['channel_id'] = f.args[1].value
+            elif f.op == '&gt;' and f.args[0].parts[-1] == 'timestamp':
+                params['after'] = self.handler.utc_to_snowflake(f.args[1].value)
+            # ... other conditions ...
+    
+    result = self.handler.call_discord_api('get_messages', params, filters)
+    return result
+```
+
+These snippets demonstrate how the Discord handler manages connections, translates SQL queries into API calls, and processes the results. The handler provides a robust interface between MindsDB's SQL-like query system and Discord's REST API, enabling seamless integration of Discord data into MindsDB workflows.

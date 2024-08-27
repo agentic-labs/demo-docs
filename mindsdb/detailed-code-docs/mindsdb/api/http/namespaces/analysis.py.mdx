@@ -1,0 +1,112 @@
+---
+title: "analysis.py"
+---
+
+## High-level description
+This code defines two API endpoints for data analysis in the MindsDB HTTP API. It provides functionality to analyze SQL query results and raw data, using the Flask-RESTx framework and pandas for data manipulation.
+
+## Code Structure
+The code defines two main classes, `QueryAnalysis` and `DataAnalysis`, which are Flask-RESTx resources. These classes handle POST requests for analyzing SQL queries and raw data, respectively. The code also includes utility functions for data analysis and error handling.
+
+## Symbols
+
+### `analyze_df`
+#### Description
+This function analyzes a pandas DataFrame using the `dataprep_ml.insights.analyze_dataset` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | DataFrame | The pandas DataFrame to be analyzed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| analysis | dict | The analysis results as a dictionary |
+
+#### Internal Logic
+1. Handles empty DataFrames
+2. Renames duplicate columns
+3. Uses `dataprep_ml.insights.analyze_dataset` to perform the analysis
+4. Converts the analysis result to a dictionary
+
+### `QueryAnalysis`
+#### Description
+This class defines a REST endpoint for analyzing SQL queries.
+
+#### Inputs
+The POST request expects a JSON payload with the following structure:
+```json
+{
+  "query": "SQL query string",
+  "context": {},
+  "limit": null
+}
+```
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| analysis | dict | The analysis results |
+| column_names | list | List of column names in the query result |
+| row_count | int | Number of rows in the query result |
+| timestamp | float | Timestamp of the analysis |
+| tables | list | List of tables referenced in the query |
+
+#### Internal Logic
+1. Parses the SQL query
+2. Applies a limit to the query if specified
+3. Executes the query using a FakeMysqlProxy
+4. Converts the query result to a pandas DataFrame
+5. Analyzes the DataFrame using `analyze_df`
+6. Extracts table names from the query
+7. Returns the analysis results, metadata, and table information
+
+### `DataAnalysis`
+#### Description
+This class defines a REST endpoint for analyzing raw data.
+
+#### Inputs
+The POST request expects a JSON payload with the following structure:
+```json
+{
+  "column_names": ["col1", "col2", ...],
+  "data": [[val1, val2, ...], ...]
+}
+```
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| analysis | dict | The analysis results |
+| timestamp | float | Timestamp of the analysis |
+| error | str | Error message if an exception occurs (optional) |
+
+#### Internal Logic
+1. Converts the input data to a pandas DataFrame
+2. Analyzes the DataFrame using `analyze_df`
+3. Returns the analysis results and timestamp
+4. If an exception occurs, returns an empty analysis with an error message
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| flask | Web framework for the API |
+| flask_restx | Extension for building REST APIs with Flask |
+| pandas | Data manipulation and analysis |
+| mindsdb_sql | SQL parsing and utilities |
+| dataprep_ml | Dataset analysis |
+
+## Error Handling
+The code implements error handling for various scenarios, such as missing queries, SQL parsing errors, and query execution errors. It uses the `http_error` function to return appropriate HTTP error responses.
+
+## Logging
+The code uses the `log` module from `mindsdb.utilities` for logging errors and exceptions.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /analysis/query | POST | JSON with query, context, and limit | JSON with analysis results and metadata | Analyzes SQL query results |
+| /analysis/data | POST | JSON with column_names and data | JSON with analysis results and timestamp | Analyzes raw data |
+
+This code provides a comprehensive API for data analysis within the MindsDB framework, allowing users to analyze both SQL query results and raw data through HTTP endpoints.

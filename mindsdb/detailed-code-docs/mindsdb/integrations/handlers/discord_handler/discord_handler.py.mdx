@@ -1,0 +1,135 @@
+---
+title: "discord_handler.py"
+---
+
+## High-level description
+This code implements a Discord handler for MindsDB, allowing interaction with the Discord API. It provides functionality to connect to Discord, retrieve messages, and send messages using a bot token.
+
+## Code Structure
+The main class `DiscordHandler` inherits from `APIHandler` and implements methods for connecting to Discord, checking the connection, executing native queries, and calling the Discord API. It also includes utility methods for converting dates to Discord's Snowflake format.
+
+## Symbols
+
+### DiscordHandler
+#### Description
+The main class that handles Discord integration for MindsDB.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | Name of the particular handler instance |
+| **kwargs | dict | Arbitrary keyword arguments, including connection_data |
+
+#### Internal Logic
+1. Initializes the handler with the given name and connection data.
+2. Registers a `MessagesTable` instance.
+3. Implements methods for connecting to Discord, checking the connection, and executing queries.
+
+### DiscordHandler.connect
+#### Description
+Sets up the connection to Discord using the provided bot token.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| StatusResponse | object | Indicates whether the connection was successful |
+
+#### Internal Logic
+1. Checks if already connected.
+2. Sends a GET request to Discord API to validate the token.
+3. Sets `is_connected` flag to True if successful.
+
+### DiscordHandler.check_connection
+#### Description
+Checks the connection to Discord by attempting to connect.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| StatusResponse | object | Indicates whether the connection check was successful |
+
+#### Internal Logic
+1. Attempts to connect using the `connect` method.
+2. Catches any exceptions and logs errors.
+3. Updates the `is_connected` flag based on the result.
+
+### DiscordHandler.native_query
+#### Description
+Executes a native query by parsing it and calling the Discord API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | str | Query in native format |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Response | object | Contains the query result as a DataFrame |
+
+#### Internal Logic
+1. Parses the query using `FuncParser`.
+2. Calls `call_discord_api` with the parsed operation and parameters.
+3. Returns the result as a `Response` object.
+
+### DiscordHandler.utc_to_snowflake
+#### Description
+Converts a UTC date to Discord's Snowflake format.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| utc_date | str | UTC date to convert |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| int | int | Snowflake representation of the date |
+
+### DiscordHandler.call_discord_api
+#### Description
+Calls the Discord API based on the specified operation and parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| operation | str | The API operation to perform |
+| params | dict | Parameters for the API call |
+| filters | list | Optional filters for the API call |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pd.DataFrame | object | DataFrame containing the API response |
+
+#### Internal Logic
+1. Handles two operations: 'get_messages' and 'send_message'.
+2. For 'get_messages':
+   - Constructs the API URL and parameters.
+   - Sends a GET request to retrieve messages.
+   - Processes the response and creates a DataFrame.
+3. For 'send_message':
+   - Constructs the API URL and message content.
+   - Sends a POST request to send a message.
+   - Creates a DataFrame from the response.
+4. Raises a ValueError for unsupported operations.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| requests | Making HTTP requests to the Discord API |
+| pandas | Data manipulation and creating DataFrames |
+| mindsdb.integrations.libs.api_handler | Base class and utilities for API handling |
+| mindsdb.integrations.utilities.date_utils | Date parsing utility |
+| mindsdb.integrations.libs.response | Response classes for handler operations |
+
+## Error Handling
+The code implements basic error handling by raising `ValueError` exceptions with descriptive messages when API calls fail or unsupported operations are requested.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /channels/{channel_id}/messages | GET | channel_id, limit, after, before | JSON array of messages | Retrieve messages from a channel |
+| /channels/{channel_id}/messages | POST | channel_id, content | JSON object of sent message | Send a message to a channel |
+
+Note: The actual endpoints are part of the Discord API, and this handler acts as a wrapper to interact with them.

@@ -1,0 +1,91 @@
+---
+title: "producer.py"
+---
+
+## High-level description
+This code defines the `MLTaskProducer` class, which is responsible for adding machine learning tasks to a Redis queue. It provides an interface for asynchronously executing ML tasks by serializing task information and storing it in Redis.
+
+## Code Structure
+The `MLTaskProducer` class inherits from `BaseRedisQueue` and uses Redis to manage the task queue. It initializes a connection to Redis and provides the `apply_async` method to add tasks to the queue.
+
+## References
+This code references:
+- `mindsdb.utilities.context.context`
+- `mindsdb.utilities.config.Config`
+- `mindsdb.utilities.ml_task_queue.utils.RedisKey`
+- `mindsdb.utilities.ml_task_queue.task.Task`
+- `mindsdb.utilities.ml_task_queue.base.BaseRedisQueue`
+- `mindsdb.utilities.ml_task_queue.const.TASKS_STREAM_NAME`
+- `mindsdb.utilities.ml_task_queue.const.ML_TASK_TYPE`
+- `mindsdb.utilities.ml_task_queue.const.ML_TASK_STATUS`
+
+## Symbols
+
+### MLTaskProducer
+#### Description
+This class is responsible for adding ML tasks to a Redis queue. It initializes a connection to Redis and provides methods to add tasks to the queue.
+
+#### Inputs
+None for initialization.
+
+#### Outputs
+None directly, but it creates a Redis connection and initializes stream, cache, and pubsub objects.
+
+#### Internal Logic
+1. Initializes Redis connection using configuration from `Config().get('ml_task_queue', {})`.
+2. Sets up Redis stream, cache, and pubsub objects.
+3. Provides the `apply_async` method to add tasks to the queue.
+
+### MLTaskProducer.apply_async
+#### Description
+This method adds a new ML task to the Redis queue.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| task_type | ML_TASK_TYPE | Type of the ML task |
+| model_id | int | Identifier for the model |
+| payload | dict | Lightweight model data to be added to the stream message |
+| dataframe | DataFrame | Optional dataframe to be transferred via regular Redis storage |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Task | Task | Object representing the added task |
+
+#### Internal Logic
+1. Serializes the payload using pickle.
+2. Creates a new RedisKey for the task.
+3. Constructs a message containing task information.
+4. If a dataframe is provided, stores it in Redis cache.
+5. Sets the task status to WAITING in Redis cache.
+6. Adds the message to the Redis stream.
+7. Returns a Task object representing the added task.
+
+## Side Effects
+- Writes data to Redis (stream, cache).
+- May raise a ConnectionError if unable to connect to Redis.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| pickle | For serializing payload data |
+| walrus | For Redis database operations |
+| pandas | For handling DataFrame objects |
+| mindsdb.utilities.context | For accessing context information |
+| mindsdb.utilities.config | For accessing configuration |
+| mindsdb.utilities.ml_task_queue.utils | For Redis key management and data conversion |
+| mindsdb.utilities.ml_task_queue.task | For creating Task objects |
+| mindsdb.utilities.ml_task_queue.base | For BaseRedisQueue functionality |
+| mindsdb.utilities.ml_task_queue.const | For constant values |
+| mindsdb.utilities | For logging |
+
+## Error Handling
+The code includes basic error handling:
+- Catches and logs ConnectionError when unable to send a message to Redis.
+- Uses a wait_redis_ping method (not shown in the provided code) to ensure Redis connection is established.
+
+## Logging
+The code uses a logger obtained from `mindsdb.utilities.log` to log error messages.
+
+This code is crucial for managing the asynchronous execution of ML tasks in MindsDB, allowing for efficient queuing and processing of tasks using Redis as a backend.

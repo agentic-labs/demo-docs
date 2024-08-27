@@ -1,0 +1,59 @@
+---
+title: "predict_process.py"
+---
+
+## High-level description
+This code defines a `predict_process` function that handles the prediction process for a machine learning model. It dynamically imports a handler module, initializes or retrieves a cached ML handler, and uses it to make predictions on the provided data.
+
+## Code Structure
+The main function `predict_process` uses helper classes and functions from various MindsDB modules. It interacts with the `handlers_cacher` to manage ML handler instances and uses `ModelStorage` and `HandlerStorage` for data persistence.
+
+## Symbols
+
+### `predict_process`
+#### Description
+This function is responsible for making predictions using a specified ML handler. It dynamically imports the handler module, initializes or retrieves the handler, and performs the prediction.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| integration_id | int | The ID of the integration |
+| predictor_record | db.Predictor | The predictor record from the database |
+| args | dict | Arguments for the prediction process |
+| module_path | str | The path to the handler module |
+| ml_engine_name | str | The name of the ML engine |
+| dataframe | DataFrame | The input data for prediction |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | DataFrame | The predictions made by the ML handler |
+
+#### Internal Logic
+1. Dynamically import the handler module using `importlib.import_module`.
+2. Check if the handler for the given predictor is cached:
+   - If not, create new `HandlerStorage` and `ModelStorage` instances, initialize the handler, and cache it.
+   - If cached, retrieve the handler from the cache.
+3. If the ML engine is 'lightwood', prepare additional arguments.
+4. Call the `predict` method of the handler with the input dataframe and arguments.
+5. Close the handler and return the predictions.
+
+## Side Effects
+- Modifies the `handlers_cacher` dictionary by adding new handler instances.
+- Interacts with the file system through `ModelStorage` and `HandlerStorage`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| importlib | For dynamically importing the handler module |
+| pandas | For DataFrame operations |
+| mindsdb.interfaces.storage.db | For database interactions |
+| mindsdb.interfaces.storage.model_fs | For model and handler storage |
+| mindsdb.integrations.libs.ml_handler_process.handlers_cacher | For caching handler instances |
+| mindsdb.utilities.functions | For the `mark_process` decorator |
+
+## Error Handling
+The code doesn't implement explicit error handling. Errors would propagate up the call stack.
+
+## Performance Considerations
+The function uses caching (`handlers_cacher`) to avoid reinitializing handlers for the same predictor, which can improve performance for repeated predictions.

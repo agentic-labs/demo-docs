@@ -1,0 +1,140 @@
+---
+title: "autokeras_handler.py"
+---
+
+## High-level description
+This code implements an AutokerasHandler class, which integrates the AutoKeras machine learning library with MindsDB. It provides functionality to create, train, and use AutoKeras models for both regression and classification tasks, handling data preprocessing and prediction formatting.
+
+## Code Structure
+The code consists of three main functions (`train_model`, `get_preds_from_model`, `format_categorical_preds`) and the `AutokerasHandler` class, which inherits from `BaseMLEngine`. The functions support the class methods in training and prediction tasks.
+
+## Symbols
+
+### `train_model`
+#### Description
+This function trains an AutoKeras model using the input DataFrame.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | Input data for training |
+| target | str | Name of the target column |
+| max_trials | int | Maximum number of trials for AutoKeras (default: 100) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model | AutoKeras model | Trained AutoKeras model |
+| categorical_dummy_column_names | list | Names of categorical columns converted to dummies |
+
+#### Internal Logic
+1. Determines if the task is regression or classification based on the target column's data type.
+2. Preprocesses the data, including encoding categorical variables.
+3. Trains the AutoKeras model using the appropriate trainer (regressor or classifier).
+4. Returns the trained model and the names of categorical dummy columns.
+
+### `get_preds_from_model`
+#### Description
+This function generates predictions using a trained AutoKeras model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | Input data for prediction |
+| model | AutoKeras model | Trained AutoKeras model |
+| target | str | Name of the target column |
+| column_count | int | Expected number of columns |
+| categorical_dummy_column_names | list | Names of categorical columns converted to dummies |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | numpy.ndarray | Model predictions |
+
+#### Internal Logic
+1. Prepares the input data by dropping unnecessary columns and encoding categorical variables.
+2. Ensures the input data has the expected number of columns.
+3. Uses the trained model to generate predictions.
+
+### `format_categorical_preds`
+#### Description
+This function formats categorical predictions back to their original class labels and adds confidence scores.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | numpy.ndarray | Raw model predictions |
+| original_y | pandas.Series | Original target values |
+| df_to_predict | pandas.DataFrame | Input data for prediction |
+| target_col | str | Name of the target column |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df_to_predict | pandas.DataFrame | DataFrame with formatted predictions and confidence scores |
+
+#### Internal Logic
+1. Transforms binary predictions back to their original categorical labels.
+2. Adds the predictions and confidence scores to the input DataFrame.
+
+### `AutokerasHandler`
+#### Description
+This class handles the integration of AutoKeras with MindsDB, providing methods for creating, training, and using AutoKeras models.
+
+#### Methods
+
+##### `create`
+###### Description
+Creates and tunes an AutoKeras model using the input DataFrame.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | Name of the target column |
+| df | pandas.DataFrame | Input data for training |
+| args | dict | Additional arguments for model creation |
+
+###### Internal Logic
+1. Processes input arguments and sets up model parameters.
+2. Calls `train_model` to create and train the AutoKeras model.
+3. Saves the trained model and relevant information for later use.
+
+##### `predict`
+###### Description
+Generates predictions using the saved AutoKeras model.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pandas.DataFrame | Input data for prediction |
+| args | dict | Additional arguments for prediction (optional) |
+
+###### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df_to_predict | pandas.DataFrame | DataFrame with predictions and confidence scores (for classification) |
+
+###### Internal Logic
+1. Loads the saved model and training information.
+2. Calls `get_preds_from_model` to generate predictions.
+3. For classification tasks, formats the predictions using `format_categorical_preds`.
+4. Returns the DataFrame with predictions.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| os | File system operations |
+| random | Generate random strings |
+| string | String manipulation |
+| numpy | Numerical operations |
+| pandas | Data manipulation and analysis |
+| autokeras | AutoML library for model creation and training |
+| sklearn.preprocessing | Data preprocessing |
+| tensorflow.keras.models | Loading saved models |
+| mindsdb.integrations.libs.base | Base class for ML engines in MindsDB |
+
+## Error Handling
+The code includes basic error handling, such as raising an exception when the number of input columns for prediction doesn't match the expected count. However, more comprehensive error handling could be implemented for robustness.
+
+## Performance Considerations
+The `max_trials` parameter in the `train_model` function can be adjusted to balance between model performance and training time. The default value is 100, but it can be modified based on the `train_time` argument provided during model creation.

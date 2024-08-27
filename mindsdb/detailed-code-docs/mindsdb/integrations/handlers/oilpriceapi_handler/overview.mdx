@@ -1,0 +1,80 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the OilPriceAPI handler for MindsDB. It provides an interface to connect to the OilPriceAPI and retrieve oil price data. The handler allows users to query latest and past day oil prices using SQL-like syntax within MindsDB.
+
+## What does it do?
+The OilPriceAPI handler enables MindsDB to interact with the OilPriceAPI service. It allows users to:
+
+1. Connect to the OilPriceAPI using an API key.
+2. Query the latest oil prices for different types of oil (e.g., Brent, WTI) and price types (e.g., spot price, daily average).
+3. Retrieve oil price data for the past day.
+4. Use SQL-like queries to filter, sort, and limit the retrieved data.
+
+The handler translates SQL queries into API requests, fetches the data, and returns it in a format compatible with MindsDB's data structures.
+
+## Entry points
+The main entry point for this handler is the `OilPriceAPIHandler` class in `oilpriceapi_handler.py`. This class manages the connection to the API, handles authentication, and processes queries. It utilizes two main components:
+
+1. `OilPriceAPIClient` (in `oilpriceapi.py`): Handles low-level API interactions.
+2. `OilPriceLatestTable` and `OilPricePastDayPriceTable` (in `oilpriceapi_tables.py`): Define the structure and data retrieval logic for the two main tables exposed by the handler.
+
+The data flow typically follows this path:
+1. SQL query → `OilPriceAPIHandler`
+2. `OilPriceAPIHandler` → appropriate table class (`OilPriceLatestTable` or `OilPricePastDayPriceTable`)
+3. Table class → `OilPriceAPIClient`
+4. `OilPriceAPIClient` → OilPriceAPI
+5. Response data flows back through the same path, being processed at each step.
+
+## Key Files
+1. `oilpriceapi_handler.py`: Contains the `OilPriceAPIHandler` class, which is the main interface between MindsDB and the OilPriceAPI.
+
+2. `oilpriceapi.py`: Defines the `OilPriceAPIClient` class, which handles direct communication with the OilPriceAPI, including request construction and response parsing.
+
+3. `oilpriceapi_tables.py`: Contains `OilPriceLatestTable` and `OilPricePastDayPriceTable` classes, which define the structure of the data tables and implement the logic for translating SQL queries into API requests.
+
+4. `connection_args.py`: Specifies the connection arguments required for the handler, primarily the API key.
+
+5. `__init__.py`: Handles the dynamic import of the handler class and defines metadata for the integration.
+
+## Dependencies
+The handler relies on the following main external libraries:
+
+1. `requests`: Used for making HTTP requests to the OilPriceAPI.
+2. `pandas`: Used for data manipulation and creating DataFrames from API responses.
+3. `mindsdb_sql`: Used for parsing SQL queries.
+
+These dependencies are not explicitly specified in the provided code, but they are crucial for the handler's functionality.
+
+## Configuration
+The handler requires an API key for authentication with the OilPriceAPI. This is specified in the `connection_args.py` file:
+
+```python
+connection_args = OrderedDict(
+    api_key={
+        "type": ARG_TYPE.STRING,
+        "description": "API Key used to authenticate with OilPriceAPI",
+        "required": True,
+        "label": "API Key",
+        "secret": True
+    }
+)
+```
+
+Users need to provide this API key when creating a database connection in MindsDB:
+
+```sql
+CREATE DATABASE mindsdb_oilpriceapi
+WITH ENGINE = 'oilpriceapi',
+PARAMETERS = {
+  "api_key": "your_api_key_here"
+};
+```
+
+The handler supports two main tables:
+1. `latest_price`: Provides access to the latest oil prices.
+2. `past_day_price`: Provides access to oil prices for the past day.
+
+Users can query these tables using SQL-like syntax, including filtering by price type and oil code, ordering results, and limiting the number of returned rows.

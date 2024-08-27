@@ -1,0 +1,91 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains utilities for handling Microsoft authentication, specifically for the Microsoft Graph API, within the MindsDB integrations package. It provides a robust authentication manager that implements OAuth 2.0 flow for secure access to Microsoft services.
+
+## What does it do?
+The code in this directory facilitates secure authentication with Microsoft services, particularly the Microsoft Graph API. It handles the complex OAuth 2.0 authentication flow, including:
+
+1. Initiating the authentication process
+2. Acquiring access tokens
+3. Storing credentials securely
+4. Refreshing tokens when they expire
+5. Validating token validity
+
+This allows other parts of the MindsDB project to interact with Microsoft services securely without having to implement the authentication logic themselves. The authentication process is designed to be as seamless as possible, automatically handling token refresh and re-authentication when necessary.
+
+## Key Files
+
+### ms_graph_api_auth_utilities.py
+This is the core file in the directory, containing the `MSGraphAPIAuthManager` class. This class is responsible for:
+
+1. Managing the entire authentication process for Microsoft Graph API
+2. Handling token acquisition, storage, and refresh
+3. Validating access tokens
+4. Executing the OAuth 2.0 authorization flow
+
+The `MSGraphAPIAuthManager` class provides several key methods:
+
+- `get_access_token()`: Retrieves a valid access token, refreshing if necessary or initiating a new auth flow.
+- `_execute_ms_graph_api_auth_flow()`: Executes the OAuth 2.0 authorization flow.
+- `_refresh_access_token()`: Refreshes the access token using a refresh token.
+- `_check_access_token_validity()`: Checks if the current access token is valid.
+
+### __init__.py
+This file serves as an initialization module for the Microsoft authentication utilities. It imports the `MSGraphAPIAuthManager` class from `ms_graph_api_auth_utilities.py`, making it easily accessible to other parts of the MindsDB project.
+
+## Dependencies
+The code relies on several external libraries and internal MindsDB modules:
+
+1. MSAL (Microsoft Authentication Library): Used for handling OAuth 2.0 flows with Microsoft services.
+2. Flask: Web framework used for handling HTTP requests, particularly in the authentication flow.
+3. json: Used for JSON encoding and decoding of token responses and other data.
+4. mindsdb.integrations.utilities.handlers.api_utilities.MSGraphAPIBaseClient: Likely used for making API calls to validate tokens.
+5. mindsdb.utilities.log: Used for logging information and errors during the authentication process.
+6. mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: Custom exception class for authentication-related errors.
+
+## Configuration
+The `MSGraphAPIAuthManager` class requires several configuration parameters:
+
+- `handler_storage`: Storage mechanism for persisting credentials
+- `scopes`: List of permission scopes required for the API
+- `client_id`: Application (client) ID for the registered app
+- `client_secret`: Client secret for the registered app
+- `tenant_id`: Directory (tenant) ID for the registered app
+- `code`: Optional authorization code for token acquisition
+
+These parameters are typically provided when initializing the `MSGraphAPIAuthManager` instance and are crucial for the authentication process to work correctly.
+
+The code also determines the redirect URI dynamically, either from storage or request headers, which is an important part of the OAuth 2.0 flow.
+
+Here's an example of how the `MSGraphAPIAuthManager` might be initialized:
+
+```python
+auth_manager = MSGraphAPIAuthManager(
+    handler_storage='some_storage_mechanism',
+    scopes=['https://graph.microsoft.com/.default'],
+    client_id='your_client_id',
+    client_secret='your_client_secret',
+    tenant_id='your_tenant_id'
+)
+```
+
+After initialization, you can use the `get_access_token()` method to retrieve a valid access token:
+
+```python
+access_token = auth_manager.get_access_token()
+```
+
+This token can then be used to make authenticated requests to the Microsoft Graph API.
+
+The authentication manager handles token refresh automatically, so you don't need to worry about token expiration in most cases. However, if you need to manually refresh a token, you can use the `_refresh_access_token()` method:
+
+```python
+new_token_response = auth_manager._refresh_access_token(refresh_token)
+```
+
+The code also includes error handling, particularly for cases where authorization is required. It raises a custom `AuthException` in these cases, which should be caught and handled by the calling code.
+
+Overall, this directory provides a comprehensive solution for handling Microsoft authentication within the MindsDB project, abstracting away the complexities of OAuth 2.0 and token management.

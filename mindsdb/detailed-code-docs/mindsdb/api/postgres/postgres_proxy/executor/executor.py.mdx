@@ -1,0 +1,126 @@
+---
+title: "executor.py"
+---
+
+Here's a detailed documentation of the provided code:
+
+## High-level description
+This code defines an `Executor` class that handles the execution of SQL queries and commands for a PostgreSQL proxy server in MindsDB. It processes various SQL statements, interacts with the MindsDB session, and returns appropriate responses.
+
+## Code Structure
+The `Executor` class contains methods to parse SQL queries, execute them, and handle different types of SQL statements. It interacts with other components of MindsDB, such as the session, database controller, and command executor.
+
+## Symbols
+
+### Executor
+#### Description
+The main class responsible for executing SQL queries and commands in the PostgreSQL proxy server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| session | Session | The MindsDB session object |
+| proxy_server | ProxyServer | The PostgreSQL proxy server instance |
+| charset | str | The character set to use (default: "utf8") |
+
+#### Internal Logic
+1. Initializes the executor with the given session, proxy server, and charset.
+2. Sets up logging and initializes various attributes for query execution.
+3. Creates a command executor instance.
+
+### parse
+#### Description
+Parses the given SQL query string into a structured query object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sql | Union[str, bytes] | The SQL query to parse |
+
+#### Internal Logic
+1. Decodes the SQL query if it's in bytes format.
+2. Attempts to parse the SQL using the MindsDB dialect.
+3. If parsing fails with MindsDB dialect, tries parsing with MySQL dialect.
+4. Raises an exception if parsing fails with both dialects.
+
+### stmt_execute
+#### Description
+Executes a prepared statement with the given parameter values.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| param_values | List | The parameter values for the prepared statement |
+
+#### Internal Logic
+1. Fills the query parameters with the provided values.
+2. Calls `do_execute()` to execute the query.
+
+### query_execute
+#### Description
+Executes a SQL query string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sql | str | The SQL query to execute |
+
+#### Internal Logic
+1. Attempts to execute the query externally.
+2. If not executed externally, parses the SQL and calls `do_execute()`.
+
+### do_execute
+#### Description
+Performs the actual execution of the parsed query.
+
+#### Internal Logic
+1. Checks if the query has already been executed.
+2. Uses the command executor to execute the query.
+3. Sets the execution flag and stores the result data and columns.
+
+### to_postgres_columns
+#### Description
+Converts MindsDB column information to PostgreSQL column format.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| columns | List[Column] | The list of columns to convert |
+
+#### Internal Logic
+1. Iterates through the input columns.
+2. Determines the appropriate PostgreSQL data type for each column.
+3. Creates a dictionary with column information in PostgreSQL format.
+
+### stmt_prepare
+#### Description
+Prepares a statement for execution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sql | str | The SQL statement to prepare |
+
+#### Internal Logic
+1. Parses the SQL statement.
+2. Extracts query parameters.
+3. Prepares the query and sets up parameter and column information.
+
+## Dependencies
+- mindsdb_sql
+- numpy
+- pandas
+- mindsdb.api.executor
+- mindsdb.api.mysql.mysql_proxy.utilities
+- mindsdb.utilities
+
+## Error Handling
+The code uses try-except blocks to handle parsing errors and raises `SqlApiException` for unsupported or incorrectly parsed SQL statements.
+
+## Logging
+The code uses the `log` module from `mindsdb.utilities` for logging information and warnings.
+
+## Performance Considerations
+The code uses lazy execution by setting flags like `is_executed` to avoid redundant query executions. It also leverages pandas for efficient data handling and numpy for type conversions.
+
+This documentation provides an overview of the `Executor` class and its main methods for handling SQL queries in the MindsDB PostgreSQL proxy server. The class is responsible for parsing, preparing, and executing various types of SQL statements, as well as converting data types between MindsDB and PostgreSQL formats.

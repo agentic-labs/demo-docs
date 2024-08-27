@@ -1,0 +1,83 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains unit tests for the GmailHandler class, which is part of the MindsDB integration with Gmail. The tests are designed to verify the functionality of connecting to Gmail, executing queries, retrieving tables and columns, and ensuring the handler works as expected.
+
+## What does it do?
+The test suite in this directory performs several checks on the GmailHandler:
+
+1. It verifies that the handler can successfully connect to the Gmail service using provided credentials.
+2. It tests the execution of native SQL queries on Gmail data, ensuring that the handler can retrieve email information.
+3. It checks if the handler can correctly list available tables (in this case, likely just the 'emails' table).
+4. It validates that the handler can retrieve the correct column information for the 'emails' table.
+
+These tests ensure that the GmailHandler is functioning correctly and can interact with the Gmail API as expected, which is crucial for the MindsDB integration to work properly with Gmail data.
+
+## Key Files
+1. `test_gmail_handler.py`: This is the main test file containing the `EmailsTableTest` class, which includes all the unit tests for the GmailHandler.
+
+## Dependencies
+The test suite relies on the following dependencies:
+
+1. `unittest`: The standard Python testing framework used to structure and run the tests.
+2. `mindsdb.integrations.handlers.gmail_handler.gmail_handler`: This module contains the GmailHandler class being tested.
+3. `mindsdb.api.executor.data_types.response_type`: This module provides the RESPONSE_TYPE enum used to verify the types of responses from the handler.
+
+## Configuration
+The tests use a specific configuration for connecting to the Gmail API:
+
+1. `credentials_file`: Set to "mindsdb/integrations/handlers/gmail_handler/credentials.json". This file should contain the necessary OAuth credentials for accessing the Gmail API.
+2. `scopes`: Set to `['https://www.googleapis.com/auth/gmail.readonly']`. This scope allows read-only access to Gmail data, which is sufficient for the tests.
+
+It's important to note that for these tests to run successfully, a valid credentials file must be present at the specified path, and the OAuth scopes must be correctly set up for the Google Cloud project associated with these credentials.
+
+Here's an example of how the test setup is configured:
+
+```python
+@classmethod
+def setUpClass(cls):
+    kwargs = {
+        "connection_data": {
+            "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
+            "scopes": ['https://www.googleapis.com/auth/gmail.readonly']
+        }
+    }
+    cls.handler = GmailHandler('test_gmail_handler', **kwargs)
+```
+
+This configuration is used to initialize the GmailHandler instance that is then used throughout the test suite.
+
+The test suite covers several key aspects of the GmailHandler functionality:
+
+1. Connection testing:
+```python
+def test_0_check_connection(self):
+    assert self.handler.check_connection()
+```
+
+2. Native query execution:
+```python
+def test_1_native_query_select(self):
+    query = "SELECT * FROM Google.emails LIMIT 5"
+    result = self.handler.native_query(query)
+    assert result.type is RESPONSE_TYPE.TABLE
+```
+
+3. Table retrieval:
+```python
+def test_2_get_tables(self):
+    tables = self.handler.get_tables()
+    assert tables.type is not RESPONSE_TYPE.ERROR
+```
+
+4. Column information retrieval:
+```python
+def test_3_get_columns(self):
+    columns = self.handler.get_columns('emails')
+    expected_columns = ['id', 'thread_id', 'label_ids', 'snippet', 'payload', 'size_estimate', 'raw', 'internal_date', 'history_id']
+    assert set(columns) == set(expected_columns)
+```
+
+These tests ensure that the GmailHandler can perform all necessary operations to integrate Gmail data with MindsDB effectively.

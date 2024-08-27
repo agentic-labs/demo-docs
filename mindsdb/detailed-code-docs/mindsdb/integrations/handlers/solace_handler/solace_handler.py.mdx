@@ -1,0 +1,125 @@
+---
+title: "solace_handler.py"
+---
+
+## High-level description
+This code defines a `SolaceHandler` class that integrates Solace messaging services with MindsDB. It allows users to interact with Solace topics through SQL-like queries, enabling operations such as inserting messages, querying message history, and subscribing to real-time updates.
+
+## Code Structure
+The `SolaceHandler` class inherits from `DatabaseHandler` and implements methods for connecting to Solace, executing queries, and managing subscriptions. It uses the Solace Python API to interact with the messaging service. The handler defines several table-like structures (`SlackChannelListsTable`, `SlackUsersTable`, `SlackChannelsTable`) to represent different aspects of the Solace system.
+
+## Symbols
+
+### SolaceHandler
+#### Description
+The main class that handles the integration between MindsDB and Solace messaging services.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | str | The name of the handler |
+| connection_data | dict | Connection parameters for Solace |
+
+#### Internal Logic
+- Initializes connection to Solace using provided credentials
+- Implements methods for querying and manipulating Solace topics
+- Handles subscriptions to real-time updates
+
+### connect
+#### Description
+Establishes a connection to the Solace messaging service.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| messaging_service | MessagingService | Connected Solace messaging service |
+
+#### Internal Logic
+- Creates a MessagingService instance with provided connection parameters
+- Establishes connection and creates a direct message publisher
+
+### disconnect
+#### Description
+Terminates the connection to the Solace messaging service.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| is_connected | bool | Connection status after disconnection |
+
+### check_connection
+#### Description
+Verifies the connection to the Solace messaging service.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | StatusResponse | Connection status response |
+
+### query
+#### Description
+Executes a query on the Solace messaging service.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.ASTNode | SQL-like query to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Response | Query execution result |
+
+#### Internal Logic
+- Parses the input query
+- Handles different query types (e.g., INSERT)
+- Executes the appropriate operation on Solace
+
+### handle_insert
+#### Description
+Handles INSERT queries by publishing messages to Solace topics.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| query | ast.Insert | INSERT query to be executed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | Response | Query execution result |
+
+#### Internal Logic
+- Extracts topic name and message data from the query
+- Publishes the message to the specified Solace topic
+
+### subscribe
+#### Description
+Sets up a subscription to receive real-time updates from a Solace topic.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| stop_event | Event | Event to signal subscription termination |
+| callback | function | Function to handle received messages |
+| table_name | str | Name of the table (topic) to subscribe to |
+| columns | list | Optional list of columns to filter |
+
+#### Internal Logic
+- Creates a MessageHandler to process incoming messages
+- Sets up a subscription to the specified topic
+- Calls the callback function with received messages
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| solace.messaging | Solace Python API for interacting with Solace messaging services |
+| mindsdb_sql | SQL parsing and AST manipulation |
+| mindsdb.integrations.libs.base | Base classes for MindsDB integrations |
+| mindsdb.integrations.libs.response | Response handling for MindsDB integrations |
+
+## Error Handling
+The code implements basic error handling, primarily through try-except blocks in methods like `check_connection`. Errors are logged and propagated as appropriate.
+
+## Performance Considerations
+The code uses asynchronous message handling for subscriptions, which can help with performance when dealing with high-volume real-time data. However, the performance of queries and insertions will largely depend on the underlying Solace messaging service's capabilities and configuration.

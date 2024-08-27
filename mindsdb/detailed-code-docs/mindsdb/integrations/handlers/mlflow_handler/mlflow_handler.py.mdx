@@ -1,0 +1,116 @@
+---
+title: "mlflow_handler.py"
+---
+
+## High-level description
+The `MLflowHandler` class is an integration engine for MindsDB that connects with MLflow, a platform for managing the machine learning lifecycle. It allows users to create predictors using MLflow models, make predictions, and retrieve model information.
+
+## Code Structure
+The `MLflowHandler` class inherits from `BaseMLEngine` and implements methods for creating predictors, making predictions, and describing models. It interacts with MLflow using the `MlflowClient` and makes HTTP requests to a prediction endpoint.
+
+## Symbols
+
+### MLflowHandler
+#### Description
+This class handles the integration between MindsDB and MLflow, providing methods to create predictors, make predictions, and describe models.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| model_storage | object | Storage for model-specific data |
+| engine_storage | object | Storage for engine-related data |
+
+#### Internal Logic
+The class implements three main methods:
+1. `create`: Sets up a connection to MLflow and validates the model.
+2. `predict`: Sends prediction requests to the MLflow model endpoint.
+3. `describe`: Retrieves and formats model information from MLflow.
+
+### create
+#### Description
+Creates a predictor by setting up a connection to MLflow and validating the specified model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| target | str | The target variable for prediction |
+| df | Optional[pd.DataFrame] | Input data (not used in this method) |
+| args | Optional[Dict] | Configuration arguments |
+
+#### Internal Logic
+1. Extracts configuration from `args['using']`.
+2. Connects to MLflow using the provided server URL and path.
+3. Checks if the specified model exists in MLflow.
+4. Validates the prediction URL.
+5. Stores the configuration in `model_storage`.
+
+### predict
+#### Description
+Makes predictions using the MLflow model by sending requests to the prediction endpoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| df | pd.DataFrame | Input data for prediction |
+| args | Optional[Dict] | Additional arguments (not used) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| predictions | pd.DataFrame | Predicted values for the target variable |
+
+#### Internal Logic
+1. Retrieves stored configuration.
+2. Sends a POST request to the prediction URL with the input data.
+3. Processes the response and returns predictions as a DataFrame.
+
+### describe
+#### Description
+Retrieves and formats information about the MLflow model.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | Optional[str] | Specifies the type of information to retrieve |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| description | pd.DataFrame | Model information or available tables |
+
+#### Internal Logic
+If `key` is 'info':
+1. Connects to MLflow and retrieves model information.
+2. Formats the information into a DataFrame with various model attributes.
+Otherwise:
+- Returns a DataFrame with available tables (only 'info' in this case).
+
+### _check_model_url
+#### Description
+A static method that validates the prediction URL by sending a test POST request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| url | str | The prediction URL to validate |
+
+#### Internal Logic
+1. Sends a POST request to the given URL without data.
+2. Checks if the response status code indicates a valid endpoint (not 404 or 405).
+3. Raises an exception if the URL is incorrect or unreachable.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| requests | Making HTTP requests to the MLflow prediction endpoint |
+| pandas | Data manipulation and storage |
+| mlflow.tracking | Interacting with MLflow's model registry |
+| mindsdb.integrations.libs.base | Base class for ML engines in MindsDB |
+
+## Error Handling
+The code implements basic error handling:
+- Raises an exception if the specified model is not found in MLflow.
+- Raises an exception if the prediction URL is incorrect or unreachable.
+
+## Performance Considerations
+The performance of this integration depends largely on the responsiveness of the MLflow server and the prediction endpoint. Each prediction requires an HTTP request, which may introduce latency for large datasets or frequent predictions.

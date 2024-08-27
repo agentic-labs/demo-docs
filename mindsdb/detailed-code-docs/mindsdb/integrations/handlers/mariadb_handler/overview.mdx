@@ -1,0 +1,107 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the MariaDB handler for MindsDB, which provides integration with MariaDB databases. The handler allows MindsDB to connect to, query, and interact with MariaDB databases, leveraging the compatibility between MariaDB and MySQL.
+
+## What does it do?
+The MariaDB handler enables MindsDB to:
+1. Establish connections to MariaDB databases using various connection parameters.
+2. Execute SQL queries and statements on connected MariaDB databases.
+3. Retrieve data from MariaDB tables for use in MindsDB's machine learning and AI capabilities.
+4. Enhance MariaDB with AI functionalities provided by MindsDB.
+
+The handler utilizes the existing MySQL handler implementation due to the high compatibility between MariaDB and MySQL, while providing a distinct identifier for MariaDB connections.
+
+## Key Files
+
+### 1. mariadb_handler.py
+This file contains the `MariaDBHandler` class, which is the core of the integration. It inherits from the `MySQLHandler` class, leveraging MySQL's compatibility with MariaDB. The class provides methods for connecting to MariaDB databases, executing queries, and managing connections.
+
+```python
+class MariaDBHandler(MySQLHandler):
+    name = 'mariadb'
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+```
+
+### 2. __init__.py
+This file sets up the MariaDB handler for use within MindsDB. It imports the `MariaDBHandler` class and defines metadata such as version, description, and handler type. It also handles potential import errors gracefully.
+
+```python
+from mindsdb.integrations.libs.const import HANDLER_TYPE
+
+from .__about__ import __version__ as version, __description__ as description
+from .mariadb_handler import MariaDBHandler
+
+try:
+    Handler = MariaDBHandler
+    import_error = None
+except Exception as e:
+    Handler = None
+    import_error = e
+
+title = 'MariaDB'
+name = 'mariadb'
+type = HANDLER_TYPE.DATA
+icon_path = 'icon.svg'
+
+__all__ = [
+    'Handler', 'version', 'name', 'type', 'title', 'description',
+    'import_error', 'icon_path'
+]
+```
+
+### 3. connection_args.py
+This file defines the connection arguments required for establishing a connection to a MariaDB server. It specifies the structure and properties of each connection parameter, including their types, descriptions, and whether they are required or optional.
+
+```python
+from collections import OrderedDict
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
+connection_args = OrderedDict(
+    url=dict(
+        type=ARG_TYPE.STR,
+        description='URL as a connection string',
+        required=False,
+        label='URL',
+    ),
+    user=dict(
+        type=ARG_TYPE.STR,
+        description='The user name used to authenticate with the MariaDB server.',
+        required=True,
+        label='User',
+    ),
+    # ... other connection arguments ...
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=3306,
+    user='root',
+    password='password',
+    database='database',
+)
+```
+
+## Dependencies
+The MariaDB handler relies on the following main dependencies:
+1. MindsDB's MySQL handler: The `MariaDBHandler` class extends the `MySQLHandler` class, leveraging its implementation for database operations.
+2. MariaDB Connector/Python: While not explicitly imported in the provided files, this is likely used under the hood for connecting to MariaDB databases.
+
+## Configuration
+The MariaDB handler can be configured using various connection parameters, including:
+- `url`: A URI-like connection string (optional, overrides other parameters if provided)
+- `user`: Username for authentication
+- `password`: Password for authentication
+- `database`: Name of the database to connect to
+- `host`: Hostname or IP address of the MariaDB server
+- `port`: TCP/IP port of the MariaDB server
+- `ssl`: Boolean to enable SSL connection
+- `ssl_ca`, `ssl_cert`, `ssl_key`: Paths or URLs for SSL certificate files (optional, used when SSL is enabled)
+
+These parameters can be provided when creating a new database connection in MindsDB using the `CREATE DATABASE` SQL command.
+
+In conclusion, the MariaDB handler provides a seamless integration between MindsDB and MariaDB databases, allowing users to leverage MindsDB's AI capabilities with their MariaDB data sources. The handler's implementation builds upon the MySQL handler, ensuring compatibility and reliability while providing a distinct identifier for MariaDB connections.
