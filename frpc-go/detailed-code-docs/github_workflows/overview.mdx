@@ -1,0 +1,61 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains GitHub Actions workflow files that define automated processes for continuous integration and code quality assurance for a Go project. The workflows are designed to run linting checks and automated tests, including race condition detection, on pull requests and push events.
+
+## What does it do?
+The workflows in this directory automate two critical aspects of the development process:
+
+1. Code Quality Checks: The "Lint" workflow runs on pull requests, using golangci-lint to perform static code analysis on the Go codebase. This helps maintain code consistency and catch potential issues early in the development cycle.
+
+2. Automated Testing: The "Tests" workflow runs on both push events and pull requests. It executes two types of tests:
+   - Standard tests: Run the project's test suite to ensure functionality.
+   - Race condition tests: Run tests with race detection enabled to identify potential concurrency issues.
+
+These automated processes help ensure that code changes maintain quality standards and don't introduce regressions before being merged into the main codebase.
+
+## Key Files
+
+### lint.yml
+This file defines the "Lint" workflow. Key features include:
+- Triggered on pull requests
+- Uses golangci-lint for Go code linting
+- Runs on the latest Ubuntu environment
+- Sets up Go 1.21 without caching
+- Uses the latest version of golangci-lint
+
+### tests.yaml
+This file defines the "Tests" workflow. Key features include:
+- Triggered on push and pull request events for all branches
+- Defines two jobs: `tests` and `tests-race`
+- Both jobs set up Go 1.21, cache dependencies, and install Protoc and related plugins
+- The `tests` job runs standard tests using `go test -v ./...`
+- The `tests-race` job runs tests with race detection using `go test -race -v ./...`
+- Includes a 15-minute timeout for the `tests-race` job
+
+## Dependencies
+Both workflows rely on several GitHub Actions:
+
+1. actions/checkout (v2 and v3): Used to fetch the repository code.
+2. actions/setup-go (v2 and v4): Sets up the Go programming environment.
+3. actions/cache (v2): Caches Go build and mod dependencies for improved performance.
+4. golangci/golangci-lint-action (v3): Runs golangci-lint for code linting.
+5. arduino/setup-protoc (v1): Installs Protoc for handling protocol buffers.
+
+## Configuration
+The workflows use the following key configurations:
+
+1. Go version: Both workflows use Go 1.21.
+2. golangci-lint version: The lint workflow uses the latest version.
+3. Caching: The test workflow caches Go build and mod dependencies, while the lint workflow disables caching for Go setup.
+4. Test execution: Standard tests and race condition tests are run separately.
+5. Protoc setup: The test workflow installs Protoc and related plugins, including a custom `frpc` plugin.
+
+## Additional Notes
+1. There's an inconsistency in the checkout action versions used (v2 and v3). Standardizing to v3 could improve consistency.
+2. The `go-cache-paths` step in the test workflow uses a deprecated `set-output` command, which should be updated to use the `$GITHUB_OUTPUT` environment file.
+3. The installation of the custom `frpc` plugin for `protoc-gen` might benefit from an additional verification step.
+
+These workflows collectively ensure that code changes are thoroughly checked for quality and functionality before being integrated into the main codebase, supporting a robust continuous integration process for the Go project.

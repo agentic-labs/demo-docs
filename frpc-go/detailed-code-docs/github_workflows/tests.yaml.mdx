@@ -1,0 +1,50 @@
+---
+title: "tests.yaml"
+---
+
+## High-level description
+This YAML file defines a GitHub Actions workflow named "Tests" that runs automated tests for a Go project. It sets up two jobs: one for running standard tests and another for running tests with race condition detection. The workflow is triggered on push and pull request events for all branches.
+
+## Code Structure
+The workflow consists of two main jobs: `tests` and `tests-race`. Both jobs have similar steps but differ in their final test execution command. They set up the Go environment, cache dependencies, install necessary tools, and run tests.
+
+## Symbols
+
+### `tests` (job)
+#### Description
+This job runs the standard tests for the project.
+
+#### Internal Logic
+1. Sets up the Go environment and caches dependencies.
+2. Installs Protoc and related plugins.
+3. Runs the generator for test proto files.
+4. Executes the tests using `go test -v ./...`.
+
+### `tests-race` (job)
+#### Description
+This job runs tests with race condition detection enabled.
+
+#### Internal Logic
+Similar to the `tests` job, but the final step runs tests with the `-race` flag:
+`go test -race -v ./...`
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v2 | Checks out the repository |
+| actions/setup-go@v2 | Sets up the Go environment |
+| actions/cache@v2 | Caches Go build and mod dependencies |
+| arduino/setup-protoc@v1 | Installs Protoc |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| go-version | string | '1.21' | Specifies the Go version to use |
+
+## Performance Considerations
+The workflow uses caching for Go build and mod dependencies to improve performance across runs. The `tests-race` job has a timeout of 15 minutes due to the potential for longer execution times when running with race detection.
+
+## TODOs
+- The workflow uses both `actions/checkout@v2` and `actions/checkout@v3`. It might be beneficial to standardize on the latest version (v3) for consistency.
+- Consider adding a step to verify the installation of the custom `frpc` plugin for `protoc-gen`.
+- The `go-cache-paths` step uses the deprecated `set-output` command. It should be updated to use the newer `$GITHUB_OUTPUT` environment file.

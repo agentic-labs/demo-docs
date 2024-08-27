@@ -1,0 +1,95 @@
+---
+title: "client.templ"
+---
+
+## High-level description
+This code defines a client-side implementation for an RPC (Remote Procedure Call) system using the Frisbee protocol. It generates client structs and methods for various services defined in a protocol buffer-like schema, handling both unary and streaming RPC calls.
+
+## Code Structure
+The code is structured as a Go template that generates client-side code for multiple services. It defines structures for each service client, a main Client struct, and methods for creating and using these clients. The code also includes helper functions for handling different types of RPC calls (unary and streaming).
+
+## Symbols
+
+### `Client`
+#### Description
+The main client struct that encapsulates all service-specific clients.
+
+#### Internal Logic
+- Initializes service-specific clients
+- Provides methods for connecting to a server and creating a client from an existing connection
+
+### `NewClient`
+#### Description
+Creates and initializes a new Client instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tlsConfig | *tls.Config | TLS configuration for secure connections |
+| logger | *zerolog.Logger | Logger for client operations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Client | *Client | Initialized Client instance |
+| error | error | Error if initialization fails |
+
+#### Internal Logic
+- Creates a new frisbee.Client with the provided TLS config and logger
+- Initializes service-specific clients and their internal state (e.g., mutexes, maps for inflight requests)
+
+### `Connect`
+#### Description
+Connects the client to a server at the specified address.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| addr | string | Server address to connect to |
+| streamHandler | ...frisbee.NewStreamHandler | Optional stream handlers |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error if connection fails |
+
+### `FromConn`
+#### Description
+Creates a client from an existing network connection.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| conn | net.Conn | Existing network connection |
+| streamHandler | ...frisbee.NewStreamHandler | Optional stream handlers |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error if client creation fails |
+
+### Service-specific client methods
+#### Description
+For each service method defined in the schema, the template generates corresponding client methods.
+
+#### Internal Logic
+- For unary calls: Prepares the request, sends it, and waits for the response
+- For streaming calls: Creates a new stream and returns a stream client for further interaction
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/loopholelabs/frisbee-go | Underlying RPC framework |
+| github.com/rs/zerolog | Logging |
+| crypto/tls | TLS support for secure connections |
+| sync | Synchronization primitives |
+| go.uber.org/atomic | Atomic operations |
+
+## Error Handling
+The code uses a combination of error returns and a custom `CloseError` type for handling errors in RPC operations.
+
+## Performance Considerations
+- Uses sync.RWMutex for thread-safe access to shared resources
+- Implements connection pooling and reuse through the frisbee.Client
+
+This template generates a comprehensive client-side implementation for an RPC system, handling various types of RPC calls and providing a clean API for service interactions.
