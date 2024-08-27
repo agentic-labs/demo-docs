@@ -3,108 +3,53 @@ title: "ingress-aws.yaml"
 ---
 
 ## High-level description
-This Kubernetes YAML file defines Ingress resources for a Trive application deployed on AWS using an Application Load Balancer (ALB). It also includes NetworkPolicy resources to allow all ingress and egress traffic. The Ingress resources route traffic from specific hostnames to corresponding services within the cluster.
+This Helm template file defines Kubernetes Ingress resources for an AWS environment. It sets up routing rules for various services (dashboard, chat, server, and search) and includes network policies to allow all ingress and egress traffic.
 
 ## Code Structure
-This code defines multiple Kubernetes objects within a single YAML file. Each object is delimited by `---`. The objects are:
-- **Ingress:** Defines rules for routing external traffic to services within the cluster. There are five Ingress objects defined, one for each of the following services: `dashboard-service`, `chat-service`, `server-service`, and `search-service`.
-- **NetworkPolicy:** Defines network traffic rules for pods in the cluster. There are two NetworkPolicy objects defined, one to allow all ingress traffic and one to allow all egress traffic.
+The file contains multiple Kubernetes resource definitions, including five Ingress resources and two NetworkPolicy resources. Each Ingress resource is configured for a specific service, and the NetworkPolicy resources are set to allow all ingress and egress traffic.
 
 ## Symbols
-### `ingress-dashboard`
-#### Description
-This Ingress resource configures an ALB to route traffic from `dashboard.{domain}` to the `dashboard-service` service on port 80.
 
-#### Inputs
-This Ingress resource takes the following input from values:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for the application. |
+### Ingress Resources
+#### Description
+These Kubernetes Ingress resources define how external HTTP and HTTPS traffic should be routed to the services within the cluster.
 
 #### Internal Logic
-- It sets the Ingress class to `alb` to use an ALB.
-- It sets the target type to `ip` to route traffic to the service's IP address.
-- It sets the scheme to `internet-facing` to make the service accessible from the internet.
-- It uses an annotation to set the hostname for external DNS to `dashboard.{domain}`.
-- It defines a rule that matches the hostname `dashboard.{domain}` and routes traffic to the root path `/` on the `dashboard-service` service.
+Each Ingress resource is configured with:
+- Metadata: Including name, labels, and annotations for ALB (Application Load Balancer) configuration
+- Spec: Defining the ingress class and routing rules based on the host and path
 
-### `ingress-chat`
+The following Ingress resources are defined:
+1. ingress-dashboard
+2. ingress-chat
+3. ingress-server
+4. ingress-search
+
+Each Ingress is configured to use the ALB ingress class and is set up for internet-facing access.
+
+### NetworkPolicy Resources
 #### Description
-This Ingress resource configures an ALB to route traffic from `chat.{domain}` to the `chat-service` service on port 3000.
-
-#### Inputs
-This Ingress resource takes the following input from values:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for the application. |
+These Kubernetes NetworkPolicy resources define the network traffic rules for the cluster.
 
 #### Internal Logic
-- It sets the Ingress class to `alb` to use an ALB.
-- It sets the target type to `ip` to route traffic to the service's IP address.
-- It sets the scheme to `internet-facing` to make the service accessible from the internet.
-- It uses an annotation to set the hostname for external DNS to `chat.{domain}`.
-- It defines a rule that matches the hostname `chat.{domain}` and routes traffic to the root path `/` on the `chat-service` service.
+Two NetworkPolicy resources are defined:
+1. allow-all-ingress: Allows all incoming traffic to any pod in the cluster
+2. allow-all-egress: Allows all outgoing traffic from any pod in the cluster
 
-### `ingress-server`
-#### Description
-This Ingress resource configures an ALB to route traffic from `api.{domain}` to the `server-service` service on port 8090. It also configures a health check path and port for the ALB.
-
-#### Inputs
-This Ingress resource takes the following input from values:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for the application. |
-
-#### Internal Logic
-- It sets the Ingress class to `alb` to use an ALB.
-- It sets the target type to `ip` to route traffic to the service's IP address.
-- It sets the scheme to `internet-facing` to make the service accessible from the internet.
-- It uses annotations to set the hostname for external DNS to `api.{domain}`, the health check path to `/api/health`, and the health check port to `8090`.
-- It defines a rule that matches the hostname `api.{domain}` and routes traffic to the root path `/` on the `server-service` service.
-
-### `ingress-search`
-#### Description
-This Ingress resource configures an ALB to route traffic from `search.{domain}` to the `search-service` service on port 3001.
-
-#### Inputs
-This Ingress resource takes the following input from values:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for the application. |
-
-#### Internal Logic
-- It sets the Ingress class to `alb` to use an ALB.
-- It sets the target type to `ip` to route traffic to the service's IP address.
-- It sets the scheme to `internet-facing` to make the service accessible from the internet.
-- It uses an annotation to set the hostname for external DNS to `search.{domain}`.
-- It defines a rule that matches the hostname `search.{domain}` and routes traffic to the root path `/` on the `search-service` service.
-
-### `allow-all-ingress`
-#### Description
-This NetworkPolicy resource allows all ingress traffic to all pods in the cluster.
-
-#### Internal Logic
-- It selects all pods with an empty pod selector.
-- It allows ingress traffic from all sources with an empty ingress rule.
-
-### `allow-all-egress`
-#### Description
-This NetworkPolicy resource allows all egress traffic from all pods in the cluster.
-
-#### Internal Logic
-- It selects all pods with an empty pod selector.
-- It allows egress traffic to all destinations with an empty egress rule.
-
-## Configuration
-This code snippet uses a conditional statement `{{- if (eq .Values.environment "aws") }}` to apply the Ingress and NetworkPolicy resources only when the `environment` value is set to `aws`. This suggests that there might be different configurations for other environments.
+These policies effectively disable network isolation within the cluster.
 
 ## Dependencies
-This code depends on the following Kubernetes resources:
-- **Application Load Balancer (ALB) Ingress Controller:** It uses annotations specific to the ALB Ingress Controller to configure the load balancer.
-- **External DNS:** It uses annotations to manage DNS records for the defined hostnames.
+This template relies on Helm for variable substitution and conditional rendering.
 
-## Error Handling
-This code does not implement specific error handling mechanisms.
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.environment | string | N/A | Determines if the resources should be created (must be "aws") |
+| .Values.domain | string | N/A | The domain name used for constructing hostnames |
 
-## Logging
-This code does not implement logging.
+## Notes
+- The entire template is wrapped in a conditional check `{{- if (eq .Values.environment "aws") }}`, ensuring these resources are only created in an AWS environment.
+- The `$domain` variable is set at the beginning of the file using `.Values.domain` and is used throughout the template to construct hostnames.
+- Each Ingress resource uses annotations specific to AWS ALB Ingress Controller.
+- The server Ingress includes a health check configuration pointing to "/api/health" on port 8090.
+- The NetworkPolicy resources effectively allow all network traffic, which might not be suitable for production environments requiring stricter security controls.

@@ -3,63 +3,65 @@ title: "useSearch.ts"
 ---
 
 ## High-level description
-This code defines a custom React hook called `useSearch` that manages the state and logic for a search functionality. It handles various search options, filters, and pagination, and provides methods to update and synchronize the search state with URL parameters.
+The `useSearch` hook manages the search state and parameters for the application. It synchronizes the search state with URL parameters, allowing users to share and bookmark specific search configurations. The hook also provides a debounced version of the state to optimize search requests.
 
 ## Code Structure
-The main symbols in this code are:
-- `useSearch`: The main hook function that initializes and manages the search state.
-- `SearchOptions`: An interface defining the structure of search options.
-- `SortByField` and `SortBySearchType`: Interfaces for sorting options.
-- `HighlightStrategy`: A type for highlight strategies.
-- Various utility functions like `isSortByField`, `isSortBySearchType`, and `isHighlightStrategy`.
+The `useSearch` hook uses the `createStore` function from Solid.js to manage the search state. It defines two stores: `state` and `debounced`. The `state` store holds the current search options, while the `debounced` store holds a debounced version of the state, updated after a short delay. The hook also uses the `useSearchParams` hook from Solid Router to synchronize the search state with URL parameters.
 
-These symbols are interconnected, with `useSearch` using the interfaces and utility functions to manage the search state.
+## References
+- `@solidjs/router`: Used for managing URL parameters and navigation.
+- `solid-js`: Used for reactive state management and effects.
 
 ## Symbols
 
 ### `useSearch`
 #### Description
-A custom hook that manages the search state, including debounced updates and synchronization with URL parameters.
+This hook manages the search state and parameters for the application. It synchronizes the search state with URL parameters, allowing users to share and bookmark specific search configurations. The hook also provides a debounced version of the state to optimize search requests.
+
+#### Inputs
+None
 
 #### Outputs
-Returns an object containing:
-- `debounced`: The debounced search state.
-- `state`: The current search state.
-- `setSearch`: A function to update the search state.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| debounced | `SearchOptions` | A debounced version of the search state, updated after a short delay. |
+| state | `SearchOptions` | The current search options. |
+| setSearch | `(key: keyof SearchOptions, value: any) =&gt; void` | A function to update the search state. |
 
 #### Internal Logic
-1. Initializes the search state using `createStore`.
-2. Creates a debounced version of the state.
-3. Sets up an effect to update URL parameters when the state changes.
-4. Provides a proxied `setSearch` function that increments a version number.
+1. **Initialization:**
+    - The hook initializes the search state with default values from `initalState` and values from URL parameters using `fromParamsToState`.
+    - It creates two stores: `state` and `debounced`, both initialized with the same values.
+2. **Synchronization with URL Parameters:**
+    - A `createEffect` is used to synchronize the `state` store with URL parameters.
+    - Whenever the `version` property of the `state` store changes, the `setSearchParams` function is called to update the URL parameters with the current search options using `fromStateToParams`.
+    - A timeout is set to update the `debounced` store with the current state after a 200ms delay. This debouncing prevents excessive search requests when the user is typing.
+3. **State Update:**
+    - The `setSearch` function is proxied to increment the `version` property of the `state` store after each update. This triggers the synchronization with URL parameters and the debouncing mechanism.
 
-### `SearchOptions`
-#### Description
-An interface defining the structure of search options, including query parameters, filters, and display settings.
-
-### `SortByField` and `SortBySearchType`
-#### Description
-Interfaces defining sorting options for search results.
-
-### `HighlightStrategy`
-#### Description
-A type defining possible highlight strategies for search results.
-
-### Utility Functions
-#### Description
-Several utility functions (`isSortByField`, `isSortBySearchType`, `isHighlightStrategy`) to check the type of certain objects or values.
+## Side Effects
+- Modifies URL parameters to reflect the current search state.
 
 ## Dependencies
-- `@solidjs/router`: For handling URL parameters.
-- `solid-js`: For reactive state management.
+- `@solidjs/router`
+- `solid-js`
+- `solid-js/store`
 
 ## Configuration
-The code defines an `initalState` object with default values for all search options.
+The `initalState` object defines the default search options.
 
 ## Error Handling
-The code doesn't implement explicit error handling. Errors would be handled by the calling component.
+No specific error handling mechanisms are implemented in this hook.
 
-## Performance Considerations
-The use of debounced state updates helps to reduce unnecessary re-renders and API calls.
+## Logging
+No logging mechanisms are implemented in this hook.
 
-This hook provides a comprehensive way to manage search state, including URL synchronization, which is useful for creating shareable search URLs and maintaining state across page reloads.
+## API/Interface Reference
+The `useSearch` hook exposes the following API:
+
+- `debounced`: A debounced version of the search state.
+- `state`: The current search options.
+- `setSearch`: A function to update the search state.
+
+## TODOs
+None

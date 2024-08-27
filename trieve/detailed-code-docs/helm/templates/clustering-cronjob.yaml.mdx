@@ -3,38 +3,46 @@ title: "clustering-cronjob.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes CronJob named `clustering-cronjob` that runs a containerized task on an hourly schedule. The task, using the image `trieve/clickhouse-clustering:latest`, is designed to perform clustering operations, likely related to data management within a ClickHouse database.
+This YAML file defines a Kubernetes CronJob named "clustering-cronjob" that runs a clustering task on an hourly basis. The job uses a custom Docker image to perform clickhouse clustering operations, likely involving data processing or analysis tasks.
 
 ## Symbols
-### `clustering-cronjob`
+
+### CronJob
 #### Description
-This symbol defines a Kubernetes CronJob resource responsible for scheduling and running a containerized task on an hourly basis.
+The CronJob resource schedules a job to run periodically according to a specified schedule. In this case, it's configured to run a clustering task every hour.
 
 #### Inputs
-This symbol does not take direct inputs. It relies on configuration values provided through Helm values (`.Values`) when the YAML file is deployed.
-
-#### Outputs
-This symbol does not produce direct outputs. It creates a Kubernetes CronJob object upon deployment.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| schedule | string | Cron expression defining when the job should run |
+| jobTemplate | object | Template for the job to be created |
 
 #### Internal Logic
-- **`schedule: "0 * * * *"`**: This Cron expression defines the job's schedule, which translates to running the job every hour at the 0th minute.
-- **`jobTemplate`**: This section defines the template for the Jobs that the CronJob creates.
-    - **`spec.template.spec.containers`**: This section defines the container to be run within the Job's Pod.
-        - **`name: clustering-task`**:  Assigns the name "clustering-task" to the container.
-        - **`image: trieve/clickhouse-clustering:latest`**: Specifies the Docker image to be used for the container.
-        - **`imagePullPolicy: IfNotPresent`**: Instructs Kubernetes to pull the image only if it's not already present in the local repository.
-        - **`env`**: Defines environment variables for the container.
-            - **`ANTHROPIC_API_KEY`**:  An API key, likely for Anthropic services, passed from the Helm values (`.Values.config.trieve.anthropicAPIKey`).
-            - **`CLICKHOUSE_DSN`**:  A ClickHouse Data Source Name, passed from the Helm values (`.Values.config.trieve.clickhouseDSN`), used to connect to a ClickHouse database.
-- **`restartPolicy: OnFailure`**: This setting ensures that the Job's Pod will be restarted if the container exits with a non-zero exit code, indicating a failure.
+The CronJob is set to run every hour (at the start of each hour) using the cron schedule "0 * * * *". When triggered, it creates a new Pod based on the defined template.
+
+### Pod Template
+#### Description
+Defines the specification for the Pod that will be created by the CronJob.
+
+#### Internal Logic
+The Pod runs a single container named "clustering-task" using the "trieve/clickhouse-clustering:latest" image. It sets two environment variables:
+1. ANTHROPIC_API_KEY: Sourced from the Helm values
+2. CLICKHOUSE_DSN: Sourced from the Helm values
+
+The restart policy is set to "OnFailure", meaning the Pod will be restarted if it fails to complete successfully.
 
 ## Dependencies
-- **Kubernetes:** This code defines Kubernetes resources (CronJob) and relies on Kubernetes for scheduling and execution.
-- **Helm:** The code uses Helm templating syntax (e.g., `.Values`) to inject configuration values during deployment.
+| Dependency | Purpose |
+|:-----------|:--------|
+| trieve/clickhouse-clustering:latest | Docker image containing the clustering task logic |
 
 ## Configuration
-This code relies on Helm values for configuration. The following values are used:
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| `.Values.config.trieve.anthropicAPIKey` | string | N/A | API key for Anthropic services. |
-| `.Values.config.trieve.clickhouseDSN` | string | N/A | ClickHouse Data Source Name for database connection. |
+| .Values.config.trieve.anthropicAPIKey | string | N/A | API key for Anthropic services |
+| .Values.config.trieve.clickhouseDSN | string | N/A | DSN for connecting to ClickHouse database |
+
+Note: The actual values for these configurations are not present in this file and would be provided separately in the Helm values file.
+
+## Performance Considerations
+The CronJob is scheduled to run every hour, which could impact system resources depending on the complexity and duration of the clustering task. It's important to monitor the job's performance and adjust the schedule if necessary to balance data freshness with system load.

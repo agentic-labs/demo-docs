@@ -3,53 +3,48 @@ title: "pvc.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes PersistentVolumeClaim (PVC) for storing PostgreSQL database backups. It is used in conjunction with a cronjob that performs the backups. The PVC ensures that storage is provisioned and available for the backup process.
-
-## Code Structure
-This code is a single YAML template that defines a Kubernetes PersistentVolumeClaim. It uses conditional logic to determine whether the PVC should be created based on the values provided in the Helm chart.
-
-## References
-This code references several values from a Helm chart, including:
-- `.Values.backup.enabled`: A boolean value indicating whether backups are enabled.
-- `.Values.backup.cronjob.storage.enabled`: A boolean value indicating whether to use a PersistentVolumeClaim for backup storage.
-- `.Values.backup.cronjob.storage.existingClaim`: A string value specifying the name of an existing PVC to use for backups.
-- `.Values.backup.cronjob.storage.accessModes`: A list of access modes for the PVC.
-- `.Values.backup.cronjob.storage.size`: The desired size of the PVC.
-- `.Values.backup.cronjob.storage.resourcePolicy`: The resource policy to apply to the PVC.
-- `.Values.backup.cronjob.labels`: A map of labels to apply to the PVC.
-- `.Values.backup.cronjob.annotations`: A map of annotations to apply to the PVC.
-- `.Values.commonLabels`: A map of common labels to apply to the PVC.
-- `.Values.commonAnnotations`: A map of common annotations to apply to the PVC.
-- `.Release.Namespace`: The namespace where the PVC will be created.
+This Helm template defines a Kubernetes PersistentVolumeClaim (PVC) for PostgreSQL backups using pg_dumpall. It's conditionally created based on backup and storage configuration values, providing persistent storage for backup data.
 
 ## Symbols
-### `pvc.yaml`
+
+### PersistentVolumeClaim
 #### Description
-This YAML template defines a Kubernetes PersistentVolumeClaim for storing PostgreSQL database backups.
+Defines a Kubernetes PersistentVolumeClaim resource for storing PostgreSQL backups.
 
 #### Inputs
-This template uses values passed in from a Helm chart. See the "References" section for a list of referenced values.
-
-#### Outputs
-This template renders a Kubernetes PersistentVolumeClaim object.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.backup.enabled | boolean | Determines if backup is enabled |
+| .Values.backup.cronjob.storage.enabled | boolean | Determines if storage for backup is enabled |
+| .Values.backup.cronjob.storage.existingClaim | string | Name of an existing PVC to use |
+| .Values.backup.cronjob.storage.accessModes | list | Access modes for the PVC |
+| .Values.backup.cronjob.storage.size | string | Size of the PVC |
+| .Values.backup.cronjob.labels | map | Custom labels for the PVC |
+| .Values.commonLabels | map | Common labels to apply |
+| .Values.backup.cronjob.annotations | map | Custom annotations for the PVC |
+| .Values.commonAnnotations | map | Common annotations to apply |
+| .Values.backup.cronjob.storage.resourcePolicy | string | Resource policy for the PVC |
 
 #### Internal Logic
-The template uses conditional logic to determine whether the PVC should be created. The PVC is only created if all of the following conditions are true:
-- Backups are enabled (`.Values.backup.enabled` is true).
-- Using a PersistentVolumeClaim for backup storage is enabled (`.Values.backup.cronjob.storage.enabled` is true).
-- An existing PVC is not being used for backups (`.Values.backup.cronjob.storage.existingClaim` is not set).
-
-If the PVC is created, the following attributes are configured:
-- `metadata.name`: The name of the PVC is set to `&lt;release-name&gt;-pgdumpall`.
-- `metadata.namespace`: The namespace of the PVC is set to the release namespace.
-- `metadata.labels`: Labels are applied to the PVC based on the values provided in the Helm chart.
-- `metadata.annotations`: Annotations are applied to the PVC based on the values provided in the Helm chart.
-- `spec.accessModes`: The access modes of the PVC are set based on the values provided in the Helm chart.
-- `spec.resources.requests.storage`: The requested storage size of the PVC is set based on the value provided in the Helm chart.
-- `spec.storageClassName`: The storage class of the PVC is set based on the values provided in the Helm chart.
+1. Checks if backup is enabled, storage is enabled, and no existing claim is specified.
+2. Sets the PVC name using the `postgresql.v1.primary.fullname` template.
+3. Merges custom and common labels.
+4. Conditionally adds annotations, including resource policy if specified.
+5. Defines access modes, storage size, and storage class for the PVC.
 
 ## Dependencies
-This code depends on the Kubernetes API for creating PersistentVolumeClaims. It also depends on Helm for templating and value substitution.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper templates for labels, annotations, and storage class |
 
 ## Configuration
-This code is configured using values passed in from a Helm chart. See the "References" section for a list of configurable values.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| backup.enabled | boolean | - | Enables or disables backup functionality |
+| backup.cronjob.storage.enabled | boolean | - | Enables or disables storage for backup |
+| backup.cronjob.storage.existingClaim | string | - | Name of an existing PVC to use |
+| backup.cronjob.storage.accessModes | list | - | Access modes for the PVC |
+| backup.cronjob.storage.size | string | - | Size of the PVC |
+| backup.cronjob.storage.resourcePolicy | string | - | Resource policy for the PVC |
+
+Note: Default values are not specified in this template and would be defined elsewhere in the Helm chart.

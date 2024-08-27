@@ -3,7 +3,7 @@ title: "ctr.ts"
 ---
 
 ## High-level description
-The `getSearchCTRSummary` function fetches search click-through rate (CTR) summary data for a given dataset from the `/analytics/ctr` API endpoint. It sends a POST request with optional filters and returns an object containing the number of searches with clicks, the percentage of searches with clicks, and the average click position.
+The code defines an asynchronous function `getSearchCTRSummary` that fetches search click-through rate (CTR) summary data for a given dataset from a backend API. It sends a POST request to the `/analytics/ctr` endpoint with optional filters and returns the parsed response data.
 
 ## References
 - `AnalyticsFilter` type from "shared/types"
@@ -14,32 +14,44 @@ The `getSearchCTRSummary` function fetches search click-through rate (CTR) summa
 
 ### `getSearchCTRSummary`
 #### Description
-This asynchronous function retrieves a summary of search CTR metrics for a specific dataset, optionally filtered by provided criteria. It constructs and sends a POST request to the `/analytics/ctr` endpoint, handles the response, and returns the parsed data.
+This asynchronous function fetches search CTR summary data for a given dataset from the backend API. It constructs a POST request to the `/analytics/ctr` endpoint, optionally including filters, and returns the parsed response data.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| datasetId | string | The ID of the dataset for which to fetch CTR data. |
-| filters | AnalyticsFilter (optional) | An object containing filter parameters for the CTR data. |
+| datasetId | string | The ID of the dataset to fetch CTR data for. |
+| filters | AnalyticsFilter | (Optional) Filters to apply to the CTR data request. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | object | An object containing the following CTR metrics: `searches_with_clicks`, `percent_searches_with_clicks`, and `avg_position_of_click`. |
+| data | object | An object containing the search CTR summary data:  |
+|| | - `searches_with_clicks`: The number of searches with clicks. |
+|| | - `percent_searches_with_clicks`: The percentage of searches with clicks. |
+|| | - `avg_position_of_click`: The average position of the clicked result. |
 
 #### Internal Logic
-1. **Construct API Endpoint:** The function builds the API endpoint URL using the `apiHost` and the `/analytics/ctr` path.
-2. **Prepare Request Body:** It creates a JSON payload for the request body, including the transformed `filters` (if provided) and the request `type` as "search_ctr_metrics".
-3. **Send Request:** The function sends a POST request to the constructed endpoint with the prepared body, including credentials and dataset ID in the headers.
-4. **Handle Response:**
-   - **Success:** If the response is successful (status code 200-299), it parses the JSON response into an object containing CTR metrics.
-   - **Error:** If the response is not successful, it throws an error with the response status text.
-5. **Return Data:** The function returns the parsed CTR data object.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| fetch | Used to make the API request. |
+1. Constructs the API endpoint URL using `apiHost` and the `/analytics/ctr` path.
+2. Sends a POST request to the constructed URL with the following:
+    - `credentials`: set to "include" to include cookies in the request.
+    - `method`: set to "POST".
+    - `body`: a JSON stringified object containing:
+        - `filter`: transformed `filters` using `transformAnalyticsFilter` if provided, otherwise undefined.
+        - `type`: set to "search_ctr_metrics".
+    - `headers`:
+        - `TR-Dataset`: set to the provided `datasetId`.
+        - `Content-Type`: set to "application/json".
+3. Checks if the response is not ok (status code outside the 200-299 range). If so, throws an error with the response status text.
+4. Parses the response JSON data and casts it to an object with the expected CTR summary data structure.
+5. Returns the parsed CTR summary data.
 
 ## Error Handling
-The function throws an error if the API request fails, providing the response status text as the error message.
+- Throws an error if the fetch request fails or the response status code is not in the 200-299 range. The error message includes the response status text.
+
+## Dependencies
+- `fetch` (built-in) for making HTTP requests.
+
+## References
+- `AnalyticsFilter` type from "shared/types"
+- `apiHost` from "../utils/apiHost"
+- `transformAnalyticsFilter` from "../utils/formatDate"

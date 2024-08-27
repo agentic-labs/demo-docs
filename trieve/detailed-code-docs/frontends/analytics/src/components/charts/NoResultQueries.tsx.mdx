@@ -3,70 +3,71 @@ title: "NoResultQueries.tsx"
 ---
 
 ## High-level description
-The `NoResultQueries` component displays a list of search queries that did not return any results from the backend. It fetches these queries using the `getNoResultQueries` API function and allows pagination through the results. Each query is displayed in a clickable row that opens a modal with detailed information about the search event.
+The `NoResultQueries` component displays a table of search queries that did not return any results from the backend. It allows pagination through the list of queries and provides a detailed view of each query event.
 
 ## Code Structure
-The `NoResultQueries` component uses the `createQuery` hook from `@tanstack/solid-query` to fetch and manage the list of no-result queries. It also utilizes the `usePagination` hook to handle pagination logic. The `QueryCard` sub-component renders individual query rows and manages the modal display for each query.
+The `NoResultQueries` component uses the `usePagination` hook to manage pagination state. It fetches data using the `createQuery` hook from `@tanstack/solid-query` and displays it in a table. The `QueryCard` component is used to render each row in the table, and it opens a modal with detailed information about the query when clicked.
 
 ## References
-- `getNoResultQueries`: API function to fetch no-result queries.
-- `SearchQueryEvent`: Type definition for a search query event.
-- `FullScreenModal`: Component for displaying a full-screen modal.
-- `SearchQueryEventModal`: Component for displaying details of a search query event.
-- `DatasetContext`: Context providing access to the selected dataset.
+- `getNoResultQueries`: This function is imported from `../../api/analytics` and is used to fetch the list of no-result queries from the backend.
+- `QueryStringDisplay`: This component is imported from `../QueryStringDisplay` and is used to display the search query string.
+- `SearchQueryEventModal`: This component is imported from `../../pages/TrendExplorer` and is used to display detailed information about a search query event in a modal.
 
 ## Symbols
-
 ### `NoResultQueries`
 #### Description
-This component fetches and displays a paginated list of no-result search queries for the selected dataset.
+This component fetches and displays a paginated table of search queries that returned no results. It also handles pre-fetching the next page of data for smoother pagination.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| params | `NoResultQueriesProps` | An object containing the filter parameters for fetching the queries. |
+| props | NoResultQueriesProps | An object containing the component's properties. |
+| props.params | { filter: AnalyticsFilter } | An object containing the filter parameters for the analytics data. |
+| props.params.filter | AnalyticsFilter | An object containing the filter parameters for the analytics data. |
 
 #### Outputs
-Renders a list of no-result queries with pagination controls.
+Returns a JSX Element representing the rendered component.
 
 #### Internal Logic
-1. **Data Fetching:**
-    - Uses `createQuery` to fetch no-result queries based on the provided `params` and current page.
-    - Prefetches the next page of results using `queryClient.prefetchQuery`.
-    - Updates the maximum discovered page if the fetched page is empty.
-2. **Rendering:**
-    - Displays a loading message while data is being fetched.
-    - Renders a "No Data" message if no queries are found.
-    - Renders a table of `QueryCard` components for each fetched query.
-    - Displays pagination buttons using the `PaginationButtons` component.
+1. **Retrieves Context:** Gets the current dataset ID from the `DatasetContext`.
+2. **Initializes Pagination:** Uses the `usePagination` hook to manage pagination state.
+3. **Resets Pagination on Filter Change:** When the `props.params` or `dataset.dataset.id` change, it resets the pagination to the first page.
+4. **Prefetches Next Page:**  Uses the `queryClient.prefetchQuery` function to prefetch the next page of data based on the current page and filter parameters. If the next page is empty, it updates the `maxPageDiscovered` in the pagination state.
+5. **Fetches Current Page Data:** Uses the `createQuery` hook to fetch the current page's data based on the filter parameters and current page number.
+6. **Renders Table:** Renders a table with the fetched data. If there is no data, it displays a "No Data" message. If data is loading, it displays a "Loading..." message.
+7. **Renders Pagination Buttons:** Renders pagination buttons using the `PaginationButtons` component.
 
 ### `QueryCard`
 #### Description
-This component renders a single row in the no-result queries table. It displays the query text and an expand icon. Clicking the row opens a modal with detailed information about the search event.
+This component renders a single row in the No Result Queries table. It displays the truncated search query and an expand icon. Clicking on the row opens a modal with detailed information about the search query event.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| query | `SearchQueryEvent` | The search query event object. |
+| props | QueryCardProps | An object containing the component's properties. |
+| props.query | SearchQueryEvent | The search query event object to display. |
 
 #### Outputs
-Renders a table row representing a single no-result query.
+Returns a JSX Element representing the rendered component.
 
 #### Internal Logic
-1. **Rendering:**
-    - Displays the query text in a truncated format.
-    - Renders an expand icon that opens a modal when clicked.
-2. **Modal Display:**
-    - Uses a `FullScreenModal` to display the `SearchQueryEventModal` component with details of the selected query.
+1. **Manages Modal State:** Uses the `createSignal` hook to manage the open/closed state of the modal.
+2. **Renders Table Row:** Renders a table row (`&lt;tr&gt;`) that can be clicked to open the modal.
+3. **Displays Truncated Query:** Displays the search query string using the `QueryStringDisplay` component.
+4. **Renders Expand Icon:** Renders an expand icon (`BiRegularExpand`) in the last table cell.
+5. **Renders Modal:** Renders a full-screen modal (`FullScreenModal`) when the row is clicked. The modal displays detailed information about the search query event using the `SearchQueryEventModal` component.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
 | @tanstack/solid-query | Used for data fetching and caching. |
-| shared/types | Provides type definitions for search query events and other data structures. |
-| shared/ui | Provides UI components like `FullScreenModal`, `Table`, etc. |
-| solid-js | The core SolidJS library. |
-| solid-icons | Provides icons used in the component. |
+| solid-js | The core library for building the user interface. |
+| shared/types | Provides shared type definitions. |
+| shared/ui | Provides shared UI components. |
+| solid-icons/bi | Provides Solid icons. |
 
 ## Error Handling
-The `getNoResultQueries` API function is expected to throw an error if the fetch request fails. The component handles this error by displaying a loading error message.
+The code includes basic error handling for network requests. If a request fails, an error is thrown with the response status text.
+
+## Logging
+The code does not implement any specific logging mechanisms.

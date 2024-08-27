@@ -3,16 +3,13 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script reverts the database changes made by the corresponding `up.sql` migration file. It recreates the `invitations` and `password_resets` tables and adds a full-text search index to the `card_metadata` table.
-
-## Code Structure
-The script first defines the structure for the `invitations` and `password_resets` tables. Then, it adds a `card_metadata_tsvector` column to the `card_metadata` table and defines a trigger function `update_tsvector()` to keep this column updated with a tsvector representation of the `content` column. Finally, it creates a trigger `update_tsvector_trigger` to execute the `update_tsvector()` function before inserting new rows into the `card_metadata` table.
+This SQL script reverts the database changes made by the corresponding `up.sql` migration file. It recreates the `invitations` and `password_resets` tables and adds a full-text search index to the `card_metadata` table. 
 
 ## Symbols
 
 ### `invitations` table
 #### Description
-This table stores information about invitations sent to users.
+Recreates the `invitations` table, which likely stores information about pending user invitations.
 
 #### Inputs
 N/A - This is a table definition, not a function.
@@ -22,15 +19,15 @@ N/A - This is a table definition, not a function.
 
 #### Internal Logic
 The table has the following columns:
-- `id`: A unique identifier for the invitation.
-- `email`: The email address the invitation was sent to.
-- `expires_at`: The date and time when the invitation expires.
-- `created_at`: The date and time when the invitation was created.
-- `updated_at`: The date and time when the invitation was last updated.
+- `id`: UUID, primary key, uniquely identifies each invitation.
+- `email`: VARCHAR(100), stores the email address of the invitee.
+- `expires_at`: TIMESTAMP, indicates when the invitation expires.
+- `created_at`: TIMESTAMP, records the creation timestamp of the invitation.
+- `updated_at`: TIMESTAMP, tracks the last update timestamp of the invitation.
 
 ### `password_resets` table
 #### Description
-This table stores information about password reset requests.
+Recreates the `password_resets` table, which likely stores data for password reset requests.
 
 #### Inputs
 N/A - This is a table definition, not a function.
@@ -40,15 +37,15 @@ N/A - This is a table definition, not a function.
 
 #### Internal Logic
 The table has the following columns:
-- `id`: A unique identifier for the password reset request.
-- `email`: The email address associated with the password reset request.
-- `expires_at`: The date and time when the password reset request expires.
-- `created_at`: The date and time when the password reset request was created.
-- `updated_at`: The date and time when the password reset request was last updated.
+- `id`: UUID, primary key, uniquely identifies each password reset request.
+- `email`: VARCHAR(100), stores the email address associated with the reset request.
+- `expires_at`: TIMESTAMP, indicates when the reset request expires.
+- `created_at`: TIMESTAMP, records the creation timestamp of the request.
+- `updated_at`: TIMESTAMP, tracks the last update timestamp of the request.
 
-### `card_metadata_tsvector` column
+### `card_metadata_tsvector` column in `card_metadata` table
 #### Description
-This column stores a tsvector representation of the `content` column in the `card_metadata` table, used for full-text search.
+Adds a `card_metadata_tsvector` column to the `card_metadata` table. This column likely stores a tsvector representation of the `content` column for full-text search capabilities.
 
 #### Inputs
 N/A - This is a column definition, not a function.
@@ -58,26 +55,28 @@ N/A - This is a column definition, not a function.
 
 ### `update_tsvector()` function
 #### Description
-This function updates the `card_metadata_tsvector` column with a tsvector representation of the `content` column.
+Defines a trigger function named `update_tsvector()` that automatically updates the `card_metadata_tsvector` column whenever a new row is inserted into the `card_metadata` table.
 
 #### Inputs
-N/A - This function is triggered by changes in the `card_metadata` table.
+N/A - This is a trigger function, automatically invoked on INSERT.
 
 #### Outputs
-- Returns the updated row (`NEW`) with the updated `card_metadata_tsvector` value.
+- Returns the `NEW` row with the updated `card_metadata_tsvector` value.
 
 #### Internal Logic
-The function uses the `to_tsvector()` function to generate a tsvector representation of the `content` column and assigns it to the `card_metadata_tsvector` column of the `NEW` row (representing the row being inserted or updated).
+- Uses the `to_tsvector()` function to generate a tsvector representation of the `content` column in the `NEW` row (representing the row being inserted).
+- Assigns the generated tsvector to the `card_metadata_tsvector` column of the `NEW` row.
 
 ### `update_tsvector_trigger` trigger
 #### Description
-This trigger executes the `update_tsvector()` function before inserting new rows into the `card_metadata` table.
+Creates a trigger named `update_tsvector_trigger` that executes the `update_tsvector()` function before inserting a new row into the `card_metadata` table.
 
 #### Inputs
-N/A - This trigger is automatically invoked before inserts on the `card_metadata` table.
+N/A - Triggered automatically before INSERT on `card_metadata`.
 
 #### Outputs
-N/A - This trigger ensures the `card_metadata_tsvector` column is updated before the insert operation.
+N/A - Side effect is updating the `card_metadata_tsvector` column.
 
 #### Internal Logic
-The trigger is set to execute the `update_tsvector()` function for each row being inserted into the `card_metadata` table. This ensures that the `card_metadata_tsvector` column is populated with the correct tsvector representation of the `content` column for every new row.
+- Defined as a `BEFORE INSERT` trigger on the `card_metadata` table.
+- Executes the `update_tsvector()` function for each row being inserted.

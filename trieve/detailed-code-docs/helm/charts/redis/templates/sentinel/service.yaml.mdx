@@ -3,73 +3,56 @@ title: "service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service named `redis` for a Redis Sentinel deployment. It exposes Redis Sentinel and Redis instances via various service types like ClusterIP, NodePort, or LoadBalancer, and configures ports, traffic policies, and other service-related settings. The service selectively includes ports for internal communication within a NodePort setup.
+This YAML template defines a Kubernetes Service for Redis Sentinel in a Redis replication architecture. It configures the service based on various input values, supporting different service types (ClusterIP, NodePort, LoadBalancer) and customizable port configurations for both Redis and Sentinel.
 
 ## Code Structure
-The code uses a series of nested `if` statements to conditionally render different parts of the service definition based on the provided values. It first checks for upgrade scenarios and node port types. Then, it retrieves port values from a ConfigMap if the architecture is 'replication' and Sentinel is enabled. Finally, it defines the service with specific configurations for different service types, ports, and load balancing options.
-
-## References
-This code references values from `Values`, which is a data structure containing the chart's configuration values. It also uses several functions from the Helm templating system, including `template`, `include`, `lookup`, `printf`, `eq`, `ne`, `or`, `and`, `not`, `empty`, `toYaml`, and `nindent`.
+The template uses conditional statements to determine the service configuration based on the input values. It defines two main ports: one for Redis and one for Sentinel, with additional internal ports for NodePort type services.
 
 ## Symbols
-### `helm/charts/redis/templates/sentinel/service.yaml`
+
+### Service Definition
 #### Description
-This code defines a Kubernetes Service for a Redis Sentinel deployment. It determines the appropriate service type, ports, and other configurations based on the provided values.
+Defines a Kubernetes Service resource for Redis Sentinel.
 
 #### Inputs
-This code uses values from the `Values` object, which is passed in by the Helm templating engine. The relevant values include:
-
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Release.IsUpgrade` | boolean | True if the release is an upgrade, false otherwise. |
-| `.Values.sentinel.service.type` | string | The type of service to create (e.g., `NodePort`, `LoadBalancer`, `ClusterIP`). |
-| `.Values.sentinel.service.nodePorts.redis` | int | The node port to use for the Redis service. |
-| `.Values.architecture` | string | The Redis architecture to use (e.g., `standalone`, `replication`). |
-| `.Values.sentinel.enabled` | boolean | Whether Sentinel is enabled. |
-| `.Values.sentinel.service.nodePorts.sentinel` | int | The node port to use for the Sentinel service. |
-| `.Values.sentinel.service.ports.redis` | int | The port to use for the Redis service. |
-| `.Values.sentinel.service.ports.sentinel` | int | The port to use for the Sentinel service. |
-| `.Values.replica.containerPorts.redis` | int | The container port for the Redis service. |
-| `.Values.sentinel.containerPorts.sentinel` | int | The container port for the Sentinel service. |
-| `.Values.sentinel.service.externalTrafficPolicy` | string | The external traffic policy to use for the service. |
-| `.Values.sentinel.service.loadBalancerIP` | string | The load balancer IP to use for the service. |
-| `.Values.sentinel.service.loadBalancerSourceRanges` | list | The load balancer source ranges to allow. |
-| `.Values.sentinel.service.clusterIP` | string | The cluster IP to use for the service. |
-| `.Values.sentinel.service.sessionAffinity` | string | The session affinity to use for the service. |
-| `.Values.sentinel.service.sessionAffinityConfig` | map | The session affinity configuration to use for the service. |
-| `.Values.sentinel.service.extraPorts` | list | A list of extra ports to expose on the service. |
-| `.Values.replica.podLabels` | map | Labels to apply to the Redis replica pods. |
-| `.Values.commonLabels` | map | Common labels to apply to all resources. |
-
-#### Outputs
-This code outputs a Kubernetes Service definition in YAML format.
+| .Values.sentinel.service.* | Various | Configuration values for the Sentinel service |
+| .Values.replica.* | Various | Configuration values for Redis replicas |
+| .Values.commonLabels | Map | Common labels to apply to the service |
+| .Values.commonAnnotations | Map | Common annotations to apply to the service |
 
 #### Internal Logic
-1. **Conditional Rendering:** The code uses several nested `if` statements to conditionally render different parts of the service definition based on the provided values.
-2. **Port Retrieval:** If the architecture is 'replication' and Sentinel is enabled, the code retrieves port values from a ConfigMap named `&lt;release-name&gt;-ports-configmap`.
-3. **Service Type Configuration:** The code configures the service based on the specified `service.type`:
-    - **NodePort and LoadBalancer:** Sets `externalTrafficPolicy`, `loadBalancerIP`, `loadBalancerSourceRanges`, and `nodePorts`.
-    - **ClusterIP:** Sets `clusterIP`.
-4. **Port Definitions:** The code defines two main ports:
-    - `tcp-redis`: For accessing the Redis service.
-    - `tcp-sentinel`: For accessing the Sentinel service.
-5. **Internal Ports:** If `service.type` is `NodePort`, two additional ports are defined for internal communication:
-    - `sentinel-internal`: For internal communication with the Sentinel service.
-    - `redis-internal`: For internal communication with the Redis service.
-6. **Extra Ports:** If `service.extraPorts` is defined, it includes additional ports as specified.
-7. **Selector and Labels:** The code sets the service selector to target pods with the `app.kubernetes.io/component: node` label and any labels defined in `replica.podLabels` and `commonLabels`.
-
-## Side Effects
-This code creates a Kubernetes Service resource in the cluster when applied.
+1. Checks if the service should be created based on release type and service configuration.
+2. Looks up existing port configurations from a ConfigMap.
+3. Defines metadata including name, namespace, labels, and annotations.
+4. Configures the service spec based on the service type (ClusterIP, NodePort, LoadBalancer).
+5. Defines ports for Redis and Sentinel, with special handling for NodePort type.
+6. Adds selector labels to target the appropriate pods.
 
 ## Dependencies
-This code depends on the Helm templating system and the Kubernetes API.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.names.namespace | Helper template for namespace |
+| common.names.fullname | Helper template for resource naming |
+| common.labels.standard | Helper template for standard labels |
+| common.tplvalues.merge | Helper template for merging values |
+| common.tplvalues.render | Helper template for rendering values |
 
 ## Configuration
-This code relies on configuration values provided through the `Values` object. See the "Inputs" section for a detailed description of the configurable options.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.sentinel.service.type | String | - | Service type (ClusterIP, NodePort, LoadBalancer) |
+| .Values.sentinel.service.ports.redis | Integer | - | Port for Redis traffic |
+| .Values.sentinel.service.ports.sentinel | Integer | - | Port for Sentinel traffic |
+| .Values.sentinel.service.nodePorts.redis | Integer | - | NodePort for Redis (if applicable) |
+| .Values.sentinel.service.nodePorts.sentinel | Integer | - | NodePort for Sentinel (if applicable) |
+| .Values.sentinel.service.loadBalancerIP | String | - | LoadBalancer IP (if applicable) |
+| .Values.sentinel.service.loadBalancerSourceRanges | List | - | LoadBalancer source ranges (if applicable) |
+| .Values.sentinel.service.clusterIP | String | - | ClusterIP (if applicable) |
+| .Values.sentinel.service.externalTrafficPolicy | String | - | External traffic policy for LoadBalancer/NodePort |
+| .Values.sentinel.service.sessionAffinity | String | - | Session affinity configuration |
+| .Values.sentinel.service.annotations | Map | - | Additional service annotations |
+| .Values.sentinel.service.extraPorts | List | - | Additional ports to expose |
 
-## Error Handling
-This code does not implement specific error handling beyond the basic error handling provided by the Helm templating engine.
-
-## Logging
-This code does not implement logging.
+This template provides a flexible configuration for a Redis Sentinel service, allowing users to customize various aspects of the service based on their specific requirements and deployment scenario.

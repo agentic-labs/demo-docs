@@ -3,66 +3,62 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding an `organization_id` column to the `datasets` table in a database. The migration establishes a relationship between the `datasets` and `organizations` tables, allowing datasets to be associated with specific organizations.
+This directory contains SQL migration scripts for modifying the `datasets` table in a database schema. The migration adds an `organization_id` column to the `datasets` table, establishing a relationship between datasets and organizations. The directory includes both "up" and "down" migration scripts, allowing for the application and reversal of these changes.
 
 ## What does it do?
-The migration performs the following actions:
-1. Adds a new `organization_id` column to the `datasets` table.
-2. Updates existing datasets to belong to a 'DEFAULT' organization.
-3. Makes the `organization_id` column non-nullable.
-4. Establishes a foreign key relationship between `datasets` and `organizations` tables.
-5. Provides a way to revert these changes if needed.
+The migration scripts in this directory perform the following actions:
 
-This migration enables the system to track which organization each dataset belongs to, allowing for better data organization and access control based on organizational boundaries.
+1. Add a new column called `organization_id` to the `datasets` table.
+2. Update existing datasets to associate them with a default organization.
+3. Establish a foreign key relationship between the `datasets` and `organizations` tables.
+4. Provide a way to undo these changes if needed.
+
+These changes allow each dataset to be associated with a specific organization, which can be useful for organizing and managing datasets within the context of different organizations or groups.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL statements to perform the migration:
+This file contains the SQL commands to apply the migration:
 
-1. Add the `organization_id` column:
+1. It adds the `organization_id` column to the `datasets` table:
    ```sql
    ALTER TABLE datasets ADD COLUMN organization_id UUID DEFAULT NULL;
    ```
 
-2. Update existing datasets to belong to the 'DEFAULT' organization:
+2. It updates existing datasets to associate them with a default organization:
    ```sql
-   UPDATE datasets SET organization_id = organizations.id 
-   FROM organizations WHERE organizations.name = 'DEFAULT';
+   UPDATE datasets SET organization_id = (SELECT id FROM organizations WHERE name = 'DEFAULT');
    ```
 
-3. Make the `organization_id` column non-nullable:
+3. It sets the `organization_id` column to not allow NULL values:
    ```sql
    ALTER TABLE datasets ALTER COLUMN organization_id SET NOT NULL;
    ```
 
-4. Add a foreign key constraint:
+4. Finally, it adds a foreign key constraint to ensure referential integrity:
    ```sql
-   ALTER TABLE datasets ADD CONSTRAINT datasets_organization_id_fkey 
-   FOREIGN KEY (organization_id) REFERENCES organizations(id);
+   ALTER TABLE datasets ADD CONSTRAINT datasets_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id);
    ```
 
 ### down.sql
-This file contains the SQL statement to revert the migration:
+This file contains the SQL command to revert the migration:
 
 ```sql
 ALTER TABLE datasets DROP COLUMN IF EXISTS organization_id;
 ```
 
-This statement removes the `organization_id` column from the `datasets` table if it exists, effectively undoing the changes made by the `up.sql` script.
+This command removes the `organization_id` column from the `datasets` table if it exists, effectively undoing the changes made by the `up.sql` script.
 
 ## Dependencies
-This migration relies on the existence of the `datasets` and `organizations` tables in the database. It assumes that there is a 'DEFAULT' organization present in the `organizations` table.
+This migration relies on the existence of an `organizations` table in the database schema. Specifically, it assumes there is an organization with the name 'DEFAULT' in the `organizations` table.
 
 ## Configuration
-No specific configuration is required for this migration. However, it's important to note that the migration assumes the presence of a 'DEFAULT' organization in the `organizations` table. If this organization doesn't exist, the migration may fail or result in unexpected behavior.
+The migration scripts do not require any external configuration. However, they assume a specific database structure:
 
-The migration uses UUID as the data type for the `organization_id` column, which suggests that the system uses UUIDs for unique identifiers across tables.
+1. The existence of a `datasets` table.
+2. The existence of an `organizations` table with columns `id` (of type UUID) and `name`.
+3. The presence of an organization named 'DEFAULT' in the `organizations` table.
 
-When applying this migration, database administrators should be aware of the following:
+It's important to ensure these prerequisites are met before applying the migration.
 
-1. The migration will modify existing data by assigning all current datasets to the 'DEFAULT' organization.
-2. After the migration, all datasets must be associated with an organization due to the `NOT NULL` constraint.
-3. The foreign key constraint will prevent the deletion of organizations that have associated datasets, ensuring referential integrity.
-
-This migration is part of a larger system that likely manages datasets within the context of different organizations, possibly for multi-tenancy or organizational data segregation purposes.
+In conclusion, this migration enhances the data model by creating a direct relationship between datasets and organizations, allowing for better organization and management of datasets within the system.

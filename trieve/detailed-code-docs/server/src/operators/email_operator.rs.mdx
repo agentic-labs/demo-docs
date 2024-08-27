@@ -3,74 +3,68 @@ title: "email_operator.rs"
 ---
 
 ## High-level description
-This code defines the main server application for the Trieve API. It sets up the server configuration, database connections, middleware, and routes for various API endpoints. The server uses Actix-web framework and integrates with several external services and libraries for authentication, database operations, and analytics.
-
-## Code Structure
-The main function sets up the server environment, including database connections, Redis store, OIDC client, and various configuration options. It then defines the Actix-web application with multiple services and routes for different API endpoints. The code also includes OpenAPI documentation using Utoipa.
+This code defines an email operator module for a Rust server application. It provides functionality to send emails using SMTP, including retrieving SMTP credentials and sending HTML-formatted emails.
 
 ## Symbols
 
-### `main`
+### `get_smtp_creds`
 #### Description
-The main function that sets up and runs the Actix-web server.
+This function retrieves SMTP credentials from environment variables.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Credentials | SMTP credentials |
 
 #### Internal Logic
-1. Initializes environment variables and Sentry monitoring (if configured).
-2. Sets up database connection pool and Redis store.
-3. Creates OIDC client and configures various server options.
-4. Sets up Actix-web application with middleware, routes, and services.
-5. Starts the HTTP server.
+1. Retrieves SMTP username and password from environment variables.
+2. Creates and returns a new `Credentials` object with the retrieved values.
 
-### `ApiDoc`
+### `send_email`
 #### Description
-A struct that generates OpenAPI documentation for the Trieve API using Utoipa.
+This function sends an HTML-formatted email using SMTP.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| html_email_body | String | The HTML content of the email |
+| to_address | String | The recipient's email address |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | Result&lt;(), ServiceError&gt; | Ok(()) if successful, ServiceError if failed |
+
+#### Internal Logic
+1. Retrieves SMTP relay and email address from environment variables.
+2. Gets SMTP credentials using `get_smtp_creds()`.
+3. Creates an SMTP transport with the retrieved credentials.
+4. Builds an email message with the provided HTML body and recipient address.
+5. Sends the email using the SMTP transport.
+6. Returns Ok(()) if successful, or a ServiceError if there's an error.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| actix-web | Web framework for building the server |
-| diesel | ORM for database operations |
-| sentry | Error monitoring and logging |
-| utoipa | OpenAPI documentation generation |
-| lettre | Email sending functionality |
-| redis | Session storage |
-| openssl | SSL/TLS support |
-| clickhouse | Analytics database |
-
-## Configuration
-The server uses various environment variables for configuration:
-| Option | Type | Default | Description |
-|:-------|:-----|:--------|:------------|
-| DATABASE_URL | String | Required | PostgreSQL database connection URL |
-| REDIS_URL | String | Required | Redis connection URL |
-| SENTRY_URL | String | Optional | Sentry monitoring URL |
-| QUANTIZE_VECTORS | bool | false | Whether to quantize vectors |
-| REPLICATION_FACTOR | u32 | 2 | Replication factor for Qdrant collections |
-| VECTOR_SIZES | Vec&lt;u64&gt; | [384,512,768,1024,1536,3072] | Supported vector sizes |
-| USE_ANALYTICS | bool | false | Whether to enable analytics |
-| CLICKHOUSE_URL | String | "http://localhost:8123" | ClickHouse database URL |
-| CLICKHOUSE_USER | String | "default" | ClickHouse username |
-| CLICKHOUSE_PASSWORD | String | "password" | ClickHouse password |
-| CLICKHOUSE_DB | String | "default" | ClickHouse database name |
+| lettre | For email functionality (SMTP, message building) |
+| tracing | For instrumenting functions with tracing |
 
 ## Error Handling
-The server uses custom error handling middleware and the `ServiceError` enum for consistent error responses across the API.
+The code uses the `ServiceError` enum from the `errors` module to handle and return errors. Specifically, it returns a `ServiceError::BadRequest` with an error message if there's an issue sending the email.
 
 ## Logging
-The server uses the `tracing` crate for logging and integrates with Sentry for error monitoring when configured.
+The code uses the `log` crate to log errors when sending emails fails.
 
-## API/Interface Reference
-The API endpoints are defined using Actix-web's routing system and are documented using Utoipa OpenAPI annotations. The main API routes include:
+## Configuration
+The code relies on several environment variables for configuration:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| SMTP_USERNAME | String | - | SMTP username for authentication |
+| SMTP_PASSWORD | String | - | SMTP password for authentication |
+| SMTP_RELAY | String | - | SMTP relay server address |
+| SMTP_EMAIL_ADDRESS | String | - | Email address used as the sender |
 
-- Authentication (/api/auth)
-- Chunks (/api/chunks)
-- Datasets (/api/dataset)
-- Topics (/api/topic)
-- Messages (/api/message)
-- Users (/api/user)
-- Organizations (/api/organization)
-- Files (/api/file)
-- Events (/api/events)
-- Analytics (/api/analytics)
+These environment variables are accessed using the `get_env!` macro, which is likely defined elsewhere in the project.
 
-Each endpoint has specific HTTP methods and request/response formats defined in the OpenAPI documentation.
+## Performance Considerations
+The `send_email` function is marked with `#[tracing::instrument]`, which suggests that its performance is being monitored or traced. This could be useful for identifying bottlenecks or issues related to email sending.

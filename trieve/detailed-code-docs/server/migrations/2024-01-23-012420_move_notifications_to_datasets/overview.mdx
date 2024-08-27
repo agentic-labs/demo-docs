@@ -3,57 +3,67 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for transitioning the notification system from a user-centric model to a dataset-centric model in a PostgreSQL database. The migration involves modifying existing tables, renaming columns, and creating a trigger function to maintain notification counts per dataset.
+This directory contains SQL migration scripts for transitioning the notification system from a user-centric model to a dataset-centric model. The migration is identified as "2024-01-23-012420_move_notifications_to_datasets", indicating it was created on January 23, 2024, at 01:24:20. The directory includes both "up" and "down" migration scripts to apply and revert the changes, respectively.
 
 ## What does it do?
-The migration scripts in this directory perform the following tasks:
+The migration accomplishes the following:
 
-1. In the "up" migration:
-   - Remove the `user_uuid` column from the `file_upload_completed_notifications` table.
-   - Rename the `user_notification_counts` table to `dataset_notification_counts`.
-   - Add a `dataset_uuid` column to the `dataset_notification_counts` table.
-   - Remove the `user_uuid` column from the `dataset_notification_counts` table.
-   - Create a trigger function `update_notification_count()` that automatically updates the notification count for datasets when notifications are inserted or deleted.
+1. Shifts the focus of notifications from users to datasets.
+2. Modifies existing tables to reflect this change in focus:
+   - Renames `user_notification_counts` to `dataset_notification_counts`.
+   - Removes `user_uuid` columns and adds `dataset_uuid` columns where necessary.
+3. Creates a trigger function to automatically update notification counts for datasets when notifications are added or removed.
 
-2. In the "down" migration:
-   - Add a `user_uuid` column back to the `dataset_notification_counts` table.
-   - Remove the `dataset_uuid` column from the `dataset_notification_counts` table.
-   - Rename the `dataset_notification_counts` table back to `user_notification_counts`.
-   - Add a `user_uuid` column back to the `file_upload_completed_notifications` table.
-
-These changes shift the focus of the notification system from users to datasets, allowing for more granular tracking of notifications at the dataset level.
+These changes allow the system to track and manage notifications on a per-dataset basis rather than per-user, which could be useful for applications where multiple users interact with the same datasets and need to be notified of changes or updates.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to implement the migration from user-centric to dataset-centric notifications.
+### up.sql
+This file contains the SQL commands to apply the migration. It performs the following operations:
 
-2. `down.sql`: This file contains the SQL commands to revert the changes made by the `up.sql` script, effectively rolling back the migration.
+1. Removes the `user_uuid` column from the `file_upload_completed_notifications` table.
+2. Renames `user_notification_counts` to `dataset_notification_counts`.
+3. Adds a `dataset_uuid` column to `dataset_notification_counts`.
+4. Removes the `user_uuid` column from `dataset_notification_counts`.
+5. Creates a trigger function `update_notification_count()` to maintain notification counts for datasets automatically.
 
-## Dependencies
-The migration scripts are designed for PostgreSQL databases. No specific version is mentioned, but it's assumed to be compatible with recent PostgreSQL versions that support the used SQL syntax.
+Key code snippet for the trigger function:
+
+```sql
+CREATE OR REPLACE FUNCTION update_notification_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO dataset_notification_counts (dataset_uuid, notification_count)
+        VALUES (NEW.dataset_uuid, 1)
+        ON CONFLICT (dataset_uuid)
+        DO UPDATE SET notification_count = dataset_notification_counts.notification_count + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE dataset_notification_counts
+        SET notification_count = notification_count - 1
+        WHERE user_uuid = OLD.dataset_uuid;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### down.sql
+This file contains the SQL commands to revert the migration. It performs the following operations:
+
+1. Adds a `user_uuid` column to the `dataset_notification_counts` table.
+2. Removes the `dataset_uuid` column from `dataset_notification_counts`.
+3. Renames `dataset_notification_counts` back to `user_notification_counts`.
+4. Adds a `user_uuid` column to the `file_upload_completed_notifications` table.
 
 ## Configuration
-No explicit configuration files or environment variables are mentioned in the provided summaries. However, the database connection details and migration execution process would typically be managed by the application's database migration tool or ORM.
+The migration scripts do not rely on external configuration files or environment variables. However, they assume the existence of certain tables and columns in the database schema before the migration is applied.
 
-## TODOs and Potential Issues
+## TODOs
+There are two important TODOs identified in the migration:
 
-1. In the `up.sql` file:
-   - The table on which the `update_notification_count()` trigger function should be applied is not specified in the script. This needs to be defined separately and associated with the relevant table.
-   - There is a bug in the DELETE logic of the trigger function. It should use `OLD.dataset_uuid` instead of `OLD.user_uuid` to identify the dataset for which the notification count needs to be decremented. The correct SQL should be:
+1. The trigger function `update_notification_count()` needs to be associated with the appropriate table containing dataset notifications. This association is not specified in the provided code.
 
-   ```sql
-   UPDATE dataset_notification_counts
-   SET notification_count = notification_count - 1
-   WHERE dataset_uuid = OLD.dataset_uuid;
-   ```
+2. There is a potential error in the `DELETE` logic of the trigger function. It uses `user_uuid = OLD.dataset_uuid` in the `WHERE` clause, which is incorrect as `user_uuid` has been removed from the `dataset_notification_counts` table. This should be corrected to `dataset_uuid = OLD.dataset_uuid`.
 
-2. In the `down.sql` file:
-   - The comment "Your SQL goes here" suggests that this might be a template or placeholder file. Ensure that all necessary SQL commands have been added and reviewed before executing this migration.
-
-3. General considerations:
-   - Ensure that any application code or queries that interact with the modified tables are updated to reflect the new schema.
-   - Consider the impact on existing data and whether any data migration is necessary alongside the schema changes.
-   - Test the migration thoroughly in a non-production environment before applying it to the production database.
-   - Verify that the `update_notification_count()` trigger function is properly associated with the correct table after the migration.
-
-By addressing these TODOs and potential issues, the migration should successfully transition the notification system from a user-centric to a dataset-centric model, providing more granular control and tracking of notifications at the dataset level.
+These TODOs should be addressed to ensure the proper functioning of the notification system after the migration is applied.

@@ -2,152 +2,76 @@
 title: "auth_handler.rs"
 ---
 
-## High-level description
-This code defines the `auth_handler.rs` file, which contains functions and structures related to authentication and authorization in the Trieve API. It includes handlers for user login, logout, callback for OpenID Connect, and retrieving user information.
+Here's a high-level description of the `auth_handler.rs` file:
+
+The `auth_handler.rs` file is responsible for handling authentication and authorization-related operations in the Trieve API. It defines various structs and functions for user authentication, session management, and role-based access control. The file includes implementations for OAuth 2.0 authentication flow, API key management, and user information retrieval.
 
 ## Code Structure
-The file defines several structs and functions that work together to handle authentication:
-- `LoggedUser`, `AdminOnly`, and `OwnerOnly` structs for different user roles
-- Functions like `login`, `logout`, `callback`, and `get_me` for handling various authentication operations
-- Helper functions like `build_oidc_client` for setting up OpenID Connect
+
+The file is organized into several main sections:
+
+1. Struct definitions for user types (LoggedUser, OrganizationRole, AdminOnly, OwnerOnly)
+2. OpenID Connect (OIDC) client configuration and setup
+3. Authentication routes (login, logout, callback)
+4. User information retrieval (get_me)
+5. Health check endpoint
 
 ## Symbols
 
 ### `LoggedUser`
-#### Description
-A struct representing a logged-in user, used for authentication checks.
+- Description: Represents an authenticated user with minimal information.
+- Inputs: Extracted from HTTP request extensions.
+- Outputs: A LoggedUser instance.
 
-#### Internal Logic
-Implements `FromRequest` trait to extract user information from the request.
+### `OrganizationRole`
+- Description: Represents a user's role within an organization.
+- Inputs: SlimUser and UserRole.
+- Outputs: An OrganizationRole instance.
 
 ### `AdminOnly`
-#### Description
-A struct representing a user with admin privileges.
-
-#### Internal Logic
-Implements `FromRequest` trait to check if the user has admin rights.
+- Description: Represents a user with admin privileges.
+- Inputs: Extracted from HTTP request extensions.
+- Outputs: An AdminOnly instance.
 
 ### `OwnerOnly`
-#### Description
-A struct representing a user with owner privileges.
-
-#### Internal Logic
-Implements `FromRequest` trait to check if the user has owner rights.
+- Description: Represents a user with owner privileges.
+- Inputs: Extracted from HTTP request extensions.
+- Outputs: An OwnerOnly instance.
 
 ### `build_oidc_client`
-#### Description
-Builds an OpenID Connect client using configuration from environment variables.
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | CoreClient | The configured OpenID Connect client |
+- Description: Builds and configures the OpenID Connect client.
+- Outputs: A CoreClient instance for OIDC operations.
 
 ### `login`
-#### Description
-Handles user login by redirecting to the OpenID Connect provider.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| req | HttpRequest | The incoming HTTP request |
-| session | Session | The user's session |
-| data | web::Query&lt;AuthQuery&gt; | Query parameters for authentication |
-| oidc_client | web::Data&lt;CoreClient&gt; | The OpenID Connect client |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | Result&lt;HttpResponse, Error&gt; | Redirect response or error |
-
-### `callback`
-#### Description
-Handles the callback from the OpenID Connect provider after user authentication.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| req | HttpRequest | The incoming HTTP request |
-| session | Session | The user's session |
-| oidc_client | web::Data&lt;CoreClient&gt; | The OpenID Connect client |
-| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-| query | web::Query&lt;OpCallback&gt; | Callback query parameters |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | Result&lt;HttpResponse, Error&gt; | Redirect response or error |
+- Description: Handles user login by initiating the OIDC authentication flow.
+- Inputs: HTTP request, session, query parameters, and OIDC client.
+- Outputs: HTTP response with a redirect to the OIDC provider.
 
 ### `logout`
-#### Description
-Handles user logout by invalidating the current auth credential.
+- Description: Handles user logout by invalidating the current auth credential.
+- Inputs: Identity, query parameters, and HTTP request.
+- Outputs: HTTP response with logout confirmation and logout URL.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| id | Identity | The user's identity |
-| data | web::Query&lt;LogoutRequest&gt; | Logout request data |
-| req | HttpRequest | The incoming HTTP request |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | HttpResponse | JSON response with logout URL |
+### `callback`
+- Description: Handles the OIDC callback after successful authentication.
+- Inputs: HTTP request, session, OIDC client, Redis pool, and database pool.
+- Outputs: HTTP response with user information and redirect.
 
 ### `get_me`
-#### Description
-Retrieves information about the currently authenticated user.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| logged_user | LoggedUser | The authenticated user |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | Result&lt;HttpResponse, actix_web::Error&gt; | User information or error |
+- Description: Retrieves the current authenticated user's information.
+- Inputs: LoggedUser and database pool.
+- Outputs: HTTP response with user details.
 
 ### `health_check`
-#### Description
-A simple health check endpoint to confirm the service is running.
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| - | Result&lt;HttpResponse, actix_web::Error&gt; | OK response or error |
+- Description: Simple health check endpoint to verify service status.
+- Outputs: HTTP response indicating service health.
 
 ## Dependencies
-- `actix_web`, `actix_identity`, `actix_session`: Web framework and session management
-- `oauth2`, `openidconnect`: OpenID Connect implementation
-- `redis`: Redis client for session storage
-- `serde`: Serialization and deserialization of data structures
-- `utoipa`: API documentation generation
+The file relies on several external crates and internal modules, including:
+- `actix_web` for web server functionality
+- `oauth2` and `openidconnect` for OIDC implementation
+- `diesel` for database operations
+- `redis` for caching
+- Custom error handling and data models from the project's modules
 
-## Configuration
-The code uses several environment variables for configuration, including:
-- `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_AUTH_REDIRECT_URL`, `OIDC_CLIENT_SECRET`: OpenID Connect configuration
-- `BASE_SERVER_URL`: Server hostname for OpenID provider
-- `DATABASE_URL`, `REDIS_URL`: Database and Redis connection strings
-
-## Error Handling
-The code uses custom `ServiceError` types for error handling and propagation.
-
-## Logging
-The code uses the `tracing` crate for instrumentation and logging of function calls.
-
-## API/Interface Reference
-The file defines several API endpoints:
-- `GET /api/auth`: Login
-- `DELETE /api/auth`: Logout
-- `GET /api/auth/callback`: OpenID Connect callback
-- `GET /api/auth/me`: Get current user information
-- `GET /api/health`: Health check
-
-These endpoints are documented using `utoipa` for OpenAPI specification generation.
-
-___
-
-This documentation provides an overview of the `auth_handler.rs` file, its main components, and their functionalities. It covers the key structures, functions, and endpoints related to authentication in the Trieve API.
+This file plays a crucial role in managing user authentication and authorization within the Trieve API, providing the necessary endpoints and logic for secure user interactions.

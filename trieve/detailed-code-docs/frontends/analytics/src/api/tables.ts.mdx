@@ -6,21 +6,20 @@ title: "tables.ts"
 The `getSearchQueries` function fetches search query data from the analytics API endpoint. It takes search parameters and a dataset ID as input and returns an array of `SearchQueryEvent` objects representing the retrieved search queries.
 
 ## References
-- `SearchQueriesTablesParams`: Defines the type for the search parameters.
-- `transformAnalyticsFilter`: A utility function to format date values within the filter object.
-- `apiHost`: A constant representing the base URL of the API.
-- `SearchQueryResponse`: Defines the type for the API response.
+- `AnalyticsFilter`, `SearchQueryResponse`, `SearchSortBy`, `SortOrder` from "shared/types"
+- `transformAnalyticsFilter` from "../utils/formatDate"
+- `apiHost` from "../utils/apiHost"
 
 ## Symbols
 
 ### `getSearchQueries`
 #### Description
-This asynchronous function sends a POST request to the `/analytics/search` API endpoint to retrieve search query data based on the provided parameters and dataset ID.
+This asynchronous function retrieves search queries from the analytics API based on provided parameters and dataset ID. It constructs the API request, handles the response, and returns the extracted query data.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| params | `SearchQueriesTablesParams` | An object containing filter, pagination, sorting, and dataset ID information. |
+| params | `SearchQueriesTablesParams` | An object containing filter, pagination, sorting parameters for the search queries. |
 | datasetId | `string` | The ID of the dataset for which to retrieve search queries. |
 
 #### Outputs
@@ -29,17 +28,29 @@ This asynchronous function sends a POST request to the `/analytics/search` API e
 | queries | `SearchQueryEvent[]` | An array of `SearchQueryEvent` objects representing the retrieved search queries. |
 
 #### Internal Logic
-1. **Construct API URL:** The function builds the API endpoint URL using the `apiHost` constant and the `/analytics/search` path.
-2. **Prepare Request Body:** It creates a JSON payload for the POST request, including transformed filter values, pagination details, sorting options, and the "search_queries" type.
-3. **Send API Request:** The function sends a POST request to the constructed URL with the prepared body, including credentials and dataset ID in the headers.
-4. **Handle Response:**
-   - If the response is successful (status code 200-299), it parses the JSON response as a `SearchQueryResponse` object and returns the `queries` array.
-   - If the response indicates an error, it throws an error with the response status text.
+1. **Construct API Request:**
+   - Builds the API endpoint URL using `apiHost` and the `/analytics/search` path.
+   - Creates a request body object containing transformed filter parameters, pagination details, sorting options, and the query type ("search_queries").
+   - Sets request headers including the dataset ID (`TR-Dataset`) and content type.
+
+2. **Fetch Data:**
+   - Sends a POST request to the constructed API endpoint with the prepared body and headers.
+   - Includes credentials in the request.
+
+3. **Handle Response:**
+   - Checks if the response status is OK (2xx).
+   - If not OK, throws an error with the response status text.
+   - If OK, parses the response JSON as a `SearchQueryResponse` object.
+
+4. **Return Queries:**
+   - Extracts the `queries` array from the parsed response data and returns it.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| `fetch` |  Used to make the API request. |
+| shared/types | Provides type definitions for `AnalyticsFilter`, `SearchQueryResponse`, `SearchSortBy`, `SortOrder`, and `SearchQueryEvent`. |
+| ../utils/formatDate | Imports the `transformAnalyticsFilter` function for transforming date formats in filter parameters. |
+| ../utils/apiHost | Imports the `apiHost` variable containing the base URL for API requests. |
 
 ## Error Handling
-The function includes basic error handling by checking the `ok` status of the `fetch` response. If the response is not ok, it throws an error.
+- Throws an error if the API request fails (non-OK response status). The error message includes the response status text.

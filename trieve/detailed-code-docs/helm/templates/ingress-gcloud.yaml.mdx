@@ -3,82 +3,47 @@ title: "ingress-gcloud.yaml"
 ---
 
 ## High-level description
-This code defines Kubernetes Ingress resources and NetworkPolicy resources for a Google Cloud environment. It sets up routing rules for various services (dashboard, chat, server, search) based on the hostnames and paths of incoming HTTP requests. Additionally, it configures network policies to allow all ingress and egress traffic for all pods.
+This Helm template file defines Kubernetes Ingress resources for a Google Cloud environment. It sets up routing rules for different services (dashboard, chat, server, and search) and includes network policies to allow all ingress and egress traffic.
 
 ## Code Structure
-This code defines multiple Kubernetes YAML resources within a single file. Each resource is defined within a "---" separator. The resources are conditionally deployed based on the value of the "environment" variable. If the environment is "gcloud", then all the resources are deployed.
+The file contains multiple Kubernetes resource definitions, including four Ingress resources and two NetworkPolicy resources. Each Ingress resource is associated with a specific service and domain, while the NetworkPolicy resources define broad access rules.
 
 ## Symbols
-### `ingress-dashboard`
-#### Description
-This section defines an Ingress resource named "ingress-dashboard" that routes traffic to the "dashboard-service" on port 80. It's intended for a Google Cloud environment and uses the "gce" ingress class.
 
-#### Inputs
-This resource takes input from the `values.yaml` file.
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for routing traffic. |
+### Ingress Resources
+#### Description
+Four Ingress resources are defined for different services: dashboard, chat, server, and search. Each Ingress resource specifies routing rules for incoming HTTP traffic to the respective service.
 
 #### Internal Logic
-The Ingress resource uses the `dashboard.{{ $domain }}` hostname to match incoming requests. When a request matches, it forwards the traffic to the `dashboard-service` on port 80.
+- Each Ingress resource is conditionally created based on the environment being "gcloud".
+- The host for each Ingress is set using a subdomain of the `$domain` variable.
+- All Ingress resources use the GCE ingress class.
+- Each Ingress routes all traffic (`path: /`) to the corresponding service.
 
-### `ingress-chat`
+### NetworkPolicy Resources
 #### Description
-This section defines an Ingress resource named "ingress-chat" that routes traffic to the "chat-service" on port 3000. It's intended for a Google Cloud environment and uses the "gce" ingress class.
-
-#### Inputs
-This resource takes input from the `values.yaml` file.
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for routing traffic. |
+Two NetworkPolicy resources are defined to allow all ingress and egress traffic within the cluster.
 
 #### Internal Logic
-The Ingress resource uses the `chat.{{ $domain }}` hostname to match incoming requests. When a request matches, it forwards the traffic to the `chat-service` on port 3000.
+- `allow-all-ingress`: Allows all incoming traffic to any pod.
+- `allow-all-egress`: Allows all outgoing traffic from any pod.
 
-### `ingress-server`
-#### Description
-This section defines an Ingress resource named "ingress-server" that routes traffic to the "server-service" on port 8090. It's intended for a Google Cloud environment and uses the "gce" ingress class.
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Kubernetes | The target platform for these resources |
+| Google Cloud | The specific cloud provider for which these Ingress resources are configured |
 
-#### Inputs
-This resource takes input from the `values.yaml` file.
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for routing traffic. |
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.environment | string | N/A | Determines if the resources should be created (must be "gcloud") |
+| .Values.domain | string | N/A | The base domain for the Ingress hosts |
 
-#### Internal Logic
-The Ingress resource uses the `api.{{ $domain }}` hostname to match incoming requests. When a request matches, it forwards the traffic to the `server-service` on port 8090.
-
-### `ingress-search`
-#### Description
-This section defines an Ingress resource named "ingress-search" that routes traffic to the "search-service" on port 3001. It's intended for a Google Cloud environment and uses the "gce" ingress class.
-
-#### Inputs
-This resource takes input from the `values.yaml` file.
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| domain | string | The domain name used for routing traffic. |
-
-#### Internal Logic
-The Ingress resource uses the `search.{{ $domain }}` hostname to match incoming requests. When a request matches, it forwards the traffic to the `search-service` on port 3001.
-
-### `allow-all-ingress`
-#### Description
-This section defines a NetworkPolicy resource named "allow-all-ingress" that allows all ingress traffic to all pods.
-
-#### Internal Logic
-The NetworkPolicy resource uses an empty `podSelector` to select all pods and an empty ingress rule to allow all incoming traffic.
-
-### `allow-all-egress`
-#### Description
-This section defines a NetworkPolicy resource named "allow-all-egress" that allows all egress traffic from all pods.
-
-#### Internal Logic
-The NetworkPolicy resource uses an empty `podSelector` to select all pods and an empty egress rule to allow all outgoing traffic.
-
-## Configuration
-This code snippet uses values from a `values.yaml` file. The following table describes the configuration options:
-
-| Option | Type | Description |
-|:-------|:-----|:------------|
-| domain | string | The base domain name used for routing traffic to different services. |
-| environment | string | The environment this configuration is for. This code is applied only when the environment is "gcloud". |
+## Notes
+1. The file uses Helm templating syntax, indicated by the `{{- }}` delimiters.
+2. The entire template is wrapped in a conditional check `{{- if (eq .Values.environment "gcloud") }}`, ensuring these resources are only created in a Google Cloud environment.
+3. The `$domain` variable is set at the beginning of the file and used throughout to construct the hostnames for each Ingress.
+4. Each Ingress uses the `gce` ingress class, which is specific to Google Cloud.
+5. The `external-dns.alpha.kubernetes.io/hostname` annotation suggests that external DNS might be used to automatically configure DNS records for these Ingress resources.
+6. The NetworkPolicy resources are very permissive, allowing all traffic. This might not be suitable for production environments where more restrictive policies are typically recommended.

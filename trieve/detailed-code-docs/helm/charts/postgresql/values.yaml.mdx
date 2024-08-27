@@ -2,138 +2,49 @@
 title: "values.yaml"
 ---
 
+Here's a high-level description of the `values.yaml` file for the PostgreSQL Helm chart:
+
 ## High-level description
-This YAML file defines configuration values for deploying a PostgreSQL database using a Helm chart. It includes parameters for image selection, authentication, replication, backups, resource allocation, persistence, networking, and more. This file allows for customization of both standalone and replication-based PostgreSQL deployments.
+
+This `values.yaml` file is a configuration file for deploying PostgreSQL using Helm. It contains a comprehensive set of parameters to customize the PostgreSQL deployment, including settings for authentication, replication, networking, resources, security, and more. The file is structured to allow for fine-grained control over both the primary PostgreSQL instance and any read replicas.
 
 ## Code Structure
-This file is structured as a YAML file with nested key-value pairs. It is organized into sections like `global`, `image`, `auth`, `primary`, `readReplicas`, `backup`, etc. Each section contains parameters related to a specific aspect of the PostgreSQL deployment. For instance, the `primary` section defines settings for the primary PostgreSQL instance, while the `readReplicas` section defines settings for read-only replicas.
+
+The file is organized into several main sections:
+
+1. Global parameters: These affect the entire deployment.
+2. Common parameters: General Kubernetes-related settings.
+3. PostgreSQL common parameters: Settings that apply to all PostgreSQL instances.
+4. PostgreSQL Primary parameters: Specific settings for the primary PostgreSQL instance.
+5. PostgreSQL read replica parameters: Settings for read replicas (when using replication).
+6. Metrics parameters: Configuration for Prometheus metrics exporter.
+7. Volume Permissions parameters: Settings for volume permissions initialization.
+8. Other parameters: Miscellaneous settings like service bindings and RBAC.
+
+Each section contains multiple configuration options, often with nested structures for more complex settings.
 
 ## Symbols
-### `global`
-#### Description
-Defines global parameters that can override default values in other sections. This allows for setting common configurations like image registry, storage class, and authentication details in a central location.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `imageRegistry` | string | Global Docker image registry. |
-| `imagePullSecrets` | list | Global Docker registry secret names as an array. |
-| `storageClass` | string | Global StorageClass for Persistent Volume(s). |
-| `postgresql.auth.postgresPassword` | string | Password for the "postgres" admin user (overrides `auth.postgresPassword`). |
-| `postgresql.auth.username` | string | Name for a custom user to create (overrides `auth.username`). |
-| `postgresql.auth.password` | string | Password for the custom user to create (overrides `auth.password`). |
-| `postgresql.auth.database` | string | Name for a custom database to create (overrides `auth.database`). |
-| `postgresql.auth.existingSecret` | string | Name of existing secret to use for PostgreSQL credentials (overrides `auth.existingSecret`). |
-| `postgresql.auth.secretKeys.adminPasswordKey` | string | Name of key in existing secret to use for PostgreSQL admin credentials (overrides `auth.secretKeys.adminPasswordKey`). Only used when `global.postgresql.auth.existingSecret` is set. |
-| `postgresql.auth.secretKeys.userPasswordKey` | string | Name of key in existing secret to use for PostgreSQL user credentials (overrides `auth.secretKeys.userPasswordKey`). Only used when `global.postgresql.auth.existingSecret` is set. |
-| `postgresql.auth.secretKeys.replicationPasswordKey` | string | Name of key in existing secret to use for PostgreSQL replication credentials (overrides `auth.secretKeys.replicationPasswordKey`). Only used when `global.postgresql.auth.existingSecret` is set. |
-| `postgresql.service.ports.postgresql` | string | PostgreSQL service port (overrides `service.ports.postgresql`). |
-| `compatibility.openshift.adaptSecurityContext` | string | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) |
+Some key symbols (configuration options) in this file include:
 
-#### Outputs
-This section doesn't directly output anything. It provides default values that are used by other sections in the YAML file.
+- `global`: Contains global settings that can override other sections.
+- `image`: Specifies the PostgreSQL image to use.
+- `auth`: Contains authentication-related settings.
+- `primary`: Configures the primary PostgreSQL instance.
+- `readReplicas`: Configures read replicas (if using replication).
+- `metrics`: Settings for Prometheus metrics exporter.
+- `persistence`: Configures persistent storage for PostgreSQL data.
 
-### `image`
-#### Description
-Configures the Docker image used for the PostgreSQL deployment.
+These symbols are used to define various aspects of the PostgreSQL deployment, from basic configuration to advanced features like replication and monitoring.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `registry` | string | PostgreSQL image registry. Defaults to `docker.io`. |
-| `repository` | string | PostgreSQL image repository. Defaults to `bitnami/postgresql`. |
-| `tag` | string | PostgreSQL image tag. Defaults to `16.2.0-debian-12-r15`. Immutable tags are recommended. |
-| `digest` | string | PostgreSQL image digest (overrides `tag` if set). |
-| `pullPolicy` | string | PostgreSQL image pull policy. Defaults to `IfNotPresent` unless `tag` is `latest`, then defaults to `Always`. |
-| `pullSecrets` | list | Specify image pull secrets. |
-| `debug` | boolean | Specify if debug values should be set. Defaults to `false`. |
+## References
 
-#### Outputs
-This section doesn't directly output anything. It defines the configuration for the PostgreSQL Docker image used in the deployment.
+This file references several external components and concepts:
 
-### `auth`
-#### Description
-Defines authentication settings for the PostgreSQL database, including passwords for the default "postgres" user, custom users, and replication users.
+- Docker image registries and repositories
+- Kubernetes concepts like PersistentVolumeClaims, SecurityContext, and NetworkPolicies
+- PostgreSQL-specific concepts like replication and client authentication
+- Prometheus for metrics collection
+- LDAP for external authentication
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `enablePostgresUser` | boolean | Assign a password to the "postgres" admin user. Otherwise, remote access will be blocked for this user. Defaults to `true`. |
-| `postgresPassword` | string | Password for the "postgres" admin user. Ignored if `auth.existingSecret` is provided. |
-| `username` | string | Name for a custom user to create. |
-| `password` | string | Password for the custom user to create. Ignored if `auth.existingSecret` is provided. |
-| `database` | string | Name for a custom database to create. |
-| `replicationUsername` | string | Name of the replication user. Defaults to `repl_user`. |
-| `replicationPassword` | string | Password for the replication user. Ignored if `auth.existingSecret` is provided. |
-| `existingSecret` | string | Name of existing secret to use for PostgreSQL credentials. `auth.postgresPassword`, `auth.password`, and `auth.replicationPassword` will be ignored and picked up from this secret. The secret might also contains the key `ldap-password` if LDAP is enabled. `ldap.bind_password` will be ignored and picked from this secret in this case. |
-| `secretKeys.adminPasswordKey` | string | Name of key in existing secret to use for PostgreSQL admin credentials. Only used when `auth.existingSecret` is set. Defaults to `postgres-password`. |
-| `secretKeys.userPasswordKey` | string | Name of key in existing secret to use for PostgreSQL user credentials. Only used when `auth.existingSecret` is set. Defaults to `password`. |
-| `secretKeys.secretKeys.replicationPasswordKey` | string | Name of key in existing secret to use for PostgreSQL replication credentials. Only used when `auth.existingSecret` is set. Defaults to `replication-password`. |
-| `usePasswordFiles` | boolean | Mount credentials as files instead of using environment variables. Defaults to `false`. |
-
-#### Outputs
-This section doesn't directly output anything. It defines the authentication configuration for the PostgreSQL database.
-
-### `primary`
-#### Description
-This section specifically configures the primary instance in a PostgreSQL deployment, including its configuration, resource limits, persistence, networking, and more.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `name` | string | Name of the primary database (e.g., primary, master, leader, ...). Defaults to `primary`. |
-| `configuration` | string | PostgreSQL Primary main configuration to be injected as ConfigMap. |
-| `pgHbaConfiguration` | string | PostgreSQL Primary client authentication configuration. |
-| `existingConfigmap` | string | Name of an existing ConfigMap with PostgreSQL Primary configuration. NOTE: `primary.configuration` and `primary.pgHbaConfiguration` will be ignored. |
-| `extendedConfiguration` | string | Extended PostgreSQL Primary configuration (appended to main or default configuration). |
-| `existingExtendedConfigmap` | string | Name of an existing ConfigMap with PostgreSQL Primary extended configuration. NOTE: `primary.extendedConfiguration` will be ignored. |
-| `initdb.args` | string | PostgreSQL initdb extra arguments. |
-| `initdb.postgresqlWalDir` | string | Specify a custom location for the PostgreSQL transaction log. |
-| `initdb.scripts` | map | Dictionary of initdb scripts to be run at first boot. |
-| `initdb.scriptsConfigMap` | string | ConfigMap with scripts to be run at first boot. NOTE: This will override `primary.initdb.scripts`. |
-| `initdb.scriptsSecret` | string | Secret with scripts to be run at first boot (in case it contains sensitive information). NOTE: This can work along `primary.initdb.scripts` or `primary.initdb.scriptsConfigMap`. |
-| `initdb.user` | string | Specify the PostgreSQL username to execute the initdb scripts. Defaults to `postgres`. |
-| `initdb.password` | string | Specify the PostgreSQL password to execute the initdb scripts. Defaults to `password`. |
-| `standby.enabled` | boolean | Whether to enable current cluster's primary as standby server of another cluster or not. Defaults to `false`. |
-| `standby.primaryHost` | string | The Host of replication primary in the other cluster. |
-| `standby.primaryPort` | string | The Port of replication primary in the other cluster. |
-| `extraEnvVars` | list | Array with extra environment variables to add to PostgreSQL Primary nodes. |
-| `extraEnvVarsCM` | string | Name of existing ConfigMap containing extra env vars for PostgreSQL Primary nodes. |
-| `extraEnvVarsSecret` | string | Name of existing Secret containing extra env vars for PostgreSQL Primary nodes. |
-| `command` | list | Override default container command (useful when using custom images). |
-| `args` | list | Override default container args (useful when using custom images). |
-| `livenessProbe.enabled` | boolean | Enable livenessProbe on PostgreSQL Primary containers. Defaults to `true`. |
-| `livenessProbe.initialDelaySeconds` | int | Initial delay seconds for livenessProbe. Defaults to `30`. |
-| `livenessProbe.periodSeconds` | int | Period seconds for livenessProbe. Defaults to `10`. |
-| `livenessProbe.timeoutSeconds` | int | Timeout seconds for livenessProbe. Defaults to `5`. |
-| `livenessProbe.failureThreshold` | int | Failure threshold for livenessProbe. Defaults to `6`. |
-| `livenessProbe.successThreshold` | int | Success threshold for livenessProbe. Defaults to `1`. |
-| `readinessProbe.enabled` | boolean | Enable readinessProbe on PostgreSQL Primary containers. Defaults to `true`. |
-| `readinessProbe.initialDelaySeconds` | int | Initial delay seconds for readinessProbe. Defaults to `5`. |
-| `readinessProbe.periodSeconds` | int | Period seconds for readinessProbe. Defaults to `10`. |
-| `readinessProbe.timeoutSeconds` | int | Timeout seconds for readinessProbe. Defaults to `5`. |
-| `readinessProbe.failureThreshold` | int | Failure threshold for readinessProbe. Defaults to `6`. |
-| `readinessProbe.successThreshold` | int | Success threshold for readinessProbe. Defaults to `1`. |
-| `startupProbe.enabled` | boolean | Enable startupProbe on PostgreSQL Primary containers. Defaults to `false`. |
-| `startupProbe.initialDelaySeconds` | int | Initial delay seconds for startupProbe. Defaults to `30`. |
-| `startupProbe.periodSeconds` | int | Period seconds for startupProbe. Defaults to `10`. |
-| `startupProbe.timeoutSeconds` | int | Timeout seconds for startupProbe. Defaults to `1`. |
-| `startupProbe.failureThreshold` | int | Failure threshold for startupProbe. Defaults to `15`. |
-| `startupProbe.successThreshold` | int | Success threshold for startupProbe. Defaults to `1`. |
-| `customLivenessProbe` | map | Custom livenessProbe that overrides the default one. |
-| `customReadinessProbe` | map | Custom readinessProbe that overrides the default one. |
-| `customStartupProbe` | map | Custom startupProbe that overrides the default one. |
-| `lifecycleHooks` | map | Lifecycle hooks for the PostgreSQL Primary container to automate configuration before or after startup. |
-| `resourcesPreset` | string | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if primary.resources is set (primary.resources is recommended for production). Defaults to `2xlarge`. |
-| `resources` | map | Set container requests and limits for different resources like CPU or memory (essential for production workloads). |
-| `podSecurityContext.enabled` | boolean | Enable security context. Defaults to `true`. |
-| `podSecurityContext.fsGroupChangePolicy` | string | Set filesystem group change policy. Defaults to `Always`. |
-| `podSecurityContext.sysctls` | list | Set kernel settings using the sysctl interface. |
-| `podSecurityContext.supplementalGroups` | list | Set filesystem extra groups. |
-| `podSecurityContext.fsGroup` | int | Group ID for the pod. Defaults to `1001`. |
-| `containerSecurityContext.enabled` | boolean | Enabled containers' Security Context. Defaults to `true`. |
-| `containerSecurityContext.seLinuxOptions` | map | Set SELinux options in container. |
-| `containerSecurityContext.runAsUser` | int | Set containers' Security Context runAsUser. Defaults to `1001`. |
-| `containerSecurityContext.runAsGroup` | int | Set containers' Security Context runAsGroup. Defaults to `1001`. |
-| `containerSecurityContext.runAsNonRoot` | boolean | Set container's Security Context runAsNonRoot. Defaults to `true`. |
-| `containerSecurity
+Understanding these references is crucial for properly configuring and deploying PostgreSQL using this Helm chart.

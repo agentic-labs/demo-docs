@@ -3,133 +3,143 @@ title: "get_clusters.py"
 ---
 
 ## High-level description
-This code defines data structures and functions for managing and processing chunks of text data in a search system. It includes models for users, topics, messages, and various types of chunk metadata, as well as functions for clustering and analyzing search queries.
+This script performs clustering on search queries from multiple datasets stored in a ClickHouse database. It uses the HDBSCAN algorithm for clustering, generates topic names for each cluster using Claude AI, and stores the results back in the database.
 
 ## Code Structure
-The code is organized into several main components:
-1. Data models (User, Topic, Message, ChunkMetadata, etc.)
-2. Conversion functions between different data types
-3. Helper functions for data processing and analysis
-4. Database interaction functions
+The script defines several functions that work together to fetch data, perform clustering, generate topics, and insert results back into the database. The main execution flow is in the `if __name__ == "__main__":` block, which iterates through datasets and applies the clustering process.
 
 ## Symbols
 
 ### `fetch_dataset_vectors`
 #### Description
-Fetches dataset vectors from a ClickHouse database.
+Fetches search query data from the ClickHouse database for a given dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| client | clickhouse_connect.driver.client.Client | ClickHouse client |
-| dataset_id | uuid.UUID | ID of the dataset |
+| client | clickhouse_connect.driver.client.Client | ClickHouse client connection |
+| dataset_id | uuid.UUID | ID of the dataset to fetch |
 | limit | int | Maximum number of rows to fetch (default: 5000) |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| rows | List[Tuple] | List of tuples containing query data |
+| rows | list | List of tuples containing query data |
 
 #### Internal Logic
-1. Constructs a SQL query to fetch search queries
-2. Executes the query on the ClickHouse database
-3. Returns the result rows
+1. Constructs a SQL query to select recent, non-duplicate search queries for the given dataset.
+2. Executes the query and returns the result rows.
 
 ### `get_clusters`
 #### Description
-Generates clusters from HDBSCAN labels.
+Organizes clustering results into a dictionary of clusters.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| hdbscan | HDBSCAN | Fitted HDBSCAN model |
-| data | List | Input data |
+| hdbscan | HDBSCAN | Fitted HDBSCAN clustering object |
+| data | list | Original data used for clustering |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| clusters | Dict[int, List[Tuple]] | Dictionary of clusters |
+| clusters | dict | Dictionary of clusters with labels as keys and lists of (data, probability, index) tuples as values |
 
-#### Internal Logic
-1. Extracts labels and probabilities from the HDBSCAN model
-2. Groups data points by their cluster labels
-3. Stores data points, probabilities, and indices for each cluster
+### `get_datasets`
+#### Description
+Retrieves all unique dataset IDs from the search_queries table.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | clickhouse_connect.driver.client.Client | ClickHouse client connection |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rows | list | List of tuples containing dataset IDs |
 
 ### `hdbscan_clustering`
 #### Description
-Performs HDBSCAN clustering on input data.
+Performs HDBSCAN clustering on the input data.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | List | Input data containing vectors |
+| data | list | List of data points to cluster |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| hdb | HDBSCAN | Fitted HDBSCAN model |
+| hdb | HDBSCAN | Fitted HDBSCAN clustering object |
 
 #### Internal Logic
-1. Extracts vectors from input data
-2. Creates an HDBSCAN model with specified parameters
-3. Fits the model to the vectors
+1. Extracts vectors from the input data.
+2. Creates an HDBSCAN object with min_cluster_size=30.
+3. Fits the HDBSCAN object to the vectors and returns it.
 
 ### `get_topics`
 #### Description
-Generates topic names for clusters using the Claude API.
+Generates topic names for each cluster using Claude AI.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| hdbscan | HDBSCAN | Fitted HDBSCAN model |
-| clusters | Dict[int, List[Tuple]] | Dictionary of clusters |
-| data | List | Input data |
+| hdbscan | HDBSCAN | Fitted HDBSCAN clustering object |
+| clusters | dict | Dictionary of clusters |
+| data | list | Original data used for clustering |
 | top_n | int | Number of top queries to use for topic generation (default: 5) |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| topics | Dict[int, str] | Dictionary of cluster labels and their corresponding topics |
+| topics | dict | Dictionary of cluster labels and their corresponding topic names |
 
 #### Internal Logic
-1. For each cluster, selects the top N queries with highest probabilities
-2. Sends a request to the Claude API to generate a topic name
-3. Stores the generated topic name for each cluster
+1. For each cluster, selects the top N queries with the highest probabilities.
+2. Sends these queries to Claude AI to generate a 3-5 word topic name.
+3. Stores the generated topic names in a dictionary.
 
 ### `insert_centroids`
 #### Description
-Inserts cluster topics and memberships into the database.
+Inserts clustering results (topics and memberships) into the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| client | clickhouse_connect.driver.client.Client | ClickHouse client |
-| data | List | Input data |
-| dataset_id | Tuple[uuid.UUID] | Dataset ID |
-| topics | Dict[int, str] | Dictionary of cluster labels and their topics |
-| clusters | Dict[int, List[Tuple]] | Dictionary of clusters |
+| client | clickhouse_connect.driver.client.Client | ClickHouse client connection |
+| data | list | Original data used for clustering |
+| dataset_id | tuple | Dataset ID |
+| topics | dict | Dictionary of cluster labels and their corresponding topic names |
+| clusters | dict | Dictionary of clusters |
 
 #### Internal Logic
-1. Prepares data for insertion into the `cluster_topics` table
-2. Inserts cluster topics into the database
-3. Prepares data for insertion into the `search_cluster_memberships` table
-4. Inserts cluster memberships into the database
+1. Generates UUIDs for each topic.
+2. Inserts topic information into the `cluster_topics` table.
+3. Creates membership rows for each query in each cluster.
+4. Inserts membership information into the `search_cluster_memberships` table.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| datetime | Date and time operations |
-| uuid | Generating and handling UUIDs |
-| anthropic | Interacting with the Claude API |
+| datetime | Handling date and time operations |
+| os | Accessing environment variables |
+| uuid | Generating unique identifiers |
+| anthropic | Interacting with Claude AI for topic generation |
 | clickhouse_connect | Connecting to and querying ClickHouse database |
-| numpy | Numerical operations |
-| sklearn.cluster | HDBSCAN clustering |
-| dotenv | Loading environment variables |
+| numpy | Numerical operations and array handling |
+| sklearn.cluster | HDBSCAN clustering algorithm |
+| scipy.spatial.distance | Cosine distance calculation (unused in the current code) |
+| dotenv | Loading environment variables from a .env file |
 
 ## Error Handling
-The main script includes a try-except block to catch and print any errors that occur during the clustering process for each dataset.
+The main script wraps the clustering process for each dataset in a try-except block, catching and printing any exceptions that occur during processing. This allows the script to continue processing other datasets if an error occurs with one.
+
+## Logging
+The script uses print statements to log progress and errors, such as when a dataset is skipped due to insufficient data or when clustering is completed for a dataset.
 
 ## TODOs
-- The code includes commented-out QEMU setup, which might be needed for multi-architecture builds in the future.
-
-This code implements a clustering system for search queries, using HDBSCAN for clustering and the Claude API for generating topic names. It interacts with a ClickHouse database to fetch data and store results, providing a comprehensive solution for analyzing and organizing search query data.
+- The `cosine` import from `scipy.spatial.distance` is unused and could be removed.
+- Consider adding more robust error handling and logging mechanisms.
+- The `anthropic_client` is created globally but used only in the `get_topics` function. Consider moving its initialization closer to its usage.
+- The `limit` parameter in `fetch_dataset_vectors` is set to 5000 by default but used as 3000 in the main script. Consider aligning these values or making it a configurable parameter.

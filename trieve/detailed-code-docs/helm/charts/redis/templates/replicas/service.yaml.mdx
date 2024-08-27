@@ -3,59 +3,52 @@ title: "service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service for Redis replicas in a replication architecture. It exposes the Redis replicas on a configurable port and allows for customization of service type, load balancing, session affinity, and other parameters. This service is only created if the architecture is set to "replication" and Sentinel is not enabled.
+This YAML file defines a Kubernetes Service resource for Redis replicas in a replication architecture. It creates a service to expose Redis replica pods, allowing other components to connect to the Redis replicas.
 
 ## Code Structure
-This code defines a single Kubernetes Service resource. It uses conditional logic to include or exclude certain sections based on the values of configuration parameters.
-
-## References
-* `common.names.fullname`: Used to construct the service name.
-* `common.names.namespace`: Used to specify the Kubernetes namespace.
-* `common.labels.standard`: Used to generate standard labels for the service.
-* `common.tplvalues.merge`: Used to merge annotations and pod labels.
-* `common.tplvalues.render`: Used to render values from the provided context.
-* `common.capabilities.kubeVersion`: Used to check the Kubernetes version.
-* `common.labels.matchLabels`: Used to generate label selectors for the service.
+The file uses Helm templating to conditionally create the Service based on the Redis architecture and configuration values. It defines various service properties such as type, traffic policies, and selectors.
 
 ## Symbols
-### `helm/charts/redis/templates/replicas/service.yaml`
+
+### Service Definition
 #### Description
-This code defines a Kubernetes Service resource for Redis replicas. It is a template file that is rendered by Helm to generate the actual YAML manifest.
+Creates a Kubernetes Service resource for Redis replicas when the architecture is set to "replication" and sentinel is not enabled.
 
 #### Inputs
-This code uses values from the `Values` object, which is passed in by Helm during template rendering. Some of the key input values include:
-
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.architecture` | string | The Redis architecture to use ("replication" or "standalone"). |
-| `.Values.sentinel.enabled` | boolean | Whether Sentinel is enabled. |
-| `.Values.replica.service.type` | string | The type of Kubernetes Service to create (e.g., "ClusterIP", "NodePort", "LoadBalancer"). |
-| `.Values.replica.service.ports.redis` | int | The port number to expose Redis on. |
-| `.Values.replica.service.nodePorts.redis` | int | The node port to use if `service.type` is "NodePort" or "LoadBalancer". |
-| `.Values.replica.service.externalTrafficPolicy` | string | The external traffic policy to use for the service. |
-| `.Values.replica.service.internalTrafficPolicy` | string | The internal traffic policy to use for the service. |
-| `.Values.replica.service.loadBalancerIP` | string | The static IP address to assign to the service if `service.type` is "LoadBalancer". |
-| `.Values.replica.service.loadBalancerClass` | string | The load balancer class to use if `service.type` is "LoadBalancer". |
-| `.Values.replica.service.loadBalancerSourceRanges` | list | A list of IP address ranges that are allowed to access the service if `service.type` is "LoadBalancer". |
-| `.Values.replica.service.clusterIP` | string | The cluster IP address to assign to the service if `service.type` is "ClusterIP". |
-| `.Values.replica.service.sessionAffinity` | string | The session affinity mode to use for the service. |
-| `.Values.replica.service.sessionAffinityConfig` | map | Configuration options for session affinity. |
-| `.Values.replica.service.extraPorts` | list | A list of additional ports to expose on the service. |
-| `.Values.replica.podLabels` | map | Custom labels to apply to the Redis replica pods. |
-| `.Values.commonLabels` | map | Common labels to apply to all resources. |
-| `.Values.commonAnnotations` | map | Common annotations to apply to all resources. |
-
-#### Outputs
-This code generates a Kubernetes Service resource definition in YAML format.
+| .Values.architecture | string | Redis deployment architecture |
+| .Values.sentinel.enabled | boolean | Whether Redis sentinel is enabled |
+| .Values.replica.service.* | various | Configuration values for the replica service |
 
 #### Internal Logic
-The code uses conditional logic (if statements) to include or exclude certain sections of the service definition based on the values of configuration parameters. For example, the `nodePort` field is only included if the `service.type` is set to "NodePort" or "LoadBalancer".
-
-## Side Effects
-This code defines a Kubernetes Service resource, which will be created in the cluster when the Helm chart is deployed.
+1. Checks if the architecture is "replication" and sentinel is not enabled.
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Configures the service spec including type, traffic policies, and other properties based on the provided values.
+4. Sets up the service ports for Redis and any extra ports.
+5. Defines the selector for the service to target Redis replica pods.
 
 ## Dependencies
-* Kubernetes
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.names.fullname | Generate the full name for the service |
+| common.names.namespace | Get the namespace |
+| common.labels.standard | Generate standard labels |
+| common.tplvalues.merge | Merge annotation values |
+| common.tplvalues.render | Render template values |
+| common.labels.matchLabels | Generate match labels for the selector |
 
-### Configuration
-This code relies on configuration values passed in through the `Values` object. See the "Inputs" section for a description of the available configuration options.
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| replica.service.type | string | N/A | Type of Kubernetes service |
+| replica.service.ports.redis | int | N/A | Port number for Redis |
+| replica.service.nodePorts.redis | int | N/A | Node port number for Redis (if applicable) |
+| replica.service.externalTrafficPolicy | string | N/A | External traffic policy for LoadBalancer/NodePort services |
+| replica.service.internalTrafficPolicy | string | N/A | Internal traffic policy (for Kubernetes 1.22+) |
+| replica.service.loadBalancerIP | string | N/A | LoadBalancer IP (if applicable) |
+| replica.service.loadBalancerSourceRanges | list | N/A | LoadBalancer source ranges (if applicable) |
+| replica.service.annotations | object | N/A | Additional annotations for the service |
+| replica.service.extraPorts | list | N/A | Extra ports to expose in the service |
+
+Note: This file is part of a Helm chart for deploying Redis, and its behavior depends on the values provided during chart installation or upgrade.

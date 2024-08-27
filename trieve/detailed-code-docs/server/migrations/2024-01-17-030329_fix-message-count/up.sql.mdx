@@ -3,37 +3,55 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script defines a function `update_messages_counts` and a trigger `update_messages_counts_trigger` to maintain the accuracy of message counts in the `organization_usage_counts` table whenever messages are inserted or deleted from the `messages` table. 
+This SQL script defines a function `update_messages_counts` and a trigger `update_messages_counts_trigger` to maintain the accuracy of message counts in the `organization_usage_counts` table. The trigger automatically updates the message count whenever a message is inserted or deleted from the `messages` table.
 
 ## Code Structure
-The `update_messages_counts` function is used by the `update_messages_counts_trigger` trigger. The trigger is executed after each insert or delete operation on the `messages` table, invoking the function to update the corresponding message count in the `organization_usage_counts` table.
+The code defines two main SQL objects:
+
+1. **`update_messages_counts` function:** This function is executed by the trigger and contains the logic to update the message counts.
+2. **`update_messages_counts_trigger` trigger:** This trigger is defined on the `messages` table and calls the `update_messages_counts` function after each insert or delete operation.
 
 ## Symbols
 
 ### `update_messages_counts`
 #### Description
-This function updates the `message_count` for an organization in the `organization_usage_counts` table based on insert or delete operations on the `messages` table. 
+This function updates the `message_count` in the `organization_usage_counts` table based on insert or delete operations on the `messages` table. 
 
 #### Inputs
-This function implicitly takes the inserted or deleted row from the `messages` table as input through the trigger.
+This function implicitly receives input from the trigger context:
+
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `NEW` | Record | Represents the new row being inserted into the `messages` table (available on INSERT). |
+| `OLD` | Record | Represents the old row being deleted from the `messages` table (available on DELETE). |
+| `TG_OP` | String | Indicates the triggering operation: 'INSERT' or 'DELETE'. |
 
 #### Outputs
-This function returns the `NEW` row for `INSERT` operations and implicitly returns nothing for `DELETE` operations.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Trigger return value | Record | Returns the `NEW` record for INSERT operations, effectively returning the inserted row. This is a common practice for triggers, even if the returned value is not explicitly used. |
 
 #### Internal Logic
-1. **Determine Operation:** Checks if the triggering event is an `INSERT` or `DELETE` operation.
-2. **INSERT Case:** If it's an `INSERT`:
-    - Attempts to insert a new row into `organization_usage_counts` with `org_id` from the `datasets` table (linked by `dataset_id` from the inserted message) and `message_count` set to 1.
+1. **Determine Operation:** Checks the `TG_OP` variable to identify if the trigger was invoked by an INSERT or DELETE operation.
+2. **INSERT Case:** If `TG_OP` is 'INSERT':
+    - It attempts to insert a new row into `organization_usage_counts` with `org_id` from the related dataset and `message_count` set to 1.
     - If a row with the same `org_id` already exists, it increments the existing `message_count` by 1.
-3. **DELETE Case:** If it's a `DELETE`:
-    - Updates the `organization_usage_counts` table, decrementing the `message_count` for the corresponding `org_id` (obtained from the `datasets` table using the deleted message's `dataset_id`).
-    - Ensures `message_count` doesn't go below 0 by setting it to 0 if it's already 0.
-4. **Return Value:** Returns the `NEW` row for `INSERT` operations (implicitly returns nothing for `DELETE`).
+3. **DELETE Case:** If `TG_OP` is 'DELETE':
+    - It decrements the `message_count` in `organization_usage_counts` for the corresponding `org_id`.
+    - It ensures that `message_count` doesn't go below 0 by using a CASE statement.
+4. **Return:** Returns the `NEW` record for INSERT operations.
 
 ### `update_messages_counts_trigger`
 #### Description
-This trigger automatically executes the `update_messages_counts` function after each `INSERT` or `DELETE` operation on the `messages` table.
+This trigger automatically executes the `update_messages_counts` function after each INSERT or DELETE operation on the `messages` table.
 
 #### Internal Logic
-1. **Trigger Event:** Triggered after `INSERT` or `DELETE` on the `messages` table.
-2. **Execution:** Executes the `update_messages_counts` function for each row affected by the `INSERT` or `DELETE` operation.
+- It is defined as a `FOR EACH ROW` trigger, meaning it fires for each individual row inserted or deleted.
+- It calls the `update_messages_counts` function, passing the implicit context (including `NEW`, `OLD`, and `TG_OP`) to the function.
+
+## Side Effects
+- **Modifies `organization_usage_counts`:** This trigger updates the `message_count` in the `organization_usage_counts` table to reflect the changes in the `messages` table.
+
+## Performance Considerations
+- **Potential Bottleneck:** This trigger could introduce a minor performance overhead for INSERT and DELETE operations on the `messages` table, as it performs additional updates on `organization_usage_counts`. However, the impact is likely to be minimal for typical workloads.
+- **Optimization:** The use of `ON CONFLICT DO UPDATE` in the INSERT case helps to optimize the update process by avoiding unnecessary rows and updates.

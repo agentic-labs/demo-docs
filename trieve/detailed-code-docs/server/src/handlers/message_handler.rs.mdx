@@ -4,20 +4,87 @@ title: "message_handler.rs"
 
 Here's a high-level description of the `message_handler.rs` file:
 
-This file contains handlers and functions related to managing messages within the Trieve API. It primarily deals with creating, editing, regenerating, and retrieving messages associated with topics. The file also includes functionality for generating suggested queries based on existing content.
+The `message_handler.rs` file is responsible for handling operations related to messages in a chat-like system. It provides functionality for creating, retrieving, editing, and regenerating messages within topics. The file also includes methods for generating suggested queries and handling RAG (Retrieval-Augmented Generation) operations.
 
-Key components and functionality:
+## Code Structure
 
-1. Message Creation: The `create_message` function handles the creation of new messages, including RAG (Retrieval-Augmented Generation) functionality.
+The file defines several structs and functions that work together to manage messages:
 
-2. Message Retrieval: Functions like `get_all_topic_messages` retrieve messages associated with a specific topic.
+1. `CreateMessageReqPayload`: Defines the structure for creating a new message.
+2. `RegenerateMessageReqPayload`: Defines the structure for regenerating a message.
+3. `EditMessageReqPayload`: Defines the structure for editing an existing message.
+4. `SuggestedQueriesReqPayload`: Defines the structure for generating suggested queries.
 
-3. Message Editing and Regeneration: The file includes handlers for editing existing messages (`edit_message`) and regenerating assistant responses (`regenerate_message` and `regenerate_message_patch`).
+Key functions include:
+- `create_message`: Handles the creation of new messages.
+- `get_all_topic_messages`: Retrieves all messages for a given topic.
+- `edit_message`: Allows editing of existing messages.
+- `regenerate_message`: Regenerates the last message in a topic.
+- `get_suggested_queries`: Generates suggested queries based on the context.
 
-4. Query Suggestion: The `get_suggested_queries` function generates suggested queries based on existing content using RAG and language models.
+## References
 
-5. Helper Functions: Various helper functions support the main handlers, such as `check_completion_param_validity` for validating LLM options and `stream_response` for handling streaming responses from language models.
+The code references several other modules and external crates:
 
-6. Data Structures: The file defines several request and response payload structures used in the API endpoints.
+- Various handlers and operators from the same codebase.
+- Database models and configurations.
+- External crates like `actix_web`, `openai_dive`, `serde`, and `utoipa`.
 
-The code integrates with other parts of the system, including authentication, database operations, and external services like OpenAI for language model interactions. It also handles error cases and implements logging for better observability.
+## Symbols
+
+### create_message
+#### Description
+Creates a new message within a topic, potentially using RAG for generating responses.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Json&lt;CreateMessageReqPayload&gt; | The payload containing message creation details |
+| user | AdminOnly | The authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| event_queue | web::Data&lt;EventQueue&gt; | Queue for handling events |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result | HttpResponse | The HTTP response, either streaming or JSON |
+
+#### Internal Logic
+1. Validates completion parameters.
+2. Checks organization message count limits.
+3. Retrieves previous messages for the topic.
+4. Performs RAG operations if necessary.
+5. Generates a response using an LLM.
+6. Stores the new message and returns the response.
+
+### get_suggested_queries
+#### Description
+Generates suggested queries based on the provided context and dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Json&lt;SuggestedQueriesReqPayload&gt; | The payload containing query generation details |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| _required_user | LoggedUser | The authenticated user |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result | HttpResponse | JSON response containing suggested queries |
+
+#### Internal Logic
+1. Retrieves relevant chunks from the dataset.
+2. Uses an LLM to generate suggested queries based on the chunks.
+3. Sorts and filters the generated queries.
+4. Returns the top suggested queries.
+
+## Error Handling
+The code uses a `ServiceError` enum for handling various error cases, such as unauthorized access, bad requests, or internal server errors.
+
+## Logging
+The code uses the `tracing` crate for instrumentation and logging of function calls and important operations.
+
+This file is crucial for managing the message-related operations in the system, integrating with the database, and leveraging AI models for generating responses and suggestions.

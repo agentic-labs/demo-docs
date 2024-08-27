@@ -3,49 +3,70 @@ title: "OrgContext.tsx"
 ---
 
 ## High-level description
-This code defines the OrgContext and OrgContextProvider components in React, which manage the selected organization for the user. It provides a context for sharing the selected organization across components and handles the logic for initializing and updating the selected organization based on URL parameters and user data.
+The `OrgContext.tsx` file defines a SolidJS context, `OrgContext`, for managing the currently selected organization within the analytics frontend. It handles selecting an organization from the user's available organizations and persists the selection in the URL parameters.
 
 ## Code Structure
-The main symbols in this code are:
-1. `OrgContext`: A context object created to share organization-related data.
-2. `OrgContextProvider`: A component that wraps its children with the OrgContext.Provider and manages the selected organization state.
+The `OrgContextProvider` component uses the `OrgContext` to provide the `selectedOrg` signal and the `selectOrg` function to its children. The `selectedOrg` signal holds the currently active organization, while `selectOrg` updates this signal and the URL parameters.
 
-The `OrgContextProvider` uses the `useSearchParams` hook to interact with URL parameters and the `createSignal` hook to manage the selected organization state.
+## References
+- `Organization` and `SlimUser` types from "shared/types"
+- `redirect` and `useSearchParams` from "@solidjs/router"
+- Various SolidJS primitives like `Accessor`, `Context`, `createContext`, `createSignal`, `ParentProps`, and `Show`
 
 ## Symbols
 
-### OrgContext
+### `OrgDatasetContextProps`
 #### Description
-A context object created using `createContext()` to share organization-related data across components.
-
-### OrgContextProvider
-#### Description
-A component that provides the OrgContext to its children and manages the selected organization state.
+An interface defining the props expected by the `OrgContextProvider` component. It extends the `ParentProps` interface from SolidJS.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| props | OrgDatasetContextProps | Contains user data and children components |
+| user | SlimUser | The currently logged-in user, containing information about their organizations. |
+
+### `OrgContextType`
+#### Description
+An interface defining the shape of the context object provided by `OrgContext`.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| selectedOrg | Accessor&lt;Organization&gt; | A SolidJS accessor providing access to the currently selected organization. |
+| selectOrg | (orgId: string) =&gt; void | A function to update the selected organization. |
+
+### `OrgContext`
+#### Description
+A SolidJS context object created using `createContext`. It is used to share the selected organization state across the application.
+
+### `OrgContextProvider`
+#### Description
+A SolidJS component that acts as a provider for the `OrgContext`. It wraps its children and makes the context available to them.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| props | OrgDatasetContextProps | The props for the component, including the currently logged-in user. |
 
 #### Internal Logic
-1. Uses `useSearchParams` to interact with URL parameters.
-2. Defines `getInitialUserOrg` function to determine the initial selected organization.
-3. Creates a signal for `selectedOrg` using `createSignal`.
-4. Defines `setSelectedOrgWithParams` function to update the selected organization and URL parameters.
-5. Renders the OrgContext.Provider with the selected organization and selection function as value.
+1. **Initialization:**
+   - Retrieves URL parameters using `useSearchParams`.
+   - Defines `getInitialUserOrg` to determine the initial organization to be selected.
+     - If the user has no organizations, redirects to an error page.
+     - If the URL has an `organization` parameter, selects the corresponding organization from the user's organizations or defaults to the first organization.
+     - Otherwise, sets the `organization` parameter in the URL to the ID of the user's first organization and selects it.
+   - Creates a signal `selectedOrg` initialized with the result of `getInitialUserOrg`.
+
+2. **`setSelectedOrgWithParams` function:**
+   - Takes an `orgId` as input.
+   - Finds the corresponding organization from the user's organizations.
+   - Redirects to an error page if the organization is not found.
+   - Updates the `selectedOrg` signal with the found organization.
+   - Updates the URL parameter `organization` with the selected organization's ID.
+
+3. **Rendering:**
+   - Provides the `selectedOrg` signal and `setSelectedOrgWithParams` function through the `OrgContext.Provider`.
+   - Conditionally renders its children using `Show` only when `selectedOrg` has a truthy value.
 
 ## Side Effects
-- Updates URL parameters when selecting an organization.
-- Redirects to an error page if the user has no organizations or if an invalid organization is selected.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| @solidjs/router | For routing and URL parameter management |
-| solid-js | For creating and managing reactive state and components |
-| shared/types | For type definitions (Organization, SlimUser) |
-
-## Error Handling
-- Redirects to "/error" if the user has no organizations or if an invalid organization is selected.
-
-Your response should not exceed 3000 words or 4000 tokens. Focus on providing clear, concise information that can be directly inferred from the code. Include optional sections only when they provide significant value for understanding the code.
+- Modifies the URL parameters by setting and updating the `organization` parameter.
+- Redirects to `/error` if the user has no organizations or if an invalid organization ID is provided. 

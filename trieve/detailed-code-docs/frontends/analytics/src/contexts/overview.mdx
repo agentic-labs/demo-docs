@@ -3,129 +3,58 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains context providers for managing user authentication and organization selection in a React application using SolidJS. It includes two main context providers: UserAuthContext and OrgContext. These contexts work together to handle user authentication, manage the selected organization, and provide this information to other components throughout the application.
+This directory contains context providers for managing organization and user authentication states in the analytics frontend of the application. It includes two main files: `OrgContext.tsx` and `UserAuthContext.tsx`, which create and manage SolidJS contexts for organization selection and user authentication, respectively.
 
 ## What does it do?
-The code in this directory implements two crucial functionalities for the application:
+The contexts in this directory serve as central state management solutions for the application, handling two critical aspects:
 
-1. User Authentication:
-   - It manages the user's authentication state.
-   - It handles the login process, including sending authentication requests to the server.
-   - It fetches and stores user data upon successful authentication.
-   - It provides the authenticated user's information to other parts of the application.
+1. Organization Management: The `OrgContext` allows users to select and switch between different organizations they have access to. It persists the selected organization in the URL parameters and provides this information to other components.
 
-2. Organization Management:
-   - It allows the user to select an organization from their available organizations.
-   - It manages the state of the currently selected organization.
-   - It updates the URL parameters to reflect the selected organization.
-   - It provides the selected organization information to other components.
+2. User Authentication: The `UserAuthContext` manages the user's authentication state. It fetches user data from the API, handles login redirects, and provides user information to the rest of the application.
 
-These functionalities work together to ensure that the application has the necessary user and organization context for its operations. They handle the flow of logging in a user, selecting an organization, and making this information available throughout the application.
+These contexts work together to ensure that the application has access to the current user's information and their selected organization, which is crucial for displaying relevant data and controlling access to features based on user roles and permissions.
 
 ## Key Files
 
-### UserAuthContext.tsx
-This file defines the UserAuthContext and UserAuthContextProvider. Its main responsibilities include:
-
-- Creating a context for storing user information.
-- Implementing a login function that authenticates the user and fetches user data.
-- Managing the user's authentication state.
-- Wrapping child components with the user context, organization context, and top bar layout.
-
-Key code snippet:
-```typescript
-export function UserAuthContextProvider(props: ParentComponent) {
-  const [user, setUser] = createSignal&lt;SlimUser | null&gt;(null);
-
-  const login = async () =&gt; {
-    // Authentication logic
-  };
-
-  onMount(() =&gt; {
-    login();
-  });
-
-  return (
-    &lt;UserContext.Provider value={{ user, setUser }}&gt;
-      &lt;Show when={user()} fallback={&lt;div&gt;Loading...&lt;/div&gt;}&gt;
-        &lt;OrgContextProvider user={user()!}&gt;
-          &lt;TopBarLayout&gt;{props.children}&lt;/TopBarLayout&gt;
-        &lt;/OrgContextProvider&gt;
-      &lt;/Show&gt;
-    &lt;/UserContext.Provider&gt;
-  );
-}
-```
-
 ### OrgContext.tsx
-This file defines the OrgContext and OrgContextProvider. Its main responsibilities include:
+This file defines the `OrgContext` and `OrgContextProvider`. It manages the selection of an organization from the user's available organizations and persists this selection in the URL parameters.
 
-- Creating a context for storing the selected organization.
-- Managing the state of the selected organization.
-- Handling the logic for initializing and updating the selected organization based on URL parameters and user data.
-- Providing functions to update the selected organization and URL parameters.
+Key features:
+- Provides a `selectedOrg` accessor and a `selectOrg` function to update the selection.
+- Handles URL parameter management for the selected organization.
+- Redirects to an error page if the user has no organizations or if an invalid organization ID is provided.
 
-Key code snippet:
-```typescript
-export function OrgContextProvider(props: OrgDatasetContextProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+### UserAuthContext.tsx
+This file defines the `UserContext` and `UserAuthContextProvider`. It manages user authentication and provides user data to the rest of the application.
 
-  const getInitialUserOrg = () =&gt; {
-    // Logic to determine initial organization
-  };
-
-  const [selectedOrg, setSelectedOrg] = createSignal&lt;Organization&gt;(
-    getInitialUserOrg()
-  );
-
-  const setSelectedOrgWithParams = (org: Organization) =&gt; {
-    // Update selected org and URL params
-  };
-
-  return (
-    &lt;OrgContext.Provider
-      value={{
-        selectedOrg,
-        setSelectedOrg: setSelectedOrgWithParams,
-      }}
-    &gt;
-      {props.children}
-    &lt;/OrgContext.Provider&gt;
-  );
-}
-```
+Key features:
+- Fetches user data from the API on component mount.
+- Handles redirects to the login page if the user is not authenticated.
+- Provides user information to child components through the `UserContext`.
+- Integrates with `OrgContextProvider` and `TopBarLayout` to ensure they have access to user data.
 
 ## Dependencies
-The code in this directory relies on the following main dependencies:
+The contexts rely on the following external libraries and frameworks:
 
-1. SolidJS (solid-js): Used for creating and managing reactive state and components.
+1. SolidJS: Used for creating reactive components and managing state.
    - Version: Not specified in the provided code.
    - Chosen for its efficient reactivity system and performance benefits.
 
-2. @solidjs/router: Used for routing and URL parameter management.
+2. @solidjs/router: Used for handling URL parameters and navigation.
    - Version: Not specified in the provided code.
-   - Chosen for its integration with SolidJS and handling of routing in the application.
+   - Chosen for its integration with SolidJS and routing capabilities.
 
-3. shared/types: Used for type definitions (e.g., Organization, SlimUser).
+3. shared/types: A custom module providing shared type definitions like `SlimUser` and `Organization`.
    - Version: Not specified in the provided code.
-   - Chosen to maintain consistent type definitions across the application.
+   - Chosen for maintaining consistency in type definitions across the application.
 
 ## Configuration
-The code uses configuration from the following sources:
+While there are no explicit configuration files mentioned, the contexts use environment-specific settings:
 
-1. API Host Configuration:
-   - Imported from `../utils/apiHost`.
-   - Used for making API requests in the UserAuthContext.
+1. API Host: The `UserAuthContext` uses an `apiHost` utility function to determine the base URL for API calls. This likely comes from an environment variable or configuration file.
 
-2. Environment Variables:
-   - The code may rely on environment variables for API endpoints or other configuration, but these are not explicitly shown in the provided code snippets.
+2. Login Redirect: The login redirect URL is constructed using `window.location.origin`, which adapts to the current environment.
 
-3. URL Parameters:
-   - The OrgContext uses URL parameters to manage the selected organization.
-   - Example: `org` parameter in the URL is used to determine and update the selected organization.
+3. Error Page: Both contexts use a hardcoded `/error` path for redirecting in case of errors. This might be configurable in a more complete setup.
 
-Error handling:
-- The UserAuthContext redirects to a login page if authentication fails (status 401).
-- The OrgContext redirects to an error page ("/error") if the user has no organizations or if an invalid organization is selected.
-
-These context providers form the backbone of user authentication and organization management in the application, ensuring that components have access to the necessary user and organization information throughout the application's lifecycle.
+These contexts form the backbone of state management for user authentication and organization selection in the analytics frontend. They ensure that components throughout the application have access to critical user and organization data, enabling proper rendering and access control based on the user's permissions and selected organization.

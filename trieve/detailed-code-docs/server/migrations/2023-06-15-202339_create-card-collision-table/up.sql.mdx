@@ -3,40 +3,37 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script creates a new table `card_collisions` and adds a unique constraint to the `card_metadata` table. It establishes a structure to track collisions between cards based on their Qdrant point IDs and ensures uniqueness of Qdrant point IDs in the card metadata.
+This SQL script defines a database migration that introduces a new table `card_collisions` and enforces uniqueness on the `qdrant_point_id` column in the `card_metadata` table. The `card_collisions` table is designed to store information about collisions between cards, likely based on some similarity metric related to the `qdrant_point_id`.
+
+## Code Structure
+The script first alters the existing `card_metadata` table. Then, it creates the `card_collisions` table and an index on the `card_id` column.
+
+## References
+This script references the `card_metadata` table.
 
 ## Symbols
-
-### ALTER TABLE card_metadata
+### `ALTER TABLE card_metadata ...`
 #### Description
-This statement adds a unique constraint to the `qdrant_point_id` column in the `card_metadata` table.
+This statement adds a unique constraint to the `qdrant_point_id` column in the `card_metadata` table. This ensures that each `qdrant_point_id` value is unique within the table.
 
 #### Internal Logic
-- Adds a unique constraint named `uq_qdrant_point_id` to the `qdrant_point_id` column.
-- This ensures that each Qdrant point ID is unique across all card metadata entries.
+- `ALTER TABLE card_metadata`: Specifies the table to be modified.
+- `ADD CONSTRAINT uq_qdrant_point_id UNIQUE (qdrant_point_id)`: Adds a new constraint named `uq_qdrant_point_id` that enforces uniqueness on the `qdrant_point_id` column.
 
-### CREATE TABLE card_collisions
+### `CREATE TABLE card_collisions ...`
 #### Description
-This statement creates a new table named `card_collisions` to store information about card collisions.
+This statement creates a new table named `card_collisions` to store information about collisions between cards.
 
 #### Internal Logic
-- Creates a table with the following columns:
-  - `id`: UUID, serves as the primary key
-  - `card_id`: UUID, references the `id` column in the `card_metadata` table
-  - `collision_qdrant_id`: UUID, references the `qdrant_point_id` column in the `card_metadata` table
-- Establishes foreign key relationships to ensure data integrity
+- `CREATE TABLE card_collisions`: Specifies the creation of a new table.
+- `id UUID PRIMARY KEY`: Defines the `id` column as a UUID and the primary key of the table.
+- `card_id UUID NOT NULL REFERENCES card_metadata (id)`: Defines the `card_id` column as a UUID, sets it as non-nullable, and creates a foreign key constraint referencing the `id` column of the `card_metadata` table.
+- `collision_qdrant_id UUID NOT NULL REFERENCES card_metadata (qdrant_point_id)`: Defines the `collision_qdrant_id` column as a UUID, sets it as non-nullable, and creates a foreign key constraint referencing the `qdrant_point_id` column of the `card_metadata` table.
 
-### CREATE INDEX idx_card_collisions_card_id
+### `CREATE INDEX idx_card_collisions_card_id ...`
 #### Description
-This statement creates an index on the `card_id` column of the `card_collisions` table.
+This statement creates an index on the `card_id` column of the `card_collisions` table. This index will speed up queries that filter or join on the `card_id` column.
 
 #### Internal Logic
-- Creates an index named `idx_card_collisions_card_id` on the `card_id` column
-- This index will improve query performance when searching for collisions by card ID
-
-## Performance Considerations
-- The unique constraint on `qdrant_point_id` in the `card_metadata` table will enforce uniqueness but may slightly impact insert performance.
-- The index on `card_id` in the `card_collisions` table will improve query performance for lookups by card ID but may slightly impact insert and update operations on this table.
-
-## Dependencies
-This migration script assumes the existence of a `card_metadata` table with `id` and `qdrant_point_id` columns.
+- `CREATE INDEX idx_card_collisions_card_id`: Specifies the creation of a new index named `idx_card_collisions_card_id`.
+- `ON card_collisions (card_id)`: Defines the table and column on which the index is created.

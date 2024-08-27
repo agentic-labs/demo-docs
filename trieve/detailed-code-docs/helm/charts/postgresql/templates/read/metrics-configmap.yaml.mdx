@@ -3,46 +3,43 @@ title: "metrics-configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap named `&lt;release-name&gt;-metrics` in the `templates/read` directory of a Helm chart for PostgreSQL. This ConfigMap is specifically used to store custom metrics configuration when metrics are enabled, custom metrics are defined, and the PostgreSQL architecture is set to "replication".
-
-## Code Structure
-This code uses conditional logic to determine whether to create the ConfigMap. It uses Helm templating features like `include` and `toYaml` to generate the ConfigMap's content.
+This Helm template generates a Kubernetes ConfigMap for custom metrics in a PostgreSQL read replica deployment. It's specifically designed for scenarios where metrics are enabled, custom metrics are defined, and the architecture is set to "replication".
 
 ## Symbols
-### `metrics-configmap.yaml`
+
+### ConfigMap Definition
 #### Description
-This code defines a Kubernetes ConfigMap that holds custom metrics configuration for a PostgreSQL read replica. It is applied only when specific conditions are met.
+Defines a Kubernetes ConfigMap resource for storing custom metrics configuration for PostgreSQL read replicas.
 
 #### Inputs
-This template uses values from the `Values` object passed to the Helm template engine. The relevant values are:
-
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.metrics.enabled` | boolean | Flag indicating whether metrics collection is enabled. |
-| `.Values.metrics.customMetrics` | object |  A dictionary containing custom metrics configuration. |
-| `.Values.architecture` | string | The architecture of the PostgreSQL deployment (e.g., "replication"). |
-| `.Release.Namespace` | string | The Kubernetes namespace where the Helm chart is deployed. |
-| `.Values.commonLabels` | object | A dictionary of common labels to apply to the ConfigMap. |
-| `.Values.commonAnnotations` | object | A dictionary of common annotations to apply to the ConfigMap. |
-
-#### Outputs
-A Kubernetes ConfigMap resource configuration in YAML format.
+| .Values.metrics.enabled | boolean | Indicates if metrics are enabled |
+| .Values.metrics.customMetrics | object | Custom metrics configuration |
+| .Values.architecture | string | Deployment architecture type |
+| .Release.Namespace | string | Kubernetes namespace for the release |
+| .Values.commonLabels | object | Common labels to be applied |
+| .Values.commonAnnotations | object | Common annotations to be applied |
 
 #### Internal Logic
-1. **Conditional Rendering:** The template uses `{{- if and .Values.metrics.enabled .Values.metrics.customMetrics (eq .Values.architecture "replication") }}` to check if:
-    - Metrics are enabled (`metrics.enabled`).
-    - Custom metrics are defined (`metrics.customMetrics`).
-    - The architecture is set to "replication" (`architecture` is "replication").
-   The ConfigMap is only rendered if all three conditions are true.
-
-2. **Name and Namespace:** The ConfigMap name is set to `&lt;release-name&gt;-metrics` using `printf "%s-metrics" (include "postgresql.v1.readReplica.fullname" .)` and the namespace is set to the release namespace or a default value.
-
-3. **Labels and Annotations:** Standard labels are included using `include "common.labels.standard"`. If `commonAnnotations` are defined, they are also included.
-
-4. **Data:** The `custom-metrics.yaml` key in the ConfigMap's `data` field is set to the YAML representation of the `metrics.customMetrics` object using `toYaml .Values.metrics.customMetrics | quote`.
+1. Checks if metrics are enabled, custom metrics are defined, and architecture is "replication".
+2. If conditions are met, creates a ConfigMap with the following:
+   - Name: Constructed using the read replica's full name and "-metrics" suffix
+   - Namespace: Set to the release namespace
+   - Labels: Applied using common labels template
+   - Annotations: Applied if commonAnnotations are defined
+   - Data: Contains custom metrics configuration in YAML format
 
 ## Dependencies
-* **Helm:** This code is a Helm template and relies on the Helm templating engine for rendering.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides templates for labels and value rendering |
 
 ## Configuration
-This code relies on configuration values passed to the Helm template, as described in the "Inputs" section. 
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| metrics.enabled | boolean | - | Enables or disables metrics |
+| metrics.customMetrics | object | - | Custom metrics configuration |
+| architecture | string | - | Deployment architecture type |
+
+Note: This template is part of a larger Helm chart for PostgreSQL and relies on values and templates defined elsewhere in the chart.

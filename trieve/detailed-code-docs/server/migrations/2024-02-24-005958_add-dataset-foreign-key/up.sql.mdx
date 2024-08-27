@@ -3,80 +3,76 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script applies a database migration to add foreign key constraints to several tables, linking them to the `datasets` table. This ensures referential integrity by enforcing that entries in these tables have a corresponding dataset in the `datasets` table.
+This SQL script applies a database migration to add foreign key constraints to several tables, linking them to the `datasets` table. This ensures referential integrity and data consistency within the database.
 
 ## Code Structure
-This script consists of a series of SQL `ALTER TABLE` statements. Each statement either drops an existing foreign key constraint or adds a new one. All new constraints reference the `datasets` table, establishing a relationship between datasets and other entities like events, files, and messages.
+The script consists of a series of `ALTER TABLE` statements, each targeting a specific table. Within each statement, a foreign key constraint is first dropped (if it exists) and then recreated. All foreign keys reference the `id` column of the `datasets` table and enforce cascading updates and deletions.
 
 ## Symbols
 ### `ALTER TABLE dataset_usage_counts`
 #### Description
-This statement modifies the `dataset_usage_counts` table. It first attempts to drop a foreign key constraint named `dataset_usage_counts_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint with the same name, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure that any updates or deletions to the `datasets` table are cascaded to the `dataset_usage_counts` table.
+This statement modifies the `dataset_usage_counts` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists dataset_usage_counts_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT dataset_usage_counts_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+1. **`DROP CONSTRAINT IF EXISTS dataset_usage_counts_dataset_id_fkey;`**: This line attempts to drop the foreign key constraint named `dataset_usage_counts_dataset_id_fkey` if it already exists. The `IF EXISTS` clause prevents an error if the constraint doesn't exist.
+2. **`ALTER TABLE dataset_usage_counts ADD CONSTRAINT dataset_usage_counts_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`**: This line adds a new foreign key constraint named `dataset_usage_counts_dataset_id_fkey` to the `dataset_usage_counts` table. 
+    - `FOREIGN KEY (dataset_id)`: This part specifies that the `dataset_id` column in the `dataset_usage_counts` table is the foreign key.
+    - `REFERENCES datasets(id)`: This part specifies that the foreign key references the `id` column in the `datasets` table.
+    - `ON UPDATE CASCADE`: This clause ensures that if the `id` value in the `datasets` table is updated, the corresponding `dataset_id` values in the `dataset_usage_counts` table will be automatically updated as well.
+    - `ON DELETE CASCADE`: This clause ensures that if a row in the `datasets` table is deleted, any corresponding rows in the `dataset_usage_counts` table (with the same `dataset_id`) will also be deleted.
 
 ### `ALTER TABLE events`
 #### Description
-This statement modifies the `events` table. It first attempts to drop a foreign key constraint named `notifications_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint named `events_dataset_id_fkey`, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `events` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists notifications_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT events_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+Similar to the `ALTER TABLE dataset_usage_counts` statement, this statement drops the existing foreign key constraint `notifications_dataset_id_fkey` if it exists and adds a new constraint `events_dataset_id_fkey` with the same cascading update and delete behavior.
 
 ### `ALTER TABLE chunk_metadata`
 #### Description
-This statement modifies the `chunk_metadata` table. It first attempts to drop a foreign key constraint named `card_metadata_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint named `chunk_metadata_dataset_id_fkey`, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `chunk_metadata` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists card_metadata_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT chunk_metadata_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+Similar to previous statements, this statement drops the existing foreign key constraint `card_metadata_dataset_id_fkey` if it exists and adds a new constraint `chunk_metadata_dataset_id_fkey` with cascading update and delete behavior.
 
 ### `ALTER TABLE chunk_group`
 #### Description
-This statement modifies the `chunk_group` table. It first attempts to drop a foreign key constraint named `card_collection_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint named `chunk_group_dataset_id_fkey`, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `chunk_group` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists card_collection_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT chunk_group_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement follows the same pattern as previous ones, dropping the existing constraint `card_collection_dataset_id_fkey` and adding a new constraint `chunk_group_dataset_id_fkey` with cascading update and delete behavior.
 
 ### `ALTER TABLE files`
 #### Description
-This statement modifies the `files` table. It first attempts to drop a foreign key constraint named `files_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint with the same name, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `files` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists files_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT files_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement drops the existing constraint `files_dataset_id_fkey` if it exists and adds a new constraint with the same name, referencing the `datasets` table and enforcing cascading updates and deletions.
 
 ### `ALTER TABLE chunk_files -&gt; files`
 #### Description
-This statement modifies the `chunk_files` table. It first attempts to drop a foreign key constraint named `card_files_file_id_fkey` if it exists. Then, it adds a new foreign key constraint named `chunk_files_file_id_fkey`, referencing the `id` column of the `files` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `chunk_files` table to add a foreign key constraint on the `file_id` column, referencing the `files` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists card_files_file_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT chunk_files_file_id_fkey FOREIGN KEY (file_id) REFERENCES files(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement drops the existing constraint `card_files_file_id_fkey` and adds a new constraint `chunk_files_file_id_fkey` referencing the `files` table with cascading update and delete behavior.
 
 ### `ALTER TABLE chunk_files -&gt; chunks`
 #### Description
-This statement modifies the `chunk_files` table. It first attempts to drop a foreign key constraint named `card_files_card_id_fkey` if it exists. Then, it adds a new foreign key constraint named `chunk_files_chunk_id_fkey`, referencing the `id` column of the `chunk_metadata` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `chunk_files` table to add a foreign key constraint on the `chunk_id` column, referencing the `chunk_metadata` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists card_files_card_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT chunk_files_chunk_id_fkey FOREIGN KEY (chunk_id) REFERENCES chunk_metadata(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement drops the existing constraint `card_files_card_id_fkey` and adds a new constraint `chunk_files_chunk_id_fkey` referencing the `chunk_metadata` table with cascading update and delete behavior.
 
 ### `ALTER TABLE messages`
 #### Description
-This statement modifies the `messages` table. It first attempts to drop a foreign key constraint named `messages_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint with the same name, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `messages` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists messages_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT messages_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement drops the existing constraint `messages_dataset_id_fkey` if it exists and adds a new constraint with the same name, referencing the `datasets` table and enforcing cascading updates and deletions.
 
 ### `ALTER TABLE topics`
 #### Description
-This statement modifies the `topics` table. It first attempts to drop a foreign key constraint named `topics_dataset_id_fkey` if it exists. Then, it adds a new foreign key constraint with the same name, referencing the `id` column of the `datasets` table. The `ON UPDATE CASCADE` and `ON DELETE CASCADE` clauses ensure cascading updates and deletions.
+This statement modifies the `topics` table to add a foreign key constraint on the `dataset_id` column, referencing the `datasets` table.
 
 #### Internal Logic
-1. **Drop existing constraint (if exists):** `DROP CONSTRAINT if exists topics_dataset_id_fkey;`
-2. **Add new constraint:** `ADD CONSTRAINT topics_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE;`
+This statement drops the existing constraint `topics_dataset_id_fkey` if it exists and adds a new constraint with the same name, referencing the `datasets` table and enforcing cascading updates and deletions.

@@ -3,31 +3,65 @@ title: "dashboard-service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service named "dashboard-service" that exposes a deployment named "dashboard" on port 80. The service type is ClusterIP, making the dashboard accessible only within the Kubernetes cluster.
-
-## Code Structure
-This code defines a single Kubernetes Service resource using a YAML template. It uses variables for the service name and selector to allow for customization.
+This YAML file defines a Kubernetes Service resource for a dashboard application. It creates a ClusterIP service that routes traffic to pods labeled as the dashboard application, exposing port 80 for internal cluster communication.
 
 ## Symbols
-### `dashboard-service.yaml`
-#### Description
-This YAML file defines a Kubernetes Service resource that exposes a deployment named "dashboard" on port 80 within the cluster.
 
-#### Inputs
-This template uses values from the Helm release:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `.Release.Name` | string | The name of the Helm release.
+### Service Definition
+#### Description
+This YAML defines a Kubernetes Service resource named "dashboard-service". It's designed to provide network access to a set of pods running the dashboard application within the cluster.
 
 #### Internal Logic
-The template defines a Service with the following key properties:
-* **`name`**: Set to "dashboard-service".
-* **`selector`**:  Selects pods with the label "app.kubernetes.io/name: dashboard" and "app.kubernetes.io/instance: &lt;Release Name&gt;".
-* **`type`**: Set to "ClusterIP", making the service accessible only within the cluster.
-* **`ports`**: Exposes port 80 on the service, mapping to port 80 on the target pods.
+1. Sets up variables for name and selector.
+2. Defines the Service resource with metadata and specifications.
+3. Configures the service type as ClusterIP for internal cluster access.
+4. Specifies port mapping and protocol for incoming traffic.
+5. Sets up selector labels to identify the target pods.
+
+### Variables
+#### `$name`
+- **Value**: "dashboard-service"
+- **Usage**: Used as the name of the Service and in labels.
+
+#### `$selector`
+- **Value**: "dashboard"
+- **Usage**: Used in the selector to identify target pods.
+
+### Metadata
+#### Description
+Defines the name and labels for the Service resource.
+
+| Field | Value | Description |
+|:------|:------|:------------|
+| name | {{ $name }} | Sets the name of the Service to "dashboard-service" |
+| labels.app.kubernetes.io/name | {{ $name }} | Adds a label with the service name |
+
+### Spec
+#### Description
+Specifies the Service configuration, including type, ports, and selector.
+
+| Field | Value | Description |
+|:------|:------|:------------|
+| type | ClusterIP | Exposes the Service on an internal IP in the cluster |
+| ports.port | 80 | The port on which the Service is exposed |
+| ports.targetPort | 80 | The port on the pod to which traffic is sent |
+| ports.protocol | TCP | The network protocol used |
+| ports.name | dashboard | A name for this port definition |
+| selector.app.kubernetes.io/name | {{ $selector }} | Selects pods with the label "dashboard" |
+| selector.app.kubernetes.io/instance | {{ .Release.Name }} | Selects pods from the current Helm release |
 
 ## Dependencies
-This code depends on Kubernetes and Helm.
+This YAML file is a Helm template, indicated by the use of template variables (e.g., `{{ $name }}`). It relies on Helm for variable substitution and template rendering.
 
-### Configuration
-The service name and selector can be customized by overriding the `$name` and `$selector` variables, respectively. 
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | Template rendering and variable substitution |
+
+## Configuration
+The configuration of this Service is partly determined by Helm variables:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Release.Name | string | The name of the Helm release, used in pod selector |
+
+This allows for flexibility in deployment, as the actual values will be provided when the Helm chart is installed or upgraded.

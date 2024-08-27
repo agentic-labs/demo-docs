@@ -3,50 +3,86 @@ title: "configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap for a Redis deployment using Helm templating. It generates configuration files (`redis.conf`, `master.conf`, `replica.conf`, and optionally `sentinel.conf`) based on user-provided values and includes logic for common, master, replica, and sentinel configurations.
+This Kubernetes ConfigMap template is designed for Redis configuration in a Helm chart. It creates a ConfigMap containing Redis configuration files for master, replica, and optionally sentinel components. The template allows for user-supplied configurations and supports disabling specific Redis commands.
 
-## References
-- `redis.createConfigmap`: This appears to be a Helm template function that determines whether to create the ConfigMap.
-- `common.names.fullname`: Returns the full name of the release.
-- `common.names.namespace`: Returns the namespace of the release.
-- `common.labels.standard`: Returns a standard set of labels.
-- `common.tplvalues.render`: Renders a template with provided values.
-- `common.names.fullname`: Returns the full name of the release.
-- `common.names.namespace`: Returns the namespace of the release.
-- `clusterDomain`: Refers to the cluster's domain name.
+## Code Structure
+The template defines a single ConfigMap resource with multiple data entries, each corresponding to a different Redis configuration file. The main sections are `redis.conf`, `master.conf`, `replica.conf`, and optionally `sentinel.conf`.
 
 ## Symbols
-### `configmap.yaml`
+
+### ConfigMap Resource
 #### Description
-This file defines a Kubernetes ConfigMap resource that holds configuration files for a Redis deployment. It uses Helm templating to dynamically generate the configuration based on user-provided values.
+Defines a Kubernetes ConfigMap resource to store Redis configuration files.
 
 #### Inputs
-This file uses values passed to the Helm template, including:
-- `.Values.commonConfiguration`: Common Redis configuration.
-- `.Values.master.*`: Configuration specific to Redis master nodes.
-- `.Values.replica.*`: Configuration specific to Redis replica nodes.
-- `.Values.sentinel.*`: Configuration specific to Redis Sentinel instances.
-
-#### Outputs
-A Kubernetes ConfigMap resource with the following data:
-- `redis.conf`: Common Redis configuration.
-- `master.conf`: Configuration specific to Redis master nodes.
-- `replica.conf`: Configuration specific to Redis replica nodes.
-- `sentinel.conf`: Configuration specific to Redis Sentinel instances (if enabled).
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values | Object | Helm values passed to the template |
+| $ | Object | The root context of the template |
 
 #### Internal Logic
-The template uses conditional logic (`{{- if ... }}`) to include configuration sections based on user-provided values. It also uses loops (`{{- range ... }}`) to iterate over lists, such as disabled commands.
+1. Checks if the ConfigMap should be created using the `redis.createConfigmap` helper function.
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Defines data entries for different Redis configuration files.
+4. Incorporates user-supplied configurations and applies specific settings like disabling commands.
+
+### redis.conf
+#### Description
+Contains common Redis configuration shared between master and replica.
+
+#### Internal Logic
+- Includes user-supplied common configuration if provided in `.Values.commonConfiguration`.
+
+### master.conf
+#### Description
+Contains Redis master-specific configuration.
+
+#### Internal Logic
+- Sets the data directory using `.Values.master.persistence.path`.
+- Includes user-supplied master configuration if provided in `.Values.master.configuration`.
+- Disables specified Redis commands if listed in `.Values.master.disableCommands`.
+
+### replica.conf
+#### Description
+Contains Redis replica-specific configuration.
+
+#### Internal Logic
+- Sets the data directory using `.Values.replica.persistence.path`.
+- Includes user-supplied replica configuration if provided in `.Values.replica.configuration`.
+- Disables specified Redis commands if listed in `.Values.replica.disableCommands`.
+
+### sentinel.conf
+#### Description
+Contains Redis Sentinel configuration, included only if Sentinel is enabled.
+
+#### Internal Logic
+- Sets the temporary directory and Sentinel port.
+- Configures Sentinel to monitor the Redis master set.
+- Sets various Sentinel parameters like quorum, down-after-milliseconds, failover-timeout, and parallel-syncs.
+- Includes user-supplied Sentinel configuration if provided in `.Values.sentinel.configuration`.
 
 ## Dependencies
-This code depends on the following Helm libraries:
 | Dependency | Purpose |
 |:-----------|:--------|
-| `include` | Used to include other Helm templates.
-| `printf` | Used for string formatting.
-| `template` | Used to render Helm templates.
-| `dict` | Used to create dictionaries.
-| `nindent` | Used to indent text.
-| `quote` | Used to quote strings.
+| common.names.fullname | Generates full name for resources |
+| common.names.namespace | Retrieves the namespace |
+| common.labels.standard | Generates standard labels |
+| common.tplvalues.render | Renders template values |
 
 ## Configuration
-This code relies on user-provided values passed to the Helm chart. These values configure various aspects of the Redis deployment, including common settings, master and replica configurations, and Sentinel settings.
+The template uses various configuration options from the Helm values. Key configurations include:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Values.commonConfiguration | String | User-supplied common Redis configuration |
+| .Values.master.configuration | String | User-supplied master-specific configuration |
+| .Values.replica.configuration | String | User-supplied replica-specific configuration |
+| .Values.sentinel.configuration | String | User-supplied Sentinel configuration |
+| .Values.master.disableCommands | Array | List of Redis commands to disable on master |
+| .Values.replica.disableCommands | Array | List of Redis commands to disable on replica |
+| .Values.sentinel.enabled | Boolean | Whether to enable Sentinel configuration |
+
+## Notes
+- The template uses conditional logic to include or exclude certain configurations based on the provided values.
+- It leverages several helper templates from the `common` library for generating names, labels, and rendering values.
+- The ConfigMap is only created if the `redis.createConfigmap` helper function returns true.

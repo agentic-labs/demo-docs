@@ -3,54 +3,55 @@ title: "Overview"
 ---
 
 ## High-level description
-
-This directory contains SQL migration scripts for adding and removing indices to the 'files' and 'card_files' tables in a database. The migration is dated 2023-08-06 and is specifically focused on improving query performance for frequently accessed columns in these tables.
+This directory contains SQL migration scripts for adding and removing indices on the 'files' and 'card_files' tables in a database. The migration is dated 2023-08-06 and is specifically aimed at improving query performance for these tables.
 
 ## What does it do?
-
 The migration scripts in this directory perform two main functions:
 
 1. Adding Indices (up.sql):
-   - Creates new indices on specific columns of the 'files' and 'card_files' tables.
-   - These indices are designed to speed up data retrieval operations, especially for columns frequently used in WHERE clauses, JOIN conditions, or ORDER BY clauses.
+   - Creates indices on the 'files' table for columns: user_id, private, created_at, and updated_at.
+   - Creates indices on the 'card_files' table for columns: card_id, file_id, created_at, and updated_at.
 
 2. Removing Indices (down.sql):
-   - Removes the indices that were added by the up.sql script.
-   - This script is used to revert the changes made by the up.sql migration if needed.
+   - Removes all the indices created by the up.sql script.
 
-The purpose of these scripts is to optimize database performance. By adding indices, the database can more quickly locate and retrieve data based on the indexed columns. However, this comes with a trade-off of increased storage space and potentially slower write operations.
+These changes are designed to optimize database performance by speeding up queries that filter or sort by the indexed columns. For example, queries that search for files by user_id or filter private files will be faster after this migration is applied.
 
 ## Key Files
 
-1. up.sql:
-   - This file contains SQL statements to create new indices on the 'files' and 'card_files' tables.
-   - It adds indices for columns such as user_id, private, created_at, and updated_at in the 'files' table, and card_id, file_id, created_at, and updated_at in the 'card_files' table.
-   - Each index is named following the convention `idx_&lt;table_name&gt;_&lt;column_name&gt;`.
+### up.sql
+This file contains the SQL commands to create the new indices. Here's a breakdown of what it does:
 
-2. down.sql:
-   - This file contains SQL statements to remove the indices added by up.sql.
-   - It uses `DROP INDEX IF EXISTS` statements to ensure the script doesn't fail if an index doesn't exist.
-   - The indices are removed from the same columns and tables as they were added in up.sql.
+```sql
+CREATE INDEX idx_files_user_id ON files (user_id);
+CREATE INDEX idx_files_private ON files (private);
+CREATE INDEX idx_files_created_at ON files (created_at);
+CREATE INDEX idx_files_updated_at ON files (updated_at);
 
-## Dependencies
+CREATE INDEX idx_card_files_card_id ON card_files (card_id);
+CREATE INDEX idx_card_files_file_id ON card_files (file_id);
+CREATE INDEX idx_card_files_created_at ON card_files (created_at);
+CREATE INDEX idx_card_files_updated_at ON card_files (updated_at);
+```
 
-These SQL scripts are likely to be executed by a database migration tool, possibly Diesel, given the file path includes "migrations". The scripts are written in standard SQL and should be compatible with most relational database management systems.
+Each `CREATE INDEX` statement creates a new index on a specific column of either the 'files' or 'card_files' table. The index names are prefixed with 'idx_' followed by the table name and the column name.
 
-## Performance Considerations
+### down.sql
+This file contains the SQL commands to remove the indices created by up.sql. Here's what it does:
 
-Adding indices (up.sql):
-- Can significantly improve query performance for read operations, especially for large tables.
-- May slow down write operations (INSERT, UPDATE, DELETE) as the indices need to be updated along with the table data.
-- Increases the storage space required for the database.
+```sql
+DROP INDEX IF EXISTS idx_files_user_id;
+DROP INDEX IF EXISTS idx_files_private;
+DROP INDEX IF EXISTS idx_files_created_at;
+DROP INDEX IF EXISTS idx_files_updated_at;
 
-Removing indices (down.sql):
-- Can improve the performance of INSERT, UPDATE, and DELETE operations as the database no longer needs to maintain these indices.
-- May negatively impact the performance of SELECT queries that were utilizing these indices.
+DROP INDEX IF EXISTS idx_card_files_card_id;
+DROP INDEX IF EXISTS idx_card_files_file_id;
+DROP INDEX IF EXISTS idx_card_files_created_at;
+DROP INDEX IF EXISTS idx_card_files_updated_at;
+```
 
-The choice of columns for indexing suggests that these are frequently queried fields, and the performance benefit for read operations is expected to outweigh the potential slowdown in write operations.
+Each `DROP INDEX IF EXISTS` statement removes the corresponding index created in the up.sql file. The `IF EXISTS` clause ensures that the script doesn't fail if the index has already been removed.
 
-## Error Handling
-
-The down.sql script uses the `IF EXISTS` clause with each `DROP INDEX` statement. This prevents the script from failing if an index doesn't exist, ensuring the migration can complete even if some indices were already removed or never created.
-
-In conclusion, these migration scripts provide a mechanism to optimize database performance by adding indices to frequently accessed columns, with the ability to revert these changes if needed. The effectiveness of these indices should be monitored over time to ensure they continue to provide significant performance benefits.
+## Configuration
+This migration doesn't require any specific configuration. However, it's important to note that the effectiveness of these indices depends on the database system being used and the specific query patterns of the application. Database administrators or developers may need to monitor query performance after applying this migration to ensure it has the desired effect.

@@ -3,63 +3,65 @@ title: "networkpolicy.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes NetworkPolicy for the primary instance of a PostgreSQL database deployed using a Helm chart. It controls network traffic to and from the primary PostgreSQL pod, allowing communication from specific sources like read replicas and potentially clients with specific labels.
+This YAML file defines a Kubernetes NetworkPolicy for the primary PostgreSQL instance in a Helm chart. It configures ingress and egress rules to control network traffic to and from the primary PostgreSQL pod, enhancing security by limiting network access.
 
 ## Code Structure
-The code uses conditional logic based on Helm values to define a NetworkPolicy resource. It sets up rules for ingress and egress traffic based on configuration options like allowing external access or communication with read replicas.
-
-## References
-* `postgresql.v1.primary.fullname`: This likely refers to a Helm template that generates the full name of the primary PostgreSQL instance.
-* `common.labels.standard`, `common.labels.matchLabels`: These likely refer to Helm templates that manage standard labels for the PostgreSQL deployment.
-* `common.tplvalues.render`, `common.tplvalues.merge`: These likely refer to Helm templates that handle rendering and merging of values.
-* `common.names.namespace`: This likely refers to a Helm template that defines the namespace for the deployment.
-* `common.capabilities.networkPolicy.apiVersion`: This likely refers to a Helm template that determines the appropriate API version for NetworkPolicy based on Kubernetes cluster capabilities.
+The file uses Helm templating to dynamically generate a NetworkPolicy based on various configuration values. It defines metadata, pod selector, policy types, and specific ingress and egress rules.
 
 ## Symbols
-### `helm/charts/postgresql/templates/primary/networkpolicy.yaml`
+
+### NetworkPolicy
 #### Description
-This code defines a Kubernetes NetworkPolicy resource for the primary PostgreSQL instance. It controls network traffic to and from the pod based on various configuration options.
+Defines a Kubernetes NetworkPolicy resource to control network traffic for the primary PostgreSQL pod.
 
 #### Inputs
-This code snippet doesn't have explicit input parameters. It relies on Helm values passed to the template. Some key values influencing the NetworkPolicy definition include:
-
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.primary.networkPolicy.enabled` | boolean | Enables or disables the NetworkPolicy. |
-| `.Values.primary.networkPolicy.allowExternalEgress` | boolean | If true, allows all outbound traffic from the primary PostgreSQL pod. |
-| `.Values.primary.networkPolicy.allowExternal` | boolean | If true, allows ingress traffic from any source. |
-| `.Values.primary.networkPolicy.extraEgress` | list | Allows defining additional egress rules. |
-| `.Values.primary.networkPolicy.extraIngress` | list | Allows defining additional ingress rules. |
-| `.Values.primary.networkPolicy.ingressNSMatchLabels` | map | Allows specifying namespace labels for ingress traffic. |
-| `.Values.primary.networkPolicy.ingressNSPodMatchLabels` | map | Allows specifying pod labels within the selected namespaces for ingress traffic. |
-| `.Values.containerPorts.postgresql` | integer | Defines the PostgreSQL container port. |
-| `.Values.metrics.enabled` | boolean | Enables or disables metrics exposure. |
-| `.Values.metrics.containerPorts.metrics` | integer | Defines the metrics container port. |
-| `.Values.primary.podLabels` | map | Defines labels for the primary PostgreSQL pod. |
-| `.Values.commonLabels` | map | Defines common labels for the deployment. |
-| `.Values.commonAnnotations` | map | Defines common annotations for the deployment. |
-
-#### Outputs
-This code defines a Kubernetes NetworkPolicy resource in YAML format.
+| .Values.primary.networkPolicy.enabled | boolean | Determines if the NetworkPolicy should be created |
+| .Values.commonLabels | map | Common labels to apply to the resource |
+| .Values.commonAnnotations | map | Common annotations to apply to the resource |
+| .Values.primary.podLabels | map | Labels specific to the primary PostgreSQL pod |
+| .Values.primary.networkPolicy.allowExternalEgress | boolean | Allows all egress traffic if true |
+| .Values.containerPorts.postgresql | number | Port number for PostgreSQL |
+| .Values.metrics.enabled | boolean | Determines if metrics are enabled |
+| .Values.metrics.containerPorts.metrics | number | Port number for metrics |
+| .Values.primary.networkPolicy.allowExternal | boolean | Allows external ingress if true |
+| .Values.primary.networkPolicy.ingressNSMatchLabels | map | Labels to match for ingress namespace selector |
+| .Values.primary.networkPolicy.ingressNSPodMatchLabels | map | Labels to match for ingress namespace pod selector |
+| .Values.primary.networkPolicy.extraEgress | list | Additional egress rules |
+| .Values.primary.networkPolicy.extraIngress | list | Additional ingress rules |
 
 #### Internal Logic
-1. **Conditional Creation:** The NetworkPolicy is created only if `.Values.primary.networkPolicy.enabled` is true.
-2. **Metadata:** Sets standard metadata like name, namespace, and labels for the NetworkPolicy.
-3. **Pod Selector:** Defines which pods the NetworkPolicy applies to, using labels to select the primary PostgreSQL pod.
-4. **Egress Rules:**
-   - If `.Values.primary.networkPolicy.allowExternalEgress` is true, allows all outbound traffic.
-   - Otherwise, allows DNS resolution (port 53 UDP/TCP) and connections to read replicas on the PostgreSQL port.
-   - Includes additional egress rules defined in `.Values.primary.networkPolicy.extraEgress`.
-5. **Ingress Rules:**
-   - Allows traffic on the PostgreSQL port and the metrics port if enabled.
-   - If `.Values.primary.networkPolicy.allowExternal` is false, restricts ingress traffic to:
-     - Pods with matching labels.
-     - Pods with the label `{{ template "postgresql.v1.primary.fullname" . }}-client: "true"`.
-     - Pods within namespaces matching labels defined in `.Values.primary.networkPolicy.ingressNSMatchLabels`, optionally further filtered by pod labels in `.Values.primary.networkPolicy.ingressNSPodMatchLabels`.
-   - Includes additional ingress rules defined in `.Values.primary.networkPolicy.extraIngress`.
+1. Creates a NetworkPolicy only if enabled (.Values.primary.networkPolicy.enabled is true).
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Defines pod selector using merged labels.
+4. Specifies policy types as Ingress and Egress.
+5. Configures egress rules:
+   - Allows all egress if allowExternalEgress is true.
+   - Otherwise, allows DNS resolution and connections to read-replicas.
+   - Includes any extra egress rules if specified.
+6. Configures ingress rules:
+   - Allows traffic to PostgreSQL port and metrics port (if enabled).
+   - Restricts ingress based on pod and namespace selectors if allowExternal is false.
+   - Includes any extra ingress rules if specified.
 
 ## Dependencies
-This code depends on Helm for template rendering and value substitution. It also relies on Kubernetes APIs for the NetworkPolicy resource.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.capabilities.networkPolicy.apiVersion | Determines the appropriate NetworkPolicy API version |
+| common.names.namespace | Provides the namespace name |
+| common.labels.standard | Generates standard labels |
+| common.tplvalues.render | Renders template values |
+| common.tplvalues.merge | Merges multiple value maps |
+| common.labels.matchLabels | Generates match labels for selectors |
 
 ## Configuration
-This code relies heavily on Helm values for configuration. See the "Inputs" section for a detailed list of configurable options.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| primary.networkPolicy.enabled | boolean | - | Enables or disables the NetworkPolicy |
+| primary.networkPolicy.allowExternalEgress | boolean | - | Allows all egress traffic if true |
+| primary.networkPolicy.allowExternal | boolean | - | Allows external ingress if true |
+
+Note: Default values are not specified in the provided YAML file.
+
+This NetworkPolicy configuration provides fine-grained control over network traffic for the primary PostgreSQL pod, allowing administrators to enhance security by restricting communication paths while maintaining necessary connectivity for the database to function properly.

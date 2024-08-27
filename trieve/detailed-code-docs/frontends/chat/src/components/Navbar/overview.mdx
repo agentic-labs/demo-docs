@@ -3,138 +3,124 @@ title: "Overview"
 ---
 
 ## High-level description
-The `Navbar` directory contains components that form the navigation and sidebar structure of a chat application. It consists of two main components: `Navbar.tsx` and `Sidebar.tsx`. These components work together to provide a user interface for managing topics, navigating between different sections of the application, and accessing various features and settings.
+The `frontends/chat/src/components/Navbar` directory contains two main components: `Navbar` and `Sidebar`. These components are crucial for the chat application's user interface, providing navigation, topic management, and access to various settings and features.
 
 ## What does it do?
-The components in this directory create a responsive navigation system for a chat application. Here's a breakdown of their functionalities:
+The Navbar and Sidebar components work together to create a user-friendly interface for a chat application. Here's what they do:
 
-1. The Navbar component:
-   - Displays the current topic name
-   - Allows users to edit the topic name
-   - Provides a way to create new topics
-   - Adapts its layout for mobile and desktop views
+1. Navigation: The Navbar displays the current topic name and allows users to toggle the sidebar visibility.
 
-2. The Sidebar component:
-   - Manages topic navigation and control
-   - Allows users to select datasets and organizations
-   - Provides access to settings and external links
-   - Offers topic management features (editing, deleting)
-   - Displays GitHub star count for the Trieve repository
-   - Implements a responsive design for different screen sizes
+2. Topic Management: Users can view, create, edit, and delete topics. The Sidebar displays a list of topics, while the Navbar shows the current topic name and allows editing.
 
-Together, these components create a comprehensive navigation system that allows users to interact with the chat application efficiently, manage their topics, and access various features and settings.
+3. Settings and Configuration: The Sidebar provides access to application settings, dataset selection, and organization switching.
+
+4. User Interface Adaptability: The components are designed to be responsive, adapting to both mobile and desktop views.
+
+5. External Links: The Sidebar includes links to external resources like documentation and the GitHub repository.
 
 ## Key Files
 
 ### Navbar.tsx
-This file contains the `Navbar` component, which is responsible for rendering the top navigation bar of the chat application. Key features include:
-
-- Displaying and editing the current topic name
+This file contains the `Navbar` component, which is responsible for:
+- Displaying and allowing edits to the current topic name
+- Toggling the sidebar visibility
 - Creating new topics
-- Responsive design for mobile and desktop views
-- Integration with the UserContext for accessing dataset information
 
-The component uses Solid.js primitives like `createSignal`, `createEffect`, and `useContext` for state management and side effects. It also makes API calls to update topic names when edited.
+Key features:
+- Uses Solid.js primitives for state management
+- Implements topic name editing with validation
+- Makes API calls to update topic information
+- Adapts to different layouts for mobile and desktop views
 
-### Sidebar.tsx
-This file contains the `Sidebar` component, which provides the main navigation and control elements for the chat application. Key features include:
-
-- Topic management (navigation, editing, deleting)
-- Dataset and organization selection
-- Access to settings and external links
-- Responsive design for mobile and desktop views
-- GitHub star count display for the Trieve repository
-
-The component uses Solid.js primitives for state management and implements complex conditional rendering based on user interactions and application state. It also interacts with API endpoints for topic management operations.
-
-## Dependencies
-Both components rely on the following main dependencies:
-
-1. Solid.js: The core library used for building reactive UI components and managing state.
-2. solid-icons: Provides various icons used throughout the navigation components.
-3. terracotta: Used in the Sidebar component for UI components like Popover and Menu.
-4. @nozbe/microfuzz: Utilized in the Sidebar for implementing fuzzy search functionality.
-
-## Configuration
-The Sidebar component uses environment variables for configuration:
-
-- VITE_DASHBOARD_URL: URL for the dashboard
-- VITE_API_HOST: Host URL for API requests
-
-These variables are used to construct URLs for various features and API endpoints.
-
-## Code Examples
-
-Here's an example of how the Navbar component handles editing a topic name:
+Example of topic name editing:
 
 ```typescript
 const saveTitle = async () =&gt; {
-  const dataset = userContext?.currentDataset;
-  const selectedTopic = props.selectedTopic;
-  if (!dataset || !selectedTopic) return;
+  const dataset = userState.currentDataset;
+  const topic = userState.currentTopic;
+  if (!dataset || !topic) return;
 
-  if (editContent().trim().length === 0) {
-    setEditContent(selectedTopic.name);
+  if (editedContent().trim().length === 0) {
+    setEditedContent(topic.name);
     return;
   }
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_HOST}/topic`, {
+    const res = await fetch(`${import.meta.env.VITE_API_HOST}/api/topic`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${userContext?.accessToken}`,
+        "TR-Dataset": dataset.id,
       },
       body: JSON.stringify({
-        topic_id: selectedTopic.id,
-        name: editContent(),
-        dataset_id: dataset.id,
+        topic_id: topic.id,
+        name: editedContent(),
       }),
     });
-
-    if (response.ok) {
-      setEditing(false);
-      props.refetchTopics();
-    } else {
-      throw new Error("Failed to update topic name");
-    }
-  } catch (error) {
-    console.error("Error updating topic name:", error);
+    // ... handle response and update state
+  } catch (e) {
+    console.error(e);
   }
 };
 ```
 
-This function demonstrates how the component interacts with the API to update a topic name, handles errors, and updates the local state accordingly.
+### Sidebar.tsx
+This file contains the `Sidebar` component, which is responsible for:
+- Displaying a list of topics
+- Allowing topic creation, editing, and deletion
+- Providing access to application settings and external links
+- Handling dataset and organization selection
 
-In the Sidebar component, here's an example of how it manages topic deletion:
+Key features:
+- Implements topic management functions (edit, delete)
+- Displays a settings modal for advanced configuration
+- Fetches and displays GitHub star count for the Trieve repository
+- Provides navigation to various sections of the application
+
+Example of topic deletion:
 
 ```typescript
 const deleteSelected = async () =&gt; {
-  if (!props.selectedTopic) return;
+  const dataset = userState.currentDataset;
+  const topic = userState.currentTopic;
+  if (!dataset || !topic) return;
+
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_HOST}/topic/${props.selectedTopic.id}`,
+    const res = await fetch(
+      `${import.meta.env.VITE_API_HOST}/api/topic/${topic.id}`,
       {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${userContext?.accessToken}`,
+          "Content-Type": "application/json",
+          "TR-Dataset": dataset.id,
         },
       }
     );
-
-    if (response.ok) {
-      props.setSelectedTopic(undefined);
-      props.refetchTopics();
-    } else {
-      throw new Error("Failed to delete topic");
-    }
-  } catch (error) {
-    console.error("Error deleting topic:", error);
-    createToast("Error deleting topic", { type: "error" });
+    // ... handle response and update state
+  } catch (e) {
+    createToast("Error deleting topic");
   }
 };
 ```
 
-This function shows how the Sidebar component handles topic deletion, including API interaction, error handling, and updating the application state.
+## Dependencies
+Both components rely on the following key dependencies:
 
-These components work together to provide a comprehensive and responsive navigation system for the chat application, allowing users to efficiently manage topics, access various features, and interact with the application's core functionality.
+1. Solid.js: Used for reactive programming and UI component creation.
+2. solid-icons: Provides icon components used throughout the interface.
+3. terracotta: Offers UI components like Menu and Popover for enhanced interactivity.
+4. UserContext: A custom context for managing user-related data and state.
+
+## Configuration
+The components use environment variables for configuration, particularly:
+
+- `VITE_API_HOST`: Specifies the API host for making requests to the backend.
+
+Example usage:
+```typescript
+const res = await fetch(`${import.meta.env.VITE_API_HOST}/api/topic`, {
+  // ... request configuration
+});
+```
+
+These components form the core of the chat application's user interface, providing essential navigation and topic management features. They demonstrate effective use of Solid.js for building reactive and efficient UI components, while also showcasing proper API integration and state management practices.

@@ -3,61 +3,46 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for modifying the `invitations` table in a database. The migration adds an `organization_id` column to establish a relationship between invitations and organizations, while removing the `referral_tokens` column. The directory includes both "up" and "down" migration scripts to apply and revert these changes, respectively.
+This directory contains SQL migration scripts for modifying the `invitations` table in a database. The migration adds an `organization_id` column with a foreign key constraint to the `organizations` table and removes the `referral_tokens` column. It also includes a corresponding down migration to revert these changes.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
 1. In the "up" migration:
-   - Add a new `organization_id` column of type UUID to the `invitations` table.
-   - Create a foreign key constraint linking the `organization_id` column to the `id` column in the `organizations` table.
-   - Remove the existing `referral_tokens` column from the `invitations` table.
+   - Add a new column called `organization_id` to the `invitations` table. This column is of type UUID and cannot contain null values.
+   - Create a foreign key constraint linking the `organization_id` column in the `invitations` table to the `id` column in the `organizations` table.
+   - Remove the `referral_tokens` column from the `invitations` table.
 
 2. In the "down" migration:
    - Remove the `organization_id` column from the `invitations` table.
-   - Add back the `referral_tokens` column of type TEXT to the `invitations` table.
+   - Add back the `referral_tokens` column to the `invitations` table as a TEXT field.
 
-These changes effectively transition the invitation system from using referral tokens to being directly associated with organizations. This modification allows for better tracking and management of invitations within the context of specific organizations.
+These changes effectively modify the structure of the `invitations` table to establish a direct relationship with the `organizations` table through the `organization_id` column, while removing the previously used `referral_tokens` column.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to apply the migration, adding the `organization_id` column and removing the `referral_tokens` column.
+### up.sql
+This file contains the SQL commands to apply the migration:
 
-   ```sql
-   ALTER TABLE invitations ADD COLUMN organization_id UUID NOT NULL;
-   ALTER TABLE invitations ADD CONSTRAINT invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id);
-   ALTER TABLE invitations DROP COLUMN referral_tokens;
-   ```
+```sql
+ALTER TABLE invitations ADD COLUMN organization_id UUID NOT NULL;
+ALTER TABLE invitations ADD CONSTRAINT invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id);
+ALTER TABLE invitations DROP COLUMN referral_tokens;
+```
 
-2. `down.sql`: This file contains the SQL commands to revert the migration, removing the `organization_id` column and adding back the `referral_tokens` column.
+These commands add the `organization_id` column, create a foreign key constraint, and remove the `referral_tokens` column.
 
-   ```sql
-   ALTER TABLE invitations DROP COLUMN IF EXISTS organization_id;
-   ALTER TABLE invitations ADD COLUMN referral_tokens TEXT;
-   ```
+### down.sql
+This file contains the SQL commands to revert the migration:
 
-## Dependencies
-This migration depends on the existence of the following database objects:
-- `invitations` table
-- `organizations` table (referenced in the foreign key constraint)
+```sql
+ALTER TABLE invitations DROP COLUMN IF EXISTS organization_id;
+ALTER TABLE invitations ADD COLUMN referral_tokens TEXT;
+```
+
+These commands remove the `organization_id` column and add back the `referral_tokens` column.
 
 ## Configuration
-The migration scripts do not require any specific configuration. However, it's important to note that the migration system being used (likely a database migration tool like Flyway or Alembic) should be properly configured to execute these scripts in the correct order and manage the migration versioning.
+The migration is identified by its timestamp: `2023-12-06-035900`. This timestamp is used to order migrations and ensure they are applied in the correct sequence.
 
-## Side Effects and Considerations
-
-1. Data Loss: The removal of the `referral_tokens` column in the "up" migration will result in the permanent loss of any existing data in that column. It's crucial to ensure that this data is no longer needed or has been migrated to a new location before applying this migration.
-
-2. NOT NULL Constraint: The new `organization_id` column is added with a NOT NULL constraint. If there are existing records in the `invitations` table, you may need to provide valid `organization_id` values for these records before applying the migration.
-
-3. Foreign Key Constraint: The addition of the foreign key constraint ensures referential integrity between invitations and organizations. This means that you cannot create an invitation without a valid reference to an existing organization.
-
-4. Performance: Adding or removing columns and constraints on potentially large tables may temporarily lock the table, which could impact database performance during the migration process.
-
-5. Application Code Updates: Any application code that interacts with the `invitations` table will need to be updated to work with the new `organization_id` column and to no longer use the `referral_tokens` column.
-
-6. Error Handling: The migration scripts do not include explicit error handling. If any part of the migration fails, the entire process may need to be rolled back. It's important to test these migrations thoroughly in a non-production environment before applying them to a production database.
-
-7. Reversibility: While the "down" migration script is provided to revert the changes, it's important to note that any data added to the `organization_id` column after the "up" migration will be lost when reverting. Similarly, the `referral_tokens` column will be empty when added back in the "down" migration.
-
-In conclusion, this migration represents a significant change in how invitations are associated with organizations within the system. It's a step towards a more structured and relational approach to managing invitations, but it requires careful consideration of existing data and potential impacts on the application before implementation.
+No additional configuration is required for these migration scripts. They are designed to be run by a database migration tool that supports up and down migrations.

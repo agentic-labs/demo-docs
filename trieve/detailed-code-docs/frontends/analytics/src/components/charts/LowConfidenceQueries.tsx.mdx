@@ -3,97 +3,92 @@ title: "LowConfidenceQueries.tsx"
 ---
 
 ## High-level description
-The `LowConfidenceQueries` component displays a table of search queries with the lowest top scores, indicating low confidence in the search results. It allows users to set a threshold for the minimum top score to be displayed and provides pagination for navigating through the results.
+The `LowConfidenceQueries` component displays a table of search queries with the lowest top scores, allowing users to set a threshold for low confidence and view details of individual queries. It fetches query data from the backend API, handles pagination, and provides a modal for viewing detailed information about each query.
 
 ## Code Structure
-The `LowConfidenceQueries` component uses the `usePagination` hook to manage pagination and the `createQuery` hook from `@tanstack/solid-query` to fetch and cache the low confidence queries data. It also utilizes the `DatasetContext` and `OrgContext` to access the selected dataset and organization information. The `QueryCard` component is used to display individual query details in a table row, and it references the `FullScreenModal` and `SearchQueryEventModal` components for displaying detailed query information in a modal dialog.
+The code defines two main components: `LowConfidenceQueries` and `QueryCard`. 
+
+* `LowConfidenceQueries` is responsible for fetching and displaying the list of low confidence queries. It uses the `usePagination` hook for pagination and the `createQuery` function from `@tanstack/solid-query` to manage the query state. It also includes a text input for setting the low confidence threshold.
+* `QueryCard` is a sub-component of `LowConfidenceQueries` that renders a single row in the table, representing a single low confidence query. It displays the query text, score, and an expand icon. Clicking on a row opens a modal displaying more details about the query using the `SearchQueryEventModal` component.
 
 ## References
-- `getLowConfidenceQueries`: A function imported from `../../api/analytics` that fetches low confidence queries data from the backend.
-- `DatasetContext`: A context imported from `../../layouts/TopBarLayout` that provides access to the selected dataset information.
-- `usePagination`: A hook imported from `../../hooks/usePagination` that provides pagination functionality.
-- `PaginationButtons`: A component imported from `../PaginationButtons` that renders pagination buttons.
-- `FullScreenModal`, `Table`, `Td`, `Th`, `Tr`: Components imported from `shared/ui` for rendering UI elements.
-- `SearchQueryEventModal`: A component imported from `../../pages/TrendExplorer` that displays detailed information about a search query event in a modal dialog.
-- `OrgContext`: A context imported from `../../contexts/OrgContext` that provides access to the selected organization information.
-- `ChartCard`: A component imported from `./ChartCard` that provides a card layout for displaying charts and other content.
+- `getLowConfidenceQueries`: A function imported from `../../api/analytics` that fetches low confidence queries from the backend.
+- `DatasetContext`: A context imported from `../../layouts/TopBarLayout` that provides access to the selected dataset.
+- `usePagination`: A custom hook imported from `../../hooks/usePagination` that manages pagination state.
+- `SearchQueryEventModal`: A component imported from `../../pages/TrendExplorer` that displays detailed information about a single search query event.
+- `QueryStringDisplay`: A component imported from `../QueryStringDisplay` that displays the query string with special handling for multi-query strings.
 
 ## Symbols
 
 ### `LowConfidenceQueries`
 #### Description
-This component fetches and displays a list of low-confidence queries from the backend, allowing the user to set a threshold for the minimum top score and navigate through paginated results.
+This component fetches and displays a list of low confidence queries from the backend API. It allows users to set a threshold for low confidence and view details of individual queries.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| params | AnalyticsParams | An object containing analytics filters and granularity for fetching data. |
+| params | `AnalyticsParams` | An object containing parameters for filtering analytics data, such as date range and search method. |
 
 #### Outputs
-JSX.Element representing the Low Confidence Queries chart card.
+JSX Element representing a chart card containing a table of low confidence queries.
 
 #### Internal Logic
-1. **Retrieves Context:** Accesses the selected dataset from `DatasetContext`.
-2. **Initializes Pagination:** Utilizes the `usePagination` hook to manage pagination state.
-3. **Sets up Query Client:** Uses `useQueryClient` from `@tanstack/solid-query` for caching and prefetching.
-4. **Threshold Input:** Manages a signal `thresholdText` to store and update the user-defined threshold for low-confidence queries.
-5. **Data Fetching and Prefetching:**
-   - Fetches low-confidence queries data using the `createQuery` hook from `@tanstack/solid-query`.
-   - Prefetches the next page of data to improve user experience.
-   - Updates pagination state based on fetched data.
-6. **Rendering:**
-   - Renders a `ChartCard` component to display the results.
-   - Shows a loading indicator while data is being fetched.
-   - Displays a table of low-confidence queries using the `Table` component.
-   - Renders individual query details using the `QueryCard` component.
-   - Shows pagination buttons using the `PaginationButtons` component.
+1. **Retrieves the selected dataset** from the `DatasetContext`.
+2. **Initializes pagination** using the `usePagination` hook.
+3. **Sets up a signal** to store the user-defined threshold for low confidence.
+4. **Fetches low confidence queries** from the backend API using the `getLowConfidenceQueries` function. The query is triggered whenever the `params`, `datasetId`, or `thresholdText` change.
+5. **Prefetches the next page of data** to improve performance.
+6. **Renders a `ChartCard` component** to display the results.
+7. **Displays a loading message** while the data is being fetched.
+8. **Renders a `Table` component** with the fetched query data.
+9. **Uses the `QueryCard` component** to render each row in the table.
+10. **Displays pagination buttons** to navigate between pages.
 
 ### `parseThreshold`
 #### Description
-This function parses a string into a number, returning undefined if the parsing fails.
+This function attempts to parse a string into a number, returning undefined if the parsing fails.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| text | string | The string to parse. |
+| text | `string` | The string to parse. |
 
 #### Outputs
-`number | undefined`: The parsed number or undefined if parsing fails.
+- `number \| undefined`: The parsed number, or undefined if parsing fails.
+
+#### Internal Logic
+1. Parses the input string using `parseFloat`.
+2. Checks if the parsed value is `NaN` (Not a Number).
+3. Returns the parsed number if it's not `NaN`, otherwise returns `undefined`.
 
 ### `QueryCard`
 #### Description
-This component displays a single query with its score and an expand icon. Clicking on the row opens a modal dialog displaying detailed information about the query.
+This component renders a single row in the low confidence queries table, representing a single query.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| query | SearchQueryEvent | The search query event data to display. |
-| filters | AnalyticsFilter | (Optional) Analytics filters applied to the query. |
+| query | `SearchQueryEvent` | An object containing information about a single search query event. |
+| filters | `AnalyticsFilter` | An object containing filters for analytics data. |
 
 #### Outputs
-JSX.Element representing a table row with query details.
+JSX Element representing a table row with query information.
 
 #### Internal Logic
-1. **State Management:** Uses the `createSignal` hook to manage the open/closed state of the modal dialog.
-2. **Context Access:** Retrieves the selected dataset and organization information from `DatasetContext` and `OrgContext`, respectively.
-3. **Search Playground URL Generation:** Constructs the URL for the search playground based on the selected organization, dataset, query, and filters.
-4. **Rendering:**
-   - Renders a table row (`Tr` component) displaying the query, score, and an expand icon.
-   - Clicking the row toggles the modal dialog's visibility.
-   - The modal dialog (`FullScreenModal` component) displays the query in the title and renders the `SearchQueryEventModal` component to show detailed query information.
-   - An external link icon in the modal dialog's header opens the search playground in a new tab.
+1. **Sets up a signal** to control the visibility of a modal.
+2. **Renders a `Tr` component** (table row) that displays the query text, score, and an expand icon.
+3. **Uses the `QueryStringDisplay` component** to display the query text, handling multi-query strings.
+4. **Opens a `FullScreenModal` component** when the row is clicked.
+5. **The modal displays the `SearchQueryEventModal` component**, which shows detailed information about the selected query.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
 | @tanstack/solid-query | Used for fetching, caching, and updating asynchronous data. |
 | solid-js | The core library for building the user interface. |
-| shared/types | Provides shared types used across the application. |
-| shared/ui | Contains reusable UI components. |
-| solid-icons/* | Provides icons used in the component. |
+| shared/ui | Provides shared UI components like `FullScreenModal`, `Table`, `Td`, `Th`, and `Tr`. |
+| solid-icons/io | Provides icons used in the component. |
+| solid-icons/bi | Provides icons used in the component. |
 
 ## Error Handling
-The component handles errors during data fetching by catching errors thrown by the `getLowConfidenceQueries` function. If an error occurs, a loading indicator is displayed.
-
-## Logging
-The component does not implement any specific logging mechanisms.
+The `LowConfidenceQueries` component handles errors during data fetching by catching any errors thrown by the `getLowConfidenceQueries` function. If an error occurs, a loading message is displayed.

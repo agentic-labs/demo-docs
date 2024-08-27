@@ -3,56 +3,53 @@ title: "servicemonitor.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ServiceMonitor resource for monitoring read replicas of a PostgreSQL database deployed in a "replication" architecture. It uses Prometheus operator to collect metrics from the database. The ServiceMonitor is only created if metrics are enabled, the service monitor is enabled, and the architecture is set to "replication".
+This YAML file defines a ServiceMonitor resource for monitoring PostgreSQL read replicas in a Kubernetes environment. It is specifically designed for use with Prometheus Operator and is conditionally created based on certain configuration values.
 
-## References
-This code references values from `values.yaml` for configuration like enabling metrics, namespace, labels, and annotations. It also uses some helper templates like `postgresql.v1.readReplica.fullname`, `common.tplvalues.merge`, `common.labels.standard`, `common.tplvalues.render`, and `common.labels.matchLabels`.
+## Code Structure
+The file consists of a single ServiceMonitor resource definition with various nested fields. The structure is heavily templated, using Helm's templating syntax to dynamically generate values based on the chart's configuration.
 
 ## Symbols
-### `helm/charts/postgresql/templates/read/servicemonitor.yaml`
+
+### ServiceMonitor
 #### Description
-This code defines a Kubernetes ServiceMonitor resource for a read replica of a PostgreSQL database. This allows Prometheus to discover and scrape metrics from the application.
+Defines a ServiceMonitor resource for monitoring PostgreSQL read replicas. It is created only when metrics are enabled, ServiceMonitor is enabled, and the architecture is set to "replication".
 
 #### Inputs
-This code uses values from `values.yaml` for configuration. Here are some of the key inputs:
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.metrics.enabled` | bool | Enables/disables metrics collection. |
-| `.Values.metrics.serviceMonitor.enabled` | bool | Enables/disables the ServiceMonitor. |
-| `.Values.architecture` | string | The architecture of the PostgreSQL deployment (must be "replication" for this ServiceMonitor to be created). |
-| `.Values.metrics.serviceMonitor.namespace` | string | The namespace for the ServiceMonitor. |
-| `.Values.metrics.serviceMonitor.labels` | map | Custom labels for the ServiceMonitor. |
-| `.Values.commonLabels` | map | Common labels to be added to the ServiceMonitor. |
-| `.Values.commonAnnotations` | map | Common annotations to be added to the ServiceMonitor. |
-| `.Values.metrics.serviceMonitor.jobLabel` | string | A job label for the ServiceMonitor. |
-| `.Values.metrics.serviceMonitor.selector` | map | Selectors to identify the service to monitor. |
-| `.Values.metrics.serviceMonitor.interval` | string | The interval at which metrics are scraped. |
-| `.Values.metrics.serviceMonitor.scrapeTimeout` | string | The timeout for scraping metrics. |
-| `.Values.metrics.serviceMonitor.relabelings` | list | Relabeling rules for the ServiceMonitor. |
-| `.Values.metrics.serviceMonitor.metricRelabelings` | list | Metric relabeling rules for the ServiceMonitor. |
-| `.Values.metrics.serviceMonitor.honorLabels` | bool | Whether to honor existing labels on the target. |
-| `.Release.Namespace` | string | The namespace of the release. |
-
-#### Outputs
-This code generates a Kubernetes ServiceMonitor resource defined in a YAML file.
+| .Values.metrics.enabled | boolean | Determines if metrics are enabled |
+| .Values.metrics.serviceMonitor.enabled | boolean | Determines if ServiceMonitor should be created |
+| .Values.architecture | string | Must be "replication" for this resource to be created |
 
 #### Internal Logic
-1. **Conditional Creation:** The ServiceMonitor is only created if the following conditions are met:
-    - `.Values.metrics.enabled` is true.
-    - `.Values.metrics.serviceMonitor.enabled` is true.
-    - `.Values.architecture` is "replication".
-2. **Metadata:**
-    - The `name` is set using the `postgresql.v1.readReplica.fullname` template.
-    - The `namespace` is set using the provided value or defaults to the release namespace.
-    - `labels` are set using the `common.labels.standard` template, merging common labels, custom labels, and the `app.kubernetes.io/component` label set to "metrics-read".
-    - `annotations` are set using the `common.tplvalues.render` template if `.Values.commonAnnotations` is provided.
-3. **Spec:**
-    - `jobLabel` is set if `.Values.metrics.serviceMonitor.jobLabel` is provided.
-    - `selector` is set to match labels defined by the `common.labels.matchLabels` template, merging common labels, custom labels, and the `app.kubernetes.io/component` label set to "metrics-read".
-    - `endpoints` define the endpoint for scraping metrics:
-        - `port` is set to "http-metrics".
-        - `interval`, `scrapeTimeout`, `relabelings`, `metricRelabelings`, and `honorLabels` are set based on the corresponding values provided in `values.yaml`.
-    - `namespaceSelector` is set to match the release namespace.
+1. Checks if metrics are enabled, ServiceMonitor is enabled, and architecture is "replication".
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Defines the spec for the ServiceMonitor, including job label, selector, endpoints, and namespace selector.
 
-## Side Effects
-This code, when applied to a Kubernetes cluster, creates a ServiceMonitor resource. This allows the Prometheus Operator to discover and scrape metrics from the PostgreSQL read replica pods. 
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| monitoring.coreos.com/v1 | API version for ServiceMonitor resource |
+
+### Configuration
+The ServiceMonitor configuration is highly customizable through various `.Values` options:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.metrics.serviceMonitor.namespace | string | .Release.Namespace | Namespace for the ServiceMonitor |
+| .Values.metrics.serviceMonitor.labels | object | - | Additional labels for the ServiceMonitor |
+| .Values.commonLabels | object | - | Common labels to be applied |
+| .Values.commonAnnotations | object | - | Common annotations to be applied |
+| .Values.metrics.serviceMonitor.jobLabel | string | - | Job label for the ServiceMonitor |
+| .Values.metrics.serviceMonitor.selector | object | - | Selector for the ServiceMonitor |
+| .Values.metrics.serviceMonitor.interval | string | - | Scrape interval |
+| .Values.metrics.serviceMonitor.scrapeTimeout | string | - | Scrape timeout |
+| .Values.metrics.serviceMonitor.relabelings | array | - | Relabeling configurations |
+| .Values.metrics.serviceMonitor.metricRelabelings | array | - | Metric relabeling configurations |
+| .Values.metrics.serviceMonitor.honorLabels | boolean | - | Whether to honor labels |
+
+## Notes
+- This file is part of a Helm chart for PostgreSQL and is specifically for monitoring read replicas in a replication setup.
+- It uses several custom template functions (e.g., `include "postgresql.v1.readReplica.fullname"`) which are likely defined in other files within the chart.
+- The ServiceMonitor is designed to work with Prometheus Operator, which is commonly used for monitoring in Kubernetes environments.
+- The configuration is highly flexible, allowing for customization of labels, annotations, job labels, selectors, and various monitoring parameters.

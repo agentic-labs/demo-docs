@@ -3,47 +3,40 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script migrates the database schema by adding a new column named `dataset_id` to the `card_metadata` and `card_collection` tables. It also establishes foreign key constraints to link these tables to the `datasets` table. Additionally, it drops the `dataset_id` column from the `card_collection_bookmarks` table if it exists.
+This SQL script migrates the database schema by adding a new column `dataset_id` to the `card_metadata` and `card_collection` tables. It also establishes foreign key constraints to link these tables to the `datasets` table.
 
 ## Symbols
-
 ### `ALTER TABLE card_collection_bookmarks`
 #### Description
-This statement attempts to drop the `dataset_id` column from the `card_collection_bookmarks` table if it exists. This is done to avoid potential conflicts before adding the column to other tables.
-
-#### Inputs
-N/A
-
-#### Outputs
-N/A
+This statement first attempts to drop the column `dataset_id` from the `card_collection_bookmarks` table if it exists. This is done to avoid potential conflicts during the migration process. The `IF EXISTS` clause ensures that the statement executes successfully even if the column does not exist.
 
 #### Internal Logic
-- `DROP COLUMN IF EXISTS dataset_id`: This clause checks if a column named `dataset_id` exists in the `card_collection_bookmarks` table. If it does, the column is dropped. The `IF EXISTS` clause ensures that the statement doesn't fail if the column doesn't exist.
+- **`DROP COLUMN IF EXISTS dataset_id;`**: This part of the statement handles the actual dropping of the column. 
 
 ### `ALTER TABLE card_metadata`
 #### Description
-This statement adds a new column named `dataset_id` to the `card_metadata` table and adds a foreign key constraint.
-
-#### Inputs
-N/A
-
-#### Outputs
-N/A
+This statement adds a new column named `dataset_id` to the `card_metadata` table. The column is of type `UUID` and is marked as `NOT NULL`, ensuring that every card metadata entry has an associated dataset.
 
 #### Internal Logic
-- `ADD COLUMN dataset_id UUID NOT NULL`: This clause adds a new column named `dataset_id` to the `card_metadata` table. The data type of the column is `UUID` and it's set as `NOT NULL`, meaning it cannot be empty.
-- `ADD CONSTRAINT card_metadata_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id)`: This clause adds a foreign key constraint named `card_metadata_dataset_id_fkey` to the `dataset_id` column. This constraint ensures that every value in the `dataset_id` column of the `card_metadata` table corresponds to a valid `id` in the `datasets` table.
+- **`ADD COLUMN dataset_id UUID NOT NULL;`**: This part of the statement handles adding the new column.
 
 ### `ALTER TABLE card_collection`
 #### Description
-This statement adds a new column named `dataset_id` to the `card_collection` table and adds a foreign key constraint.
-
-#### Inputs
-N/A
-
-#### Outputs
-N/A
+This statement adds a new column named `dataset_id` to the `card_collection` table. The column is of type `UUID` and is marked as `NOT NULL`, ensuring that every card collection entry has an associated dataset.
 
 #### Internal Logic
-- `ADD COLUMN dataset_id UUID NOT NULL`: This clause adds a new column named `dataset_id` to the `card_collection` table. The data type of the column is `UUID` and it's set as `NOT NULL`, meaning it cannot be empty.
-- `ADD CONSTRAINT card_collection_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id)`: This clause adds a foreign key constraint named `card_collection_dataset_id_fkey` to the `dataset_id` column. This constraint ensures that every value in the `dataset_id` column of the `card_collection` table corresponds to a valid `id` in the `datasets` table.
+- **`ADD COLUMN dataset_id UUID NOT NULL;`**: This part of the statement handles adding the new column.
+
+### `ALTER TABLE card_metadata ... CONSTRAINT ...`
+#### Description
+This statement adds a foreign key constraint named `card_metadata_dataset_id_fkey` to the `card_metadata` table. This constraint enforces referential integrity by ensuring that the `dataset_id` column in the `card_metadata` table always references a valid `id` in the `datasets` table.
+
+#### Internal Logic
+- **`ADD CONSTRAINT card_metadata_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);`**: This part of the statement defines the foreign key constraint, specifying the column (`dataset_id`) and the referenced table and column (`datasets.id`).
+
+### `ALTER TABLE card_collection ... CONSTRAINT ...`
+#### Description
+This statement adds a foreign key constraint named `card_collection_dataset_id_fkey` to the `card_collection` table. This constraint enforces referential integrity by ensuring that the `dataset_id` column in the `card_collection` table always references a valid `id` in the `datasets` table.
+
+#### Internal Logic
+- **`ADD CONSTRAINT card_collection_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);`**: This part of the statement defines the foreign key constraint, specifying the column (`dataset_id`) and the referenced table and column (`datasets.id`).

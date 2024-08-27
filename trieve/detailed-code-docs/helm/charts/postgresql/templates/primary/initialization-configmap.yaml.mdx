@@ -3,49 +3,59 @@ title: "initialization-configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap that holds initialization scripts for a PostgreSQL primary instance deployed using Helm. It is conditionally created based on the presence of `initdb.scripts` in the Helm values and the absence of `initdb.scriptsConfigMap`.
+This Helm chart template generates a Kubernetes ConfigMap for PostgreSQL initialization scripts. It's designed to create a ConfigMap containing user-defined scripts that will be executed during the initialization of the primary PostgreSQL instance.
 
 ## Code Structure
-The code uses conditional logic to determine whether to create the ConfigMap. If the conditions are met, it defines the ConfigMap with metadata and data.
+The template is a single YAML file that conditionally creates a ConfigMap based on the presence of initialization scripts and the absence of a pre-existing ConfigMap for these scripts.
 
 ## Symbols
-### `helm/charts/postgresql/templates/primary/initialization-configmap.yaml`
+
+### Conditional Statement
 #### Description
-This code defines a Kubernetes ConfigMap named `&lt;release-name&gt;-init-scripts` in the namespace specified by `Release.Namespace`. The ConfigMap stores initialization scripts for a PostgreSQL primary instance.
+The entire ConfigMap is wrapped in a conditional statement that checks for the presence of initialization scripts and the absence of a pre-existing ConfigMap.
 
-#### Inputs
-This code snippet does not define any explicit input parameters. It relies on Helm values passed during deployment.
+```yaml
+{{- if and .Values.primary.initdb.scripts (not .Values.primary.initdb.scriptsConfigMap) }}
+...
+{{- end }}
+```
 
-#### Outputs
-This code does not produce any direct output. It defines a Kubernetes ConfigMap resource.
+This ensures that the ConfigMap is only created when necessary.
+
+### ConfigMap Metadata
+#### Description
+Defines the metadata for the ConfigMap, including its name, namespace, labels, and annotations.
 
 #### Internal Logic
-1. **Conditional Creation:** The ConfigMap is created only if:
-    - `Values.primary.initdb.scripts` is defined (user provided initialization scripts).
-    - `Values.primary.initdb.scriptsConfigMap` is not defined (user did not opt for a separate ConfigMap).
-2. **Metadata:**
-    - The `name` is set to `&lt;release-name&gt;-init-scripts`.
-    - The `namespace` is set to the value of `Release.Namespace`.
-    - `labels` are included from the `common.labels.standard` template, merging standard labels with custom labels from `Values.commonLabels`.
-    - If `Values.commonAnnotations` are defined, they are included in the `annotations` section.
-3. **Data:**
-    - The `data` section is populated using the `common.tplvalues.render` template, which renders the content of `Values.primary.initdb.scripts` into the ConfigMap.
+- The name is generated using a helper function `postgresql.v1.primary.fullname` with a "-init-scripts" suffix.
+- The namespace is set to the release namespace.
+- Labels are set using a common helper function `common.labels.standard`.
+- Annotations are conditionally added if `commonAnnotations` are defined in the values.
+
+### ConfigMap Data
+#### Description
+Populates the ConfigMap with the initialization scripts defined in the Helm values.
+
+#### Internal Logic
+The `data` field is populated using the `common.tplvalues.render` helper function, which renders the scripts defined in `.Values.primary.initdb.scripts`.
 
 ## Dependencies
-- This code depends on Helm templates and functions for rendering values and including other templates.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.labels.standard | Helper function to generate standard Kubernetes labels |
+| common.tplvalues.render | Helper function to render template values |
+| postgresql.v1.primary.fullname | Helper function to generate the full name for the primary PostgreSQL instance |
 
 ## Configuration
-This code relies on Helm values for configuration:
-| Option | Type | Default | Description |
-|:-------|:-----|:--------|:------------|
-| `Values.primary.initdb.scripts` | map |  | A map of initialization scripts to be loaded into the ConfigMap. |
-| `Values.primary.initdb.scriptsConfigMap` | boolean |  | If true, a separate ConfigMap for initialization scripts is expected, and this ConfigMap will not be created. |
-| `Values.commonLabels` | map |  | Custom labels to be applied to the ConfigMap. |
-| `Values.commonAnnotations` | map |  | Custom annotations to be applied to the ConfigMap. |
-| `Release.Namespace` | string |  | The Kubernetes namespace where the ConfigMap will be created. |
+The template relies on the following configuration options:
 
-## Side Effects
-- This code defines a Kubernetes ConfigMap resource in the cluster.
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Values.primary.initdb.scripts | map | Map of initialization scripts to be included in the ConfigMap |
+| .Values.primary.initdb.scriptsConfigMap | string | Name of an existing ConfigMap containing initialization scripts |
+| .Values.commonLabels | map | Common labels to be applied to all resources |
+| .Values.commonAnnotations | map | Common annotations to be applied to all resources |
 
-## TODOs
-This code snippet does not contain any TODOs or notes.
+Note: The ConfigMap is only created if `.Values.primary.initdb.scripts` is defined and `.Values.primary.initdb.scriptsConfigMap` is not defined.
+
+This template provides a flexible way to include custom initialization scripts for a PostgreSQL deployment using Helm, allowing users to easily configure and manage the initialization process of their database instances.

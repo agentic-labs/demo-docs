@@ -3,79 +3,94 @@ title: "SingleQueryInfo.tsx"
 ---
 
 ## High-level description
-This code defines a `SingleQuery` component in React that displays detailed information about a specific search query. It fetches query data based on a provided query ID and dataset context, then renders various aspects of the query including its metadata, results, and request parameters.
+The `SingleQuery` component displays detailed information about a single search query executed against a dataset. It fetches query details from the backend API and presents them in a user-friendly format, including the query string, search parameters, results, and metadata.
 
 ## Code Structure
-The main `SingleQuery` component uses the `createQuery` hook to fetch data. It then renders a `DataDisplay` component with the fetched data. The `DataDisplay` component further breaks down the information into smaller, more specific components like `DataSquare` and `ResultCard`.
+The `SingleQuery` component uses the `createQuery` hook from `@tanstack/solid-query` to fetch query details based on the provided `queryId`. It utilizes context to access the selected dataset and organization. The component renders the query details using several helper components like `DataDisplay`, `DataSquare`, and `ResultCard`.
+
+## References
+- `getSearchQuery`: Fetches search query details from the backend API.
+- `DatasetContext`: Provides access to the selected dataset.
+- `OrgContext`: Provides access to the selected organization.
+- `QueryStringDisplay`: Renders the query string with potential weight information.
+- `FullScreenModal`: Displays a modal with detailed metadata.
+- `JSONMetadata`: Renders JSON metadata in a user-friendly format.
 
 ## Symbols
 
-### SingleQuery
+### `SingleQuery`
 #### Description
-The main component that fetches and displays information about a single search query.
+This component fetches and displays detailed information about a single search query.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| queryId | string | The ID of the query to fetch and display |
+| props | `SingleQueryProps` | An object containing the `queryId` of the search query to display. |
+
+#### Outputs
+JSX Element representing the single query information.
 
 #### Internal Logic
-1. Uses `DatasetContext` to get the current dataset.
-2. Fetches query data using `createQuery` hook.
-3. Renders `DataDisplay` component with fetched data.
+1. **Retrieves Context:** Uses `useContext` to access the selected dataset and organization from `DatasetContext` and `OrgContext`, respectively.
+2. **Fetches Query Data:** Utilizes `createQuery` from `@tanstack/solid-query` to fetch the search query details using `getSearchQuery` from the backend API. The query key is based on "single_query" and the `queryId`.
+3. **Renders Data:** Conditionally renders the `DataDisplay` component when query data is available, passing the fetched data as a prop.
 
-### DataDisplay
+### `DataDisplay`
 #### Description
-A component that renders the detailed view of a search query.
+This component is responsible for structuring and displaying the fetched query data.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | NonNullable&lt;typeof query.data&gt; | The query data to display |
+| props | `{ data: NonNullable&lt;typeof query.data&gt; }` | An object containing the fetched search query data. |
+
+#### Outputs
+JSX Element representing the structured query information.
 
 #### Internal Logic
-1. Displays query text, timestamp, and various metadata using `DataSquare` components.
-2. Renders request parameters and results.
+1. **Retrieves Dataset Name:** Uses `createMemo` and `getQueryData` to fetch the dataset name based on the `dataset_id` from the query data.
+2. **Formats Date:** Formats the `created_at` timestamp from the query data using `format` from `date-fns` and `parseCustomDateString`.
+3. **Renders Data:** Renders the query string using `QueryStringDisplay`, search timestamp, and various data points like search type, dataset name, results count, latency, and top score using `DataSquare` components.
+4. **Displays Request Parameters and Results:** Renders the request parameters and search results in separate sections. The request parameters are displayed using `JSONMetadata`, and the results are rendered using the `ResultCard` component for each result.
 
-### DataSquare
+### `DataSquare`
 #### Description
-A reusable component for displaying a labeled piece of data.
+A simple component to display a label and value pair within a styled square.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| label | string | The label for the data |
-| value | number \| string | The value to display |
+| props | `{ label: string; value: number \| string }` | An object containing the label and value to display. |
 
-### ResultCard
+#### Outputs
+JSX Element representing a styled square with the label and value.
+
+### `ResultCard`
 #### Description
-A component that displays information about a single search result.
+This component displays a single search result and its associated metadata.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| result | SearchQueryEvent["results"][0] | A single result from the search query |
+| props | `ResultCardProps` | An object containing a single search result from the `SearchQueryEvent["results"]` array. |
+
+#### Outputs
+JSX Element representing a single search result card.
 
 #### Internal Logic
-1. Parses and validates result metadata using `usefulMetadataSchema`.
-2. Displays result ID, score, and a preview of the content.
-3. Provides a button to show full JSON metadata in a modal.
+1. **Parses Metadata:** Uses `createMemo` and `zod` to parse and validate the metadata associated with the search result.
+2. **Toggles JSON View:** Implements a toggle (`showingJson`) to show/hide the full metadata in JSON format using `FullScreenModal` and `JSONMetadata`.
+3. **Renders Result:** Displays the result ID, score, and a truncated version of the `chunk_html` from the metadata. Provides a button to view the full metadata in JSON format.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| @tanstack/solid-query | For data fetching and caching |
-| solid-js | For reactive programming and component creation |
-| date-fns | For date formatting |
-| zod | For runtime type checking |
-| solid-icons/vs | For icons |
-| shared/ui | For reusable UI components |
-| shared/types | For type definitions |
+| @tanstack/solid-query | Used for data fetching and caching. |
+| solid-js | The core library for building the user interface. |
+| shared/ui | Provides shared UI components like `FullScreenModal` and `JSONMetadata`. |
+| date-fns | Used for date formatting. |
+| zod | Used for schema validation. |
+| solid-icons/vs | Provides icons. |
 
 ## Error Handling
-The code doesn't implement explicit error handling for the query fetch. It relies on the error handling provided by the `createQuery` hook.
-
-## Performance Considerations
-The component uses `createMemo` for computing the dataset name, which helps optimize performance by memoizing the result.
-
-This component provides a detailed view of a single search query, including its metadata and results. It uses various sub-components to organize and display the information in a structured manner. The use of context and query hooks suggests it's part of a larger application dealing with analytics or search functionality.
+The `ResultCard` component implements basic error handling when parsing the result metadata using `zod`. If the parsing fails, it logs the error to the console and displays a fallback UI.

@@ -1,0 +1,74 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for creating a Docker image that serves the "analytics" frontend application using Nginx. It first builds the application using Node.js and then copies the built artifacts into an Nginx image for serving.
+
+## Code Structure
+The Dockerfile uses a multi-stage build process, with the first stage named "build" and the second stage based on "nginx:1.25.4-alpine-slim". The first stage handles building the application, while the second stage sets up Nginx to serve the built application.
+
+## Symbols
+### `FROM node:18 as build`
+#### Description
+This line starts the first stage of the build process, naming it "build". It uses the `node:18` image as the base image for this stage, providing a Node.js environment for building the application.
+
+### `WORKDIR /app`
+#### Description
+Sets the working directory within the Docker image to `/app` for subsequent commands in the current stage.
+
+### `COPY package*.json ./`
+#### Description
+Copies the `package.json` and `package-lock.json` files from the host machine to the current working directory (`/app`) in the Docker image. This is done to speed up subsequent builds by leveraging Docker's layer caching.
+
+### `COPY yarn.lock ./`
+#### Description
+Copies the `yarn.lock` file from the host machine to the current working directory (`/app`) in the Docker image. This ensures that the same dependency versions are used during the build process.
+
+### `COPY turbo.json .`
+#### Description
+Copies the `turbo.json` file from the host machine to the current working directory (`/app`) in the Docker image. This file likely contains configuration for the Turbo repo tool.
+
+### `COPY frontends ./frontends`
+#### Description
+Copies the `frontends` directory from the host machine to the current working directory (`/app`) in the Docker image. This directory likely contains the source code for the frontend applications.
+
+### `COPY clients/ts-sdk ./clients/ts-sdk`
+#### Description
+Copies the `clients/ts-sdk` directory from the host machine to the current working directory (`/app/clients`) in the Docker image. This directory likely contains a TypeScript SDK used by the frontend applications.
+
+### `RUN yarn install`
+#### Description
+Executes `yarn install` within the Docker image to install the project dependencies based on the `package.json` and `yarn.lock` files.
+
+### `RUN yarn run build --filter analytics`
+#### Description
+Executes `yarn run build --filter analytics` within the Docker image. This command likely triggers the build process for the "analytics" frontend application specifically, as indicated by the `--filter analytics` flag.
+
+### `FROM nginx:1.25.4-alpine-slim`
+#### Description
+Starts the second stage of the build process, using the `nginx:1.25.4-alpine-slim` image as the base. This image provides a lightweight Nginx web server.
+
+### `WORKDIR /usr/share/nginx/html`
+#### Description
+Sets the working directory within the Docker image to `/usr/share/nginx/html`, which is the default directory where Nginx serves static files.
+
+### `COPY --from=build /app/frontends/analytics/dist /usr/share/nginx/html`
+#### Description
+Copies the contents of the `/app/frontends/analytics/dist` directory from the "build" stage (the first stage) to the current working directory (`/usr/share/nginx/html`) in the Nginx image. This directory likely contains the built artifacts of the "analytics" frontend application.
+
+### `COPY &lt;&lt;'EOF' /etc/nginx/conf.d/default.conf ... EOF`
+#### Description
+This block defines the Nginx server configuration. It listens on port 80, sets the root directory to `/usr/share/nginx/html`, and configures Nginx to serve `index.html` by default. The `try_files` directive ensures that if a requested file is not found, it will fallback to `index.html`, enabling client-side routing for single-page applications.
+
+### `COPY &lt;&lt;'EOF' /docker-entrypoint.d/01-insert-window-variable.sh ... EOF`
+#### Description
+This block defines a shell script that is executed as part of the Docker entrypoint. The script copies the `index.html` file to a template file, performs environment variable substitution on the template, and then overwrites the original `index.html` with the result. This allows for injecting environment variables into the `index.html` file at runtime.
+
+### `RUN chmod +x /docker-entrypoint.d/01-insert-window-variable.sh`
+#### Description
+Makes the shell script defined in the previous step executable.
+
+### `EXPOSE 80`
+#### Description
+Instructs Docker to expose port 80 from the container, allowing external access to the Nginx web server running inside.

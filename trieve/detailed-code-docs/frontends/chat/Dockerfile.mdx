@@ -1,0 +1,69 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for a chat application frontend. It builds the application using Node.js and then creates a lightweight Nginx-based image to serve the static files. The final image includes custom Nginx configuration and a script to inject environment variables into the HTML file at runtime.
+
+## Code Structure
+The Dockerfile consists of two main stages:
+1. Build stage: Uses Node.js to build the chat application
+2. Production stage: Uses Nginx to serve the built application
+
+## Symbols
+
+### Build Stage
+#### Description
+This stage sets up the Node.js environment, copies the necessary files, and builds the chat application.
+
+#### Internal Logic
+1. Uses `node:18` as the base image
+2. Sets the working directory to `/app`
+3. Copies package files, yarn lock, and turbo configuration
+4. Copies the frontend and client SDK files
+5. Installs dependencies using yarn
+6. Builds the chat application using the turbo build system
+
+### Production Stage
+#### Description
+This stage creates a lightweight Nginx-based image to serve the built chat application.
+
+#### Internal Logic
+1. Uses `nginx:1.25.4-alpine-slim` as the base image
+2. Copies the built application from the build stage to Nginx's HTML directory
+3. Adds a custom Nginx configuration for serving the single-page application
+4. Adds a script to inject environment variables into the HTML file at runtime
+5. Sets the script as executable
+6. Exposes port 80 for web traffic
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Node.js 18 | Used for building the application |
+| Nginx 1.25.4 (Alpine) | Used for serving the built application |
+| yarn | Package manager for installing dependencies |
+| turbo | Build system for the application |
+
+## Configuration
+The Dockerfile includes a custom Nginx configuration to serve the single-page application:
+
+```nginx
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+This configuration ensures that all routes are directed to the `index.html` file, which is necessary for single-page applications.
+
+## Side Effects
+The Dockerfile includes a script (`01-insert-window-variable.sh`) that modifies the `index.html` file at runtime to inject environment variables. This allows for dynamic configuration of the application based on the environment in which the container is run.
+
+## Performance Considerations
+1. The multi-stage build process helps to keep the final image size small by excluding build tools and dependencies.
+2. Using the Alpine-based Nginx image further reduces the final image size.
+3. The custom Nginx configuration is optimized for serving single-page applications.

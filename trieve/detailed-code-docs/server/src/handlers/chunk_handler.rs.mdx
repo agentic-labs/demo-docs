@@ -2,253 +2,103 @@
 title: "chunk_handler.rs"
 ---
 
-## High-level description
-The `chunk_handler.rs` file defines API endpoints for managing and interacting with chunks of data within a dataset. It handles operations like creating, updating, deleting, searching, and recommending chunks, as well as generating responses based on specified chunks using a language model.
+Here's a high-level description of the `chunk_handler.rs` file:
+
+The `chunk_handler.rs` file is a crucial component of the Trieve server, responsible for handling various operations related to chunks of data. It defines structures and functions for creating, updating, deleting, searching, and managing chunks within datasets. The file implements RESTful API endpoints for chunk-related operations, including semantic search, full-text search, and hybrid search capabilities.
 
 ## Code Structure
-The code defines several structs for request payloads, response bodies, and internal data structures. It then implements a series of functions, each corresponding to a specific API endpoint, to handle various chunk-related operations. These functions interact with database operators and external services like Qdrant and OpenAI to perform the requested actions.
+
+The file is organized into several main sections:
+
+1. Imports and use statements
+2. Struct definitions for request and response payloads
+3. API endpoint handler functions
+4. Helper functions for chunk operations
+
+The main symbols in the code relate to each other as follows:
+
+- `ChunkReqPayload`: Defines the structure for creating or updating chunks
+- `SearchChunksReqPayload`: Specifies parameters for searching chunks
+- `ScoreChunkDTO`: Represents a chunk with its search score
+- Various handler functions (e.g., `create_chunk`, `search_chunks`, `get_chunk_by_id`) implement the API endpoints
+- Helper functions (e.g., `parse_query`, `get_qdrant_vector`) support the main handler functions
 
 ## References
-This file references several other modules and data structures within the codebase, including:
-- `auth_handler`: For authentication and authorization of API requests.
-- `data::models`: For data models representing chunks, datasets, and other entities.
-- `operators`: For database, Qdrant, and OpenAI interaction logic.
+
+The code references other parts of the codebase, including:
+
+- `data::models`: For various data structures and types
+- `errors::ServiceError`: For error handling
+- `operators::*`: For database and search operations
+- `middleware::api_version::APIVersion`: For API versioning
 
 ## Symbols
 
+Here are some of the significant symbols in the code:
+
 ### `create_chunk`
+
 #### Description
-This function handles the creation of new chunk(s) within a dataset. It checks for plan limits, creates chunk metadata, queues ingestion messages for processing, and returns the created chunk(s) along with their position in the ingestion queue.
+Handles the creation of new chunks or upserts existing ones.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `create_chunk_data` | `web::Json&lt;CreateChunkReqPayloadEnum&gt;` | JSON payload containing chunk data for single or batch creation. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `_user` | `AdminOnly` | Authenticated user with admin or owner role. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-| `redis_pool` | `web::Data&lt;RedisPool&gt;` | Redis connection pool. |
+| create_chunk_data | web::Json&lt;CreateChunkReqPayloadEnum&gt; | The chunk data to be created or upserted |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| _user | AdminOnly | Authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
 
 #### Outputs
 | Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response indicating success or failure. |
+| ReturnQueuedChunk | HttpResponse | Response containing the created or upserted chunk information |
 
 #### Internal Logic
-1. Extract chunk data from the request payload.
-2. Check if the organization's chunk count limit is exceeded.
-3. Create chunk metadata for both upsert and non-upsert chunks.
-4. Queue ingestion messages for processing in Redis.
-5. Return the created chunk(s) and their position in the queue.
-
-### `delete_chunk`
-#### Description
-This function handles the deletion of a chunk by its ID. It retrieves the dataset configuration, marks the chunk as deleted in the database, and removes it from Qdrant.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `chunk_id` | `web::Path&lt;uuid::Uuid&gt;` | ID of the chunk to delete. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `_user` | `AdminOnly` | Authenticated user with admin or owner role. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response indicating success or failure. |
-
-#### Internal Logic
-1. Retrieve the dataset configuration.
-2. Mark the chunk as deleted in the database.
-3. Remove the chunk from Qdrant.
-4. Return a NoContent response.
-
-### `delete_chunk_by_tracking_id`
-#### Description
-This function handles the deletion of a chunk by its tracking ID. It retrieves the chunk metadata, marks the chunk as deleted in the database, and removes it from Qdrant.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `tracking_id` | `web::Path&lt;String&gt;` | Tracking ID of the chunk to delete. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `_user` | `AdminOnly` | Authenticated user with admin or owner role. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response indicating success or failure. |
-
-#### Internal Logic
-1. Retrieve the chunk metadata using the tracking ID.
-2. Mark the chunk as deleted in the database.
-3. Remove the chunk from Qdrant.
-4. Return a NoContent response.
-
-### `update_chunk`
-#### Description
-This function handles the update of an existing chunk. It retrieves the chunk metadata, updates the relevant fields, queues an ingestion message for processing, and returns a NoContent response.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `update_chunk_data` | `web::Json&lt;UpdateChunkReqPayload&gt;` | JSON payload containing chunk update data. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `redis_pool` | `web::Data&lt;RedisPool&gt;` | Redis connection pool. |
-| `_user` | `AdminOnly` | Authenticated user with admin or owner role. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response indicating success or failure. |
-
-#### Internal Logic
-1. Retrieve the chunk metadata using either the chunk ID or tracking ID.
-2. Update the chunk metadata with the provided data.
-3. Queue an ingestion message for processing in Redis.
-4. Return a NoContent response.
-
-### `update_chunk_by_tracking_id`
-#### Description
-This function is deprecated and handles the update of an existing chunk by its tracking ID. It retrieves the chunk metadata, updates the relevant fields, queues an ingestion message for processing, and returns a NoContent response.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `update_chunk_data` | `web::Json&lt;UpdateChunkByTrackingIdData&gt;` | JSON payload containing chunk update data. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `redis_pool` | `web::Data&lt;RedisPool&gt;` | Redis connection pool. |
-| `_user` | `AdminOnly` | Authenticated user with admin or owner role. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response indicating success or failure. |
-
-#### Internal Logic
-1. Retrieve the chunk metadata using the tracking ID.
-2. Update the chunk metadata with the provided data.
-3. Queue an ingestion message for processing in Redis.
-4. Return a NoContent response.
+1. Validates the request payload
+2. Checks if the chunk limit has been reached for the organization
+3. Processes the chunk data (single or batch)
+4. Inserts the chunk metadata into the database
+5. Queues the chunk for ingestion processing
+6. Returns the created or upserted chunk information
 
 ### `search_chunks`
+
 #### Description
-This function handles the primary search functionality for chunks. It supports semantic, full-text, and hybrid search methods, applies filters, sorts results, and highlights matching text.
+Performs a search operation on chunks based on the provided query and parameters.
 
 #### Inputs
 | Name | Type | Description |
-|:-----|:-----|:------------|
-| `data` | `web::Json&lt;SearchChunksReqPayload&gt;` | JSON payload containing search parameters. |
-| `_user` | `LoggedUser` | Authenticated user. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `event_queue` | `web::Data&lt;EventQueue&gt;` | ClickHouse event queue. |
-| `api_version` | `APIVersion` | API version to use for the response. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
+| data | web::Json&lt;SearchChunksReqPayload&gt; | Search parameters and query |
+| _user | LoggedUser | Authenticated user |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| event_queue | web::Data&lt;EventQueue&gt; | Event queue for logging |
+| api_version | APIVersion | API version information |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 
 #### Outputs
 | Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response containing search results. |
+| SearchResponseTypes | HttpResponse | Search results containing matching chunks |
 
 #### Internal Logic
-1. Parse the search query and apply stop word removal and quote/negated term parsing.
-2. Perform the search based on the specified search type (semantic, full-text, or hybrid).
-3. Apply filters, sort results, and highlight matching text.
-4. Send a search query event to ClickHouse for analytics.
-5. Return the search results in the appropriate API version format.
+1. Parses and processes the search query
+2. Performs the search operation based on the specified search type (semantic, full-text, or hybrid)
+3. Retrieves and formats the search results
+4. Logs the search event
+5. Returns the search results
 
-### `autocomplete`
-#### Description
-This function handles the autocomplete functionality for chunks. It prioritizes prefix matching with semantic or full-text search and can extend results to include non-exact matches.
+## Side Effects
+- Creates or updates chunks in the database
+- Queues chunk ingestion tasks
+- Logs search and analytics events
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `data` | `web::Json&lt;AutocompleteReqPayload&gt;` | JSON payload containing autocomplete parameters. |
-| `_user` | `LoggedUser` | Authenticated user. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `event_queue` | `web::Data&lt;EventQueue&gt;` | ClickHouse event queue. |
-| `api_version` | `APIVersion` | API version to use for the response. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
+## Dependencies
+- actix-web
+- serde
+- uuid
+- chrono
+- openai_dive
+- qdrant_client
+- redis
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response containing autocomplete results. |
-
-#### Internal Logic
-1. Parse the search query and apply stop word removal and quote/negated term parsing.
-2. Perform the autocomplete search based on the specified search type (semantic or full-text).
-3. Apply filters, sort results, and highlight matching text.
-4. Send a search query event to ClickHouse for analytics.
-5. Return the autocomplete results in the appropriate API version format.
-
-### `scroll_dataset_chunks`
-#### Description
-This function handles the retrieval of paginated chunks from a dataset with filters and custom sorting.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `data` | `web::Json&lt;ScrollChunksReqPayload&gt;` | JSON payload containing scroll parameters. |
-| `_user` | `LoggedUser` | Authenticated user. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response containing paginated chunks. |
-
-#### Internal Logic
-1. Assemble a Qdrant filter based on the provided filters.
-2. Retrieve Qdrant point IDs based on the scroll parameters, filter, and sort options.
-3. Retrieve chunk metadata from the point IDs.
-4. Order the chunks based on the retrieved point IDs.
-5. Return the paginated chunks.
-
-### `get_chunk_by_id`
-#### Description
-This function handles the retrieval of a single chunk by its ID.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `chunk_id` | `web::Path&lt;uuid::Uuid&gt;` | ID of the chunk to retrieve. |
-| `_user` | `LoggedUser` | Authenticated user. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `api_version` | `APIVersion` | API version to use for the response. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `Result&lt;HttpResponse, ServiceError&gt;` |  | HTTP response containing the chunk or an error. |
-
-#### Internal Logic
-1. Retrieve the chunk metadata from the database.
-2. Check if the chunk exists in Qdrant.
-3. Return the chunk in the appropriate API version format.
-
-### `count_chunks`
-#### Description
-This function handles the counting of chunks that match a search query, including score threshold and filters.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `data` | `web::Json&lt;CountChunksReqPayload&gt;` | JSON payload containing count parameters. |
-| `_user` | `LoggedUser` | Authenticated user. |
-| `pool` | `web::Data&lt;Pool&gt;` | Database connection pool. |
-| `dataset_org_plan_sub` | `DatasetAndOrgWithSubAndPlan` | Dataset, organization, plan, and subscription information. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `HttpResponse` | `Result&lt;HttpResponse, actix_web::Error&gt;` | HTTP response containing the chunk count. |
-
-####
+This file is central to the chunk management and search functionality of the Trieve server, implementing core features for handling and retrieving data chunks.

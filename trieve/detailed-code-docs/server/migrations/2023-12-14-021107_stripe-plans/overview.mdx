@@ -3,66 +3,63 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for creating and managing Stripe-related tables in the database. It includes two files: `up.sql` for creating the tables, and `down.sql` for removing them. The migration is focused on implementing structures for Stripe plans and subscriptions, which are likely used for managing payment plans and subscriptions within the application.
+This directory contains SQL migration scripts for creating and managing Stripe-related tables in the database. It includes two files: `up.sql` for creating the tables and `down.sql` for dropping them. These migrations are specifically designed to handle Stripe plans and subscriptions, allowing the application to store and manage information about different subscription plans and their associated organizations.
 
 ## What does it do?
-The migration files in this directory set up and tear down the database structure for handling Stripe plans and subscriptions. Here's a breakdown of what these files do:
+The migration scripts in this directory set up the database structure for handling Stripe subscription plans and organizational subscriptions. Here's a breakdown of what these scripts accomplish:
 
-1. The `up.sql` file creates two new tables:
-   - `stripe_plans`: This table stores information about different payment plans available in the system. It includes details such as the number of cards allowed, file storage capacity, user count, dataset count, message count, and the cost of the plan.
-   - `stripe_subscriptions`: This table links organizations to specific Stripe plans. It keeps track of which organization is subscribed to which plan.
+1. The `up.sql` script creates two new tables:
+   - `stripe_plans`: This table stores information about different subscription plans offered through Stripe. It includes details such as the plan's unique identifiers, allowed resource limits (e.g., card count, file storage, user count), pricing, and timestamps.
+   - `stripe_subscriptions`: This table links organizations to their chosen Stripe plans. It stores information about each subscription, including unique identifiers, the associated plan, the subscribing organization, and timestamps.
 
-2. The `down.sql` file removes these tables from the database, effectively undoing the changes made by the `up.sql` file.
+2. The `down.sql` script provides a way to reverse the changes made by `up.sql`. It drops both the `stripe_subscriptions` and `stripe_plans` tables, effectively removing all Stripe-related data from the database.
 
-These migrations allow the application to manage different subscription tiers and track which organizations are subscribed to which plans. This is crucial for implementing a tiered pricing model or feature access based on subscription levels.
+These migrations allow the application to:
+- Store and manage different subscription plan options
+- Keep track of which organizations are subscribed to which plans
+- Maintain important details about each subscription and plan
+- Easily upgrade or downgrade an organization's subscription by updating the relevant records
 
 ## Key Files
 
 1. `up.sql`:
-   - Creates the `stripe_plans` table with columns for various plan details such as card count, file storage, user count, dataset count, message count, and amount.
-   - Creates the `stripe_subscriptions` table that links organizations to specific plans.
-   - Sets up foreign key relationships and unique constraints.
+   This file contains the SQL commands to create the `stripe_plans` and `stripe_subscriptions` tables. It defines the structure of these tables, including all columns, data types, and relationships. Key aspects of this file include:
+   - Definition of the `stripe_plans` table with columns for plan details (e.g., `card_count`, `file_storage`, `user_count`, `amount`)
+   - Creation of the `stripe_subscriptions` table with foreign key relationships to both `stripe_plans` and an external `organizations` table
+   - Use of UUID as the primary key for both tables
+   - Inclusion of `created_at` and `updated_at` timestamps for both tables
 
 2. `down.sql`:
-   - Drops the `stripe_subscriptions` table.
-   - Drops the `stripe_plans` table.
-   - Effectively reverses the changes made by `up.sql`.
+   This file contains the SQL commands to drop the tables created by `up.sql`. It's a simple file with two commands:
+   ```sql
+   DROP TABLE stripe_subscriptions;
+   DROP TABLE stripe_plans;
+   ```
+   These commands will remove the Stripe-related tables from the database, effectively undoing the changes made by the `up.sql` script.
 
 ## Configuration
-While there are no explicit configuration files in this directory, the structure of the tables implies certain configurable aspects of the application:
+While there are no explicit configuration files in this directory, the migration scripts themselves serve as a form of configuration for the database schema. The `up.sql` file, in particular, defines the structure of the Stripe-related tables:
 
-1. Plan Limits:
-   - `card_count`: Configures the number of cards allowed in a plan.
-   - `file_storage`: Sets the amount of file storage allowed.
-   - `user_count`: Defines the number of users allowed.
-   - `dataset_count`: Specifies the number of datasets allowed.
-   - `message_count`: Sets the number of messages allowed.
+1. `stripe_plans` table configuration:
+   - `id`: UUID, primary key
+   - `stripe_id`: TEXT, Stripe's unique identifier for the plan
+   - `card_count`: INTEGER, number of cards allowed in the plan
+   - `file_storage`: INTEGER, amount of file storage included
+   - `user_count`: INTEGER, number of users allowed
+   - `dataset_count`: INTEGER, number of datasets allowed
+   - `message_count`: INTEGER, number of messages allowed
+   - `amount`: BIGINT, price of the plan
+   - `created_at`: TIMESTAMP
+   - `updated_at`: TIMESTAMP
 
-2. Pricing:
-   - `amount`: Configures the cost of each plan.
+2. `stripe_subscriptions` table configuration:
+   - `id`: UUID, primary key
+   - `stripe_id`: TEXT, Stripe's unique identifier for the subscription
+   - `plan_id`: UUID, foreign key referencing `stripe_plans.id`
+   - `organization_id`: UUID, foreign key referencing `organizations.id`
+   - `created_at`: TIMESTAMP
+   - `updated_at`: TIMESTAMP
 
-These fields in the `stripe_plans` table allow for flexible configuration of different subscription tiers without requiring code changes.
+These table definitions determine how the application will store and interact with Stripe plan and subscription data. Developers should be aware of these structures when working with Stripe-related features in the application.
 
-## Dependencies
-This migration implicitly depends on:
-
-1. A database system that supports SQL (likely PostgreSQL, given the use of UUID types).
-2. An existing `organizations` table, as referenced by the `organization_id` foreign key in the `stripe_subscriptions` table.
-3. A migration framework capable of running `up` and `down` migrations (such as Diesel for Rust or ActiveRecord for Ruby on Rails).
-
-## Performance Considerations
-1. The use of UUID as primary keys in both tables can have performance implications for very large datasets compared to auto-incrementing integers. However, it provides better distribution for sharding and eliminates the risk of ID collisions in distributed systems.
-
-2. The `stripe_id` column in both tables is marked as `UNIQUE`, which creates an index to ensure uniqueness. This can speed up lookups by this field but may slightly slow down insertions.
-
-3. The `down.sql` script drops tables without any checks. While this is generally fast, it can have a momentary impact on database performance, especially if the tables are large or if there are many concurrent database operations.
-
-## Error Handling
-The migration scripts do not include explicit error handling. It's assumed that the migration framework or the person executing these scripts will handle any potential errors. Some potential issues to be aware of:
-
-1. In `up.sql`, if the `organizations` table doesn't exist, the foreign key creation will fail.
-2. In `down.sql`, if either table doesn't exist when the script is run, it will likely result in an SQL error.
-
-It's recommended to run these migrations in a controlled environment and ensure that all dependencies (like the `organizations` table) exist before applying the `up` migration.
-
-In conclusion, this migration sets up a flexible system for managing Stripe plans and subscriptions, allowing the application to implement tiered pricing or feature access based on subscription levels. The structure provides a good balance between flexibility in plan configuration and data integrity through proper relationships and constraints.
+It's worth noting that the `stripe_subscriptions` table has a foreign key relationship with an `organizations` table, which is not defined in these migration scripts. This suggests that the `organizations` table is defined elsewhere in the database schema and is an important part of the overall application structure.

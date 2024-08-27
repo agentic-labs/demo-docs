@@ -3,36 +3,50 @@ title: "service-headless.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service of type `ClusterIP` named `[release-name]-qdrant-headless`. This service is intended to provide headless service discovery for Qdrant pods within the Kubernetes cluster. It does not expose the service externally.
+This YAML file defines a Kubernetes Headless Service for Qdrant, a vector database. It creates a service without a cluster IP, allowing direct communication with individual pods, which is useful for stateful applications like databases.
 
 ## Code Structure
-The code defines a single Kubernetes Service resource. It uses values from `Values.service` to define ports and labels. It also uses templates to dynamically generate the service name and selector labels.
-
-## References
-* `qdrant.fullname`: A template function that likely generates the full name of the Qdrant deployment.
-* `qdrant.labels`: A template function that likely generates common labels for Qdrant resources.
-* `qdrant.selectorLabels`: A template function that likely generates labels used to select Qdrant pods.
+The file consists of a single Kubernetes Service resource definition with metadata and spec sections. It uses Helm templating to dynamically generate values based on the chart's configuration.
 
 ## Symbols
-### `service-headless.yaml`
-#### Description
-This file defines a Kubernetes Service resource that provides headless service discovery for Qdrant pods within the cluster.
 
-#### Inputs
-This template uses values from `Values.yaml`:
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `.Values.service.ports` | list | A list of ports to expose on the service. Each port should have a `name`, `port`, and `targetPort`. |
-| `.Values.service.additionalLabels` | map | Additional labels to add to the service. |
+### Service Definition
+#### Description
+Defines a Kubernetes Service of type Headless (clusterIP: None) for Qdrant.
 
 #### Internal Logic
-The template uses the following Kubernetes concepts:
-* `clusterIP: None`: This configures the service as a headless service, meaning it does not get assigned a cluster IP address.
-* `publishNotReadyAddresses: true`: This ensures that endpoints for pods that are not yet ready are still included in the service's endpoints list.
-* `selector`: This field defines labels that are used to select pods that should be included in the service.
+1. Sets the service name using the `qdrant.fullname` template with a "-headless" suffix.
+2. Applies labels using the `qdrant.labels` template.
+3. Adds additional labels if specified in `.Values.service.additionalLabels`.
+4. Configures the service spec:
+   - Sets `clusterIP: None` to make it a headless service.
+   - Enables `publishNotReadyAddresses` for all pod IPs to be published.
+   - Defines ports based on `.Values.service.ports`.
+   - Sets selector labels using the `qdrant.selectorLabels` template.
 
 ## Dependencies
-This code depends on the Kubernetes API version `v1` for defining the Service resource.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | Used for templating and value injection |
 
 ## Configuration
-This template uses values from `Values.yaml` to configure the service. See the "Inputs" section for details.
+The service configuration is highly dependent on Helm values. Key configurable aspects include:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Values.service.additionalLabels | map | Additional labels to apply to the service |
+| .Values.service.ports | list | Ports to be exposed by the service |
+
+Each port in `.Values.service.ports` should have the following structure:
+```yaml
+- name: portName
+  port: portNumber
+  targetPort: targetPortNumber
+  protocol: TCP  # Optional, defaults to TCP
+```
+
+## Notes
+1. This is a headless service, which is typically used for stateful applications to allow direct communication with individual pods.
+2. The `publishNotReadyAddresses: true` setting ensures that all pod IPs are published, even if they're not ready, which can be useful for certain database clustering scenarios.
+3. The service uses Helm templates (e.g., `{{ include "qdrant.fullname" . }}`) to generate consistent naming and labeling across the Helm chart.
+4. The port configuration is flexible, allowing multiple ports to be defined in the Helm values and automatically included in the service.

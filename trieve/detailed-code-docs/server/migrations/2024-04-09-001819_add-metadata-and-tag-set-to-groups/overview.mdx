@@ -3,56 +3,58 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding metadata and tag set functionality to chunk groups in a database. It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them. These migrations modify the `chunk_group` table by adding new columns and creating associated indexes.
+This directory contains SQL migration scripts for modifying the `chunk_group` table in a database. The migration adds two new columns, `metadata` and `tag_set`, to the table and creates corresponding indexes. It also includes a rollback script to undo these changes if necessary.
 
 ## What does it do?
-The migration scripts in this directory enhance the `chunk_group` table by adding two new columns:
+The migration scripts in this directory perform the following actions:
 
-1. `metadata`: This column allows storing additional JSON data for each chunk group. It can be used to add flexible, structured information to chunk groups without altering the table schema for each new type of data.
+1. Add a new `metadata` column to the `chunk_group` table, which can store JSON data.
+2. Add a new `tag_set` column to the `chunk_group` table for storing text data.
+3. Create indexes on both new columns to improve query performance.
+4. Provide a way to revert these changes by dropping the newly added columns and indexes.
 
-2. `tag_set`: This column enables the assignment of tags to chunk groups, which can be used for categorization, filtering, or organizing the groups.
-
-The `up.sql` script adds these columns and creates indexes on them to improve query performance. The `down.sql` script removes these columns and their associated indexes, effectively undoing the changes made by the `up.sql` script.
-
-These changes allow for more flexible and efficient organization and retrieval of chunk groups based on metadata and tags.
+These changes allow for storing additional information (metadata) and tags associated with chunk groups, which can be useful for categorization, searching, or filtering purposes.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to apply the migration. It adds the `metadata` and `tag_set` columns to the `chunk_group` table and creates indexes for these new columns.
-
-   Key operations:
-   - Adds a `metadata` column of type JSONB with a default empty JSON object.
-   - Adds a `tag_set` column of type text.
-   - Creates an index named `idx_chunk_group_metadata` on the `metadata` column.
-   - Creates an index named `idx_chunk_group_tag_set` on the `tag_set` column.
-
-2. `down.sql`: This file contains the SQL commands to revert the migration. It removes the columns and indexes added by the `up.sql` script.
-
-   Key operations:
-   - Drops the `metadata` column from the `chunk_group` table.
-   - Drops the `tag_set` column from the `chunk_group` table.
-   - Drops the `idx_chunk_group_metadata` index.
-   - Drops the `idx_chunk_group_tag_set` index.
-
-## Configuration
-The migration scripts do not require any external configuration. They are designed to be run as part of a database migration process, typically managed by an ORM or migration tool.
-
-## Performance Considerations
-The addition of indexes on the new `metadata` and `tag_set` columns in the `up.sql` script will improve query performance for operations involving these columns. However, it's important to note that while indexes speed up read operations, they can slightly slow down write operations due to the need to update the index.
-
-When running the `down.sql` script, dropping columns and indexes are generally fast operations, but the exact performance impact depends on the size of the `chunk_group` table and the database system being used. These operations may briefly lock the table, potentially affecting concurrent operations on the `chunk_group` table.
-
-## Side Effects
-Running the `up.sql` script will add new capabilities to the system, allowing for more flexible data storage and improved querying of chunk groups. However, existing code that interacts with the `chunk_group` table may need to be updated to take advantage of these new columns.
-
-Running the `down.sql` script will remove the `metadata` and `tag_set` columns from the `chunk_group` table, potentially causing loss of data stored in these columns. It will also drop the associated indexes, which may affect query performance on these columns if they still exist in other parts of the database.
-
-Here's an example of how the new columns might be used in a SQL query after applying the `up.sql` migration:
+### up.sql
+This file contains the SQL statements to apply the migration:
 
 ```sql
-SELECT * FROM chunk_group
-WHERE metadata-&gt;&gt;'importance' = 'high'
-  AND tag_set LIKE '%urgent%';
+ALTER TABLE chunk_group ADD COLUMN metadata JSONB NULL DEFAULT '{}'::JSONB;
+ALTER TABLE chunk_group ADD COLUMN tag_set text NULL;
+CREATE INDEX idx_chunk_group_metadata ON chunk_group(metadata);
+CREATE INDEX idx_chunk_group_tag_set ON chunk_group(tag_set);
 ```
 
-This query would select all chunk groups where the `metadata` JSON object has an "importance" key with the value "high", and the `tag_set` includes the word "urgent". The indexes created by the migration would help this query perform efficiently.
+The script adds two new columns to the `chunk_group` table:
+- `metadata`: A JSONB column that can store structured data, with a default value of an empty JSON object.
+- `tag_set`: A text column that can store tags or labels.
+
+It also creates indexes on these new columns to improve query performance when searching or filtering based on metadata or tags.
+
+### down.sql
+This file contains the SQL statements to revert the migration:
+
+```sql
+ALTER TABLE chunk_group DROP COLUMN IF EXISTS metadata;
+ALTER TABLE chunk_group DROP COLUMN IF EXISTS tag_set;
+DROP INDEX IF EXISTS idx_chunk_group_metadata;
+DROP INDEX IF EXISTS idx_chunk_group_tag_set;
+```
+
+The script removes the columns and indexes added by the `up.sql` script. The `IF EXISTS` clauses ensure that the script doesn't fail if the columns or indexes have already been removed.
+
+## Configuration
+This migration doesn't require any specific configuration. However, it's important to note that the migration is designed for a database system that supports JSONB data types (such as PostgreSQL). The migration scripts should be executed using a database migration tool or framework that can handle these SQL files appropriately.
+
+When applying this migration, ensure that:
+1. The database user has the necessary permissions to alter tables and create indexes.
+2. The `chunk_group` table exists in the database before running the migration.
+3. The database system supports JSONB data types.
+
+It's also worth noting that the `metadata` column is set to allow NULL values and has a default value of an empty JSON object. This means that existing rows in the `chunk_group` table will automatically have an empty object in the `metadata` column after the migration is applied.
+
+The `tag_set` column is also set to allow NULL values, which means it's optional and can be left empty for chunk groups that don't require tags.
+
+When using these new columns in your application, remember to handle potential NULL values and ensure that any data inserted into the `metadata` column is valid JSON.

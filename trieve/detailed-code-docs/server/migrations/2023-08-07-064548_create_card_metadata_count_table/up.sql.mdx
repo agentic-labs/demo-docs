@@ -3,64 +3,61 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script creates a table `card_metadata_count` to store the total row count of the `card_metadata` table and sets up a trigger to keep this count updated automatically. This is presumably done for performance reasons, as querying a single row for the total count is faster than performing a full count on a potentially large table.
-
-## Code Structure
-The code first creates the `card_metadata_count` table. Then, it inserts the initial count from the `card_metadata` table. Finally, it defines a trigger function `update_card_metadata_count` and a trigger `card_metadata_count_trigger` that uses this function to update the count whenever rows are inserted into or deleted from the `card_metadata` table.
+This SQL script creates a table `card_metadata_count` to store the total row count of the `card_metadata` table. It also sets up a trigger function and trigger to automatically update this count whenever rows are inserted into or deleted from the `card_metadata` table.
 
 ## Symbols
+
 ### `card_metadata_count` table
 #### Description
 This table stores a single row with the total count of rows in the `card_metadata` table.
 
 #### Inputs
-N/A - This is a table, not a function.
+N/A - This is a table definition, not a function.
 
 #### Outputs
-N/A - This is a table, not a function.
+N/A - This is a table definition, not a function.
 
 #### Internal Logic
 The table has two columns:
 - `id`: A UUID serving as the primary key.
 - `total_rows`: A BIGINT representing the total number of rows in the `card_metadata` table.
 
-### `update_card_metadata_count` function
+### `update_card_metadata_count()` function
 #### Description
 This trigger function updates the `total_rows` value in the `card_metadata_count` table whenever a row is inserted or deleted from the `card_metadata` table.
 
 #### Inputs
-This function implicitly receives information about the triggering event (INSERT or DELETE) and the affected row from the trigger context.
+This function implicitly receives the inserted or deleted row data as part of the trigger context.
 
 #### Outputs
-The function returns NULL, as required for trigger functions that don't modify the triggering statement.
+This function returns `NULL` as it's a trigger function and doesn't need to return a specific value.
 
 #### Internal Logic
-1. **Determine operation:** Checks if the triggering event was an INSERT or DELETE.
+1. **Determine operation:** Checks if the triggering event is an INSERT or DELETE operation.
 2. **Update count:**
-    - If INSERT, increments `total_rows` in `card_metadata_count` by 1.
-    - If DELETE, decrements `total_rows` in `card_metadata_count` by 1.
-3. **Return NULL:** Returns NULL to indicate successful execution without modifying the triggering statement.
+    - If it's an INSERT, increments the `total_rows` in `card_metadata_count` by 1.
+    - If it's a DELETE, decrements the `total_rows` in `card_metadata_count` by 1.
+3. **Return NULL:** Returns `NULL` to indicate successful execution.
 
 ### `card_metadata_count_trigger` trigger
 #### Description
-This trigger calls the `update_card_metadata_count` function after each INSERT or DELETE operation on the `card_metadata` table.
+This trigger calls the `update_card_metadata_count()` function after every INSERT or DELETE operation on the `card_metadata` table.
 
 #### Inputs
-The trigger implicitly receives information about the triggering event (INSERT or DELETE) and the affected row from the database.
+This trigger implicitly receives the inserted or deleted row data as part of the trigger context.
 
 #### Outputs
-N/A - Triggers implicitly use the return value of their associated function.
+N/A - Triggers do not have explicit outputs.
 
 #### Internal Logic
-1. **Trigger activation:** The trigger activates after each INSERT or DELETE operation on the `card_metadata` table, for each affected row.
-2. **Function execution:** The trigger executes the `update_card_metadata_count` function.
+1. **Trigger activation:** This trigger activates after each INSERT or DELETE operation on the `card_metadata` table, for each affected row.
+2. **Function execution:** It calls the `update_card_metadata_count()` function to update the row count in the `card_metadata_count` table.
+
+
+## References
+- `card_metadata`: This script references the `card_metadata` table, assuming it exists and contains card metadata. 
 
 ## Side Effects
-- **Creates table:** Creates the `card_metadata_count` table.
-- **Inserts initial count:** Inserts the initial row count from `card_metadata` into `card_metadata_count`.
-- **Creates trigger function:** Creates the `update_card_metadata_count` function.
-- **Creates trigger:** Creates the `card_metadata_count_trigger` trigger.
-- **Maintains count:** Automatically updates the `total_rows` value in `card_metadata_count` whenever rows are inserted into or deleted from the `card_metadata` table.
-
-## Performance Considerations
-This approach optimizes reading the total row count from the `card_metadata` table by storing it separately and updating it incrementally. This avoids expensive full table counts, especially for large tables. However, it adds a small overhead to each INSERT and DELETE operation on the `card_metadata` table due to the trigger execution.
+- **Table creation:** Creates the `card_metadata_count` table.
+- **Trigger creation:** Creates the `card_metadata_count_trigger` trigger on the `card_metadata` table.
+- **Data modification:** Automatically updates the `total_rows` value in the `card_metadata_count` table whenever rows are inserted into or deleted from the `card_metadata` table. 

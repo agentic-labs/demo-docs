@@ -3,37 +3,49 @@ title: "extra-list.yaml"
 ---
 
 ## High-level description
-This Kubernetes Helm template file is responsible for rendering a list of extra deployments for a PostgreSQL chart. It iterates through a list of deployment configurations provided in the `extraDeploy` value and renders each one using a common template.
+This Helm chart template file, `extra-list.yaml`, is designed to render additional Kubernetes resources as specified in the `extraDeploy` value of the chart. It allows users to define custom resources that will be deployed alongside the main PostgreSQL resources.
 
 ## Code Structure
-The code uses a single Helm template range function to iterate over the `extraDeploy` list. For each item in the list, it calls the `common.tplvalues.render` template, passing in the current item and the current context.
-
-## References
-- `common.tplvalues.render`: This is another Helm template that is responsible for rendering template values. It is expected to accept a value and a context as input.
+The file consists of a single range loop that iterates over the `extraDeploy` values and renders each item using the `common.tplvalues.render` template function.
 
 ## Symbols
-### `extraDeploy`
-#### Description
-This is a value that is expected to be passed in from the Helm values file. It should be a list of deployment configurations.
 
-#### Type
-List
-
-### `common.tplvalues.render`
+### Range Loop
 #### Description
-This is a Helm template that is responsible for rendering template values.
+This loop iterates over the `.Values.extraDeploy` list, rendering each item as a separate Kubernetes resource manifest.
+
+#### Internal Logic
+1. The loop starts with `{{- range .Values.extraDeploy }}`, indicating that it will iterate over each item in the `extraDeploy` list defined in the chart's values.
+2. For each item, it creates a new YAML document separator (`---`).
+3. It then uses the `common.tplvalues.render` template function to render the current item.
+
+### common.tplvalues.render
+#### Description
+This is a template function, likely defined in a shared library, that renders the provided value while considering the current context.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| value | Any | The value to render. |
-| context | Any | The current template context. |
+| value | any | The current item from the `extraDeploy` list |
+| context | object | The current template rendering context (`$`) |
 
 #### Outputs
-The rendered template value.
+The function is expected to output a valid YAML representation of the Kubernetes resource defined by the current `extraDeploy` item.
 
 ## Dependencies
-- This code depends on the Helm templating engine.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common library | Provides the `common.tplvalues.render` function used for rendering the extra resources |
 
 ## Configuration
-This code relies on the `extraDeploy` value being defined in the Helm values file. The format of the `extraDeploy` value is determined by the `common.tplvalues.render` template.
+The main configuration for this template comes from the `extraDeploy` value in the chart's `values.yaml` file or user-provided values. Users can define a list of additional Kubernetes resources to be deployed alongside the main PostgreSQL resources.
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| extraDeploy | list | [] | A list of additional Kubernetes resource manifests to deploy |
+
+## Notes
+1. This template allows for flexible extension of the PostgreSQL chart by enabling users to deploy additional resources without modifying the core chart templates.
+2. The `extraDeploy` feature is particularly useful for adding custom resources that are specific to a user's deployment environment or requirements.
+3. Care should be taken when using `extraDeploy` to ensure that the additional resources do not conflict with the main PostgreSQL resources or other chart components.
+4. The effectiveness and correctness of the rendered resources depend on the proper definition of the `extraDeploy` values and the capabilities of the `common.tplvalues.render` function.

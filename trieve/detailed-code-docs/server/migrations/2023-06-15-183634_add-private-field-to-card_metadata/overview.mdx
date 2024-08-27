@@ -3,57 +3,44 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for modifying the `card_metadata` table in a database. The migration adds a new `private` field to the table, makes the `qdrant_point_id` column nullable, and introduces a constraint to ensure data integrity based on the private status of a card.
+This directory contains SQL migration scripts for modifying the `card_metadata` table in a database. The migration adds a new `private` boolean field to the table and makes changes to the `qdrant_point_id` column, including adding a constraint. The directory includes both "up" and "down" migration scripts to allow for applying and reverting the changes.
 
 ## What does it do?
-The migration scripts in this directory perform the following actions:
+These migration scripts modify the structure of the `card_metadata` table in the database. The main changes are:
 
-1. Add a new boolean column called `private` to the `card_metadata` table, which indicates whether a card is private or not.
-2. Modify the `qdrant_point_id` column to allow NULL values.
-3. Add a constraint to ensure that only private cards can have a null `qdrant_point_id`, while public cards must always have a valid `qdrant_point_id`.
-4. Provide a way to revert these changes if needed.
+1. Adding a new `private` boolean column to indicate whether a card is private or not.
+2. Making the `qdrant_point_id` column nullable.
+3. Adding a constraint to ensure that if a card is not private, it must have a `qdrant_point_id`.
 
-These changes allow the system to support private cards while maintaining data integrity. Private cards may not have a corresponding Qdrant point, while public cards must always have one.
+These changes allow the system to differentiate between private and public cards, and to manage the relationship between a card's privacy status and its associated `qdrant_point_id`.
+
+The "up" migration applies these changes, while the "down" migration reverts them, allowing for easy application and rollback of the database modifications.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to apply the migration, including:
-   - Adding the `private` column
-   - Making `qdrant_point_id` nullable
-   - Adding the `qdrant_point_nullable_constraint`
+### up.sql
+This file contains the SQL statements to apply the migration:
 
-   ```sql
-   ALTER TABLE card_metadata ADD COLUMN private BOOLEAN NOT NULL DEFAULT false;
-   ALTER TABLE card_metadata ALTER COLUMN qdrant_point_id DROP NOT NULL;
-   ALTER TABLE card_metadata ADD CONSTRAINT qdrant_point_nullable_constraint CHECK (private = true OR qdrant_point_id IS NOT NULL);
-   ```
+```sql
+ALTER TABLE card_metadata ADD COLUMN private BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE card_metadata ALTER COLUMN qdrant_point_id DROP NOT NULL;
+ALTER TABLE card_metadata ADD CONSTRAINT qdrant_point_nullable_constraint CHECK (private = true OR qdrant_point_id IS NOT NULL);
+```
 
-2. `down.sql`: This file contains the SQL commands to revert the migration, including:
-   - Removing the `qdrant_point_nullable_constraint`
-   - Making `qdrant_point_id` non-nullable again
-   - Dropping the `private` column
+These statements add the `private` column, make `qdrant_point_id` nullable, and add a constraint to ensure that non-private cards have a `qdrant_point_id`.
 
-   ```sql
-   ALTER TABLE card_metadata DROP CONSTRAINT qdrant_point_nullable_constraint;
-   ALTER TABLE card_metadata ALTER COLUMN qdrant_point_id SET NOT NULL;
-   ALTER TABLE card_metadata DROP COLUMN private;
-   ```
+### down.sql
+This file contains the SQL statements to revert the migration:
+
+```sql
+ALTER TABLE card_metadata DROP CONSTRAINT qdrant_point_nullable_constraint;
+ALTER TABLE card_metadata ALTER COLUMN qdrant_point_id SET NOT NULL;
+ALTER TABLE card_metadata DROP COLUMN private;
+```
+
+These statements remove the added constraint, make `qdrant_point_id` non-nullable again, and remove the `private` column.
 
 ## Configuration
-This migration does not require any specific configuration files or environment variables. However, it's important to note the following:
+The migration is identified by its timestamp: `2023-06-15-183634`. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
 
-1. The `private` column is added with a default value of `false`, meaning existing cards will be considered public by default.
-2. The `qdrant_point_id` column becomes nullable, which may affect existing queries or application logic that assumed it was always non-null.
-3. The new constraint (`qdrant_point_nullable_constraint`) enforces that only private cards can have a null `qdrant_point_id`.
-
-## Side Effects and Performance Considerations
-
-1. Adding a new column and modifying an existing column may require a table rewrite, which could be time-consuming for large tables.
-2. The new CHECK constraint may have a minor impact on INSERT and UPDATE performance as it needs to be evaluated for each operation.
-3. Existing applications interacting with the `card_metadata` table may need to be updated to handle the new `private` column and the nullable `qdrant_point_id` appropriately.
-4. When reverting this migration (using `down.sql`), ensure that:
-   - There are no NULL values in the `qdrant_point_id` column before making it NOT NULL.
-   - Any processes or applications relying on the `private` column are updated to handle its absence.
-   - The removal of the CHECK constraint doesn't introduce data integrity issues.
-
-In conclusion, this migration enables the system to support private cards while maintaining data integrity. It's crucial to update any related application code to handle these changes correctly and to consider the potential performance impact on large datasets.
+No additional configuration files or environment variables are required for these migration scripts.

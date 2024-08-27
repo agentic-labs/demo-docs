@@ -3,51 +3,51 @@ title: "search-deployment.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Deployment named "search" using Helm templating. This deployment is responsible for deploying the "search" service within a Kubernetes cluster, specifying its container image, exposed ports, and environment variables.
-
-## References
-This Helm template references values from `values.yaml` for configuration:
-- `.Release.Name`: The name of the Helm release.
-- `.Values.environment`: The target environment (e.g., "local").
-- `.Values.containers.search.tag`: The Docker image tag for the search service.
-- `.Values.config.vite.*`: Various configuration values for the Vite frontend framework.
+This YAML file defines a Kubernetes Deployment for a search application. It specifies the deployment configuration, including container image, ports, and environment variables for the search service.
 
 ## Symbols
-### `search` (Deployment)
+
+### Deployment
 #### Description
-This symbol defines a Kubernetes Deployment named "search" responsible for managing the deployment and scaling of the search service.
-
-#### Inputs
-This resource doesn't take direct inputs. It relies on values provided through the Helm `values.yaml` file.
-
-#### Outputs
-This resource creates a Deployment in the Kubernetes cluster.
+This Kubernetes resource defines a Deployment named "search" that manages the search application pods.
 
 #### Internal Logic
-- **`metadata.name`**: Sets the name of the Deployment to "search".
-- **`metadata.labels`**: Defines labels for the Deployment, including the application name and instance.
-- **`spec.selector`**: Specifies how to select Pods belonging to this Deployment.
-- **`spec.template`**: Defines the Pod template for the Deployment.
-    - **`metadata.labels`**: Defines labels for the Pods.
-    - **`spec.containers`**: Defines the containers within the Pod.
-        - **`name`**: Sets the container name to "search".
-        - **`image`**: Dynamically constructs the Docker image name and tag based on the environment and configured values.
-        - **`ports`**: Exposes port 80 from the container.
-        - **`env`**: Defines environment variables for the container:
-            - `VITE_API_HOST`: The hostname of the API.
-            - `VITE_SEARCH_UI_URL`: The URL of the search UI.
-            - `VITE_DASHBOARD_URL`: The URL of the dashboard.
+1. Sets metadata for the deployment, including name and labels.
+2. Defines a selector to match pods with specific labels.
+3. Specifies the pod template with container configuration.
+4. Configures a single container named "search" with image, port, and environment variables.
+
+### Container Configuration
+#### Description
+Defines the container specifications for the search application.
+
+#### Internal Logic
+1. Sets the container name to "search".
+2. Determines the image based on the environment:
+   - For non-local environments: `trieve/search:&lt;tag&gt;`
+   - For local environment: `localhost:5001/search:&lt;tag&gt;`
+3. Exposes port 80 for the container.
+4. Sets environment variables for the application.
 
 ## Dependencies
-- Kubernetes API (`apps/v1` for Deployment)
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | Template rendering (implied by the use of `{{ }}` syntax) |
 
 ## Configuration
-This template relies on configuration values provided through a Helm `values.yaml` file. Key configuration options include:
-| Option | Description |
-|:-------|:------------|
-| `.Release.Name` | The name of the Helm release. |
-| `.Values.environment` | The target environment (e.g., "local"). |
-| `.Values.containers.search.tag` | The Docker image tag for the search service. |
-| `.Values.config.vite.apiHost` | The hostname of the API. |
-| `.Values.config.vite.searchUiUrl` | The URL of the search UI. |
-| `.Values.config.vite.dashboardUrl` | The URL of the dashboard. |
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| `.Release.Name` | string | Helm release name, used in labels |
+| `.Values.environment` | string | Environment setting (e.g., "local" or other) |
+| `.Values.containers.search.tag` | string | Tag for the search container image |
+| `.Values.config.vite.apiHost` | string | API host configuration for Vite |
+| `.Values.config.vite.searchUiUrl` | string | Search UI URL configuration for Vite |
+| `.Values.config.vite.dashboardUrl` | string | Dashboard URL configuration for Vite |
+
+## Notes
+1. The image repository is determined dynamically based on the environment:
+   - If not local, it uses "trieve/" as the prefix.
+   - If local, it uses "localhost:5001/" as the prefix.
+2. The deployment uses app.kubernetes.io/name and app.kubernetes.io/instance labels for consistency.
+3. The container exposes port 80, suggesting it might be running a web server.
+4. Environment variables are set for Vite configuration, indicating this might be a frontend application.

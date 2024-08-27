@@ -3,64 +3,62 @@ title: "networkpolicy.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes NetworkPolicy for PostgreSQL read replicas in a replication setup. It controls ingress and egress traffic to the replicas, allowing connections from specified pods and namespaces while optionally restricting external access.
+This Kubernetes NetworkPolicy resource defines network access rules for PostgreSQL read replicas in a replication architecture. It controls both ingress and egress traffic for the read replica pods, ensuring secure communication within the cluster.
 
 ## Code Structure
-The code uses conditional logic to determine whether to create the NetworkPolicy resource. It first checks for a replication architecture and then if network policies are enabled for read replicas. If both conditions are true, it defines the NetworkPolicy with ingress and egress rules based on provided values.
-
-## References
-This code references several helper templates from the `common` chart, including:
-- `include "common.capabilities.networkPolicy.apiVersion" .`: Gets the appropriate NetworkPolicy API version.
-- `include "postgresql.v1.readReplica.fullname" .`: Generates the full name of the read replica.
-- `include "common.names.namespace" .`: Gets the namespace for the deployment.
-- `include "common.labels.standard" ...`: Generates standard labels for the resource.
-- `include "common.tplvalues.render" ...`: Renders template values.
-- `include "common.labels.matchLabels" ...`: Generates matchLabels for pod selectors.
+The file is a Helm template for a Kubernetes NetworkPolicy, with conditional blocks that customize the policy based on various configuration values. It defines rules for both ingress and egress traffic, with options to allow or restrict external access.
 
 ## Symbols
-### `helm/charts/postgresql/templates/read/networkpolicy.yaml`
+
+### NetworkPolicy Resource
 #### Description
-This code defines a Kubernetes NetworkPolicy resource for PostgreSQL read replicas. It controls which pods and namespaces can communicate with the replicas.
+Defines a Kubernetes NetworkPolicy resource to control network traffic for PostgreSQL read replicas.
 
 #### Inputs
-This code uses values from the Helm chart's `Values` object. Key values include:
-- `Values.architecture`: The PostgreSQL architecture, should be "replication" for this policy to be applied.
-- `Values.readReplicas.networkPolicy.enabled`: Enables or disables the NetworkPolicy.
-- `Values.readReplicas.networkPolicy.allowExternalEgress`: Allows all egress traffic if set to true.
-- `Values.readReplicas.networkPolicy.extraEgress`: Allows defining additional egress rules.
-- `Values.readReplicas.networkPolicy.allowExternal`: Allows all ingress traffic if set to true.
-- `Values.readReplicas.networkPolicy.ingressNSMatchLabels`: Allows defining matchLabels for namespace selector in ingress rules.
-- `Values.readReplicas.networkPolicy.ingressNSPodMatchLabels`: Allows defining matchLabels for pod selector within a namespace in ingress rules.
-- `Values.readReplicas.networkPolicy.extraIngress`: Allows defining additional ingress rules.
-- `Values.containerPorts.postgresql`: The PostgreSQL container port.
-- `Values.metrics.enabled`: Enables or disables metrics.
-- `Values.metrics.containerPorts.metrics`: The metrics container port.
-- `Values.readReplicas.podLabels`: Labels specific to read replica pods.
-- `Values.commonLabels`: Common labels for all resources.
-
-#### Outputs
-This code generates a Kubernetes NetworkPolicy resource if the conditions for replication architecture and enabled network policy are met.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.architecture | string | The PostgreSQL deployment architecture |
+| .Values.readReplicas.networkPolicy.enabled | boolean | Whether the network policy is enabled |
+| .Values.readReplicas.networkPolicy.allowExternalEgress | boolean | Whether to allow unrestricted egress traffic |
+| .Values.containerPorts.postgresql | number | The PostgreSQL container port |
+| .Values.metrics.enabled | boolean | Whether metrics are enabled |
+| .Values.metrics.containerPorts.metrics | number | The metrics container port |
+| .Values.readReplicas.networkPolicy.allowExternal | boolean | Whether to allow external ingress traffic |
+| .Values.readReplicas.networkPolicy.ingressNSMatchLabels | map | Namespace labels to match for ingress |
+| .Values.readReplicas.networkPolicy.ingressNSPodMatchLabels | map | Pod labels to match for ingress |
+| .Values.readReplicas.networkPolicy.extraEgress | list | Additional egress rules |
+| .Values.readReplicas.networkPolicy.extraIngress | list | Additional ingress rules |
 
 #### Internal Logic
-1. **Conditional Creation:** The NetworkPolicy is created only if `Values.architecture` is "replication" and `Values.readReplicas.networkPolicy.enabled` is true.
-2. **Metadata:** Sets standard metadata for the NetworkPolicy, including name, namespace, and labels.
-3. **Pod Selector:** Defines a pod selector to apply the policy to pods with the label `app.kubernetes.io/component: read`.
-4. **Egress Rules:**
-   - If `Values.readReplicas.networkPolicy.allowExternalEgress` is true, allows all egress traffic.
-   - Otherwise, allows egress traffic to:
-     - DNS resolution on port 53 (UDP and TCP).
-     - Primary PostgreSQL instance on the configured port.
-     - Any additional egress rules defined in `Values.readReplicas.networkPolicy.extraEgress`.
-5. **Ingress Rules:**
-   - Allows ingress traffic on the PostgreSQL port and optionally the metrics port if enabled.
-   - If `Values.readReplicas.networkPolicy.allowExternal` is false, restricts ingress traffic to:
-     - Pods with matching labels from `Values.readReplicas.podLabels` and `Values.commonLabels`.
-     - Pods with the label `{{ template "postgresql.v1.readReplica.fullname" . }}-client: "true"`.
-     - Pods from namespaces matching `Values.readReplicas.networkPolicy.ingressNSMatchLabels` and optionally pods within those namespaces matching `Values.readReplicas.networkPolicy.ingressNSPodMatchLabels`.
-   - Includes any additional ingress rules defined in `Values.readReplicas.networkPolicy.extraIngress`.
+1. Checks if the architecture is "replication" and network policy is enabled.
+2. Defines metadata for the NetworkPolicy, including name, namespace, labels, and annotations.
+3. Specifies pod selector for the policy using merged pod labels.
+4. Sets policy types to both Ingress and Egress.
+5. Configures egress rules:
+   - Allows DNS resolution (UDP and TCP on port 53).
+   - Permits outbound connections to the primary PostgreSQL instance.
+   - Includes any extra egress rules if specified.
+6. Configures ingress rules:
+   - Allows incoming traffic on the PostgreSQL port and metrics port (if enabled).
+   - Restricts ingress to specific pods and namespaces based on labels if external access is not allowed.
+   - Includes any extra ingress rules if specified.
 
 ## Dependencies
-This code depends on the `common` Helm chart for helper templates and functions.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.capabilities.networkPolicy.apiVersion | Determines the appropriate NetworkPolicy API version |
+| common.names.namespace | Provides the namespace name |
+| common.labels.standard | Generates standard Kubernetes labels |
+| common.tplvalues.render | Renders template values |
+| common.tplvalues.merge | Merges multiple sets of values |
+| common.labels.matchLabels | Generates label selectors for pod matching |
 
 ## Configuration
-This code relies on configuration values provided through the Helm chart's `Values` object. See the "Inputs" section for a description of key configuration options.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.architecture | string | N/A | PostgreSQL deployment architecture |
+| .Values.readReplicas.networkPolicy.enabled | boolean | N/A | Enables/disables the network policy |
+| .Values.readReplicas.networkPolicy.allowExternalEgress | boolean | N/A | Allows/restricts external egress traffic |
+| .Values.readReplicas.networkPolicy.allowExternal | boolean | N/A | Allows/restricts external ingress traffic |
+
+Note: Default values are not specified in this template file.

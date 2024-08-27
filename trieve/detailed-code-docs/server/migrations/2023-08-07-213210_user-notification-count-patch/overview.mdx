@@ -3,80 +3,53 @@ title: "Overview"
 ---
 
 ## High-level description
-
-This directory contains SQL migration files for a database update related to user notification counts. The migration is designed to implement a patch that automatically manages the count of unread notifications for each user. It consists of two files: `up.sql` and `down.sql`, which are standard components in database migration practices.
+This directory contains SQL migration scripts for a database update related to user notification counts. It includes two files: `up.sql` and `down.sql`. The `up.sql` file introduces a new function to manage user notification counts automatically, while the `down.sql` file is empty as there are no changes to revert.
 
 ## What does it do?
+The migration introduces a new PostgreSQL function called `update_notification_count()`. This function is designed to be used as a trigger on a notifications table. Its purpose is to automatically maintain an accurate count of unread notifications for each user in the system.
 
-The migration introduces a new PostgreSQL function called `update_notification_count()`. This function acts as a trigger to maintain an accurate count of unread notifications for each user in the system. Here's how it works:
-
-1. When a new notification is created for a user:
-   - If it's the user's first notification, a new record is created in the `user_notification_counts` table with a count of 1.
-   - If the user already has notifications, their count is incremented by 1.
-
-2. When a notification is deleted:
-   - The user's notification count is decreased by 1 in the `user_notification_counts` table.
-
-This automated process ensures that the notification count for each user is always up-to-date without requiring manual updates or complex queries each time a user's notifications are accessed.
+When a new notification is added for a user, the function increments the notification count for that user. Conversely, when a notification is deleted, it decrements the count. This automation ensures that the system always has an up-to-date count of unread notifications for each user without requiring manual updates or complex queries each time the notification status changes.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL code to create the `update_notification_count()` function. Here's a breakdown of its functionality:
+1. `up.sql`: This file contains the SQL script that creates the `update_notification_count()` function. The function is written in PL/pgSQL and is designed to be triggered on INSERT and DELETE operations on the notifications table.
 
-   ```sql
-   CREATE OR REPLACE FUNCTION update_notification_count() RETURNS TRIGGER AS $$
-   BEGIN
-     IF (TG_OP = 'INSERT') THEN
-       INSERT INTO user_notification_counts (user_id, count)
-       VALUES (NEW.user_id, 1)
-       ON CONFLICT (user_id) DO UPDATE SET count = user_notification_counts.count + 1;
-     ELSIF (TG_OP = 'DELETE') THEN
-       UPDATE user_notification_counts
-       SET count = count - 1
-       WHERE user_id = OLD.user_id;
-     END IF;
-     RETURN NEW;
-   END;
-   $$ LANGUAGE plpgsql;
-   ```
-
-   This function uses PostgreSQL's trigger mechanism to automatically update the `user_notification_counts` table whenever a notification is added or removed.
-
-2. `down.sql`: This file is empty except for comments, indicating that there are no changes to revert in this migration. The comments state:
-
-   ```sql
-   -- This file should undo anything in `up.sql`
-   -- Nothing to revert here
-   ```
-
-   This suggests that the changes made in `up.sql` are either not easily reversible or do not require reverting.
-
-## Dependencies
-
-The migration relies on the existence of two tables in the database:
-
-1. A table for storing notifications (likely named `notifications` or similar), which is not directly modified by this migration but is assumed to exist for the trigger function to work.
-2. The `user_notification_counts` table, which stores the count of unread notifications for each user.
+2. `down.sql`: This file is empty, containing only comments. It's part of the migration structure but doesn't perform any actions as there are no changes to revert in this particular migration.
 
 ## Configuration
+The migration is identified by its timestamp: `2023-08-07-213210`. This suggests that the migration was created on August 7, 2023, at 21:32:10 UTC.
 
-No specific configuration is required for this migration. However, to fully implement the notification count functionality, the following steps should be taken:
+Here's a detailed look at the `update_notification_count()` function from `up.sql`:
 
-1. Ensure that the `user_notification_counts` table exists in the database schema.
-2. Set up appropriate triggers on the notifications table to call the `update_notification_count()` function on INSERT and DELETE operations.
+```sql
+CREATE OR REPLACE FUNCTION update_notification_count() RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO user_notification_counts (user_id, notification_count)
+        VALUES (NEW.author_id, 1)
+        ON CONFLICT (user_id) DO UPDATE
+        SET notification_count = user_notification_counts.notification_count + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE user_notification_counts
+        SET notification_count = notification_count - 1
+        WHERE user_id = OLD.user_uuid;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
 
-## Notes
+This function does the following:
 
-1. The migration is designed to be non-destructive, as evidenced by the empty `down.sql` file. This means that applying this migration should not result in any data loss or require complex rollback procedures.
+1. On INSERT:
+   - It attempts to insert a new row into the `user_notification_counts` table with an initial count of 1.
+   - If a row for the user already exists, it increments the existing `notification_count` by 1.
 
-2. The function uses PostgreSQL's `INSERT ... ON CONFLICT DO UPDATE` syntax, which is an efficient way to handle both new and existing records in a single operation. This approach minimizes the number of database queries required to maintain the notification counts.
+2. On DELETE:
+   - It decrements the `notification_count` in the `user_notification_counts` table for the user associated with the deleted notification.
 
-3. While the function handles INSERT and DELETE operations, it does not explicitly handle UPDATE operations. Depending on the application's requirements, additional logic might be needed if notifications can be updated in a way that affects their read/unread status.
+The function uses the `NEW` and `OLD` special variables to access the data of the inserted or deleted notification, respectively. It also uses the `TG_OP` variable to determine whether the trigger was fired by an INSERT or DELETE operation.
 
-4. For large-scale systems with frequent notifications, it's important to consider the performance impact of updating the count on every insert and delete. In high-traffic scenarios, it might be worth exploring alternative approaches, such as batch updates or eventual consistency models.
+It's important to note that this function assumes the existence of a `user_notification_counts` table with columns `user_id` and `notification_count`. It also assumes that the notifications table has columns `author_id` (for new notifications) and `user_uuid` (for deleted notifications).
 
-5. The migration doesn't include explicit error handling within the function. It relies on PostgreSQL's default error handling mechanisms. In a production environment, it might be beneficial to add more robust error handling and logging.
-
-6. The filename "2023-08-07-213210_user-notification-count-patch" suggests that this migration was created on August 7, 2023, at 21:32:10. The naming convention helps in maintaining an ordered sequence of migrations.
-
-In conclusion, this migration implements an efficient mechanism for maintaining real-time user notification counts, which can significantly improve the performance and user experience of notification-related features in the application.
+To use this function, it would need to be set up as a trigger on the notifications table, which is not included in this migration. The trigger setup would likely be in another migration or part of the initial table creation script.

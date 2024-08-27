@@ -4,27 +4,18 @@ title: "up.sql"
 
 ## High-level description
 This SQL script modifies the foreign key constraint `messages_topic_id_fkey` on the `messages` table. 
-It changes the behavior of the constraint to cascade both updates and deletions from the `topics` table to the `messages` table.
+It makes the constraint enforce cascading deletes, meaning when a topic is deleted, all associated messages are also deleted.
 
 ## Symbols
 
-### `ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;`
+### `ALTER TABLE messages ...`
 #### Description
-This statement attempts to drop the foreign key constraint `messages_topic_id_fkey` on the `messages` table if it exists. 
-The `IF EXISTS` clause prevents an error if the constraint does not exist.
+This block of SQL code alters the `messages` table to modify the foreign key constraint that links it to the `topics` table.
 
 #### Internal Logic
-1. **Check for existence:** The database checks if the constraint `messages_topic_id_fkey` exists on the `messages` table.
-2. **Drop constraint (if exists):** If the constraint exists, it is dropped. If it doesn't exist, no action is taken.
-
-### `ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES topics(id) ON UPDATE CASCADE ON DELETE CASCADE;`
-#### Description
-This statement adds a new foreign key constraint named `messages_topic_id_fkey` to the `messages` table. 
-This constraint establishes a relationship between the `topic_id` column in the `messages` table and the `id` column in the `topics` table.
-
-#### Internal Logic
-1. **Add constraint:** A new foreign key constraint `messages_topic_id_fkey` is added to the `messages` table.
-2. **Define foreign key:** The `topic_id` column in the `messages` table is defined as the foreign key.
-3. **Reference table and column:** The foreign key references the `id` column in the `topics` table.
-4. **Cascade updates:** The `ON UPDATE CASCADE` clause ensures that any updates to the `id` column in the `topics` table are cascaded to the `topic_id` column in the `messages` table.
-5. **Cascade deletions:** The `ON DELETE CASCADE` clause ensures that any deletions from the `topics` table are cascaded to the `messages` table, deleting any messages associated with the deleted topic.
+1. **`DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;`**: This line first attempts to drop the existing foreign key constraint named `messages_topic_id_fkey`. The `IF EXISTS` clause ensures that the operation doesn't fail if the constraint doesn't already exist.
+2. **`ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES topics(id) ON UPDATE CASCADE ON DELETE CASCADE;`**: This line adds a new foreign key constraint named `messages_topic_id_fkey` to the `messages` table. 
+    - `FOREIGN KEY (topic_id)` specifies that the `topic_id` column in the `messages` table is the foreign key.
+    - `REFERENCES topics(id)` indicates that this foreign key references the `id` column in the `topics` table.
+    - `ON UPDATE CASCADE` means that if the `id` of a topic is updated, the corresponding `topic_id` in the `messages` table will be automatically updated to match.
+    - `ON DELETE CASCADE` is the crucial change made by this migration script. It ensures that if a topic is deleted from the `topics` table, all messages associated with that topic (i.e., messages with the corresponding `topic_id`) will also be automatically deleted from the `messages` table. 

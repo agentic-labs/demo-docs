@@ -3,72 +3,78 @@ title: "keycloak.yaml"
 ---
 
 ## High-level description
-This code defines the Kubernetes configuration for deploying a Keycloak instance in a local development environment. It includes a Service, Deployment, and Ingress resource for exposing Keycloak.
+This Kubernetes manifest file defines resources for deploying Keycloak, an open-source identity and access management solution, in a local environment. It includes a Service, a Deployment, and an Ingress resource to set up Keycloak with specific configurations and expose it to external traffic.
 
 ## Code Structure
-The code uses conditional logic to apply the configuration only when the `environment` value is set to "local". It defines a Service to expose Keycloak internally, a Deployment to manage the Keycloak pod, and an Ingress to make Keycloak accessible externally.
-
-## References
-This code references the following values from the `values.yaml` file:
-- `.Values.environment`: Used to determine if the configuration should be applied.
-- `.Values.domain`: Used to construct the `KC_HOSTNAME` environment variable.
+The file contains three main Kubernetes resource definitions: Service, Deployment, and Ingress. These resources are interconnected to create a functional Keycloak setup. The entire configuration is wrapped in a conditional statement that checks if the environment is "local".
 
 ## Symbols
-### `keycloak` (Service)
+
+### Conditional Statement
 #### Description
-This Service exposes the Keycloak deployment on port 80 using a LoadBalancer.
+The entire configuration is wrapped in a Helm conditional statement that checks if the environment is "local".
 
-#### Inputs
-N/A
+```yaml
+{{- if eq .Values.environment "local" }}
+# ... (all resource definitions)
+{{- end }}
+```
 
-#### Outputs
-N/A
+This ensures that these resources are only created when deploying to a local environment.
 
-### `keycloak` (Deployment)
+### Service
 #### Description
-This Deployment manages a single replica of the Keycloak pod. It mounts a ConfigMap named `keycloak-realm-export` to `/opt/keycloak/data/import` for importing realm configurations.
-
-#### Inputs
-N/A
-
-#### Outputs
-N/A
+Defines a Kubernetes Service resource for Keycloak.
 
 #### Internal Logic
-- Uses the `quay.io/keycloak/keycloak:25.0.2` image for the Keycloak container.
-- Starts Keycloak in development mode (`start-dev`) and imports realm configurations (`--import-realm`).
-- Sets environment variables for Keycloak configuration, including database connection details and hostname settings.
-- Defines a readiness probe that checks the `/realms/master` path on port 8080.
+- Creates a LoadBalancer type service named "keycloak"
+- Exposes port 80 and targets port 8080 on the pods
+- Selects pods with the label `app: keycloak`
 
-### `keycloak-ingress` (Ingress)
+### Deployment
 #### Description
-This Ingress resource exposes the Keycloak service externally using the `nginx` ingress controller.
-
-#### Inputs
-N/A
-
-#### Outputs
-N/A
+Defines a Kubernetes Deployment resource for Keycloak.
 
 #### Internal Logic
-- Uses the hostname `auth.localtrieve.com` to route traffic to the Keycloak service.
-- Forwards all traffic (`/`) to the `keycloak` service on port 8080.
+- Creates a deployment named "keycloak" with 1 replica
+- Uses the Keycloak image `quay.io/keycloak/keycloak:25.0.2`
+- Sets up various environment variables for Keycloak configuration
+- Mounts a ConfigMap as a volume for realm import
+- Configures readiness probe
+- Sets up PostgreSQL as the database backend
+
+### Ingress
+#### Description
+Defines a Kubernetes Ingress resource for Keycloak.
+
+#### Internal Logic
+- Creates an Ingress resource named "keycloak-ingress"
+- Uses the NGINX ingress controller
+- Routes traffic for the host "auth.localtrieve.com" to the Keycloak service on port 8080
 
 ## Dependencies
-N/A
+| Dependency | Purpose |
+|:-----------|:--------|
+| Keycloak | Identity and access management solution |
+| PostgreSQL | Database backend for Keycloak |
+| NGINX Ingress Controller | Manages external access to Keycloak |
 
 ## Configuration
-This code relies on values defined in the `values.yaml` file:
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| environment | string | N/A | Determines if this configuration is applied (must be "local"). |
-| domain | string | N/A | Used to construct the `KC_HOSTNAME` environment variable. |
+| KEYCLOAK_ADMIN | string | "admin" | Admin username for Keycloak |
+| KEYCLOAK_ADMIN_PASSWORD | string | "admin" | Admin password for Keycloak |
+| KC_PROXY | string | "edge" | Proxy configuration for Keycloak |
+| KC_HOSTNAME | string | "auth.{{ $.Values.domain }}" | Hostname for Keycloak |
+| KC_FEATURES | string | "hostname:v2" | Enabled features for Keycloak |
+| KC_HOSTNAME_DEBUG | string | "true" | Enable hostname debugging |
+| KC_DB | string | postgres | Database type |
+| KC_DB_URL | string | jdbc:postgresql://trieve-postgresql.default.svc.cluster.local:5432/keycloak | Database connection URL |
+| KC_DB_USERNAME | string | postgres | Database username |
+| KC_DB_PASSWORD | string | password | Database password |
 
-## Error Handling
-N/A
-
-## Logging
-N/A
-
-## API/Interface Reference
-N/A
+## Notes
+1. This configuration is intended for local development environments only, as indicated by the conditional statement.
+2. The Keycloak instance is set up to import a realm on startup, as indicated by the `--import-realm` argument.
+3. The configuration uses hardcoded credentials for both Keycloak admin and database access, which is not recommended for production environments.
+4. The Ingress is configured to use "auth.localtrieve.com" as the host, which should be set up in local DNS or hosts file for proper access.

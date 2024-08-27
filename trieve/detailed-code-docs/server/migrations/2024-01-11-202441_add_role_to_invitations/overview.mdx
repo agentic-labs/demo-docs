@@ -3,39 +3,36 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for modifying the `invitations` table in a database. The migration adds a new `role` column to the table and provides a way to revert this change if needed. The migration is timestamped (2024-01-11-202441), indicating when it was created.
+This directory contains SQL migration scripts for adding a new `role` column to the `invitations` table in the database. It includes both the "up" migration to add the column and the "down" migration to remove it if needed.
 
 ## What does it do?
-These scripts modify the structure of the `invitations` table in the database. The main action is to add a new column called `role` to store information about the role associated with an invitation. This column is set up as an integer with a default value of 0, suggesting that different numeric values might represent different roles in the system.
-
-The migration also includes a way to undo this change, allowing the database administrator to remove the `role` column if needed. This reversibility is a common practice in database migrations to ensure that changes can be rolled back if issues arise.
+These migration scripts modify the structure of the `invitations` table in the database. The "up" migration adds a new column called `role` to store integer values representing different roles for invitations. This allows the system to associate specific roles with each invitation. The "down" migration provides a way to revert this change by removing the `role` column if necessary.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL command to add the `role` column to the `invitations` table. It's executed when applying the migration.
+### up.sql
+This file contains the SQL command to add the `role` column to the `invitations` table. The new column is defined as an integer, not allowing null values, and has a default value of 0. Here's the SQL command:
 
-   ```sql
-   ALTER TABLE invitations ADD COLUMN role integer NOT NULL DEFAULT 0;
-   ```
+```sql
+ALTER TABLE invitations ADD COLUMN role integer NOT NULL DEFAULT 0;
+```
 
-   This command adds an integer column named `role` that cannot be null and defaults to 0.
+This ensures that every invitation will have a role associated with it, even if not explicitly set (defaulting to 0).
 
-2. `down.sql`: This file contains the SQL command to remove the `role` column from the `invitations` table. It's used when reverting the migration.
+### down.sql
+This file contains the SQL command to remove the `role` column from the `invitations` table if the migration needs to be reverted. The SQL command is:
 
-   ```sql
-   ALTER TABLE invitations DROP COLUMN IF EXISTS role;
-   ```
+```sql
+ALTER TABLE invitations DROP COLUMN IF EXISTS role;
+```
 
-   This command removes the `role` column if it exists, allowing for a clean rollback of the migration.
+The `IF EXISTS` clause ensures that the operation doesn't fail if the column has already been removed.
 
 ## Configuration
-The migration is identified by its timestamp: 2024-01-11-202441. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
+These migration scripts don't require any additional configuration. They are designed to be run by a database migration tool (likely Diesel, given the project structure) which will execute these scripts in the appropriate order based on their timestamp (2024-01-11-202441).
 
-The `role` column is configured with the following properties:
-- Data type: integer
-- Constraints: NOT NULL
-- Default value: 0
+## Side Effects
+- Running the "up" migration will add the `role` column to all existing rows in the `invitations` table, setting the value to 0 for all existing invitations.
+- Running the "down" migration will remove the `role` column and all data stored in it. This operation is irreversible, so it should be used with caution in production environments.
 
-These settings indicate that every invitation must have a role (it can't be null), and if not specified, it will default to 0. The use of an integer suggests that roles are represented by numeric values in the system, which could correspond to different permission levels or types of invitations.
-
-By providing both `up.sql` and `down.sql` scripts, this migration ensures that database changes can be applied and reversed smoothly, which is crucial for maintaining database integrity and supporting development and deployment workflows.
+It's important to note that these migrations may temporarily lock the `invitations` table during execution, which could briefly impact application performance if run on a live system with active users.

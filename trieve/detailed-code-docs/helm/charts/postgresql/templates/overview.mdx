@@ -3,61 +3,60 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Helm chart templates for deploying and configuring a PostgreSQL database in a Kubernetes environment. It includes templates for various Kubernetes resources such as ConfigMaps, Secrets, Services, StatefulSets, NetworkPolicies, and monitoring resources for both primary and read replica instances.
+This directory contains Helm chart templates for deploying and managing PostgreSQL in a Kubernetes environment. It includes configurations for the primary PostgreSQL instance, read replicas, backups, monitoring, and various supporting resources such as secrets, service accounts, and network policies.
 
 ## What does it do?
-The templates in this directory work together to:
+The templates in this directory work together to create a comprehensive PostgreSQL deployment with the following capabilities:
 
-1. Deploy PostgreSQL primary and read replica instances as StatefulSets.
-2. Set up secure authentication and TLS encryption for the database.
-3. Configure network policies to control traffic to and from PostgreSQL pods.
-4. Create services for accessing the PostgreSQL instances.
+1. Deploy a primary PostgreSQL instance using a StatefulSet with persistent storage.
+2. Set up read replicas for improved read performance and scalability.
+3. Configure automated backups using a CronJob.
+4. Implement network policies for secure communication between components.
 5. Set up monitoring and metrics collection using Prometheus.
-6. Manage custom configurations and initialization scripts through ConfigMaps.
-7. Handle backups of the PostgreSQL database.
-8. Define RBAC resources for proper permissions within the Kubernetes cluster.
+6. Manage secrets for authentication and TLS certificates.
+7. Create necessary RBAC resources (Role and RoleBinding) for proper permissions.
+8. Allow for custom resource deployment through the `extraDeploy` feature.
+
+These components work together to provide a robust, scalable, and secure PostgreSQL deployment in a Kubernetes environment, suitable for various use cases from development to production.
 
 ## Entry points
-The main entry points for deploying PostgreSQL are:
+The main entry points for this directory are:
 
-1. `primary/statefulset.yaml`: Defines the StatefulSet for the primary PostgreSQL instance.
-2. `read/statefulset.yaml`: Defines the StatefulSet for read replica instances (if using replication architecture).
-3. `secrets.yaml`: Creates secrets for storing sensitive information like passwords.
-4. `serviceaccount.yaml`: Sets up the service account for PostgreSQL pods.
+1. `primary/statefulset.yaml`: Defines the core PostgreSQL deployment as a StatefulSet.
+2. `read/statefulset.yaml`: Sets up read replicas if enabled.
+3. `backup/cronjob.yaml`: Configures automated backups.
+4. `secrets.yaml`: Manages authentication secrets.
+5. `serviceaccount.yaml`: Creates the necessary service account.
 
-The deployment process typically starts with creating the necessary secrets and service accounts, followed by deploying the StatefulSets for primary and read replicas (if applicable). Services, network policies, and monitoring resources are then set up to complete the deployment.
+The deployment flow typically starts with the creation of secrets and service accounts, followed by the primary PostgreSQL instance, then read replicas and backups if enabled. Network policies, monitoring resources, and additional custom resources are set up alongside these core components.
 
 ## Key Files
-1. `primary/statefulset.yaml`: Defines the primary PostgreSQL instance deployment.
-2. `read/statefulset.yaml`: Defines read replica deployments for replication setups.
-3. `secrets.yaml`: Manages sensitive information like passwords and TLS certificates.
-4. `serviceaccount.yaml`: Creates the service account for PostgreSQL pods.
-5. `psp.yaml`: Defines Pod Security Policies for enhanced security.
-6. `role.yaml` and `rolebinding.yaml`: Set up RBAC for PostgreSQL pods.
-7. `prometheusrule.yaml`: Defines Prometheus alerting rules for PostgreSQL.
-8. `backup/cronjob.yaml`: Sets up scheduled backups for the database.
-9. `tls-secrets.yaml`: Manages TLS certificates for secure communications.
+1. `primary/`: Contains templates for the primary PostgreSQL instance, including StatefulSet, Services, ConfigMaps, and NetworkPolicies.
+2. `read/`: Similar to `primary/`, but for read replicas.
+3. `backup/`: Includes templates for setting up automated backups.
+4. `secrets.yaml`: Manages various secrets for PostgreSQL authentication and credentials.
+5. `serviceaccount.yaml`: Defines the ServiceAccount used by PostgreSQL pods.
+6. `role.yaml` and `rolebinding.yaml`: Set up RBAC permissions.
+7. `prometheusrule.yaml`: Defines alerting rules for Prometheus monitoring.
+8. `tls-secrets.yaml`: Manages TLS certificates for secure communication.
 
 ## Dependencies
-The templates in this directory rely on several external dependencies:
+The templates in this directory rely on several external components:
 
-1. Kubernetes: These templates are designed to work with Kubernetes clusters.
-2. Helm: The templating system used is part of the Helm package manager.
-3. Prometheus Operator: For metrics collection and monitoring (optional).
-4. PostgreSQL: The underlying database system being deployed and managed.
+1. Kubernetes: These templates are designed for Kubernetes 1.19+.
+2. Helm: The chart uses Helm v3 for templating and deployment management.
+3. PostgreSQL: The specific version is configurable, but templates are designed for PostgreSQL 14.x and later.
+4. Prometheus Operator: For ServiceMonitor and PrometheusRule resources.
+5. cert-manager (optional): Can be used for TLS certificate management.
 
 ## Configuration
-The behavior of these templates can be extensively customized through Helm values. Key configuration options include:
+The templates offer extensive configuration options through Helm values, including:
 
-1. `architecture`: Determines whether to use a standalone or replication setup.
-2. `auth`: Configures authentication methods and credentials.
-3. `tls`: Enables and configures TLS encryption.
-4. `metrics`: Enables and configures Prometheus metrics collection.
-5. `networkPolicy`: Configures network access controls.
-6. `backup`: Sets up and configures database backups.
-7. `psp`: Configures Pod Security Policies.
-8. `rbac`: Manages role-based access control settings.
+1. PostgreSQL version, settings, and resource allocation.
+2. Replication and read replica configuration.
+3. Backup schedules and retention policies.
+4. Security settings (RBAC, NetworkPolicy, TLS).
+5. Monitoring and metrics options.
+6. Custom initialization scripts and configurations.
 
-These templates use various helper functions from a common chart, which provide standardized ways to generate labels, render values, and handle capabilities across different Kubernetes versions.
-
-The configuration allows for fine-tuning of resource allocation, security settings, networking, monitoring, and backup aspects of the PostgreSQL deployment.
+Users can customize these settings in the `values.yaml` file or by passing values during Helm installation or upgrade. The flexibility in configuration allows this chart to be used in various environments, from development to production, with appropriate settings for each scenario.

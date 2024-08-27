@@ -3,73 +3,55 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Helm templates for deploying various components of the Trieve application to a Kubernetes cluster. The templates define Kubernetes resources such as Deployments, Services, Ingress rules, and ConfigMaps for different microservices and supporting infrastructure.
+This directory contains Helm templates for deploying various components of a microservices-based application, including analytics, chat, search, server, and supporting services like Keycloak, ClickHouse, and Apache Tika. The templates define Kubernetes resources such as Deployments, Services, Ingress rules, and ConfigMaps, allowing for flexible and configurable deployment across different environments.
 
 ## What does it do?
-These Helm templates automate the deployment and configuration of the Trieve application in a Kubernetes environment. They define how different components of the application should be deployed, scaled, and connected. The templates cover various aspects of the application, including:
+These Helm templates collectively define the infrastructure and configuration for deploying a complex application stack. They:
 
-1. Core services: dashboard, chat, search, and server components
-2. Background workers: file worker, group worker, delete worker, and sync-qdrant
-3. Supporting services: Apache Tika for content extraction
-4. Databases: ClickHouse for analytics and potentially PostgreSQL (referenced but not directly deployed)
-5. Authentication: Keycloak for identity and access management
-6. Ingress configurations for different environments (local, AWS, Google Cloud)
-7. Network policies and service configurations
-
-The templates use conditional logic to adapt deployments based on the target environment (local, AWS, or Google Cloud), allowing for flexible and environment-specific configurations.
+1. Set up core application services (analytics, chat, search, server) with appropriate configurations and environment variables.
+2. Configure networking through Services and Ingress rules to enable communication between components and external access.
+3. Deploy supporting services like Keycloak for authentication, ClickHouse for analytics, and Apache Tika for content analysis.
+4. Provide environment-specific configurations for local, AWS, and Google Cloud deployments.
+5. Define worker deployments for background tasks such as file processing and data synchronization.
+6. Set up necessary ConfigMaps and environment variables to configure the application components.
 
 ## Entry points
-The main entry points for this directory are the individual template files, each defining specific Kubernetes resources. Some key files include:
+The main entry points for this Helm chart would typically be:
 
-1. `server-deployment.yaml`: Defines the deployment for the main server component.
-2. `ingress-*.yaml` files: Define ingress rules for different environments.
-3. `*-deployment.yaml` files: Define deployments for various microservices.
-4. `*-service.yaml` files: Define services for exposing deployments within the cluster.
+1. `ingress-*.yaml` files: Define how external traffic reaches the services.
+2. `*-deployment.yaml` files: Set up the core application components and their configurations.
+3. `*-service.yaml` files: Expose the deployments within the cluster.
 
-The deployment process would typically involve using Helm to render these templates and apply them to a Kubernetes cluster, with values provided through a `values.yaml` file or command-line arguments.
+The exact flow of control depends on the specific application architecture, but generally:
+1. External requests come through the Ingress rules.
+2. Requests are routed to appropriate Services.
+3. Services direct traffic to the corresponding Deployments.
+4. Deployments manage the pods running the application components.
 
 ## Key Files
-1. `server-deployment.yaml`: Defines the main server deployment, including environment variables and optional Cloud SQL proxy for Google Cloud deployments.
-
-2. `ingress-aws.yaml`, `ingress-gcloud.yaml`, `ingress-local.yaml`: Define ingress rules for routing external traffic to services in different environments.
-
-3. `clickhouse-deplolyment.yaml`: Configures the ClickHouse database deployment for analytics.
-
-4. `keycloak.yaml` and `keycloak-realm-configmap.yaml`: Set up Keycloak for authentication and define the realm configuration.
-
-5. `embeddings-deployment.yaml`: Deploys multiple text embedding inference services.
-
-6. `syncqdrant-deployment.yaml`: Deploys a service for synchronizing data with the Qdrant vector database.
-
-7. Various `*-deployment.yaml` and `*-service.yaml` files: Define deployments and services for different components of the application (dashboard, chat, search, file worker, group worker, etc.).
+1. `server-deployment.yaml`: Defines the main application server deployment.
+2. `clickhouse-deplolyment.yaml`: Sets up the ClickHouse database for analytics.
+3. `keycloak.yaml`: Configures Keycloak for authentication and user management.
+4. `ingress-*.yaml` files: Define routing rules for different environments.
+5. `*-worker-deployment.yaml` files: Set up background processing tasks.
 
 ## Dependencies
-The templates rely on several external dependencies and services:
+The templates rely on several external services and tools:
 
-1. Kubernetes: The underlying container orchestration platform.
-2. Helm: The package manager for Kubernetes, used to template and deploy these resources.
-3. Docker: Container runtime for running the application components.
-4. ClickHouse: Columnar database used for analytics.
-5. Keycloak: Identity and access management solution.
-6. Qdrant: Vector database for storing and querying embeddings.
-7. Redis: In-memory data store for caching and pub/sub.
-8. PostgreSQL: Relational database for persistent data storage.
-9. Apache Tika: Content extraction library.
-10. Cloud-specific services: 
-    - Google Cloud: Cloud SQL, Cloud SQL Proxy
-    - AWS: Application Load Balancer (ALB)
+1. Kubernetes: The target platform for deployment.
+2. Helm: Used for templating and managing the Kubernetes resources.
+3. Docker: Container images are used for all deployments.
+4. External services: Redis, PostgreSQL, S3-compatible storage, OpenAI API, Stripe, etc.
+5. Cloud-specific services: Depends on the deployment environment (AWS, Google Cloud, or local).
 
 ## Configuration
-The templates are highly configurable through Helm values. Key configuration areas include:
+Configuration is primarily managed through Helm values, with key settings including:
 
-1. Environment selection: Determines which ingress and environment-specific configurations to apply.
-2. Container image tags: Specifies versions of different service images.
-3. API keys and credentials: Configures access to various services and APIs.
-4. Database connection strings: Sets up connections to databases like PostgreSQL and ClickHouse.
-5. Feature flags: Enables or disables certain features of the application.
-6. Resource allocation: Defines CPU and memory requests/limits for containers.
-7. Networking: Configures hostnames, ports, and internal service discovery.
+1. `.Values.environment`: Determines the deployment environment (local, aws, gcloud).
+2. `.Values.domain`: Sets the base domain for services.
+3. `.Values.containers.*`: Specifies container images and tags.
+4. `.Values.config.*`: Configures various application settings, API keys, and service URLs.
 
-These configurations are typically set in a `values.yaml` file or provided as command-line arguments when deploying with Helm.
+Environment-specific configurations are often handled through conditional statements in the templates, allowing for flexible deployment across different infrastructures.
 
-The templates make extensive use of conditional logic to adapt deployments based on the target environment, allowing for flexible configuration across different deployment scenarios.
+The templates make extensive use of environment variables to configure the application components, allowing for easy customization and secret management through Kubernetes mechanisms.

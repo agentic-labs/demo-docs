@@ -3,47 +3,75 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Helm chart templates for deploying Redis Sentinel in a Kubernetes environment. It includes configurations for horizontal pod autoscaling, node services, port allocation, main service, and the StatefulSet for Redis Sentinel nodes. These templates work together to create a robust and scalable Redis Sentinel deployment with various configuration options.
+This directory contains Helm chart templates for deploying Redis Sentinel in a Kubernetes environment. It includes configurations for horizontal pod autoscaling, node services, port allocation, main service, and the core StatefulSet for Redis replicas with Sentinel.
 
 ## What does it do?
-The templates in this directory collectively deploy and manage a Redis Sentinel cluster in Kubernetes. Here's a breakdown of the main functionalities:
+These templates work together to create a highly available Redis cluster using the Sentinel architecture. Here's a breakdown of the main components:
 
-1. Horizontal Pod Autoscaling (HPA): Automatically scales the number of Redis Sentinel replicas based on CPU or memory usage.
-2. Node Services: Creates individual Kubernetes Services for each Redis Sentinel node, exposing both Sentinel and Redis ports.
-3. Port Allocation: Dynamically allocates and manages NodePorts for Redis and Sentinel services to avoid conflicts.
-4. Main Service: Defines the main Kubernetes Service for the Redis Sentinel deployment, supporting various service types (ClusterIP, NodePort, LoadBalancer).
-5. StatefulSet: Deploys Redis Sentinel nodes as a StatefulSet, ensuring stable network identities and persistent storage for each node.
+1. Horizontal Pod Autoscaler (HPA): Automatically scales the number of Redis replica pods based on CPU and memory utilization.
+2. Node Services: Creates NodePort services for each Redis Sentinel node, exposing both Sentinel and Redis ports.
+3. Ports ConfigMap: Dynamically allocates unused NodePort numbers for Redis and Sentinel services to avoid conflicts.
+4. Main Service: Defines a Kubernetes Service for Redis Sentinel, supporting different service types (ClusterIP, NodePort, LoadBalancer).
+5. StatefulSet: Deploys Redis replicas with Sentinel, including configurations for authentication, persistence, networking, and scaling.
 
-These components work together to provide a flexible and scalable Redis Sentinel deployment that can be easily configured and managed in a Kubernetes environment.
+This setup allows for a flexible and scalable Redis deployment with high availability features provided by Sentinel.
 
-## Entry points
-The main entry point for this directory is the `statefulset.yaml` file, which defines the core Redis Sentinel deployment. Other important files include:
+## Key Files
 
-1. `hpa.yaml`: Configures horizontal pod autoscaling for the Redis Sentinel nodes.
-2. `node-services.yaml`: Creates individual services for each Redis Sentinel node.
-3. `ports-configmap.yaml`: Manages port allocation for Redis and Sentinel services.
-4. `service.yaml`: Defines the main Kubernetes Service for the Redis Sentinel deployment.
-
-The control flow typically starts with the StatefulSet deployment, followed by the creation of associated services and configuration resources. The HPA is applied to manage scaling based on resource utilization.
+1. `hpa.yaml`: Defines the Horizontal Pod Autoscaler for Redis replica nodes.
+2. `node-services.yaml`: Creates NodePort services for each Redis Sentinel node.
+3. `ports-configmap.yaml`: Generates a ConfigMap for dynamic NodePort allocation.
+4. `service.yaml`: Defines the main Kubernetes Service for Redis Sentinel.
+5. `statefulset.yaml`: Sets up the StatefulSet for Redis replicas with Sentinel.
 
 ## Dependencies
-These templates rely on the following external dependencies:
+The templates rely on the following dependencies:
 
-1. Kubernetes API: The templates use various Kubernetes resources (StatefulSet, Service, ConfigMap, etc.) and require a compatible Kubernetes cluster.
-2. Helm: The templating system uses Helm functions and helpers for rendering and managing the deployment.
-3. Redis: The deployed containers use Redis images for both the Redis server and Sentinel components.
-4. Prometheus (optional): If metrics are enabled, a Prometheus exporter container is included in the deployment.
+1. Bitnami Redis container images
+2. Kubernetes v1.23+
+3. Helm v3.8.0+
+
+These dependencies are used to provide the Redis functionality and integrate with the Kubernetes ecosystem.
 
 ## Configuration
-The templates in this directory are highly configurable through values provided in the `values.yaml` file of the parent chart. Key configuration options include:
+The templates offer extensive configuration options through Helm values. Some key configurable aspects include:
 
-1. Redis architecture (standalone or replication)
-2. Number of replicas
-3. Service type (ClusterIP, NodePort, LoadBalancer)
-4. Persistence settings for Redis and Sentinel data
-5. Authentication and TLS settings
-6. Metrics export configuration
-7. Resource limits and requests
-8. Affinity and anti-affinity rules
+1. Autoscaling settings (min/max replicas, target CPU/memory utilization)
+2. Service types (ClusterIP, NodePort, LoadBalancer)
+3. Port configurations for Redis and Sentinel
+4. Authentication settings
+5. Persistence options
+6. Resource allocation
+7. Security contexts
+8. Probes and health checks
+9. Affinity and anti-affinity rules
+10. Scaling and update strategies
 
-These configuration options allow for flexible deployment scenarios, from simple development setups to complex production environments with high availability and security requirements.
+For example, in the `hpa.yaml` file, you can configure autoscaling like this:
+
+```yaml
+replica:
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPU: 50
+    targetMemory: 50
+```
+
+Similarly, in the `service.yaml` file, you can set up the service type and ports:
+
+```yaml
+sentinel:
+  service:
+    type: LoadBalancer
+    ports:
+      redis: 6379
+      sentinel: 26379
+```
+
+These configuration options allow for fine-tuning the Redis Sentinel deployment to meet specific requirements and adapt to different environments.
+
+The templates also include error handling mechanisms, such as various probes (startup, liveness, readiness) in the StatefulSet configuration, to handle and recover from potential failures in the Redis pods.
+
+Overall, this directory provides a comprehensive set of templates for deploying a robust, scalable, and configurable Redis Sentinel cluster in a Kubernetes environment.

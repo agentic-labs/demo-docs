@@ -23,9 +23,9 @@ None
 #### Internal Logic
 The `IF EXISTS` clause ensures that the statement doesn't fail if the trigger doesn't exist.
 
-### `DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass)`
+### `DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass);`
 #### Description
-This statement drops the function `diesel_manage_updated_at` if it exists. This function was likely created by a previous migration.
+This statement attempts to drop the function `diesel_manage_updated_at` if it exists. This function was likely created by a previous migration.
 
 #### Inputs
 None
@@ -36,9 +36,9 @@ None
 #### Internal Logic
 The `IF EXISTS` clause ensures that the statement doesn't fail if the function doesn't exist.
 
-### `DROP FUNCTION IF EXISTS diesel_set_updated_at()`
+### `DROP FUNCTION IF EXISTS diesel_set_updated_at();`
 #### Description
-This statement drops the function `diesel_set_updated_at` if it exists. This function was likely created by a previous migration.
+This statement attempts to drop the function `diesel_set_updated_at` if it exists. This function was likely created by a previous migration.
 
 #### Inputs
 None
@@ -51,39 +51,44 @@ The `IF EXISTS` clause ensures that the statement doesn't fail if the function d
 
 ### `CREATE OR REPLACE FUNCTION update_updated_at() ...`
 #### Description
-This statement defines a function `update_updated_at` that sets the `updated_at` column of a row to the current timestamp.
+This statement defines or replaces a function named `update_updated_at`. This function is a trigger function that updates the `updated_at` column of a row to the current timestamp.
 
 #### Inputs
-None
+None (receives the row being updated as `NEW`)
 
 #### Outputs
-Returns the updated row (`NEW`).
+Returns the updated row (`NEW`)
 
 #### Internal Logic
-The function sets the `updated_at` column of the `NEW` row (representing the row being updated) to `current_timestamp`.
+- Sets the `updated_at` column of the `NEW` row to `current_timestamp`.
+- Returns the modified `NEW` row.
 
 ### `CREATE OR REPLACE FUNCTION update_main_table_updated_at() ...`
 #### Description
-This statement defines a function `update_main_table_updated_at` that updates the `updated_at` column of a "main" table based on the `collection_id` of the inserted/updated row.
+This statement defines or replaces a function named `update_main_table_updated_at`. This function is a trigger function that updates the `updated_at` column of a "main" table based on the `collection_id` of the row being updated in a related table.
 
 #### Inputs
-None
+None (receives the row being updated as `NEW`)
 
 #### Outputs
-Returns the updated row (`NEW`).
+Returns the updated row (`NEW`)
 
 #### Internal Logic
-The function updates the `updated_at` column of the "main" table to `current_timestamp` where the `id` matches the `collection_id` of the `NEW` row. This suggests a relationship between the table this trigger is on and a "main" table.
+- Updates the `updated_at` column of the "main" table to `current_timestamp` where the `id` matches the `collection_id` of the `NEW` row.
+- Returns the modified `NEW` row.
 
-### `CREATE TRIGGER update_updated_at ...`
+### `CREATE TRIGGER update_updated_at ...` (all instances)
 #### Description
-These statements create triggers named `update_updated_at` on various tables. The triggers are set to fire before an update operation on each row.
+These statements create triggers named `update_updated_at` on various tables. Each trigger is set to fire before an `UPDATE` operation on the respective table.
 
 #### Inputs
-None
+None (triggered by `UPDATE` operations on the table)
 
 #### Outputs
 None
 
 #### Internal Logic
-Each trigger calls either the `update_updated_at` function or the `update_main_table_updated_at` function depending on the table. This ensures that the `updated_at` column is updated whenever a row in these tables is updated.
+- For `chunk_group`, `chunk_metadata`, `files`, `groups_from_files`, `messages`, `topics`, and `users` tables:
+    - Executes the `update_updated_at()` function for each row being updated.
+- For the `chunk_group_bookmarks` table:
+    - Executes the `update_main_table_updated_at()` function for each row being updated.

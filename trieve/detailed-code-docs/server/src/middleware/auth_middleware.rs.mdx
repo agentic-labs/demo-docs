@@ -3,32 +3,37 @@ title: "auth_middleware.rs"
 ---
 
 ## High-level description
-This code implements an authentication middleware for a web application. It handles user authentication, API key validation, and role-based access control for different endpoints. The middleware also manages dataset and organization-specific authentication requirements.
+This code implements an authentication middleware for a web application. It handles user authentication, API key validation, and role-based access control for different endpoints. The middleware integrates with OpenID Connect for user authentication and supports both session-based and API key-based authentication methods.
 
 ## Code Structure
-The main component is the `AuthenticationMiddleware` struct, which implements the `Service` trait. It processes incoming requests, authenticates users or API keys, and attaches relevant information to the request for downstream handlers. The code also includes several helper functions for extracting and validating authentication data from request headers.
+The main component is the `AuthenticationMiddleware` struct, which implements the `Service` trait. It processes incoming requests, authenticates users, and adds user information to the request extensions. The middleware also handles organization and dataset-specific authentication logic.
 
 ## Symbols
 
 ### `AuthenticationMiddleware`
 #### Description
-A middleware struct that handles authentication and authorization for incoming requests.
+This struct represents the authentication middleware. It wraps the next service in the middleware chain.
 
 #### Internal Logic
 1. Extracts user information from the request (either from session or API key).
-2. Validates the user's access to the requested dataset or organization.
-3. Attaches user and organization information to the request for downstream handlers.
+2. Validates the user's access to the requested organization and dataset.
+3. Adds authenticated user information to the request extensions.
+4. Handles different authentication scenarios (e.g., API key, OAuth).
+
+### `AuthMiddlewareFactory`
+#### Description
+This struct is a factory for creating `AuthenticationMiddleware` instances.
 
 ### `get_user`
 #### Description
-Retrieves user information from the request, either from the session or a cached Redis store.
+This function attempts to retrieve user information from the session.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | req | &HttpRequest | The incoming HTTP request |
 | pl | &mut Payload | The request payload |
-| tx | Transaction | A Sentry transaction for logging |
+| tx | Transaction | A Sentry transaction for monitoring |
 | pool | web::Data&lt;Pool&gt; | The database connection pool |
 
 #### Outputs
@@ -38,23 +43,23 @@ Retrieves user information from the request, either from the session or a cached
 
 ### `auth_with_api_key`
 #### Description
-Authenticates a request using an API key.
+This function handles authentication using an API key.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | req | &HttpRequest | The incoming HTTP request |
-| tx | Transaction | A Sentry transaction for logging |
+| tx | Transaction | A Sentry transaction for monitoring |
 | pool | web::Data&lt;Pool&gt; | The database connection pool |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| result | Result&lt;(Option&lt;LoggedUser&gt;, Option&lt;UserApiKey&gt;), ServiceError&gt; | The authenticated user and API key, if valid |
+| result | Result&lt;(Option&lt;LoggedUser&gt;, Option&lt;UserApiKey&gt;), ServiceError&gt; | The authenticated user and API key information, or an error |
 
 ### `get_api_key_from_headers`
 #### Description
-Extracts an API key from the request headers.
+This function extracts the API key from the request headers.
 
 #### Inputs
 | Name | Type | Description |
@@ -64,11 +69,11 @@ Extracts an API key from the request headers.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| api_key | Option&lt;String&gt; | The extracted API key, if present |
+| api_key | Option&lt;String&gt; | The extracted API key, if found |
 
 ### `get_dataset_id_from_headers`
 #### Description
-Extracts a dataset ID from the request headers.
+This function extracts the dataset ID from the request headers.
 
 #### Inputs
 | Name | Type | Description |
@@ -78,11 +83,11 @@ Extracts a dataset ID from the request headers.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| dataset_id | Option&lt;String&gt; | The extracted dataset ID, if present |
+| dataset_id | Option&lt;String&gt; | The extracted dataset ID, if found |
 
 ### `get_org_id_from_headers`
 #### Description
-Extracts an organization ID from the request headers.
+This function extracts the organization ID from the request headers.
 
 #### Inputs
 | Name | Type | Description |
@@ -92,32 +97,29 @@ Extracts an organization ID from the request headers.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| org_id | Option&lt;String&gt; | The extracted organization ID, if present |
-
-### `verify_owner`, `verify_admin`, `verify_member`
-#### Description
-Helper functions to verify user roles within an organization.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user | &OwnerOnly/&AdminOnly/&LoggedUser | The user to verify |
-| org_id | &uuid::Uuid | The organization ID |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| is_verified | bool | Whether the user has the required role |
+| org_id | Option&lt;String&gt; | The extracted organization ID, if found |
 
 ## Error Handling
-The code uses a `ServiceError` enum for error handling, which is converted into HTTP responses. Various error cases are handled, such as unauthorized access, forbidden actions, and bad requests.
+The code uses a custom `ServiceError` enum for error handling, which is converted into appropriate HTTP responses. It handles various error scenarios, such as unauthorized access, forbidden actions, and not found resources.
+
+## Logging
+The code uses the `tracing` crate for instrumentation and logging. Key operations and error scenarios are logged for monitoring and debugging purposes.
 
 ## Dependencies
-- `actix_web`: Web framework
-- `actix_identity`: Session management
-- `sentry`: Error tracking
-- `redis`: Caching
-- `uuid`: Unique identifier generation
-- `futures_util`: Asynchronous utilities
+- `actix-web`: Web framework
+- `actix-identity`: Session management
+- `diesel`: Database ORM
+- `redis`: Redis client for caching
+- `sentry`: Error tracking and monitoring
+- `uuid`: UUID generation and handling
+- `chrono`: Date and time utilities
 
-This middleware plays a crucial role in securing the application by ensuring that only authenticated and authorized users can access protected resources and perform specific actions.
+## Configuration
+The middleware relies on environment variables for configuration, such as API keys and database connection details. These are typically set in the application's configuration files or environment.
+
+## Performance Considerations
+- The middleware uses caching (Redis) to store user information, reducing database queries.
+- It performs role-based access control checks, which may impact performance for highly concurrent systems.
+- API key validation is optimized to check a fast hash before falling back to a more expensive hash comparison.
+
+This middleware plays a crucial role in securing the application, ensuring that only authenticated and authorized users can access protected resources. It integrates various authentication methods and performs necessary checks to maintain the security of the system.

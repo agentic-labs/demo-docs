@@ -3,22 +3,65 @@ title: "Overview"
 ---
 
 ## High-level description
-The `terraform/aws` directory houses the infrastructure-as-code setup for deploying a text embedding and reranking service on AWS, leveraging Docker and Terraform. It provisions resources like EC2 instances, configures networking, and sets up the application environment.
+This directory contains Terraform configurations and related files for deploying and managing a Kubernetes cluster on AWS. It includes configurations for setting up an AWS Load Balancer Controller, running various text embedding and reranking models using Docker, and initializing EC2 instances with specific configurations.
 
 ## What does it do?
-This code defines and deploys the infrastructure for a service that provides text embedding and reranking capabilities. It uses Terraform to create the necessary AWS resources, including an EC2 instance. The instance is then configured using a cloud-init script to set up users, groups, and install Docker. Finally, a Docker Compose file defines and runs multiple containers, each hosting a different text embedding or reranking model. This setup allows for scalable and efficient processing of text data.
+1. Sets up the necessary AWS infrastructure for a Kubernetes cluster.
+2. Configures an IAM policy for the AWS Load Balancer Controller to manage Application Load Balancers (ALBs) and Network Load Balancers (NLBs) in the Kubernetes cluster.
+3. Defines a Docker Compose setup for running multiple text embedding and reranking models using the Hugging Face Text Embeddings Inference service.
+4. Provides a cloud-init configuration for EC2 instances, setting up DNS, user groups, and a new user with specific permissions.
 
 ## Key Files
-### `alb`
-This directory likely contains code related to setting up an Application Load Balancer (ALB) on AWS. This would be used to distribute incoming traffic across multiple instances of the text embedding and reranking service, ensuring high availability and scalability.
 
-### `docker-compose.yml`
-This file defines the multi-container Docker application for running the text embedding and reranking models. It specifies the Docker images, environment variables, ports, and volumes for each service. This allows for easy management and deployment of the application.
+1. `alb/policy.json`: Defines the IAM policy for the AWS Load Balancer Controller, specifying permissions for managing load balancers and related resources.
 
-### `embedding_server_cloud_init.yaml`
-This file configures the EC2 instance launched by Terraform. It sets up DNS, creates user groups and users, and installs any necessary software. This ensures that the instance is properly configured to run the Docker containers.
+2. `docker-compose.yml`: Configures five Docker services for running different text embedding and reranking models:
+   - `jina`: Jina Embeddings v2 base model for English text
+   - `bgem3`: BAAI BGE-M3 model for text embeddings
+   - `reranker`: BAAI BGE-Reranker-Large model for text reranking
+   - `splade-doc`: Naver Efficient-SPLADE-VI-BT-Large model for document encoding
+   - `splade-query`: Naver Efficient-SPLADE-VI-BT-Large model for query encoding
+
+3. `embedding_server_cloud_init.yaml`: A cloud-config file for initializing EC2 instances, including:
+   - DNS configuration
+   - User group creation
+   - Default user configuration
+   - Creation of a new "dev" user with specific permissions and SSH access
 
 ## Dependencies
-1. **Terraform:** Used to define and manage the AWS infrastructure.
-2. **Docker:** Used to containerize the text embedding and reranking models.
-3. **AWS:** The cloud provider on which the infrastructure is deployed.
+The configurations in this directory rely on several AWS services and external tools:
+
+1. AWS Services:
+   - EC2
+   - Elastic Load Balancing
+   - IAM
+   - WAF
+   - Shield
+   - ACM
+   - Cognito
+
+2. External tools and frameworks:
+   - Docker and Docker Compose
+   - NVIDIA Docker Runtime for GPU acceleration
+   - Hugging Face Text Embeddings Inference
+   - Cloud-init system for EC2 instance configuration
+
+## Configuration
+Key configuration elements include:
+
+1. IAM Policy (alb/policy.json):
+   - Defines permissions for managing load balancers, target groups, and related resources
+   - Includes conditions to limit the scope of permissions using tags
+
+2. Docker Compose (docker-compose.yml):
+   - Configures five services with specific models and ports
+   - Uses the `ghcr.io/huggingface/text-embeddings-inference:turing-1.2` base image
+   - Mounts a local `./data` directory to `/data` in the containers
+   - Utilizes NVIDIA runtime for GPU acceleration
+
+3. Cloud-init (embedding_server_cloud_init.yaml):
+   - Sets DNS nameservers to 8.8.8.8 and 8.8.4.4
+   - Creates user groups: ec2-user, dev, and docker
+   - Configures the default user and creates a new "dev" user with sudo permissions and SSH access
+
+The configurations in this directory work together to set up a Kubernetes cluster on AWS with specialized components for text embedding and reranking tasks, while also providing the necessary infrastructure and security settings.

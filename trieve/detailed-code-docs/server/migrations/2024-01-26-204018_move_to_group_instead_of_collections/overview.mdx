@@ -3,44 +3,45 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for transitioning from a "collection" based model to a "group" based model in the database schema. It includes two main files: `up.sql` for applying the changes and `down.sql` for reverting them. The migration primarily involves renaming tables and columns, as well as updating a function to work with the new terminology.
+This directory contains SQL migration scripts for transitioning from a "collection" based model to a "group" based model in the database schema. The migration involves renaming tables and columns, as well as updating a function to work with the new terminology. The directory includes both "up" and "down" migration scripts to allow for applying and reverting the changes.
 
 ## What does it do?
-The migration performs the following key actions:
+The migration scripts in this directory perform the following tasks:
 
-1. Renames several tables, replacing "collection" with "group" in their names. For example, `chunk_collection` becomes `chunk_group`.
-2. Renames columns in various tables, again replacing "collection" with "group". For instance, `collection_uuid` becomes `group_uuid` in the `file_upload_completed_notifications` table.
-3. Adds a unique constraint on the `dataset_id` column of the `dataset_group_counts` table.
-4. Updates the `update_collection_counts` function to work with the new "group" terminology, renaming it to `update_group_counts`.
+1. Rename several database tables, replacing "collection" with "group" in their names. For example, "chunk_collection" becomes "chunk_group".
+2. Rename columns in various tables, again replacing "collection" with "group" in their names. For instance, "collection_uuid" becomes "group_uuid" in the "file_upload_completed_notifications" table.
+3. Add a unique constraint to the "dataset_group_counts" table to ensure each dataset has only one count record.
+4. Update a trigger function that maintains group counts, replacing the old "update_collection_counts" function with a new version that works with the "group" terminology.
 
-These changes effectively transition the database schema from organizing data in "collections" to organizing it in "groups". This could reflect a conceptual shift in how the application manages and categorizes data.
-
-The `down.sql` script provides the ability to revert all these changes, restoring the original "collection" based schema if needed.
+These changes effectively restructure the database to use "groups" as the primary organizational unit for chunks of data, instead of "collections". The "down" migration script allows for reverting these changes if needed, restoring the original "collection" based structure.
 
 ## Key Files
 
 1. `up.sql`: This file contains the SQL commands to apply the migration, transitioning from "collections" to "groups".
 
    Key operations:
+   - Renames tables (e.g., `chunk_collection` to `chunk_group`)
+   - Renames columns (e.g., `collection_uuid` to `group_uuid`)
+   - Adds a unique constraint to `dataset_group_counts`
+   - Replaces the `update_collection_counts` function with an updated version
+
+   Example of table renaming:
    ```sql
    ALTER TABLE chunk_collection RENAME TO chunk_group;
-   ALTER TABLE file_upload_completed_notifications RENAME COLUMN collection_uuid TO group_uuid;
-   ALTER TABLE dataset_group_counts ADD CONSTRAINT UQ_dataset_id UNIQUE (dataset_id);
    ```
 
-   It also includes the updated `update_group_counts` function:
+   Example of function update:
    ```sql
-   CREATE OR REPLACE FUNCTION update_group_counts()
+   CREATE OR REPLACE FUNCTION update_collection_counts()
    RETURNS TRIGGER AS $$
    BEGIN
      IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
        INSERT INTO dataset_group_counts (dataset_id, group_count)
        VALUES (NEW.dataset_id, 1)
-       ON CONFLICT (dataset_id)
-       DO UPDATE SET group_count = dataset_group_counts.group_count + 1;
+       ON CONFLICT (dataset_id) DO UPDATE SET group_count = dataset_group_counts.group_count + 1;
      ELSIF (TG_OP = 'DELETE') THEN
        UPDATE dataset_group_counts
-       SET group_count = dataset_group_counts.group_count - 1
+       SET group_count = group_count - 1
        WHERE dataset_id = OLD.dataset_id;
      END IF;
      RETURN NULL;
@@ -51,29 +52,18 @@ The `down.sql` script provides the ability to revert all these changes, restorin
 2. `down.sql`: This file contains the SQL commands to revert the migration, changing back from "groups" to "collections".
 
    Key operations:
+   - Renames tables and columns back to their original "collection" names
+   - Implicitly removes the unique constraint (by renaming the table)
+
+   Example of reverting table names:
    ```sql
    ALTER TABLE chunk_group RENAME TO chunk_collection;
-   ALTER TABLE file_upload_completed_notifications RENAME COLUMN group_uuid TO collection_uuid;
    ```
 
-   Note that the `down.sql` script does not include reverting the function change or removing the unique constraint. These omissions should be addressed for a complete rollback.
+## Dependencies
+The migration scripts rely on the PostgreSQL database system, as evidenced by the use of PostgreSQL-specific SQL syntax and the `plpgsql` language for the trigger function. The exact version of PostgreSQL is not specified in the provided files, but it should be compatible with relatively recent versions that support these features.
 
 ## Configuration
-This migration does not appear to use any external configuration files or environment variables. The changes are hardcoded in the SQL scripts.
+These migration scripts do not require explicit configuration. However, they assume a specific initial state of the database and expect certain tables and columns to exist. The migration process typically relies on a migration framework or tool (such as Diesel for Rust projects) to manage the execution of these scripts in the correct order and track which migrations have been applied.
 
-## Dependencies
-The migration scripts assume the existence of certain tables and columns in the database. They are likely dependent on previous migrations or an initial schema setup. The specific database system is not explicitly mentioned, but the syntax suggests it's likely PostgreSQL.
-
-## Side Effects
-Executing these migration scripts will modify the database schema, which may affect any application code or queries that rely on the current naming conventions. It's crucial to update all related application code to use the new "group" terminology after applying the `up.sql` migration.
-
-The addition of the unique constraint on `dataset_id` in the `dataset_group_counts` table may have a minor impact on insert and update operations for that table, but it will improve query performance when searching by `dataset_id`.
-
-## Error Handling
-The migration scripts do not include explicit error handling. Any errors during execution will be managed by the database system running the migration. It's important to test these migrations thoroughly in a non-production environment before applying them to a live system.
-
-## TODOs
-1. The `down.sql` script should be updated to include reverting the function change from `update_group_counts` back to `update_collection_counts`.
-2. The `down.sql` script should also include removing the unique constraint `UQ_dataset_id` from the `dataset_collection_counts` table.
-3. Ensure that all related application code is updated to reflect these database changes to maintain consistency between the database and the application layer.
-4. Consider adding error handling or validation steps in the migration process to ensure data integrity during the transition.
+It's crucial to note that applying these migrations will change the database schema, potentially breaking existing application code that relies on the old "collection" naming convention. Therefore, corresponding updates to the application code should be made in conjunction with applying these database migrations to ensure continued functionality.

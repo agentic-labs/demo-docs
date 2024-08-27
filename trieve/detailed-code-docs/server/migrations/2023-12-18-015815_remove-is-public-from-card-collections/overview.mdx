@@ -10,54 +10,57 @@ The migration scripts in this directory perform the following actions:
 
 1. The `up.sql` script removes the `is_public` column from the `card_collection` table. This action eliminates the ability to mark card collections as public or private directly in the database.
 
-2. The `down.sql` script adds the `is_public` column back to the `card_collection` table. This serves as a rollback mechanism, allowing the database to be reverted to its previous state if needed.
+2. The `down.sql` script adds the `is_public` column back to the `card_collection` table. This script is used to revert the changes made by the `up.sql` script if needed. The added column is of type boolean, not nullable, and has a default value of true.
 
-These changes affect how the application handles the visibility of card collections. By removing the `is_public` column, the system may be moving towards a different method of managing collection visibility, or it might be eliminating the feature altogether.
+These changes affect how the application handles the visibility of card collections. After applying the `up.sql` migration, the concept of public/private card collections, at least as represented by this column, will no longer exist in the database schema. This could indicate a shift in how the application manages access to card collections or a simplification of the data model.
 
 ## Key Files
 
-### up.sql
-This file contains the SQL command to remove the `is_public` column from the `card_collection` table:
+1. `up.sql`:
+   This file contains the SQL command to remove the `is_public` column from the `card_collection` table. Here's the content of the file:
 
-```sql
-ALTER TABLE card_collection DROP COLUMN is_public;
-```
+   ```sql
+   ALTER TABLE card_collection DROP COLUMN is_public;
+   ```
 
-This change will permanently remove the `is_public` column and all its data from the `card_collection` table.
+   This script is responsible for modifying the database schema to remove the `is_public` column.
 
-### down.sql
-This file contains the SQL command to add the `is_public` column back to the `card_collection` table:
+2. `down.sql`:
+   This file contains the SQL command to add back the `is_public` column to the `card_collection` table. Here's the content of the file:
 
-```sql
-ALTER TABLE card_collection ADD COLUMN is_public boolean NOT NULL DEFAULT true;
-```
+   ```sql
+   ALTER TABLE card_collection ADD COLUMN is_public boolean NOT NULL DEFAULT true;
+   ```
 
-This script reverses the change made by `up.sql`, restoring the `is_public` column with a boolean type, a NOT NULL constraint, and a default value of true.
+   This script is used to revert the changes made by the `up.sql` script, effectively restoring the database schema to its previous state.
 
 ## Dependencies
-These migration scripts rely on:
+The migration scripts rely on the following:
 
-1. SQL (Structured Query Language): Used to perform the database schema changes.
-2. The existence of the `card_collection` table in the database.
+1. SQL (Structured Query Language): Both scripts use standard SQL syntax to perform the database schema changes.
+
+2. Existing `card_collection` table: Both scripts assume the existence of a `card_collection` table in the database.
 
 ## Configuration
-The `down.sql` script introduces a configuration option when adding back the `is_public` column:
+While there are no explicit configuration files in this directory, the `down.sql` script implicitly defines a configuration for the `is_public` column:
 
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
 | is_public | boolean | true | Determines whether a card collection is public or not |
 
+This configuration is relevant when reverting the migration or understanding the previous state of the database schema.
+
 ## Side Effects
-Executing these migration scripts will have the following side effects:
+Applying these migrations will have the following side effects:
 
-1. When running `up.sql`:
+1. After running `up.sql`:
    - The `is_public` column and all its data will be permanently removed from the `card_collection` table.
-   - Queries, views, or application code that previously relied on the `is_public` column will need to be updated.
-   - Storage space used by the `is_public` column will be freed up in the database.
+   - Any queries, views, or application code that previously relied on the `is_public` column will need to be updated to reflect this change.
+   - The storage space used by the `is_public` column will be freed up in the database.
 
-2. When running `down.sql`:
+2. After running `down.sql`:
    - The `is_public` column will be added back to the `card_collection` table.
-   - Existing rows in the `card_collection` table will have the `is_public` column added with a default value of `true`.
-   - Queries or application code that were modified to work without the `is_public` column may need to be updated again to handle its presence.
+   - All existing rows in the `card_collection` table will have the `is_public` column added with a default value of `true`.
+   - Queries or application code that were modified to work without the `is_public` column may need to be updated to handle its presence again.
 
-It's crucial to ensure that the application code is updated accordingly when applying these migrations to maintain consistency between the database schema and the application's expectations.
+It's important to note that these migrations should be applied carefully, considering their impact on the application's functionality and data integrity. Proper testing and coordination with application code changes are crucial when implementing such database schema modifications.

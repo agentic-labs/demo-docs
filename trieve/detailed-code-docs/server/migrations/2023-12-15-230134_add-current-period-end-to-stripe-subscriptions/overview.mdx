@@ -3,49 +3,53 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for adding a new column `current_period_end` to the `stripe_subscriptions` table in the database. The migration is dated 2023-12-15 and is identified by the timestamp 230134. It consists of two files: `up.sql` for applying the change and `down.sql` for reverting it.
+This directory contains SQL migration scripts for adding a new column `current_period_end` to the `stripe_subscriptions` table in a database. The migration is dated 2023-12-15 and includes both "up" and "down" scripts for applying and reverting the change, respectively.
 
 ## What does it do?
-This migration modifies the structure of the `stripe_subscriptions` table in the database. It adds a new column called `current_period_end` which is designed to store the end date of the current subscription period. This column is of type TIMESTAMP and allows NULL values, with a default value of NULL. 
+These migration scripts modify the structure of a database table related to Stripe subscriptions. The main actions are:
 
-The purpose of this change is likely to track when each subscription's current period ends, which could be useful for billing purposes, subscription management, or reporting. By adding this information directly to the `stripe_subscriptions` table, it becomes easier to query and manage subscription periods without having to rely on external data or complex calculations.
+1. Adding a new column: The "up" script adds a `current_period_end` column to the `stripe_subscriptions` table. This column is designed to store the timestamp of when the current subscription period ends.
 
-The migration also provides a way to undo this change if needed, by removing the `current_period_end` column from the table.
+2. Removing the column: The "down" script removes the `current_period_end` column from the `stripe_subscriptions` table, effectively undoing the change made by the "up" script.
+
+These scripts allow developers to manage database schema changes in a controlled and reversible manner, which is crucial for maintaining data integrity and application compatibility across different versions.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL command to add the `current_period_end` column to the `stripe_subscriptions` table. Here's the content of the file:
+1. `up.sql`:
+   This file contains the SQL command to add the `current_period_end` column to the `stripe_subscriptions` table. Here's the content of the file:
 
    ```sql
    ALTER TABLE stripe_subscriptions
    ADD COLUMN current_period_end TIMESTAMP DEFAULT NULL;
    ```
 
-   This command modifies the `stripe_subscriptions` table by adding a new TIMESTAMP column named `current_period_end` with a default value of NULL.
+   This script adds a new `TIMESTAMP` column named `current_period_end` with a default value of `NULL` to the `stripe_subscriptions` table.
 
-2. `down.sql`: This file contains the SQL command to reverse the changes made by `up.sql`. Here's the content of the file:
+2. `down.sql`:
+   This file contains the SQL command to remove the `current_period_end` column from the `stripe_subscriptions` table. Here's the content of the file:
 
    ```sql
-   ALTER TABLE stripe_subscriptions DROP COLUMN current_period_end;
+   ALTER TABLE stripe_subscriptions
+   DROP COLUMN current_period_end;
    ```
 
-   This command removes the `current_period_end` column from the `stripe_subscriptions` table, effectively undoing the change made by the `up.sql` migration.
-
-## Dependencies
-This migration depends on the existence of the `stripe_subscriptions` table in the database. It assumes that the table has already been created in a previous migration or as part of the initial database setup.
+   This script removes the `current_period_end` column from the `stripe_subscriptions` table, effectively reverting the change made by the `up.sql` script.
 
 ## Configuration
-There are no specific configuration files or environment variables associated with this migration. The migration is designed to be run as part of a database migration process, typically managed by an ORM (Object-Relational Mapping) tool or a custom migration system.
+The migration scripts don't require any specific configuration. However, the naming convention of the directory (2023-12-15-230134_add-current-period-end-to-stripe-subscriptions) suggests that this migration system likely uses timestamps in the directory name to order migrations. The timestamp 2023-12-15-230134 indicates that this migration was created on December 15, 2023, at 23:01:34.
 
-## Performance Considerations
-While adding or dropping a column is generally a quick operation, especially when allowing NULL values and not setting a non-NULL default value, there are some performance considerations to keep in mind:
+## Side Effects
+When applying these migrations:
 
-1. Table Size: If the `stripe_subscriptions` table contains a large number of rows, the migration might take longer to complete.
+1. Running the "up" migration:
+   - Adds a new `current_period_end` column to the `stripe_subscriptions` table.
+   - This new column will be of type `TIMESTAMP` and will default to `NULL` for existing rows.
+   - Applications using this table will need to be updated to handle this new column.
 
-2. Table Locking: During the migration, the database might briefly lock the `stripe_subscriptions` table. This could potentially affect concurrent operations on this table.
+2. Running the "down" migration:
+   - Removes the `current_period_end` column from the `stripe_subscriptions` table.
+   - Any data stored in this column will be permanently lost.
+   - Applications that were using this column will need to be updated to handle its absence.
 
-3. Application Impact: After applying the `up.sql` migration, any applications or queries that interact with the `stripe_subscriptions` table will have access to the new `current_period_end` column. Conversely, after applying the `down.sql` migration, any code that relies on this column will no longer function correctly.
-
-It's important to plan the execution of these migrations during a time of low database activity to minimize potential disruptions to the application's functionality.
-
-In conclusion, this migration provides a straightforward way to add and remove a `current_period_end` column in the `stripe_subscriptions` table, allowing for better tracking and management of subscription periods in the application.
+It's important to note that these migrations should be applied carefully, especially in production environments, as they involve structural changes to the database that could affect the application's functionality.

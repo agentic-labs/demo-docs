@@ -10,17 +10,17 @@ The migration performs the following tasks:
 
 1. In the "up" direction:
    - Adds a new `owner_id` column to the `topics` table.
-   - Copies data from the existing `user_id` column to the new `owner_id` column.
+   - Copies existing `user_id` values to the new `owner_id` column.
    - Removes the old `user_id` column.
-   - Creates an index on the `dataset_id` and `owner_id` columns for improved query performance.
+   - Creates an index on `dataset_id` and `owner_id` for improved query performance.
 
 2. In the "down" direction:
    - Adds back the `user_id` column to the `topics` table.
-   - Copies data from the `owner_id` column to the restored `user_id` column.
+   - Copies `owner_id` values to the `user_id` column.
    - Removes the `owner_id` column.
    - Drops the index created in the "up" migration.
 
-This migration essentially renames the `user_id` column to `owner_id`, potentially reflecting a change in terminology or data model in the application. The process ensures that existing data is preserved during the transition.
+This migration allows the database schema to transition from using `user_id` to `owner_id` for the `topics` table, which might be part of a larger refactoring effort or a change in the application's data model.
 
 ## Key Files
 
@@ -31,10 +31,10 @@ This file contains the SQL commands to apply the migration:
 ALTER TABLE topics ADD COLUMN owner_id TEXT NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
 UPDATE topics SET owner_id = user_id WHERE user_id IS NOT NULL;
 ALTER TABLE topics DROP COLUMN user_id;
-CREATE INDEX topics_dataset_id_owner_id_idx ON topics (dataset_id, owner_id);
+CREATE INDEX "topics_dataset_id_owner_id_idx" ON topics (dataset_id, owner_id);
 ```
 
-The script adds the `owner_id` column, populates it with data from `user_id`, removes the `user_id` column, and creates an index on `dataset_id` and `owner_id`.
+The script adds the `owner_id` column, populates it with existing `user_id` values, drops the `user_id` column, and creates an index for improved query performance.
 
 ### down.sql
 This file contains the SQL commands to revert the migration:
@@ -46,17 +46,17 @@ ALTER TABLE topics DROP COLUMN owner_id;
 DROP INDEX IF EXISTS "topics_dataset_id_owner_id_idx";
 ```
 
-The script adds back the `user_id` column, populates it with data from `owner_id`, removes the `owner_id` column, and drops the index created in the "up" migration.
+The script adds back the `user_id` column, copies `owner_id` values to it, drops the `owner_id` column, and removes the index created in the "up" migration.
 
 ## Configuration
-The migration uses a default value for the `owner_id` column in the "up" migration:
+The migration scripts use the following configuration:
 
-```sql
-DEFAULT '00000000-0000-0000-0000-000000000000'
-```
+1. Table name: `topics`
+2. New column name: `owner_id`
+3. Old column name: `user_id`
+4. Default value for `owner_id`: '00000000-0000-0000-0000-000000000000'
+5. Index name: "topics_dataset_id_owner_id_idx"
 
-This UUID-like string serves as a placeholder for rows where no `user_id` was previously set. Developers should be aware of this default value and its implications for data integrity and application logic.
+These values are hardcoded in the migration scripts and should be adjusted if the table or column names differ in the actual database schema.
 
-The index name `topics_dataset_id_owner_id_idx` is used in both scripts. If this index name needs to be changed, it should be updated in both the `up.sql` and `down.sql` files to ensure consistency.
-
-In summary, this migration directory contains scripts to safely transition from a `user_id` to an `owner_id` column in the `topics` table, preserving existing data and providing a way to revert the changes if necessary. The migration also optimizes query performance by creating an index on the new column structure.
+The migration assumes that the database system supports standard SQL syntax for ALTER TABLE, UPDATE, CREATE INDEX, and DROP INDEX operations. The specific database system (e.g., PostgreSQL, MySQL) is not explicitly mentioned, so it's important to ensure compatibility with the target database before applying the migration.

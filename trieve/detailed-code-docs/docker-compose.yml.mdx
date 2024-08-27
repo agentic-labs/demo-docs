@@ -3,23 +3,24 @@ title: "docker-compose.yml"
 ---
 
 ## High-level description
-This Docker Compose file defines a multi-service application stack for Trieve, a complex system that includes databases, search engines, file processing, authentication, and various frontend applications. It orchestrates the deployment and configuration of multiple interconnected services, ensuring they work together seamlessly.
+This Docker Compose file defines a multi-service application stack for Trieve, a complex system that includes databases, search engines, file processing, authentication, and various frontend applications. It orchestrates multiple interconnected services to create a complete environment for running the Trieve application.
 
 ## Code Structure
-The file is structured as a Docker Compose configuration, defining multiple services, networks, and volumes. Each service is configured with its own image, environment variables, dependencies, and network settings. The services are designed to work together, with some depending on others for proper functionality.
+The file defines multiple services, networks, and volumes. Each service is configured with specific images, environment variables, ports, volumes, and dependencies. The services are interconnected through a shared network and use various volumes for data persistence.
 
 ## Symbols
 
 ### `services`
 #### Description
-Defines all the individual services that make up the Trieve application stack.
+Defines all the services that make up the Trieve application stack.
 
 #### Internal Logic
 - Sets up databases (PostgreSQL, Redis, Qdrant, MinIO)
-- Configures search and processing services (Tika, server, workers)
-- Sets up frontend applications (dashboard, chat, search, analytics)
-- Includes authentication service (Keycloak)
-- Configures monitoring and analytics (ClickHouse)
+- Configures file processing services (Tika)
+- Defines application servers and workers
+- Sets up frontend applications
+- Configures authentication service (Keycloak)
+- Sets up analytics database (ClickHouse)
 
 ### `db`
 #### Description
@@ -29,7 +30,7 @@ PostgreSQL database service for the main application.
 - Uses PostgreSQL 15 image
 - Sets up environment variables for database credentials
 - Configures health check
-- Persists data using a named volume
+- Mounts a volume for data persistence
 - Exposes port 5432
 
 ### `redis`
@@ -38,9 +39,9 @@ Redis service for caching and message queuing.
 
 #### Internal Logic
 - Uses Redis 7.2.2 image
-- Configures password protection
-- Sets up health check
-- Persists data using a named volume
+- Configures health check
+- Sets up password protection
+- Mounts a volume for data persistence
 - Exposes port 6379
 
 ### `qdrant-database`
@@ -50,8 +51,8 @@ Qdrant vector database service for similarity search.
 #### Internal Logic
 - Uses Qdrant 1.10.1 image
 - Configures API key
+- Mounts a volume for data storage
 - Exposes ports 6333 and 6334
-- Persists data using a named volume
 
 ### `s3`
 #### Description
@@ -61,8 +62,8 @@ MinIO S3-compatible object storage service.
 - Uses MinIO image
 - Configures root user and password
 - Sets up health check
-- Persists data using a named volume
-- Exposes ports 9000 and 42625
+- Mounts a volume for data storage
+- Exposes ports 9000 and 42625 for API and console
 
 ### `s3-client`
 #### Description
@@ -75,11 +76,11 @@ MinIO client service for initializing the S3 bucket.
 
 ### `tika`
 #### Description
-Apache Tika service for file parsing and content extraction.
+Apache Tika service for file content extraction.
 
 #### Internal Logic
 - Uses Apache Tika 2.9.1 image
-- Sets up health check
+- Configures health check
 - Exposes port 9998
 
 ### `server`
@@ -88,19 +89,19 @@ Main application server for Trieve.
 
 #### Internal Logic
 - Builds from a custom Dockerfile
-- Depends on multiple services (Tika, db, qdrant-database, redis, keycloak)
+- Depends on multiple services
 - Configures numerous environment variables
 - Uses host network mode
 
 ### `ingestion-worker`, `file-worker`, `delete-worker`
 #### Description
-Worker services for handling various background tasks.
+Worker services for various background tasks.
 
 #### Internal Logic
 - Build from custom Dockerfiles
-- Depend on core services
+- Depend on multiple services
 - Use host network mode
-- Share environment variables from a .env file
+- Share environment variables from .env file
 
 ### `dashboard`, `chat`, `search`, `analytics-site`
 #### Description
@@ -108,8 +109,8 @@ Frontend services for different parts of the Trieve application.
 
 #### Internal Logic
 - Build from custom Dockerfiles
+- Expose different ports
 - Configure environment variables for API and UI URLs
-- Expose ports for web access
 
 ### `keycloak`
 #### Description
@@ -117,7 +118,7 @@ Keycloak service for authentication and authorization.
 
 #### Internal Logic
 - Uses Keycloak 23.0.7 image
-- Depends on a separate Keycloak database
+- Depends on a separate PostgreSQL database
 - Configures admin credentials and database connection
 - Sets up health check
 - Imports a custom realm and theme
@@ -125,46 +126,50 @@ Keycloak service for authentication and authorization.
 
 ### `keycloak-db`
 #### Description
-PostgreSQL database service dedicated to Keycloak.
+PostgreSQL database service for Keycloak.
 
 #### Internal Logic
 - Uses PostgreSQL 15 image
 - Configures database credentials
 - Sets up health check
-- Persists data using a named volume
+- Mounts a volume for data persistence
 - Exposes port 5434
 
 ### `clickhouse-db`
 #### Description
-ClickHouse database service for analytics and monitoring.
+ClickHouse database service for analytics.
 
 #### Internal Logic
 - Uses a custom ClickHouse image
 - Configures database credentials
-- Sets environment variable for embedding server
-- Persists data using a named volume
-- Exposes ports 8123, 9001, and 9009
+- Sets up environment variable for embedding server
+- Mounts a volume for data persistence
+- Exposes multiple ports
 
 ### `networks`
 #### Description
-Defines the `app-network` used by the services for communication.
+Defines the network used by the services.
 
 ### `volumes`
 #### Description
-Defines named volumes for persisting data across container restarts.
+Defines named volumes used by various services for data persistence.
 
 ## Dependencies
-The application relies on several external Docker images and custom builds. Key dependencies include:
-- PostgreSQL
-- Redis
-- Qdrant
-- MinIO
-- Apache Tika
-- Keycloak
-- ClickHouse
+The file relies on various Docker images and custom Dockerfiles for building the services.
 
 ## Configuration
-The configuration is primarily done through environment variables, which are referenced throughout the file (e.g., `${VARIABLE_NAME}`). These variables should be defined in a separate `.env` file or set in the environment where Docker Compose is run.
+The file uses numerous environment variables, which are likely defined in a separate .env file.
 
 ## Error Handling
-Error handling is primarily implemented through health checks and dependency conditions, ensuring services start in the correct order and are verified to be running before dependent services start.
+Error handling is primarily managed through health checks and restart policies defined for various services.
+
+## API/Interface Reference
+The file exposes multiple ports for different services, which can be used to interact with the application components:
+- PostgreSQL: 5432
+- Redis: 6379
+- Qdrant: 6333, 6334
+- MinIO: 9000, 42625
+- Tika: 9998
+- Keycloak: 8080
+- ClickHouse: 8123, 9001, 9009
+- Various frontend services: 5173, 5174, 5175, 5176

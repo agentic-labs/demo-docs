@@ -3,50 +3,49 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration file creates a new table `user_organizations` to manage user-organization relationships and removes the `organization_id` column from the `users` table. This change allows for a many-to-many relationship between users and organizations, enabling users to belong to multiple organizations with different roles.
-
-## Code Structure
-The migration consists of three main parts:
-1. Dropping the `organization_id` column from the `users` table
-2. Creating the new `user_organizations` table
-3. Adding foreign key constraints to the `user_organizations` table
+This SQL script migrates the database schema to introduce a new table `user_organizations` for managing relationships between users and organizations. It also removes the `organization_id` column from the `users` table, indicating a shift from a one-to-one to a many-to-many relationship between users and organizations.
 
 ## Symbols
-
-### ALTER TABLE users DROP COLUMN IF EXISTS organization_id;
+### `ALTER TABLE users DROP COLUMN IF EXISTS organization_id;`
 #### Description
-This statement removes the `organization_id` column from the `users` table if it exists. This is likely done to prepare for the new many-to-many relationship structure.
-
-### CREATE TABLE user_organizations
-#### Description
-This statement creates a new table called `user_organizations` to manage the relationships between users and organizations.
+This statement removes the `organization_id` column from the `users` table if it exists. This suggests a change in the database schema where users are no longer directly associated with a single organization.
 
 #### Internal Logic
-The table is created with the following columns:
-- `id`: A unique UUID primary key
-- `user_id`: UUID of the user
-- `organization_id`: UUID of the organization
-- `role`: An integer representing the user's role in the organization
-- `created_at`: Timestamp of when the relationship was created
-- `updated_at`: Timestamp of when the relationship was last updated
+- It uses `DROP COLUMN IF EXISTS` to avoid errors if the column doesn't exist, making the migration more robust.
 
-### ALTER TABLE user_organizations ADD CONSTRAINT
+### `CREATE TABLE user_organizations`
 #### Description
-These statements add foreign key constraints to the `user_organizations` table.
+This statement creates a new table named `user_organizations` to store the relationships between users and organizations.
+
+#### Inputs
+N/A - This statement defines a table structure, it doesn't take inputs.
+
+#### Outputs
+N/A - This statement performs a database operation, it doesn't return outputs.
 
 #### Internal Logic
-Two constraints are added:
-1. `fk_user_id`: Links the `user_id` column to the `id` column in the `users` table
-2. `fk_organization_id`: Links the `organization_id` column to the `id` column in the `organizations` table
+- It defines the table structure with columns for:
+    - `id`: Unique identifier for each user-organization relationship.
+    - `user_id`: Foreign key referencing the `users` table.
+    - `organization_id`: Foreign key referencing the `organizations` table.
+    - `role`: Integer value likely representing the user's role within the organization.
+    - `created_at`: Timestamp indicating when the relationship was created.
+    - `updated_at`: Timestamp indicating when the relationship was last updated.
+- It sets `id` as the primary key, ensuring each row has a unique identifier.
+- It uses `NOT NULL` constraints to enforce data integrity for essential columns.
 
-## Side Effects
-- The `users` table will no longer have a direct link to a single organization.
-- Users can now be associated with multiple organizations through the `user_organizations` table.
-- Existing code that relies on the `organization_id` column in the `users` table will need to be updated to use the new `user_organizations` table.
+### `ALTER TABLE user_organizations ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users (id);`
+#### Description
+This statement adds a foreign key constraint to the `user_organizations` table, linking the `user_id` column to the `id` column of the `users` table.
 
-## Performance Considerations
-- Queries involving user-organization relationships may become more complex and potentially slower, as they now require joining with the `user_organizations` table.
-- The `user_organizations` table may grow large for systems with many users and organizations, so proper indexing should be considered for performance optimization.
+#### Internal Logic
+- It uses `ADD CONSTRAINT` to define a new foreign key constraint named `fk_user_id`.
+- The constraint ensures that every `user_id` in `user_organizations` corresponds to a valid `id` in the `users` table, maintaining referential integrity.
 
-## References
-This migration file is likely related to the `user_operator.rs` file, which contains functions for managing users and their relationships with organizations. The new table structure aligns with functions like `add_existing_user_to_org`, `update_user_org_role_query`, and `remove_user_from_org_query` in the related code snippet.
+### `ALTER TABLE user_organizations ADD CONSTRAINT fk_organization_id FOREIGN KEY (organization_id) REFERENCES organizations (id);`
+#### Description
+This statement adds a foreign key constraint to the `user_organizations` table, linking the `organization_id` column to the `id` column of the `organizations` table.
+
+#### Internal Logic
+- It uses `ADD CONSTRAINT` to define a new foreign key constraint named `fk_organization_id`.
+- The constraint ensures that every `organization_id` in `user_organizations` corresponds to a valid `id` in the `organizations` table, maintaining referential integrity.

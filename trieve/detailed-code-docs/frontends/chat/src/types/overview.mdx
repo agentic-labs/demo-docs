@@ -3,15 +3,80 @@ title: "Overview"
 ---
 
 ## High-level description
-The `frontends/chat/src/types` directory houses TypeScript type definitions and utility functions crucial for handling API interactions and message structures within a chat application. It ensures type safety and consistency throughout the codebase.
+This directory contains TypeScript files that define types, interfaces, and utility functions for a chat application. The code primarily focuses on handling API responses, user plans, messages, and referral tokens. It provides type definitions and type guards to ensure type safety throughout the application.
 
 ## What does it do?
-This directory acts as a central repository for defining the shape and structure of data used in the chat application. It provides type definitions for API responses, user plans, and chat messages, ensuring that the application handles data consistently and predictably. Additionally, it includes utility functions for tasks like managing referral tokens in the browser's local storage and determining message roles in a conversation.
+The code in this directory serves several purposes:
+
+1. It defines the structure of API responses, particularly for Stripe checkout sessions and user subscription plans.
+2. It provides utility functions for managing referral tokens, including storing and retrieving them from the browser's local storage.
+3. It defines the structure of chat messages and offers functions to validate message objects and arrays.
+4. It includes a function to determine the role of a message (system, assistant, or user) based on its position in a conversation.
+
+These types and utilities help maintain consistency and type safety across the chat application, ensuring that data is properly structured and validated before being used in other parts of the codebase.
 
 ## Key Files
 
-### `actix-api.ts`
-This file focuses on types and functions related to API interactions, particularly with an Actix backend. It defines interfaces for API responses, including error structures and Stripe checkout session responses. It also includes functions for managing referral tokens in local storage, ensuring that these tokens are correctly stored and retrieved for user sessions.
+### actix-api.ts
+This file focuses on API-related types and functions:
 
-### `messages.ts`
-This file is dedicated to defining the structure and handling of messages within the chat application. It defines the `Message` interface, which outlines the structure of a chat message. It also includes type guard functions to verify if a given value is a valid `Message` or an array of `Message` objects. Additionally, it provides a utility function to determine the role of a message (system, assistant, or user) based on its index in a conversation. This file is crucial for maintaining the integrity and consistency of message data within the chat application. 
+1. It defines interfaces for API responses, such as `ActixApiDefaultError` and `StripeCheckoutSessionResponse`.
+2. It provides utility functions for managing referral tokens:
+   - `detectReferralToken`: Detects and stores referral tokens in local storage.
+   - `getReferralTokenArray`: Retrieves stored referral tokens.
+3. It defines the `UserPlan` interface, representing a user's subscription plan.
+4. It includes type guard functions like `isStripeCheckoutSessionResponse` and `isUserPlan` to validate object structures.
+
+Example of detecting and storing a referral token:
+
+```typescript
+detectReferralToken("ABC123");
+const storedTokens = getReferralTokenArray();
+console.log(storedTokens); // ["ABC123"]
+```
+
+### messages.ts
+This file defines types and utilities for handling chat messages:
+
+1. It provides the `Message` interface, representing a single message in the chat.
+2. It includes type guard functions:
+   - `isMessage`: Checks if an object is a valid `Message`.
+   - `isMessageArray`: Verifies if an array contains only `Message` objects.
+3. It defines the `messageRoleFromIndex` function, which determines a message's role based on its position in a conversation.
+
+Example of using the message utilities:
+
+```typescript
+const message = { content: "Hello, world!" };
+console.log(isMessage(message)); // true
+
+const messages = [
+  { content: "System message" },
+  { content: "User message" },
+  { content: "Assistant response" }
+];
+console.log(isMessageArray(messages)); // true
+
+console.log(messageRoleFromIndex(0)); // "system"
+console.log(messageRoleFromIndex(1)); // "user"
+console.log(messageRoleFromIndex(2)); // "assistant"
+```
+
+## Dependencies
+The code in this directory doesn't rely on any external libraries or frameworks. It uses TypeScript's built-in types and features, as well as browser APIs like `localStorage` for managing referral tokens.
+
+## Configuration
+This directory doesn't contain any configuration files or use environment variables. However, it does interact with the browser's local storage for managing referral tokens, which can be considered a form of client-side configuration.
+
+The `detectReferralToken` function in `actix-api.ts` stores referral tokens in the browser's local storage under the key "referralTokens". This allows the application to persist referral information across page reloads or sessions.
+
+Example of how referral tokens are stored:
+
+```typescript
+// Local storage entry
+{
+  "referralTokens": ["ABC123", "XYZ789"]
+}
+```
+
+Developers working with this code should be aware of this local storage usage and ensure that it aligns with the application's overall data management and privacy policies.

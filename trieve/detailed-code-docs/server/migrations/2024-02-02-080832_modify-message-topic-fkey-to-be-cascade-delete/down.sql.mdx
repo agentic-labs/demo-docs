@@ -3,14 +3,26 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script defines a database migration that reverts a change made to the foreign key constraint between the `messages` and `topics` tables. Specifically, it removes the cascade delete behavior from the foreign key constraint.
+This SQL migration script reverts a database schema change related to the foreign key constraint between the `messages` and `topics` tables. It specifically undoes the cascade delete behavior that was likely implemented in the corresponding `up.sql` migration.
 
 ## Symbols
 
-### `down.sql`
+### `ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;`
 #### Description
-This script is executed when rolling back a database migration. It removes the `ON DELETE CASCADE` behavior from the foreign key constraint `messages_topic_id_fkey` between the `messages` and `topics` tables. This means deleting a row in the `topics` table will no longer automatically delete related rows in the `messages` table.
+This statement drops the foreign key constraint named `messages_topic_id_fkey` on the `messages` table if it exists. This action allows for subsequent modifications to the constraint without errors if it was already present.
 
 #### Internal Logic
-1. **Drop Existing Constraint:** `ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_topic_id_fkey;` drops the existing foreign key constraint if it exists. This is done to avoid conflicts when recreating the constraint without the cascade delete behavior.
-2. **Recreate Constraint:** `ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES topics(id);` recreates the foreign key constraint `messages_topic_id_fkey` between the `topic_id` column in the `messages` table and the `id` column in the `topics` table. This time, the constraint is created without the `ON DELETE CASCADE` option, effectively disabling the automatic deletion of related messages when a topic is deleted. 
+- It uses `DROP CONSTRAINT IF EXISTS` to avoid errors if the constraint doesn't exist.
+- `messages_topic_id_fkey` is the assumed name of the foreign key constraint being reverted.
+
+### `ALTER TABLE messages ADD CONSTRAINT messages_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES topics(id);`
+#### Description
+This statement adds a foreign key constraint, named `messages_topic_id_fkey`, to the `messages` table. This constraint establishes a relationship between the `topic_id` column in the `messages` table and the `id` column in the `topics` table. 
+
+#### Internal Logic
+- `ALTER TABLE ... ADD CONSTRAINT` is used to add a new constraint.
+- `FOREIGN KEY (topic_id) REFERENCES topics(id)` defines the foreign key relationship, linking `topic_id` in `messages` to `id` in `topics`. 
+
+## Side Effects
+- **Database Schema Change:** This script modifies the database schema by reverting the foreign key constraint between the `messages` and `topics` tables. This change affects how data integrity is maintained between these tables.
+- **Data Integrity:** Removing the cascade delete behavior means that deleting a topic will no longer automatically delete associated messages. This could lead to orphaned records (messages without a corresponding topic) if not handled properly in application logic. 

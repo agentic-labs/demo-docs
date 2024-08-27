@@ -10,44 +10,52 @@ The migration scripts in this directory perform the following actions:
 
 1. In the "up" migration:
    - Add a new `dataset_id` column of type UUID to both the `card_metadata` and `card_collection` tables.
-   - Set up foreign key constraints linking the new `dataset_id` columns to the `id` column in the `datasets` table.
-   - Remove the `dataset_id` column from the `card_collection_bookmarks` table if it exists.
+   - Set up foreign key constraints to ensure that the `dataset_id` in these tables always references a valid `id` in the `datasets` table.
+   - Attempt to drop a `dataset_id` column from the `card_collection_bookmarks` table if it exists, likely to clean up any previous migration attempts or to prepare for future changes.
 
 2. In the "down" migration:
-   - Remove the `dataset_id` column from both the `card_metadata` and `card_collection` tables.
+   - Remove the `dataset_id` column from both the `card_metadata` and `card_collection` tables, effectively reverting the changes made by the "up" migration.
 
-These changes allow the system to associate card metadata and collections with specific datasets, enabling better organization and categorization of data within the application.
+These changes allow the system to associate card metadata and collections with specific datasets, which could be useful for organizing and filtering data based on its source or category.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL commands to apply the migration:
+This file contains the SQL commands to perform the forward migration. It adds the `dataset_id` column to the necessary tables and sets up the foreign key constraints. Here's a breakdown of its main actions:
 
 ```sql
 ALTER TABLE card_collection_bookmarks DROP COLUMN IF EXISTS dataset_id;
 
-ALTER TABLE card_metadata
-ADD COLUMN dataset_id UUID NOT NULL,
-ADD CONSTRAINT card_metadata_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);
+ALTER TABLE card_metadata ADD COLUMN dataset_id UUID NOT NULL;
+ALTER TABLE card_collection ADD COLUMN dataset_id UUID NOT NULL;
 
-ALTER TABLE card_collection
-ADD COLUMN dataset_id UUID NOT NULL,
-ADD CONSTRAINT card_collection_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id);
+ALTER TABLE card_metadata ADD CONSTRAINT card_metadata_dataset_id_fkey 
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id);
+ALTER TABLE card_collection ADD CONSTRAINT card_collection_dataset_id_fkey 
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id);
 ```
 
-The script first removes any existing `dataset_id` column from the `card_collection_bookmarks` table to avoid conflicts. It then adds the `dataset_id` column to both `card_metadata` and `card_collection` tables, setting up foreign key constraints to link them to the `datasets` table.
-
 ### down.sql
-This file contains the SQL commands to revert the migration:
+This file contains the SQL commands to revert the changes made by the up.sql script. It simply drops the `dataset_id` column from the affected tables:
 
 ```sql
 ALTER TABLE card_metadata DROP COLUMN IF EXISTS dataset_id;
 ALTER TABLE card_collection DROP COLUMN IF EXISTS dataset_id;
 ```
 
-The script simply removes the `dataset_id` column from both `card_metadata` and `card_collection` tables if they exist.
-
 ## Configuration
-The migration is identified by its timestamp: `2023-12-10-075709`. This timestamp is used to order migrations and ensure they are applied in the correct sequence.
+The migration is identified by its timestamp: 2023-12-10-075709. This timestamp is likely used by a migration management system to track which migrations have been applied and in what order.
 
-No additional configuration is required for these migration scripts. They are designed to be run by a database migration tool that supports up and down migrations.
+No additional configuration appears to be required for these migration scripts. However, it's important to note that:
+
+1. The scripts assume the existence of a `datasets` table with an `id` column of type UUID.
+2. The `card_metadata` and `card_collection` tables must exist prior to running this migration.
+3. The database system must support UUID data types.
+
+When applying these migrations, database administrators should ensure that:
+
+1. There is no existing data in the `card_metadata` or `card_collection` tables that would violate the new NOT NULL constraint on the `dataset_id` column.
+2. The `datasets` table is populated with the necessary data before establishing the foreign key relationships.
+3. Any application code interacting with these tables is updated to handle the new `dataset_id` column.
+
+It's also worth noting that the attempt to drop the `dataset_id` column from `card_collection_bookmarks` in the up migration suggests there might be some ongoing schema changes or cleanup processes happening in parallel with this migration.

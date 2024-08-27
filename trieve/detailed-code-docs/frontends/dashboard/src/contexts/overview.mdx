@@ -3,55 +3,146 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains React context components that manage and provide essential data and functionality throughout the dashboard application. The two main contexts are the DatasetContext and UserContext, which handle dataset-related information and user authentication respectively.
+This directory contains context providers for managing global state and data flow in a dashboard application. It includes two main context providers: `DatasetContext` and `UserContext`. These contexts are responsible for managing dataset information and user-related data, respectively, making them accessible throughout the application.
 
 ## What does it do?
-The contexts in this directory serve as central data stores and provide key functionality for the dashboard application:
+The contexts in this directory serve as central data stores and provide essential functionality for the dashboard application:
 
-1. DatasetContext:
-   - Fetches and stores information about the current dataset being viewed or worked on.
-   - Makes this dataset information available to other components in the application.
-   - Handles errors that may occur during dataset fetching and displays notifications to the user.
+1. Dataset Management:
+   - Fetches and stores information about the current dataset being viewed or manipulated.
+   - Provides this dataset information to other components in the application.
 
-2. UserContext:
-   - Manages user authentication, including login and logout functionality.
-   - Stores and provides access to the current user's information.
-   - Handles organization selection for the user.
-   - Provides loading states to indicate when user data is being fetched.
+2. User Management:
+   - Handles user authentication and stores user information.
+   - Manages the selection of the user's current organization.
+   - Provides login and logout functionality.
+   - Makes user data and authentication status available to other parts of the application.
 
-These contexts allow other components in the application to easily access and react to changes in dataset and user information without having to pass props through multiple levels of the component tree.
+These contexts allow for efficient state management and data sharing across different components of the dashboard, eliminating the need for prop drilling and enabling a more modular and maintainable codebase.
 
 ## Key Files
 
-1. DatasetContext.tsx
-   - Creates and exports the DatasetContext.
-   - Implements the DatasetContextWrapper component, which fetches dataset information and provides it to child components.
-   - Handles error cases and displays toast notifications for issues during dataset fetching.
+### DatasetContext.tsx
+This file defines the `DatasetContext` and `DatasetContextWrapper` component. Its main functions include:
 
-2. UserContext.tsx
-   - Creates and exports the UserContext.
-   - Implements the UserContextWrapper component, which manages user authentication, organization selection, and provides user data to child components.
-   - Handles login/logout functionality and persists user selection in local storage.
+- Creating a context for sharing dataset information.
+- Fetching dataset details from an API based on the dataset ID in the URL.
+- Handling errors during dataset fetching and displaying notifications.
+- Providing the fetched dataset information to child components through the context.
 
-Both files use the Solid.js library for reactive state management and component creation.
+Key code snippet:
+```typescript
+export const DatasetContext = createContext&lt;DatasetStore&gt;({ dataset: null });
+
+export function DatasetContextWrapper(props: DatasetStoreContextProps) {
+  const [dataset, setDataset] = createSignal&lt;Dataset | null&gt;(null);
+  const params = useParams();
+  const userContext = useContext(UserContext);
+
+  createEffect(() =&gt; {
+    if (userContext.user) {
+      const apiUrl = `${import.meta.env.VITE_API_HOST}/datasets/${params.datasetId}`;
+      fetch(apiUrl, {
+        method: "GET",
+        credentials: "include",
+      })
+        .then((response) =&gt; response.json())
+        .then((data) =&gt; {
+          setDataset(data);
+        })
+        .catch((error) =&gt; {
+          createToast("Error fetching dataset", "error");
+          console.error("Error fetching dataset:", error);
+        });
+    }
+  });
+
+  return (
+    &lt;DatasetContext.Provider value={{ dataset: dataset }}&gt;
+      {props.children}
+    &lt;/DatasetContext.Provider&gt;
+  );
+}
+```
+
+### UserContext.tsx
+This file defines the `UserContext` and `UserContextWrapper` component. Its main functions include:
+
+- Creating a context for managing user-related data and actions.
+- Handling user login and logout.
+- Managing the selection of the user's current organization.
+- Providing user data, authentication status, and related functions to child components.
+
+Key code snippet:
+```typescript
+export const UserContext = createContext&lt;UserStore&gt;({
+  user: null,
+  selectedOrganizationId: null,
+  isLoading: false,
+  login: () =&gt; {},
+  logout: () =&gt; {},
+});
+
+export function UserContextWrapper(props: UserStoreContextProps) {
+  const [user, setUser] = createSignal&lt;SlimUser | null&gt;(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = createSignal&lt;string | null&gt;(null);
+  const [isLoading, setIsLoading] = createSignal(false);
+
+  const apiHost = import.meta.env.VITE_API_HOST;
+
+  const login = async () =&gt; {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${apiHost}/auth/me`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.status === 401) {
+        window.location.href = `${apiHost}/auth/login?redirect=${window.location.href}`;
+        return;
+      }
+
+      const data = await response.json();
+      setUser(data);
+    } catch (error) {
+      console.error("Error logging in:", error);
+      createToast("Error logging in", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ... (organization selection logic and context provider)
+}
+```
 
 ## Dependencies
-The contexts rely on the following main dependencies:
+The contexts in this directory rely on the following main dependencies:
 
-1. solid-js: Used for creating reactive components and managing state.
-2. @solidjs/router: Used for accessing URL parameters and navigation.
-3. shared/types: Provides type definitions for Dataset, SlimUser, and other shared types.
+1. solid-js (version not specified):
+   - Used for creating reactive state management with signals, effects, and contexts.
+   - Chosen for its efficient reactivity system and lightweight nature.
+
+2. @solidjs/router (version not specified):
+   - Used for accessing URL parameters in the DatasetContext.
+   - Chosen for its integration with the Solid.js framework and routing capabilities.
+
+3. shared/types (internal dependency):
+   - Provides type definitions used across the application, such as `Dataset` and `SlimUser`.
+   - Ensures consistency in data structures throughout the application.
 
 ## Configuration
-While there are no explicit configuration files, both contexts use environment variables and URL parameters for configuration:
+The contexts use environment variables for configuration:
 
-1. DatasetContext:
-   - Uses URL parameters to determine the current dataset ID.
+1. `VITE_API_HOST`:
+   - Specifies the base URL for API requests.
+   - Used in both DatasetContext and UserContext for constructing API endpoints.
 
-2. UserContext:
-   - Uses URL parameters for organization selection.
-   - Uses localStorage to persist user selections.
+Example usage:
+```typescript
+const apiHost = import.meta.env.VITE_API_HOST;
+const apiUrl = `${apiHost}/datasets/${params.datasetId}`;
+```
 
-Both contexts interact with API endpoints, which are likely configured elsewhere in the application.
-
-In summary, this directory provides crucial data management and authentication functionality for the dashboard application through React contexts. These contexts centralize important application state and make it easily accessible throughout the component tree.
+This configuration allows for easy switching between different API environments (e.g., development, staging, production) without modifying the code.

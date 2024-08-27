@@ -3,83 +3,66 @@ title: "Overview"
 ---
 
 ## High-level description
-This Python script is designed to generate embeddings for input text using an external embedding server. It reads input from stdin, processes it in batches, and outputs the resulting embeddings or error messages to stdout. The script is likely used as part of a data processing pipeline, possibly in conjunction with ClickHouse database operations.
+This directory contains the necessary files to set up a custom ClickHouse server Docker image with additional functionality for generating text embeddings. The setup extends the official ClickHouse server image by incorporating a Python script for embedding generation, along with custom configurations and dependencies.
 
-## Symbols
+## What does it do?
+The Docker setup in this directory creates a specialized ClickHouse server that can generate embeddings for text data. Here's a simplified explanation of its functionality:
 
-### `completion_with_backoff`
-#### Description
-This function sends a POST request to an embedding server to generate embeddings for the given input text.
+1. It starts with a standard ClickHouse database server, which is good at handling and analyzing large amounts of data quickly.
+2. On top of this, it adds a special feature: the ability to turn text into numbers (embeddings) that represent the meaning of the text.
+3. When you put text into this customized database, it can automatically create these number representations, which are useful for things like searching similar texts or analyzing the content of documents.
+4. This setup allows you to combine the power of a fast database (ClickHouse) with advanced text processing capabilities, all in one package.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| model_input | str | The input text to generate embeddings for |
+## Key Files
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| embedding | list | A list of floats representing the embedding for the input text |
+1. **Dockerfile**
+   - Purpose: Defines the custom ClickHouse server image build process.
+   - Key aspects:
+     - Extends the official ClickHouse server image
+     - Adds custom configuration files
+     - Sets up a Python environment for the embedding script
+     - Installs necessary dependencies
 
-#### Internal Logic
-1. Retrieves the embedding server URL from an environment variable.
-2. Prepares the request parameters and headers.
-3. Sends a POST request to the embedding server.
-4. Extracts and returns the embedding from the server's response.
-5. Handles potential errors and raises exceptions if necessary.
-
-### `embed`
-#### Description
-This function wraps the `completion_with_backoff` function, handling empty inputs and errors.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| text | str | The input text to generate embeddings for |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| result | str or list | Either "NULL", "ERROR", or the embedding list |
-
-#### Internal Logic
-1. Checks if the input text is empty, returning "NULL" if so.
-2. Calls `completion_with_backoff` with the input text.
-3. Returns the embedding if successful, or "ERROR" if an exception occurs.
-
-### Main loop
-#### Description
-The main loop of the script that reads input from stdin, processes it in batches, and outputs the results.
-
-#### Internal Logic
-1. Reads a batch size from stdin.
-2. Iterates over the specified number of rows in the batch.
-3. For each row, reads a line from stdin, strips whitespace, and calls `embed`.
-4. Prints the result of `embed` for each input.
-5. Flushes stdout after processing each batch.
-6. Catches and prints any exceptions that occur during processing.
+2. **embed.py**
+   - Purpose: Python script for generating text embeddings.
+   - Key functionality:
+     - Processes input text received from ClickHouse
+     - Sends requests to an external embedding server
+     - Returns embeddings or error messages back to ClickHouse
 
 ## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| sys | Used for stdin/stdout operations and exception handling |
-| requests | Used to send HTTP requests to the embedding server |
-| os | Used to retrieve environment variables |
+The setup relies on the following key dependencies:
+
+1. **ClickHouse Server**: 
+   - Version: Latest (as specified in the Dockerfile)
+   - Purpose: Provides the core database functionality
+
+2. **Python 3**:
+   - Purpose: Runtime environment for the embedding script
+
+3. **Python Libraries**:
+   - Specified in `requirements.txt` (not provided, but referenced in the Dockerfile)
+   - Likely includes libraries such as `requests` for HTTP communication
+
+4. **External Embedding Server**:
+   - Not included in this directory, but referenced in the `embed.py` script
+   - URL is expected to be provided via an environment variable `EMBEDDING_SERVER_URL`
 
 ## Configuration
-| Option | Type | Default | Description |
-|:-------|:-----|:--------|:------------|
-| EMBEDDING_SERVER_URL | str | None | The URL of the embedding server, set as an environment variable |
-| request_timeout | int | 3 | The timeout for requests to the embedding server |
+The setup uses several configuration files and environment variables:
 
-## Error Handling
-The script implements error handling at multiple levels:
-1. In `completion_with_backoff`, specific exceptions are caught and re-raised with more context.
-2. In `embed`, any exception is caught and results in returning "ERROR".
-3. In the main loop, exceptions are caught, printed, and the loop continues to the next batch.
+1. **config.xml**:
+   - Purpose: Custom ClickHouse server configuration
+   - Location: Copied to `/etc/clickhouse-server/config.xml` in the Docker image
 
-## Performance Considerations
-1. The script processes input in batches, which can improve performance when dealing with large amounts of data.
-2. The `sys.stdout.flush()` call ensures that output is written immediately, which may be important for real-time processing or monitoring.
+2. **embedding_function.xml**:
+   - Purpose: Likely defines the embedding function for ClickHouse
+   - Location: Copied to `/etc/clickhouse-server/embedding_function.xml` in the Docker image
 
-This script is designed to be efficient and robust, handling various error conditions while providing a simple interface for generating embeddings from input text. It's likely used as part of a larger data processing pipeline, possibly in conjunction with ClickHouse database operations.
+3. **EMBEDDING_SERVER_URL** (Environment Variable):
+   - Purpose: Specifies the URL of the external embedding server
+   - Used by the `embed.py` script to send requests for embedding generation
+
+The `embed.py` script is configured to process inputs in batches, with the batch size determined by the input received from stdin. This can help optimize performance when dealing with multiple inputs.
+
+In summary, this directory contains the necessary components to create a Docker image for a ClickHouse server with integrated text embedding capabilities. It combines database functionality with machine learning features, allowing for efficient storage and analysis of text data along with their semantic representations.

@@ -3,45 +3,62 @@ title: "MultiSelect.tsx"
 ---
 
 ## High-level description
-This code defines a `MultiSelect` component in React using SolidJS. It creates a customizable dropdown menu that allows users to select multiple items from a list. The component handles the display of selected items, the dropdown functionality, and the selection/deselection of individual items.
+This code defines a `MultiSelect` component in React using SolidJS. It creates a customizable dropdown menu that allows users to select multiple items from a list. The component is designed to be reusable and flexible, with support for disabled state, custom item types, and controlled selection.
 
 ## Code Structure
-The `MultiSelect` component is the main export of this file. It uses various SolidJS components and hooks to manage its state and render the UI. The component is composed of a button that displays the selected items and a dropdown list of options when clicked.
+The `MultiSelect` component is the main export of this file. It uses several sub-components from the `terracotta` library to create the dropdown functionality. The component manages its own state for selected items and syncs this with the parent component through props.
 
 ## Symbols
 
-### `MultiSelect`
+### `MultiSelect&lt;I extends Item&gt;`
 #### Description
-A functional component that creates a multi-select dropdown menu.
+A generic function component that creates a multi-select dropdown menu.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| props | Object | Contains the component's properties |
-| props.disabled | boolean | Optional. If true, disables the dropdown |
+| props | Object | Configuration object for the component |
+| props.disabled | boolean (optional) | Whether the dropdown is disabled |
 | props.items | I[] | Array of selectable items |
-| props.selected | I[] | Optional. Array of initially selected items |
-| props.setSelected | function | Callback function to update the selected items |
+| props.selected | I[] (optional) | Array of initially selected items |
+| props.setSelected | (selected: I[]) =&gt; void | Callback function to update selected items in parent component |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| JSX.Element | JSX | The rendered multi-select component |
+| JSX.Element | JSX.Element | The rendered multi-select dropdown component |
 
 #### Internal Logic
-1. Initializes the selected items state using `createSignal`.
-2. Uses `createEffect` to filter out any selected items that are no longer in the `props.items` array.
-3. Renders a `Listbox` component from the Terracotta library, which includes:
-   - A button displaying the selected items or "None selected" if empty.
-   - A dropdown list of options, each wrapped in a `ListboxOption` component.
-4. Handles item selection/deselection and updates the parent component using the `setSelected` prop.
+1. Initialize state for selected items using `createSignal`.
+2. Create a `setSelected` function that updates both local state and parent component.
+3. Use `createEffect` to sync selected items with available items, removing any selected items that are no longer in the item pool.
+4. Render a `Listbox` component from `terracotta` library, configuring it with multiple selection and toggle functionality.
+5. Render selected items as tags within the button.
+6. Use `DisclosureStateChild` to conditionally render the dropdown options.
+7. Render each item in the dropdown, showing a checkmark for selected items.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| solid-js | Provides core functionality for building user interfaces |
-| solid-icons | Provides icons used in the component |
-| terracotta | Provides UI components like Listbox |
+| solid-icons/ai | Provides the checkmark icon (AiOutlineCheck) |
+| solid-icons/tb | Provides the selector icon (TbSelector) |
+| solid-js | Core library for reactive programming |
+| terracotta | Provides UI components for the dropdown (Listbox, ListboxButton, etc.) |
 
 ## Performance Considerations
-The component uses `createEffect` to keep the selected items in sync with the available items, which could impact performance if the list of items is very large or frequently changing. The use of `For` component for rendering list items helps optimize rendering performance.
+The component uses `createEffect` to keep the selected items in sync with the available items. This effect runs on every render, which could potentially impact performance if the list of items is very large. Consider optimizing this if dealing with a large number of items.
+
+## Error Handling
+The component doesn't implement explicit error handling. It relies on the parent component to provide valid props and handle any errors that might occur during the selection process.
+
+## API/Interface Reference
+The `MultiSelect` component expects items to conform to the `Item` interface:
+
+```typescript
+interface Item {
+  id: string;
+  name: string;
+}
+```
+
+This interface allows the component to work with various item types as long as they have `id` and `name` properties.

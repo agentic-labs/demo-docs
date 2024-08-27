@@ -3,76 +3,74 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for implementing automatic `updated_at` timestamp updates in a database. It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them. The migration adds `created_at` and `updated_at` columns to the `card_verification` table and creates triggers to automatically update these timestamps across various tables in the database.
+This directory contains SQL migration scripts for adding and removing timestamp columns and triggers in a database. The migration adds `created_at` and `updated_at` columns to the `card_verification` table and creates triggers to automatically update the `updated_at` column on various tables when a row is updated. The directory includes both `up.sql` and `down.sql` scripts to apply and revert these changes, respectively.
 
 ## What does it do?
-The migration scripts in this directory implement a system for automatically tracking when database records are created and last updated. This is achieved by:
+The migration scripts in this directory perform the following tasks:
 
-1. Adding `created_at` and `updated_at` columns to the `card_verification` table.
-2. Creating functions that update these timestamps automatically.
-3. Setting up triggers on various tables to call these functions whenever a record is updated.
+1. Add timestamp tracking: They add `created_at` and `updated_at` columns to the `card_verification` table. These columns automatically record when a row is created and last updated.
 
-This system ensures that the database always has accurate information about when each record was last modified, which can be crucial for tracking changes, auditing, and maintaining data integrity.
+2. Create automatic update triggers: The scripts set up triggers on multiple tables that automatically update the `updated_at` column whenever a row is modified. This ensures that the last modification time is always accurate without requiring manual updates.
 
-When applied, the `up.sql` script sets up this system. If needed, the `down.sql` script can be used to remove all these changes, reverting the database to its previous state without automatic timestamp updates.
+3. Implement cascading updates: For the `card_collection_bookmarks` table, a special trigger is created that not only updates its own `updated_at` column but also updates the `updated_at` column of a related row in the `main_table`. This maintains consistency across related tables.
+
+4. Provide rollback functionality: The `down.sql` script allows for reverting all these changes, removing the added columns, triggers, and functions. This is crucial for database version control and allows for easy rollback if needed.
 
 ## Key Files
 
-### up.sql
-This file contains the SQL commands to implement the automatic timestamp update system. Its main components are:
+1. `up.sql`:
+   This file contains the SQL commands to apply the migration. It adds the new columns, creates the necessary functions, and sets up the triggers on various tables. Key operations include:
+   - Adding `created_at` and `updated_at` columns to the `card_verification` table.
+   - Creating the `update_updated_at()` function to update the `updated_at` column.
+   - Creating the `update_main_table_updated_at()` function for cascading updates.
+   - Setting up triggers on multiple tables to use these functions.
 
-1. Altering the `card_verification` table to add `created_at` and `updated_at` columns.
-2. Creating two functions:
-   - `update_updated_at()`: Updates the `updated_at` column of a row to the current timestamp.
-   - `update_main_table_updated_at()`: Updates the `updated_at` column in the `main_table` based on the `collection_id` of the updated row.
-3. Creating triggers on various tables to execute these functions before update operations.
+   Example of adding columns:
+   ```sql
+   ALTER TABLE card_verification
+   ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
+   ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT current_timestamp;
+   ```
 
-Here's an example of how the `update_updated_at()` function is defined:
+   Example of creating a trigger:
+   ```sql
+   CREATE TRIGGER update_updated_at
+   BEFORE UPDATE ON card_collection
+   FOR EACH ROW
+   EXECUTE FUNCTION update_updated_at();
+   ```
 
-```sql
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = current_timestamp;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
+2. `down.sql`:
+   This file contains the SQL commands to revert the migration. It removes the added columns, drops the created functions, and removes all the triggers. Key operations include:
+   - Dropping the `created_at` and `updated_at` columns from the `card_verification` table.
+   - Dropping the `update_updated_at()` and `update_main_table_updated_at()` functions.
+   - Removing all the triggers created in the `up.sql` script.
 
-And here's how a trigger is created to use this function:
+   Example of removing columns:
+   ```sql
+   ALTER TABLE card_verification 
+   DROP COLUMN created_at,
+   DROP COLUMN updated_at;
+   ```
 
-```sql
-CREATE TRIGGER update_updated_at
-BEFORE UPDATE ON card_verification
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at();
-```
+   Example of dropping a function:
+   ```sql
+   DROP FUNCTION IF EXISTS update_updated_at() CASCADE;
+   ```
 
-### down.sql
-This file contains SQL commands to revert the changes made by `up.sql`. It performs the following operations:
-
-1. Drops the `created_at` and `updated_at` columns from the `card_verification` table.
-2. Drops the `update_updated_at()` and `update_main_table_updated_at()` functions.
-3. Drops all the triggers created in the `up.sql` script.
-
-For example, here's how it drops a trigger:
-
-```sql
-DROP TRIGGER IF EXISTS update_updated_at ON card_verification;
-```
+These files work together to provide a reversible database migration that adds timestamp tracking and automatic update functionality to the database schema.
 
 ## Configuration
-This migration doesn't rely on any external configuration files or environment variables. All necessary information is contained within the SQL scripts themselves. However, the database connection details (such as host, port, database name, and credentials) would typically be configured in the application that runs these migrations.
+The migration scripts use SQL commands and do not rely on external configuration files or environment variables. However, they assume certain table structures and naming conventions:
 
-The migration is designed to work with a PostgreSQL database, as evidenced by the use of PostgreSQL-specific syntax and features like the `plpgsql` language for functions.
+1. Table names: The scripts reference several table names such as `card_verification`, `card_collection`, `card_collection_bookmarks`, etc. These tables must exist in the database for the migration to succeed.
 
-It's important to note that this migration affects several tables in the database:
-- `card_verification`
-- `main_table`
-- `card_collection`
-- `card_collection_item`
-- `card_collection_item_verification`
+2. Column names: The scripts add or remove `created_at` and `updated_at` columns. If these columns already exist or don't exist when expected, the migration may fail.
 
-Ensure that these tables exist in the database before applying this migration.
+3. Function names: The scripts create and drop functions named `update_updated_at()` and `update_main_table_updated_at()`. These names should not conflict with existing functions in the database.
 
-In conclusion, this migration implements a robust system for automatic timestamp updates, which can greatly enhance the ability to track and audit changes in the database. The ability to easily revert these changes provides flexibility in database management and development processes.
+4. Trigger names: Multiple triggers named `update_updated_at` are created on different tables. Ensure these names don't conflict with existing triggers.
+
+5. Database compatibility: The SQL syntax used in these scripts (such as `CREATE OR REPLACE FUNCTION` and `BEFORE UPDATE`) is compatible with PostgreSQL. Ensure your database system supports these features.
+
+When applying this migration, ensure that the database state matches the expected schema, and that you have the necessary permissions to create and drop columns, functions, and triggers.

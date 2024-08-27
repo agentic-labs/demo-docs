@@ -3,44 +3,77 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL migration file is designed to revert the changes made in the corresponding `up.sql` file. It primarily focuses on removing the `NOT NULL` constraint from the `chunk_count` column in the `organization_usage_counts` table and dropping a trigger function named `update_organization_chunk_count`.
+This SQL script reverts the changes introduced by the migration `2024-07-02-205044_fix-total-chunk-count`. It aims to undo modifications made to the `organization_usage_counts` table, specifically related to the `chunk_count` column.
+
+## Code Structure
+The script executes a series of SQL statements in order to revert the database changes. It starts by undoing the `NOT NULL` constraint on the `chunk_count` column and then removes a trigger function named `update_organization_chunk_count`. Comments within the script indicate steps that are not strictly necessary for data reversal but were part of the original migration.
 
 ## Symbols
 
-### ALTER TABLE organization_usage_counts
+### `-- This file should undo anything in `up.sql``
 #### Description
-This SQL command modifies the `organization_usage_counts` table by removing the `NOT NULL` constraint from the `chunk_count` column.
+This is a comment indicating the purpose of the file. It highlights that this "down" migration script is designed to reverse the changes made by its corresponding "up" migration script.
 
 #### Internal Logic
-The command uses the `ALTER COLUMN` clause to modify the `chunk_count` column, specifically using `DROP NOT NULL` to remove the not-null constraint.
+This is a comment and does not contain executable code.
 
-### DROP FUNCTION IF EXISTS update_organization_chunk_count
+### `-- Reverse setting chunk_count to 0 for NULL values (not necessary to reverse data update)`
 #### Description
-This SQL command removes the trigger function named `update_organization_chunk_count` if it exists in the database.
+This comment explains that the following SQL statement was part of the original migration but is not strictly necessary to reverse. It suggests that setting `chunk_count` to `NULL` where it was previously `0` is not crucial for data integrity in the rollback.
 
 #### Internal Logic
-The `IF EXISTS` clause ensures that the command doesn't throw an error if the function doesn't exist. This is a safe way to ensure the function is removed without causing issues if it's not present.
+This is a comment and does not contain executable code.
 
-## Comments
-The file contains several commented-out SQL statements. These comments provide insight into potential additional reversions that were considered but not implemented:
+### `UPDATE organization_usage_counts SET chunk_count = NULL WHERE chunk_count = 0;`
+#### Description
+This SQL statement was part of the original migration and is being retained in the down migration for potential data consistency, even though it's marked as not strictly necessary. It finds records in the `organization_usage_counts` table where `chunk_count` is `0` and sets those values to `NULL`.
 
-1. Reverting the `chunk_count` to `NULL` for values that were set to 0:
-   ```sql
-   -- UPDATE organization_usage_counts
-   -- SET chunk_count = NULL
-   -- WHERE chunk_count = 0;
-   ```
+#### Internal Logic
+- **`UPDATE organization_usage_counts`**: This clause specifies the target table for the update operation.
+- **`SET chunk_count = NULL`**: This clause sets the value of the `chunk_count` column to `NULL`.
+- **`WHERE chunk_count = 0`**: This clause filters the rows to be updated, targeting only those where the `chunk_count` column currently holds a value of `0`.
 
-2. Reverting the update of `chunk_count` to a calculated sum:
-   ```sql
-   -- UPDATE organization_usage_counts
-   -- SET chunk_count = NULL;
-   ```
+### `-- Reverse altering the column to SET NOT NULL`
+#### Description
+This comment indicates that the following SQL statement is intended to reverse a change where the `chunk_count` column was made to not accept `NULL` values.
 
-These commented sections suggest that the original `up.sql` migration might have included data updates that are not being explicitly reverted in this down migration. The comments indicate that reversing these data changes was deemed unnecessary.
+#### Internal Logic
+This is a comment and does not contain executable code.
 
-## Notes
-1. The file follows the convention of undoing changes made in the corresponding `up.sql` file.
-2. The migration focuses on structural changes (removing constraints and dropping functions) rather than data reversions.
-3. The presence of commented-out code suggests that careful consideration was given to what needed to be reverted and what could be safely left as is.
-4. This migration script appears to be part of a larger change related to managing chunk counts in organization usage, possibly involving triggers for automatic updates.
+### `ALTER TABLE organization_usage_counts ALTER COLUMN chunk_count DROP NOT NULL;`
+#### Description
+This SQL statement removes the `NOT NULL` constraint from the `chunk_count` column in the `organization_usage_counts` table. This allows the column to accept `NULL` values again.
+
+#### Internal Logic
+- **`ALTER TABLE organization_usage_counts`**: This clause specifies the target table for alteration.
+- **`ALTER COLUMN chunk_count DROP NOT NULL`**: This clause modifies the `chunk_count` column, specifically removing the constraint that prevented it from holding `NULL` values.
+
+### `-- Reverse the update of chunk_count to the calculated sum (not necessary to reverse data update)`
+#### Description
+This comment explains that the following SQL statement, while part of the original migration, is not essential for reversing the data changes. It implies that reverting the calculation of `chunk_count` is not critical for data integrity during the rollback.
+
+#### Internal Logic
+This is a comment and does not contain executable code.
+
+### `-- UPDATE organization_usage_counts SET chunk_count = NULL;`
+#### Description
+This SQL statement, commented out, was part of the original migration and is kept here for reference. It suggests that the original migration involved updating the `chunk_count` column with a calculated sum. However, it's marked as unnecessary for the rollback process.
+
+#### Internal Logic
+This is a comment and does not contain executable code.
+
+### `-- Drop the trigger function`
+#### Description
+This comment indicates that the following SQL statement will remove a database trigger function.
+
+#### Internal Logic
+This is a comment and does not contain executable code.
+
+### `DROP FUNCTION IF EXISTS update_organization_chunk_count;`
+#### Description
+This SQL statement attempts to drop a function named `update_organization_chunk_count`. The `IF EXISTS` clause ensures that the statement executes without error even if the function does not exist. This is a common practice in rollback scripts to handle cases where the original migration might not have been successful in creating the function.
+
+#### Internal Logic
+- **`DROP FUNCTION`**: This clause initiates the process of removing a database function.
+- **`IF EXISTS`**: This clause adds a conditional check to the statement. The function will only be dropped if it currently exists in the database.
+- **`update_organization_chunk_count`**: This is the name of the function to be dropped.

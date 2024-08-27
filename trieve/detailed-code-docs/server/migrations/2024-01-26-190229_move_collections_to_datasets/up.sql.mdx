@@ -3,7 +3,7 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script migrates the database schema to move collections from being associated with users to being associated with datasets. It removes the `author_id` column from `chunk_collection`, renames `user_collection_counts` to `dataset_collection_counts`, and updates the trigger function `update_collection_counts` to reflect these changes.
+This SQL script migrates the database schema to move collections from being associated with users to being associated with datasets. It removes the `author_id` column from `chunk_collection`, renames `user_collection_counts` to `dataset_collection_counts`, and updates the trigger function `update_collection_counts` accordingly.
 
 ## Symbols
 
@@ -11,49 +11,25 @@ This SQL script migrates the database schema to move collections from being asso
 #### Description
 This statement removes the `author_id` column from the `chunk_collection` table, indicating that collections are no longer directly associated with users.
 
-#### Inputs
-N/A - This is a SQL statement, not a function.
-
-#### Outputs
-N/A - This is a SQL statement, not a function.
-
-#### Internal Logic
-Drops the `author_id` column from the `chunk_collection` table.
-
-### `ALTER TABLE user_collection_counts ...`
+### `ALTER TABLE user_collection_counts DROP COLUMN user_id`
 #### Description
-These statements modify the `user_collection_counts` table to associate collections with datasets instead of users. It first removes the `user_id` column and then adds a `dataset_id` column. Finally, it renames the table to `dataset_collection_counts`.
+This statement removes the `user_id` column from the `user_collection_counts` table as part of the migration process.
 
-#### Inputs
-N/A - These are SQL statements, not functions.
+### `ALTER TABLE user_collection_counts ADD COLUMN dataset_id uuid`
+#### Description
+This statement adds a new column `dataset_id` of type `uuid` to the `user_collection_counts` table. This column will store the association between datasets and collections.
 
-#### Outputs
-N/A - These are SQL statements, not functions.
-
-#### Internal Logic
-1. Drops the `user_id` column from the `user_collection_counts` table.
-2. Adds a `dataset_id` column to the `user_collection_counts` table.
-3. Renames the `user_collection_counts` table to `dataset_collection_counts`.
+### `ALTER TABLE user_collection_counts RENAME TO dataset_collection_counts`
+#### Description
+This statement renames the table `user_collection_counts` to `dataset_collection_counts` to reflect the new schema where collections are associated with datasets.
 
 ### `CREATE OR REPLACE FUNCTION public.update_collection_counts()`
 #### Description
-This statement defines a trigger function named `update_collection_counts` that updates the `dataset_collection_counts` table whenever a row is inserted, updated, or deleted in a related table (likely the table containing datasets).
-
-#### Inputs
-This function implicitly takes the inserted, updated, or deleted row as input through the `NEW` and `OLD` special variables within the trigger context.
-
-#### Outputs
-This function returns `NULL` as it is a trigger function primarily intended for its side effects.
+This statement creates or replaces a trigger function named `update_collection_counts`. This function is triggered on INSERT, UPDATE, and DELETE operations on a table (not explicitly specified in the provided code).
 
 #### Internal Logic
-1. **Trigger Activation:** This function is triggered on INSERT, UPDATE, and DELETE operations on a related table.
-2. **Conditional Logic:** It uses an `IF` statement to determine the triggering operation (INSERT, UPDATE, or DELETE).
-3. **INSERT/UPDATE Case:** If the operation is INSERT or UPDATE, it inserts a new row into `dataset_collection_counts` with the `dataset_id`, `user_id`, and an initial `collection_count` of 1. If a row with the same `user_id` already exists, it increments the existing `collection_count` by 1.
-4. **DELETE Case:** If the operation is DELETE, it decrements the `collection_count` in `dataset_collection_counts` for the corresponding `user_id`.
-5. **Return Value:** The function returns `NULL` as it primarily modifies data.
+The function checks the type of operation (`TG_OP`) being performed:
+- **INSERT/UPDATE:** Inserts a new row into `dataset_collection_counts` with the `dataset_id`, `user_id`, and an initial `collection_count` of 1. If a row with the same `user_id` already exists, it increments the `collection_count` by 1.
+- **DELETE:** Decrements the `collection_count` in `dataset_collection_counts` for the corresponding `user_id`.
 
-#### Side Effects
-- Modifies the `dataset_collection_counts` table by inserting, updating, or deleting rows based on changes in a related table.
-
-## Error Handling
-This script does not implement specific error handling beyond the standard error handling mechanisms of SQL. Any errors during the execution of the SQL statements will likely result in a rollback of the transaction.
+The function always returns `NULL` as it is a trigger function and does not directly modify the data being inserted, updated, or deleted.

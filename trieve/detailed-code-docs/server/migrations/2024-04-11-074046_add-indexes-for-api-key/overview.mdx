@@ -3,40 +3,44 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for adding and removing indexes on the `user_api_key` table in a PostgreSQL database. The migration is dated 2024-04-11 and is specifically designed to improve query performance for API key-related operations.
+This directory contains SQL migration scripts for adding and removing indexes on the `user_api_key` table in a database. The migration is dated 2024-04-11 and focuses on improving query performance for API key-related operations.
 
 ## What does it do?
-The migration adds two new indexes to the `user_api_key` table:
-1. An index on the `api_key_hash` column
-2. An index on the `blake3_hash` column
+The migration scripts in this directory perform the following actions:
 
-These indexes are created to speed up searches and lookups based on these columns, which likely contain hashed versions of API keys. The migration also includes a corresponding "down" migration to remove these indexes if needed.
+1. In the "up" migration:
+   - Create an index on the `api_key_hash` column of the `user_api_key` table.
+   - Create an index on the `blake3_hash` column of the `user_api_key` table.
 
-By adding these indexes, the database can more quickly find rows in the `user_api_key` table when queried using the `api_key_hash` or `blake3_hash` columns. This can significantly improve the performance of API key validation or lookup operations, especially as the number of API keys in the system grows.
+2. In the "down" migration:
+   - Remove the index on the `api_key_hash` column.
+   - Remove the index on the `blake3_hash` column.
+
+These changes are designed to improve the speed of database queries that search for API keys using either the `api_key_hash` or `blake3_hash` values. By adding indexes, the database can more quickly locate the relevant rows without having to scan the entire table.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to create the new indexes.
-   - Creates `user_api_key_api_key_hash_index` on the `api_key_hash` column
-   - Creates `user_api_key_blake3_hash_index` on the `blake3_hash` column
+### up.sql
+This file contains the SQL commands to create the new indexes:
 
-2. `down.sql`: This file contains the SQL commands to remove the indexes created by `up.sql`.
-   - Drops `user_api_key_api_key_hash_index`
-   - Drops `user_api_key_blake3_hash_index`
+```sql
+CREATE INDEX IF NOT EXISTS user_api_key_api_key_hash_index ON user_api_key (api_key_hash);
+CREATE INDEX IF NOT EXISTS user_api_key_blake3_hash_index ON user_api_key (blake3_hash);
+```
 
-Both files use `IF EXISTS` (for dropping) and `IF NOT EXISTS` (for creating) clauses to ensure idempotency, allowing the migration to be run multiple times without causing errors.
+The `IF NOT EXISTS` clause ensures that the operation is idempotent, meaning it can be safely run multiple times without causing errors or duplicate indexes.
 
-## Dependencies
-The migration files are written for PostgreSQL databases. While the exact version is not specified, the syntax used is compatible with recent versions of PostgreSQL that support the `CREATE INDEX IF NOT EXISTS` syntax.
+### down.sql
+This file contains the SQL commands to remove the indexes created by the up migration:
 
-## Performance Considerations
-Adding these indexes will likely improve read performance for queries that filter or search on the `api_key_hash` and `blake3_hash` columns. However, it's important to note that indexes can slightly slow down write operations (inserts, updates, and deletes) on the `user_api_key` table, as the indexes need to be updated along with the table data.
+```sql
+DROP INDEX IF EXISTS user_api_key_api_key_hash_index;
+DROP INDEX IF EXISTS user_api_key_blake3_hash_index;
+```
 
-The trade-off between improved read performance and slightly decreased write performance should be considered based on the application's usage patterns. In most API key systems, read operations (validating or looking up API keys) are much more frequent than write operations (creating or deleting API keys), so this trade-off is usually beneficial.
+Again, the `IF EXISTS` clause makes these operations safe to run multiple times, as they will only attempt to drop the indexes if they exist.
 
-When the "down" migration is applied, removing these indexes will reverse these performance characteristics. Queries using these columns may become slower, especially for large datasets, but write operations might slightly improve.
+## Configuration
+The migration is identified by its timestamp: 2024-04-11-074046. This naming convention is likely used by a database migration tool to track which migrations have been applied and in what order.
 
-## Error Handling
-Both migration files include basic error handling through the use of `IF EXISTS` and `IF NOT EXISTS` clauses. This prevents the migration from failing if the indexes already exist (when creating) or don't exist (when dropping), allowing the migration to proceed safely even if it's run multiple times or in an unexpected state.
-
-In conclusion, this migration is a targeted performance optimization for API key operations, likely implemented in response to observed or anticipated performance issues with API key lookups as the system scales.
+The migration assumes the existence of a `user_api_key` table with columns `api_key_hash` and `blake3_hash`. The specific database system is not explicitly mentioned, but the SQL syntax is compatible with common relational database management systems like PostgreSQL or MySQL.

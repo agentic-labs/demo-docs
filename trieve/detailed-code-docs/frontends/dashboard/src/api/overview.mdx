@@ -3,81 +3,78 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains API-related functionality for the dashboard frontend of the Trieve application. It includes modules for creating datasets, uploading sample data, and a centralized Trieve API client instance.
+This directory contains API-related functions for the dashboard frontend of a data management application. The main functionalities include creating new datasets and uploading sample data to existing datasets. These functions serve as an interface between the frontend and the backend API, handling data transformation and communication.
 
 ## What does it do?
-The code in this directory facilitates communication between the dashboard frontend and the Trieve backend API. It provides functions for creating new datasets, uploading sample data to existing datasets, and a configured API client for making various API calls throughout the application.
+The code in this directory enables two primary operations:
 
-1. Dataset Creation: It allows users to create new datasets by sending a POST request to the API with the dataset name and organization ID.
-2. Sample Data Upload: It enables the upload of sample data to a dataset by parsing a CSV file, transforming the data, and sending it to the API in batches.
-3. API Client: It provides a centralized, pre-configured Trieve API client instance for use throughout the dashboard application.
+1. Creating a new dataset: Users can create a new dataset by providing a name, organization ID, and server configuration. This information is sent to the backend API, which then creates the dataset and returns its details.
+
+2. Uploading sample data: Users can upload sample data to an existing dataset. The process involves downloading a CSV file from a predefined URL, parsing its contents, transforming the data into the required format, and then sending it to the API in batches. This allows users to populate their datasets with initial data for testing or demonstration purposes.
+
+Both operations involve making HTTP requests to the backend API, handling responses, and managing potential errors. The code also includes progress reporting for the data upload process, allowing the frontend to display upload status to the user.
 
 ## Key Files
 
 ### createDataset.ts
-This file contains the `createNewDataset` function, which handles the creation of new datasets. It sends a POST request to the API with the dataset information and handles the response, including error scenarios.
+This file contains the `createNewDataset` function, which is responsible for sending a POST request to the API to create a new dataset. It takes in the dataset name, organization ID, and server configuration as parameters and returns a Promise that resolves to the newly created Dataset object.
+
+Key aspects:
+- Uses the `fetch` API to make HTTP requests
+- Includes error handling for API responses
+- Utilizes environment variables for API host configuration
 
 ### uploadSampleData.ts
-This file defines the `uploadSampleData` function, which is responsible for uploading sample data to a dataset. It uses the Papa Parse library to process a CSV file, transforms the data, and sends it to the Trieve API in batches.
+This file contains functions for uploading sample data to an existing dataset. The main function `uploadSampleData` orchestrates the entire process of downloading a CSV file, parsing it, transforming the data, and uploading it to the API.
 
-### trieve.ts
-This file exports an instance of the Trieve API client, configured with the base URL obtained from the environment. This client serves as the main interface for making API calls to the Trieve backend throughout the dashboard application.
+Key components:
+- `sendDataToTrieve`: Sends transformed data to the API in batches
+- `transformRow`: Converts CSV row data into the format expected by the API
+- `uploadSampleData`: Main function that manages the entire upload process
 
 ## Dependencies
-1. trieve-fetch-client: Used to create the Trieve API client instance.
-2. Papa Parse: Utilized for parsing CSV data in the sample data upload process.
+1. Papa Parse (version not specified): Used for parsing CSV data in `uploadSampleData.ts`.
+   - Chosen for its robust CSV parsing capabilities and ease of use in JavaScript/TypeScript environments.
+
+2. Fetch API: Used for making HTTP requests to the backend API.
+   - Built-in browser API, chosen for its wide support and simplicity in making network requests.
 
 ## Configuration
-The code relies on the following environment variable:
-- VITE_API_HOST: Specifies the base URL for API requests.
+The code uses environment variables for configuration:
 
-Example usage of the `createNewDataset` function:
+- `VITE_API_HOST`: Specifies the base URL of the API. This is used in both `createDataset.ts` and `uploadSampleData.ts` to construct the full API endpoint URLs.
 
+Example usage:
 ```typescript
-import { createNewDataset } from './api/createDataset';
-
-const createDataset = async () =&gt; {
-  try {
-    const dataset = await createNewDataset('New Dataset', 'org123', serverConfig);
-    console.log('Dataset created:', dataset);
-  } catch (error) {
-    console.error('Error creating dataset:', error);
-  }
-};
+const api_host = import.meta.env.VITE_API_HOST;
 ```
 
-Example usage of the `uploadSampleData` function:
+This configuration allows for easy switching between different API environments (e.g., development, staging, production) without modifying the code.
 
-```typescript
-import { uploadSampleData } from './api/uploadSampleData';
+## Error Handling
+Both files implement error handling to manage potential issues during API communication:
 
-const uploadData = async () =&gt; {
-  try {
-    const success = await uploadSampleData('dataset123', (progress) =&gt; {
-      console.log(`Upload progress: ${progress}%`);
-    });
-    if (success) {
-      console.log('Sample data uploaded successfully');
-    }
-  } catch (error) {
-    console.error('Error uploading sample data:', error);
-  }
-};
-```
+1. In `createDataset.ts`:
+   - If the API response is not successful (status code outside 200-299 range), it parses the error response and throws a new error with the message from the API.
 
-Example usage of the Trieve API client:
+   ```typescript
+   if (!response.ok) {
+     const errorData: DefaultError = await response.json();
+     throw new Error(errorData.message);
+   }
+   ```
 
-```typescript
-import { trieve } from './api/trieve';
+2. In `uploadSampleData.ts`:
+   - The `transformRow` function returns `undefined` for invalid rows, which are then filtered out.
+   - The `uploadSampleData` function catches any errors during the process and rejects the promise with `false`.
 
-const fetchDatasets = async () =&gt; {
-  try {
-    const response = await trieve.listDatasets();
-    console.log('Datasets:', response.data);
-  } catch (error) {
-    console.error('Error fetching datasets:', error);
-  }
-};
-```
+   ```typescript
+   } catch (error) {
+     console.error("Error uploading sample data:", error);
+     reject(false);
+   }
+   ```
 
-These API-related functions and the centralized client provide a robust foundation for interacting with the Trieve backend, enabling the dashboard to perform essential operations such as dataset management and data upload.
+This error handling ensures that the frontend can gracefully manage and display errors to the user, improving the overall user experience and making debugging easier.
+
+In conclusion, this API directory provides a clean interface for the dashboard frontend to interact with the backend, handling dataset creation and sample data upload while managing data transformation, error handling, and configuration.

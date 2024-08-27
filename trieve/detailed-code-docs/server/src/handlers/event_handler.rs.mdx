@@ -3,82 +3,52 @@ title: "event_handler.rs"
 ---
 
 ## High-level description
-The `get_events` function retrieves events for a specific dataset, paginated, and filtered by event types. It uses a Clickhouse database to store and query the events. The function is exposed as a POST endpoint `/events` and requires authentication.
+This code defines a handler for retrieving events associated with a specific dataset. It allows fetching events with pagination and filtering by event types. The handler interacts with a ClickHouse database to retrieve the events and return them in a structured format.
 
-## References
-- `LoggedUser` from `super::auth_handler`
-- `DatasetAndOrgWithSubAndPlan`, `EventType`, `EventTypeRequest` from `crate::data::models`
-- `ServiceError` from `crate::errors`
-- `get_events_query` from `crate::operators::event_operator`
+## Code Structure
+The main function `get_events` is an HTTP handler that processes the request, retrieves events from the database, and returns the response. It relies on the `get_events_query` function from the `event_operator` module to perform the actual database query.
 
 ## Symbols
+
 ### `get_events`
 #### Description
-This function handles the `/events` endpoint, retrieving events for a specific dataset from the Clickhouse database. It takes authentication information, dataset details, pagination and filtering parameters, and a Clickhouse client as input. It returns a paginated list of events and the total page count.
+This is the main handler function for the GET /events endpoint. It retrieves events for a specified dataset with pagination and optional event type filtering.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `_user` | LoggedUser | Authentication information of the logged-in user. |
-| `dataset_org_plan_sub` | DatasetAndOrgWithSubAndPlan | Details of the dataset, organization, subscription plan, etc. |
-| `get_events_data` | web::Json&lt;GetEventsData&gt; | JSON payload containing pagination and filtering parameters. |
-| `clickhouse_client` | web::Data&lt;clickhouse::Client&gt; | Shared Clickhouse client instance. |
+| _user | LoggedUser | The authenticated user (unused in this function) |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Contains dataset information |
+| get_events_data | web::Json&lt;GetEventsData&gt; | Request payload containing pagination and filtering options |
+| clickhouse_client | web::Data&lt;clickhouse::Client&gt; | ClickHouse database client |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| (Implicit) | Result&lt;HttpResponse, actix_web::Error&gt; | Returns an Ok result with a 200 OK HTTP response containing the paginated list of events and page count on success. Returns an error result with appropriate error code and message on failure. |
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | HTTP response containing events or an error |
 
 #### Internal Logic
-1. **Extract and validate event types:**
-    - Retrieves the requested event types from the `get_events_data` payload.
-    - If no types are specified or the list is empty, defaults to all event types.
-2. **Query the database:**
-    - Calls the `get_events_query` function to fetch the events from the Clickhouse database based on the provided parameters.
-    - Maps any errors from the query to a `ServiceError::BadRequest`.
-3. **Return the response:**
-    - On success, returns a 200 OK HTTP response with the retrieved events and page count serialized as JSON.
+1. Extract event types from the request payload or use all event types if not specified.
+2. Call `get_events_query` to retrieve events from the database.
+3. Return the events as a JSON response.
 
 ### `GetEventsData`
 #### Description
-This struct defines the structure of the JSON payload expected by the `/events` endpoint. It allows specifying the page number, page size, and a list of event types to filter the results.
+A struct representing the request payload for the get_events endpoint.
 
-#### Inputs
-N/A - This is a data structure, not a function.
-
-#### Outputs
-N/A - This is a data structure, not a function.
-
-#### Internal Logic
-N/A - This is a data structure, not a function.
-
-### `EventId`
-#### Description
-This struct defines the structure for identifying a specific event using its notification ID.
-
-#### Inputs
-N/A - This is a data structure, not a function.
-
-#### Outputs
-N/A - This is a data structure, not a function.
-
-#### Internal Logic
-N/A - This is a data structure, not a function.
-
-## Side Effects
-This code interacts with a Clickhouse database to retrieve data.
+#### Fields
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| page | Option&lt;i64&gt; | The page number to retrieve (default: 1) |
+| page_size | Option&lt;i64&gt; | Number of items per page (default: 10) |
+| event_types | Option&lt;Vec&lt;EventTypeRequest&gt;&gt; | Types of events to retrieve |
 
 ## Dependencies
-- `actix-web`
-- `serde`
-- `utoipa`
-- `tracing`
-- `clickhouse`
-- `uuid`
+- actix_web: Web framework for handling HTTP requests
+- serde: Serialization/deserialization library
+- utoipa: API documentation generator
 
-## API/Interface Reference
-| Endpoint | Method | Request | Response | Description |
-|:---------|:-------|:--------|:---------|:------------|
-| /events | POST | `{ "page": number, "page_size": number, "event_types": ["event_type_1", "event_type_2"] }` | `{ "events": [...], "page_count": number }` | Retrieves a paginated list of events for a specific dataset, filtered by event types. Requires authentication. |
+## Error Handling
+The function uses the `ServiceError` enum to handle and return appropriate error responses. Errors are mapped to HTTP status codes and error messages.
 
-The `event_types` field is optional. If not provided, all event types are returned.
+Your response should not exceed 3000 words or 4000 tokens. Focus on providing clear, concise information that can be directly inferred from the code. Include optional sections only when they provide significant value for understanding the code.

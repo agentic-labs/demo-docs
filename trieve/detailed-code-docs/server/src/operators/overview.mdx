@@ -2,161 +2,68 @@
 title: "Overview"
 ---
 
-Here's a high-level description and documentation of the `user_operator.rs` file:
-
 ## High-level description
-The `user_operator.rs` file contains functions for managing user-related operations in the Trieve application. It handles tasks such as user retrieval, API key management, user organization roles, and user creation. The file interacts with both a PostgreSQL database (using Diesel ORM) and a Redis cache for various operations.
+The `operators` directory contains modules that implement core business logic and data operations for the Trieve server application. These modules handle various aspects of the system, including analytics, data processing, user management, search functionality, and integrations with external services.
 
-## Code Structure
-The file consists of several functions that perform specific user-related tasks. These functions often interact with the database and Redis cache, and they handle error cases using a custom `ServiceError` type.
+## What does it do?
+The operators in this directory perform key functions such as:
 
-## Symbols
+- Managing user accounts, organizations, and permissions
+- Processing and storing data chunks and files
+- Handling search and recommendation operations
+- Integrating with external services like Stripe for payments and ClickHouse for analytics
+- Managing datasets and their configurations
+- Handling email operations and invitations
+- Processing and analyzing events
+- Managing API keys and authentication
 
-### `get_user_by_id_query`
-#### Description
-Retrieves a user by their ID, along with their associated organizations and roles.
+These operators work together to provide the core functionality of the Trieve application, enabling features like semantic search, data management, user collaboration, and usage analytics.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user_id | &uuid::Uuid | The ID of the user to retrieve |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
+## Entry points
+The main entry point for the operators is the `mod.rs` file, which exports all the individual operator modules. Key operator modules include:
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;(User, Vec&lt;UserOrganization&gt;, Vec&lt;Organization&gt;), ServiceError&gt; | Result | User data, organizations, and roles, or an error |
+- `user_operator.rs`: Handles user account management and authentication
+- `dataset_operator.rs`: Manages datasets and their configurations
+- `chunk_operator.rs`: Processes and stores data chunks
+- `search_operator.rs`: Implements search functionality
+- `analytics_operator.rs`: Handles analytics data processing and querying
 
-### `add_existing_user_to_org`
-#### Description
-Adds an existing user to an organization by their email address.
+These modules are typically used by the application's route handlers to implement API endpoints and business logic.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| email | String | User's email address |
-| organization_id | uuid::Uuid | Organization ID |
-| user_role | UserRole | User's role in the organization |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+## Key Files
+1. `chunk_operator.rs`: Manages the creation, retrieval, and manipulation of data chunks, which are the fundamental units of searchable content in the system.
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;bool, ServiceError&gt; | Result | True if user was added, false if user doesn't exist, or an error |
+2. `search_operator.rs`: Implements various search algorithms and methods, including semantic search, full-text search, and hybrid search approaches.
 
-### `update_user_org_role_query`
-#### Description
-Updates a user's role in an organization.
+3. `user_operator.rs`: Handles user account management, including creation, authentication, and authorization. It also manages API keys and user roles within organizations.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user_id | uuid::Uuid | User ID |
-| organization_id | uuid::Uuid | Organization ID |
-| role | UserRole | New user role |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+4. `analytics_operator.rs`: Processes and queries analytics data, providing insights into system usage, search performance, and user behavior.
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;(), ServiceError&gt; | Result | Success or an error |
+5. `qdrant_operator.rs`: Interfaces with the Qdrant vector database for efficient similarity search and vector operations.
 
-### `set_user_api_key_query`
-#### Description
-Creates a new API key for a user and stores it in the database.
+6. `stripe_operator.rs`: Manages integration with Stripe for payment processing and subscription management.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user_id | uuid::Uuid | User ID |
-| name | String | API key name |
-| role | ApiKeyRole | API key role |
-| dataset_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional dataset IDs |
-| organization_ids | Option&lt;Vec&lt;uuid::Uuid&gt;&gt; | Optional organization IDs |
-| scopes | Option&lt;Vec&lt;String&gt;&gt; | Optional scopes |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;String, ServiceError&gt; | Result | The raw API key or an error |
-
-### `get_user_from_api_key_query`
-#### Description
-Retrieves a user and their API key information based on a provided API key.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| api_key | &str | The API key |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;(SlimUser, UserApiKey), ServiceError&gt; | Result | User and API key information or an error |
-
-### `get_user_api_keys_query`
-#### Description
-Retrieves all API keys associated with a specific user ID.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user_id | uuid::Uuid | User ID |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;Vec&lt;ApiKeyRespBody&gt;, ServiceError&gt; | Result | List of API keys or an error |
-
-### `delete_user_api_keys_query`
-#### Description
-Deletes a specific API key associated with a user.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user_id | uuid::Uuid | User ID |
-| api_key_id | uuid::Uuid | API key ID |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;(), ServiceError&gt; | Result | Success or an error |
-
-### `create_user_query`
-#### Description
-Creates a new user in the database and adds them to a specific organization.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| user | User | User data |
-| organization_id | uuid::Uuid | Organization ID |
-| user_role | UserRole | User's role in the organization |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Result&lt;User, ServiceError&gt; | Result | Created user or an error |
+7. `clickhouse_operator.rs`: Handles interactions with ClickHouse for storing and querying large-scale analytics data.
 
 ## Dependencies
-- `diesel`: ORM for database operations
-- `redis`: For caching and session management
-- `argon2`: For password hashing
-- `blake3`: For API key hashing
-- `uuid`: For handling UUIDs
+The operators rely on several external libraries and frameworks:
 
-## Error Handling
-The file uses a custom `ServiceError` type for error handling, which is returned in the `Result` of most functions.
+- Diesel: For database operations and ORM functionality
+- Qdrant Client: For interacting with the Qdrant vector database
+- Stripe: For payment processing
+- ClickHouse: For analytics data storage and querying
+- Redis: For caching and temporary data storage
+- OpenAI: For language model integrations
+- AWS SDK: For S3 file storage operations
 
-## Logging
-The code uses the `log` crate for logging errors and important information.
+## Configuration
+The operators use configuration settings defined in environment variables and passed through the application's configuration system. Key configuration areas include:
 
-This file is crucial for managing user-related operations in the Trieve application, handling various aspects of user data, authentication, and authorization.
+- Database connection settings
+- External service API keys (Stripe, OpenAI, etc.)
+- Feature flags and operational modes
+- Security settings (e.g., API key hashing parameters)
+
+The operators are designed to be flexible and configurable, allowing the application to be adapted to different deployment scenarios and requirements.
+
+This directory forms the core of the Trieve server's business logic, providing a modular and extensible architecture for implementing complex data processing, search, and analytics functionality.

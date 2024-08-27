@@ -3,82 +3,75 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains scripts and Kubernetes resource templates for setting up and configuring a self-hosted instance of Trieve, an application designed to run in a Kubernetes environment. The scripts automate the installation of dependencies and configuration of the Trieve instance, while the Kubernetes templates define the necessary resources for deploying Trieve in a cluster.
+The `scripts` directory contains essential bash scripts and Kubernetes resource templates for setting up, configuring, and deploying a self-hosted instance of Trieve. It includes two main bash scripts for system preparation and configuration, as well as a set of Kubernetes templates for deploying the application using Helm.
 
 ## What does it do?
-The scripts in this directory perform two main functions:
+The scripts and templates in this directory work together to:
 
-1. System Preparation: The `setup-self-hosting.sh` script installs necessary dependencies such as jq, git, caddy, curl, and Docker. It sets up the environment for hosting Trieve.
-
-2. Trieve Configuration: The `configure-self-hosting.sh` script configures the Trieve instance based on the system's capabilities and user input. It detects GPU architecture, checks system resources, generates configuration files, and modifies Docker Compose and Keycloak settings.
-
-The Kubernetes templates define the infrastructure for deploying and running Trieve in a Kubernetes cluster. They specify:
-- How the application should be deployed (Deployment)
-- Storage resources for the application (PersistentVolume and PersistentVolumeClaim)
-- Network access within the cluster (Service)
-
-Together, these components allow for a streamlined setup and deployment of a self-hosted Trieve instance, either on a single machine or in a Kubernetes cluster.
-
-## Entry points
-The main entry points for this directory are:
-
-1. `setup-self-hosting.sh`: This script should be run first to prepare the system for hosting Trieve.
-
-2. `configure-self-hosting.sh`: After setting up, this script should be run to configure the Trieve instance. It requires the `DOMAIN` environment variable to be set.
-
-3. Kubernetes templates in the `template` subdirectory: These files are used by Helm to generate the Kubernetes resources needed for deploying Trieve in a cluster.
-
-The workflow typically follows this order:
-1. Run the setup script to install dependencies.
-2. Run the configuration script to set up Trieve.
-3. Use the Kubernetes templates with Helm to deploy Trieve in a Kubernetes cluster.
+1. Prepare a system for hosting Trieve by installing necessary dependencies like Docker, Caddy, and other required packages.
+2. Configure the Trieve instance based on the system's capabilities (GPU, CPU, RAM) and user input.
+3. Set up reverse proxy configuration using Caddy.
+4. Modify environment files and Docker Compose configurations for self-hosting.
+5. Configure Keycloak for authentication.
+6. Define Kubernetes resources (Deployment, PersistentVolume, PersistentVolumeClaim, and Service) for deploying Trieve in a Kubernetes cluster using Helm.
 
 ## Key Files
 
-### setup-self-hosting.sh
-This script prepares the system for hosting Trieve by:
-- Installing required packages (jq, git, caddy, curl, gawk)
-- Setting up Caddy for secure web server installation
-- Installing Docker if not present
-- Providing error handling and informative messages
+1. **setup-self-hosting.sh**: This script prepares the system for hosting Trieve by:
+   - Installing required packages (jq, git, caddy, curl, gawk)
+   - Setting up Caddy web server
+   - Installing Docker if not present
+   - Providing error handling and informative messages
 
-### configure-self-hosting.sh
-This script configures the Trieve instance by:
-- Detecting GPU architecture and system resources
-- Generating a Caddyfile for reverse proxy configuration
-- Modifying the .env file with appropriate values
-- Updating the docker-compose.yml file
-- Configuring Keycloak authentication
+2. **configure-self-hosting.sh**: This script configures the Trieve instance by:
+   - Detecting GPU architecture and system resources
+   - Determining appropriate Docker Compose configuration
+   - Generating Caddyfile for reverse proxy
+   - Modifying environment files and Docker Compose configurations
+   - Configuring Keycloak realm
+   - Managing services and displaying DNS record information
 
-### Kubernetes Templates (in `template` subdirectory)
-- `deployment.yaml`: Defines how Trieve should be deployed in Kubernetes
-- `pv.yaml`: Creates a PersistentVolume for local development environments
-- `pvc.yaml`: Requests storage resources for Trieve
-- `service.yaml`: Exposes Trieve within the Kubernetes cluster
+3. **template/deployment.yaml**: Defines the Kubernetes Deployment resource for Trieve, specifying:
+   - Container image and tag
+   - Environment variables
+   - Port configurations
+   - Volume mounts
+   - Resource requests and limits
+
+4. **template/pv.yaml**: Creates a PersistentVolume for local environments, using hostPath configuration.
+
+5. **template/pvc.yaml**: Defines the PersistentVolumeClaim, requesting storage for the application with environment-specific configurations.
+
+6. **template/service.yaml**: Sets up a Kubernetes Service to expose the Trieve application within the cluster.
 
 ## Dependencies
-The scripts and templates rely on several external tools and libraries:
+The scripts rely on several external tools and libraries:
 
-1. Docker: For containerization of Trieve
-2. Caddy: Used as a reverse proxy
-3. jq, git, curl, gawk: Utilities used in the setup and configuration process
-4. Helm: Required for using the Kubernetes templates
-5. Kubernetes: The target platform for deploying Trieve using the provided templates
+- Docker: For containerization of the Trieve application
+- Caddy: As a web server and reverse proxy
+- jq, git, curl, gawk: For various system operations and configurations
+
+The Kubernetes templates are designed to be used with:
+
+- Helm: For Kubernetes package management and template processing
+- Amazon ECR: For container image storage (assumed in the Deployment template)
 
 ## Configuration
-The scripts and templates use various configuration options:
+The bash scripts use environment variables and user input for configuration:
 
-1. In the bash scripts:
-   - `DOMAIN`: Environment variable specifying the domain for the Trieve instance
+- `DOMAIN`: Specifies the domain for the Trieve instance
+- GPU and system resource detection for optimal configuration
 
-2. In the Kubernetes templates:
-   - `.Values.environment`: Deployment environment (e.g., "local" or "aws")
-   - `.Values.accountId`: AWS account ID for ECR image URL
-   - `.Values.region`: AWS region for ECR image URL
-   - `.Values.containers.$NAME.tag`: Docker image tag
-   - `.Values.config.fixme`: Value for the `ENV_VAR` environment variable
-   - `.Release.Name`: Name of the Helm release
+The Kubernetes templates use Helm values for configuration, including:
 
-The configuration process involves user input for domain settings and automatic detection of system capabilities for optimal setup.
+- `.Values.environment`: Deployment environment (e.g., "local", "aws")
+- `.Values.accountId`: AWS account ID for ECR
+- `.Values.region`: AWS region for ECR
+- `.Values.containers.$NAME.tag`: Container image tag
+- `.Values.config.fixme`: Used for setting an environment variable in the Deployment
 
-In conclusion, this `scripts` directory provides a comprehensive set of tools for setting up, configuring, and deploying a self-hosted Trieve instance, catering to both single-machine setups and Kubernetes cluster deployments.
+Environment-specific configurations in the Kubernetes templates include:
+- Storage size: 10Gi for local, 500Gi for other environments
+- StorageClassName: "gp2" for AWS, empty string for others
+
+These scripts and templates provide a comprehensive solution for deploying Trieve, whether as a self-hosted instance on a single system or as a scalable application in a Kubernetes cluster.

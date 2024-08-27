@@ -3,29 +3,32 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script is designed to undo the changes made in the corresponding `up.sql` migration. It removes a foreign key constraint from the `file_upload_completed_notifications` table, effectively reverting it to its original state without the reference to the `collections` table.
+This SQL script is a database migration file designed to undo the changes made in the corresponding `up.sql` file. It removes a foreign key constraint from the `file_upload_completed_notifications` table, effectively reverting it to its original state without the reference to the `collections` table.
 
 ## Symbols
 
-### SQL Script
+### SQL Migration Script
 #### Description
-The script performs a series of steps to remove a foreign key constraint from the `file_upload_completed_notifications` table without losing any data.
+This script performs a series of SQL operations to remove a foreign key constraint from the `file_upload_completed_notifications` table. It does this by creating a temporary table, copying data, dropping the original table, recreating it without the constraint, and then copying the data back.
 
 #### Internal Logic
-1. Creates a temporary table `file_upload_completed_notifications_temp` with the original structure (without foreign key constraint).
-2. Copies all data from the existing `file_upload_completed_notifications` table to the temporary table.
-3. Drops the original `file_upload_completed_notifications` table.
-4. Recreates the `file_upload_completed_notifications` table with the original structure (without foreign key constraint).
-5. Copies all data back from the temporary table to the newly created table.
-6. Drops the temporary table.
+1. Create a temporary table `file_upload_completed_notifications_temp` with the original structure (without foreign key constraint).
+2. Copy all data from the current `file_upload_completed_notifications` table to the temporary table.
+3. Drop the current `file_upload_completed_notifications` table (which has the foreign key constraint).
+4. Recreate the `file_upload_completed_notifications` table without the foreign key constraint.
+5. Copy all data from the temporary table back to the newly created `file_upload_completed_notifications` table.
+6. Drop the temporary table.
 
 ## Side Effects
-- Removes the foreign key constraint on the `collection_uuid` column in the `file_upload_completed_notifications` table.
-- Temporarily creates and then drops a table named `file_upload_completed_notifications_temp`.
-- Preserves all existing data in the `file_upload_completed_notifications` table.
+- Temporarily duplicates data in a temporary table.
+- Drops and recreates the `file_upload_completed_notifications` table.
+- Removes any foreign key constraint that was previously added to the `file_upload_completed_notifications` table.
 
 ## Performance Considerations
-This migration involves copying data twice and creating/dropping tables, which could be resource-intensive for large datasets. It's advisable to run this migration during low-traffic periods if the table contains a significant amount of data.
+This migration involves copying potentially large amounts of data twice (to and from a temporary table). For large tables, this operation could be time-consuming and resource-intensive. It's advisable to run this migration during low-traffic periods.
+
+## Error Handling
+This script does not include explicit error handling. If an error occurs during execution, the database system will likely roll back the entire transaction, leaving the database in its original state.
 
 ## TODOs
-The comment at the top of the file suggests that this script should undo anything in `up.sql`. It's important to ensure that this down migration exactly reverses the changes made in the corresponding up migration.
+The comment at the top of the file, "This file should undo anything in `up.sql`", suggests that this script is intended to reverse the changes made in a corresponding `up.sql` file. It's important to ensure that this script accurately undoes all changes made in the `up.sql` file to maintain database integrity during migrations.

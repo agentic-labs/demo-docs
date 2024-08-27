@@ -3,115 +3,119 @@ title: "formatDate.ts"
 ---
 
 ## High-level description
-This code defines utility functions for formatting and parsing dates in the context of an analytics application. It provides methods to format dates for API requests, parse custom date strings, and transform date parameters for analytics filters. The code also includes a function to format timestamps based on the time range of the analytics data.
+The `formatDate.ts` file provides a set of utility functions for formatting and parsing dates, primarily for use with the analytics API. It includes functions for formatting dates in API-compatible strings, parsing custom date strings, and transforming date parameters for analytics filters.
 
 ## Code Structure
-The main symbols in this code are standalone functions that handle different aspects of date formatting and parsing. They are not directly interconnected but are designed to work together in the context of the analytics application.
+The code consists of several independent utility functions that handle date formatting, parsing, and transformation. These functions are used by other parts of the codebase, particularly when interacting with the analytics API.
+
+## References
+This code references the following types defined in the `shared/types.ts` file:
+- `AnalyticsFilter`
+- `DateRangeFilter`
 
 ## Symbols
 
 ### `formatDateForApi`
 #### Description
-Formats a given Date object into a string suitable for API requests.
+Formats a JavaScript `Date` object into a string representation suitable for use with the analytics API. The format is `YYYY-MM-DDTHH:mm:ssZ` in UTC timezone.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| date | Date | The date to be formatted |
+| date | `Date` | The date object to format. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| formattedDate | string | The formatted date string |
+| formattedDate | `string` | The formatted date string. |
 
 #### Internal Logic
-1. Uses `toLocaleString` with specific options to format the date.
-2. Removes the comma from the resulting string.
+1. Uses `toLocaleString` with the `en-CA` locale and specific options to format the date in the desired format.
+2. Removes the comma from the formatted string (which is present in the `en-CA` locale).
 
 ### `parseCustomDateString`
 #### Description
-Parses a custom date string format into a Date object.
+Parses a custom date string in the format `YYYY-MM-DD HH:mm:ss.SSS` into a JavaScript `Date` object.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| dateString | string | The custom date string to be parsed |
+| dateString | `string` | The date string to parse. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| parsedDate | Date | The parsed Date object |
+| date | `Date` | The parsed date object. |
 
 #### Internal Logic
-1. Splits the date string into date and time parts.
-2. Extracts year, month, day, hour, minute, and second.
-3. Pads values with leading zeros if necessary.
-4. Constructs an ISO date string.
-5. Creates a new Date object from the ISO string.
+1. Splits the input string into date and time parts.
+2. Parses the year, month, day, hour, minute, second, and milliseconds from the string.
+3. Constructs an ISO 8601 date string in UTC timezone.
+4. Creates a new `Date` object from the ISO string.
 
 ### `transformAnalyticsFilter`
 #### Description
-Transforms an analytics filter object by applying date transformations.
+Transforms an object containing a `date_range` property, which is a `DateRangeFilter` object, by formatting the date values within the `DateRangeFilter` using the `formatDateForApi` function.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| filter | HasDateRange | The filter object to be transformed |
+| filter | `HasDateRange` | An object containing a `date_range` property. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| transformedFilter | object | The transformed filter object |
+| transformedFilter | `object` | The transformed object with formatted date values in the `date_range` property. |
 
 #### Internal Logic
-1. Spreads the original filter object.
-2. Applies `transformDateParams` to the `date_range` property if it exists.
+1. Creates a new object with the same properties as the input `filter` object.
+2. If the `date_range` property exists, it calls the `transformDateParams` function to format the date values within it.
 
 ### `transformDateParams`
 #### Description
-Transforms date parameters by formatting them for API use.
+Transforms a `DateRangeFilter` object by formatting the date values within it using the `formatDateForApi` function.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| params | DateRangeFilter | The date range parameters to be transformed |
+| params | `DateRangeFilter` | The `DateRangeFilter` object to transform. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| transformedParams | object | The transformed date parameters |
+| transformedParams | `object` | The transformed object with formatted date values. |
 
 #### Internal Logic
-Applies `formatDateForApi` to each date property (gt, lt, gte, lte) if they exist.
+1. Creates a new object with the same properties as the input `params` object.
+2. For each date property (`gt`, `lt`, `gte`, `lte`), if it exists, it formats the date value using the `formatDateForApi` function.
 
 ### `formatSensibleTimestamp`
 #### Description
-Formats a timestamp based on the time range of the analytics data.
+Formats a date object into a human-readable timestamp string, adjusting the level of detail based on the provided date range.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| date | Date | The date to be formatted |
-| range | AnalyticsFilter["date_range"] | The date range of the analytics data |
+| date | `Date` | The date object to format. |
+| range | `AnalyticsFilter["date_range"]` | The date range to consider for formatting. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| formattedTimestamp | string | The formatted timestamp |
+| timestamp | `string` | The formatted timestamp string. |
 
 #### Internal Logic
-1. Determines the high and low time bounds from the range.
-2. Calculates the hour difference between high and low times.
-3. Formats the date based on the hour difference:
-   - 24 hours or less: time only
-   - 7 days or less: date only
-   - 30 days or less: date only
-   - More than 30 days: date only
+1. Determines the highest and lowest time points from the provided date range.
+2. Calculates the difference in hours between the highest and lowest time points.
+3. Based on the hour difference, formats the date with varying levels of detail:
+    - If the difference is 24 hours or less, formats with only the time (HH:mm:ss).
+    - If the difference is 7 days or less, formats with the date and time.
+    - If the difference is 30 days or less, formats with only the date.
+    - Otherwise, formats with the full date and time.
 
 ## Dependencies
+This code depends on the following external library:
 | Dependency | Purpose |
 |:-----------|:--------|
-| date-fns | Used for date manipulation and formatting |
-| shared/types | Imports type definitions used in the code |
+| date-fns | Provides date and time utilities for formatting, parsing, and manipulating dates. |
 
-This code is crucial for handling date-related operations in the analytics frontend, ensuring consistent date formatting for API requests and user display.

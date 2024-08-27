@@ -3,50 +3,52 @@ title: "createDataset.ts"
 ---
 
 ## High-level description
-This code defines an asynchronous function `createNewDataset` that creates a new dataset by sending a POST request to an API endpoint. It handles the creation process, including error handling and response parsing.
+The `createNewDataset` function is an asynchronous function that creates a new dataset in the application. It sends a POST request to the API endpoint with the dataset name, organization ID, and server configuration.
+
+## References
+- `Dataset`: Represents the structure of a dataset object.
+- `DefaultError`: Represents the structure of an error object returned by the API.
+- `ServerEnvsConfiguration`: Represents the server-side configuration for a dataset.
 
 ## Symbols
 
 ### `createNewDataset`
 #### Description
-An asynchronous function that creates a new dataset by sending a POST request to the API.
+This asynchronous function sends a POST request to the `/dataset` API endpoint to create a new dataset. It includes the dataset name, organization ID, and server configuration in the request body. If the request is successful, it returns the newly created `Dataset` object. Otherwise, it throws an error with the message from the API response.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| name | string | The name of the dataset to be created |
-| organizationId | string | The ID of the organization the dataset belongs to |
-| serverConfig | ServerEnvsConfiguration | Configuration settings for the server |
+| `{ name, organizationId, serverConfig }` | object | An object containing the dataset name, organization ID, and server configuration. |
+| name | string | The name of the new dataset. |
+| organizationId | string | The ID of the organization that the dataset belongs to. |
+| serverConfig | ServerEnvsConfiguration | The server-side configuration for the dataset. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| dataset | Dataset | The created dataset object if successful |
+| Dataset | Promise\&lt;Dataset\&gt; | A promise that resolves to the newly created `Dataset` object if the request is successful. |
 
 #### Internal Logic
-1. Constructs the request URL using the `api_host` environment variable.
-2. Sends a POST request to the API with the provided dataset information.
-3. If the response is successful (ok), it parses and returns the dataset object.
-4. If the response is not successful, it parses the error message and throws an Error.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| shared/types | Imports types like Dataset, DefaultError, and ServerEnvsConfiguration |
-
-## Configuration
-| Option | Type | Default | Description |
-|:-------|:-----|:--------|:------------|
-| VITE_API_HOST | string | N/A | The API host URL, set as an environment variable |
-
-## Error Handling
-- If the API response is not successful, the function throws an Error with the message from the API response.
+1. **Construct API endpoint URL:** The function constructs the API endpoint URL using the `api_host` variable (imported from environment variables) and the `/dataset` path.
+2. **Send POST request:** It sends a POST request to the constructed URL with the following:
+    - `credentials: "include"` to include cookies in the request.
+    - Headers:
+        - `"Content-Type": "application/json"` to indicate the request body is in JSON format.
+        - `"TR-Organization": organizationId` to specify the organization ID.
+    - Body: A JSON string containing the `dataset_name`, `organization_id`, `server_configuration`, and an empty `client_configuration` object.
+3. **Handle response:**
+    - If the response is ok (status code 200-299), it parses the response body as JSON and returns the result as a `Dataset` object.
+    - If the response is not ok, it parses the response body as a `DefaultError` object, throws a new error with the message from the error object.
 
 ## Side Effects
-- Makes an HTTP request to an external API endpoint.
+- This function makes an API call to create a new dataset, modifying the application's state.
 
-## Performance Considerations
-- The function uses `fetch` for making the API request, which is asynchronous and non-blocking.
-- The response is parsed using `response.json()`, which is also asynchronous.
+## Dependencies
+- `fetch`: Used to make the API request. This is a built-in browser API.
 
-This function is likely used in the context of a dashboard application for creating new datasets within an organization. It interacts with a backend API and handles the dataset creation process, including error scenarios.
+## Configuration
+- `VITE_API_HOST`: An environment variable that defines the base URL of the API.
+
+## Error Handling
+- The function handles errors by catching any exceptions thrown during the API request. It then parses the error response from the API and throws a new error with the error message.

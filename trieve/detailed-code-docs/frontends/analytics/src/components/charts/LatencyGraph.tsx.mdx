@@ -3,22 +3,22 @@ title: "LatencyGraph.tsx"
 ---
 
 ## High-level description
-The `LatencyGraph` component renders a line chart that displays the average latency of searches over time. It fetches latency data from the backend API based on provided filters and granularity, and dynamically updates the chart using Chart.js.
+The `LatencyGraph` component renders a line chart that displays the average latency of searches over time. It fetches latency data based on provided filters and granularity, then dynamically updates a Chart.js instance.
 
 ## Code Structure
-The `LatencyGraph` component uses the `createQuery` function from `@tanstack/solid-query` to fetch and manage latency data. It leverages SolidJS's reactive primitives like `createEffect` and `createSignal` to update the chart when data or props change. The `Chart` object from Chart.js is used to render and update the line chart.
+The `LatencyGraph` component uses the `createQuery` hook from `@tanstack/solid-query` to fetch and manage latency data. It leverages SolidJS's reactive primitives like `createEffect` and `createSignal` to update the chart when data or props change. The `Chart` instance from `chart.js` is responsible for rendering the actual chart.
 
 ## References
 - `AnalyticsFilter`, `AnalyticsParams` from "shared/types"
-- `DatasetContext` from "../../layouts/TopBarLayout"
 - `getLatency` from "../../api/analytics"
+- `DatasetContext` from "../../layouts/TopBarLayout"
 - `parseCustomDateString` from "../../utils/formatDate"
 
 ## Symbols
 
 ### `LatencyGraph`
 #### Description
-A SolidJS component that renders a line chart displaying average search latency over time. It fetches data based on provided filters and granularity, and dynamically updates the chart.
+A SolidJS component that renders a line chart displaying average search latency over time. It fetches data, configures the chart, and handles updates based on data changes.
 
 #### Inputs
 | Name | Type | Description |
@@ -26,22 +26,27 @@ A SolidJS component that renders a line chart displaying average search latency 
 | props | `LatencyGraphProps` | An object containing filter and granularity settings for the latency data. |
 
 #### Outputs
-Renders a canvas element containing the latency graph.
+Renders a `&lt;canvas&gt;` element containing the latency graph.
 
 #### Internal Logic
-1. **Data Fetching:** Uses `createQuery` to fetch latency data from the backend API based on `props.params.filter`, `props.params.granularity`, and the selected dataset ID from `DatasetContext`.
-2. **Chart Initialization:** When the component mounts and data is available, it initializes a new `Chart` instance on the canvas element.
-3. **Chart Configuration:** Configures the chart type, data structure, axes labels, styling, and animation settings.
+1. **Data Fetching:** Uses `createQuery` to fetch latency data based on `props.params` and the selected dataset from `DatasetContext`.
+2. **Chart Initialization:** When data and canvas element are available, initializes a `Chart` instance if one doesn't exist.
+3. **Chart Configuration:** Configures the chart type, labels, datasets, scales (with date-fns adapter for time-based x-axis), and animation.
 4. **Dynamic Updates:** Uses `createEffect` to reactively update the chart data and options whenever `props.params` or `latencyQuery.data` change.
-5. **Cleanup:** Uses `onCleanup` to destroy the `Chart` instance when the component unmounts to prevent memory leaks.
+5. **Cleanup:** Uses `onCleanup` to destroy the `Chart` instance when the component unmounts.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| @tanstack/solid-query | Used for fetching and managing asynchronous data. |
+| @tanstack/solid-query | Used for data fetching and caching. |
 | chart.js | Used for rendering the line chart. |
-| chartjs-adapter-date-fns | Used for handling date formatting on the chart's x-axis. |
-| date-fns | Used for date manipulation and formatting. |
+| chartjs-adapter-date-fns | Used for handling date-time values on the chart's x-axis. |
+| date-fns | Used for date formatting and manipulation. |
 
 ## Error Handling
-The `getLatency` function, responsible for fetching data, throws an error if the API request fails. This error is not explicitly handled within the component and would likely be caught by a higher-level error boundary in the application. 
+The `latencyQuery` from `@tanstack/solid-query` handles basic error states during data fetching. If the fetch request fails, it exposes the error through its `error` property, which can be handled by the component.
+
+## Side Effects
+- Fetches latency data from an API endpoint.
+- Modifies the DOM by rendering and updating a `&lt;canvas&gt;` element.
+- Creates and destroys a `Chart.js` instance. 

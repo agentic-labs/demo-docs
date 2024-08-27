@@ -2,20 +2,33 @@
 title: "dataset_handler.rs"
 ---
 
+Here's a comprehensive documentation for the `dataset_handler.rs` file:
+
 ## High-level description
-The `dataset_handler.rs` file defines API endpoints for managing datasets within the Trieve application. It handles operations such as creating, updating, deleting, and retrieving datasets, as well as managing dataset usage and tags.
+This file contains handlers for dataset-related operations in the Trieve API. It includes functions for creating, updating, deleting, and retrieving datasets, as well as managing dataset configurations and tags.
 
 ## Code Structure
-The code defines several structs for API request and response payloads, and implements various handler functions for different dataset operations. Each handler function interacts with database operators to perform the requested action and returns an appropriate HTTP response.
+The code defines several request and response structures, and implements handler functions for various dataset operations. These handlers interact with the database through the `Pool` connection and use various operator functions from other modules to perform the required operations.
 
 ## References
-This file references several database operators defined in `crate::operators::dataset_operator` and `crate::operators::organization_operator` to interact with the database. It also references authentication middleware defined in `crate::middleware::auth_middleware` to enforce access control.
+- `auth_handler`: For authentication and authorization structures
+- `data::models`: For database models and structures
+- `errors::ServiceError`: For error handling
+- `middleware::auth_middleware`: For authentication middleware
+- Various operator modules: For database operations
 
 ## Symbols
 
+### `DatasetAndOrgWithSubAndPlan`
+#### Description
+Implements `FromRequest` trait for `DatasetAndOrgWithSubAndPlan` to extract it from the request extensions.
+
+#### Internal Logic
+Uses `req.extensions()` to get the `DatasetAndOrgWithSubAndPlan` from the request, returning a `ServiceError` if not found.
+
 ### `CreateDatasetRequest`
 #### Description
-This struct defines the request payload for creating a new dataset.
+Defines the structure for creating a new dataset.
 
 #### Inputs
 | Name | Type | Description |
@@ -23,283 +36,207 @@ This struct defines the request payload for creating a new dataset.
 | dataset_name | String | Name of the dataset |
 | organization_id | uuid::Uuid | Organization ID that the dataset will belong to |
 | tracking_id | Option&lt;String&gt; | Optional tracking ID for the dataset |
-| server_configuration | Option&lt;DatasetConfigurationDTO&gt; | Optional configuration of the dataset |
-
-#### Outputs
-None
+| server_configuration | Option&lt;DatasetConfigurationDTO&gt; | Optional configuration for the dataset |
 
 ### `create_dataset`
 #### Description
-This handler function creates a new dataset based on the provided `CreateDatasetRequest` payload. It verifies the user's ownership of the organization and checks if the organization's plan allows for creating more datasets. If successful, it inserts the new dataset into the database and returns the created dataset in the response.
+Handler for creating a new dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Json&lt;CreateDatasetRequest&gt; | JSON payload containing dataset details |
+| data | web::Json&lt;CreateDatasetRequest&gt; | Request payload |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| _user | OwnerOnly | Authentication middleware ensuring the user is an owner of the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response indicating success or failure |
+| _user | OwnerOnly | Authenticated user with owner privileges |
 
 #### Internal Logic
-1. Extract organization ID from the request payload.
-2. Retrieve the organization's subscription plan from the database.
-3. Check if the organization's plan allows for creating more datasets.
-4. Create a new `Dataset` instance from the request payload.
-5. Insert the new dataset into the database using `create_dataset_query`.
-6. Return an HTTP response with the created dataset.
+1. Checks if the organization has reached its dataset limit
+2. Creates a new dataset using the provided details
+3. Returns the created dataset
 
 ### `UpdateDatasetRequest`
 #### Description
-This struct defines the request payload for updating an existing dataset.
+Defines the structure for updating an existing dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| dataset_id | Option&lt;uuid::Uuid&gt; | The id of the dataset you want to update |
-| tracking_id | Option&lt;String&gt; | The tracking ID of the dataset you want to update |
-| dataset_name | Option&lt;String&gt; | The new name of the dataset |
-| server_configuration | Option&lt;DatasetConfigurationDTO&gt; | The new configuration of the dataset |
-| new_tracking_id | Option&lt;String&gt; | Optional new tracking ID for the dataset |
-
-#### Outputs
-None
+| dataset_id | Option&lt;uuid::Uuid&gt; | ID of the dataset to update |
+| tracking_id | Option&lt;String&gt; | Tracking ID of the dataset to update |
+| dataset_name | Option&lt;String&gt; | New name for the dataset |
+| server_configuration | Option&lt;DatasetConfigurationDTO&gt; | New configuration for the dataset |
+| new_tracking_id | Option&lt;String&gt; | New tracking ID for the dataset |
 
 ### `update_dataset`
 #### Description
-This handler function updates an existing dataset based on the provided `UpdateDatasetRequest` payload. It verifies the user's ownership of the organization and updates the dataset in the database.
+Handler for updating an existing dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Json&lt;UpdateDatasetRequest&gt; | JSON payload containing dataset updates |
+| data | web::Json&lt;UpdateDatasetRequest&gt; | Request payload |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| user | OwnerOnly | Authentication middleware ensuring the user is an owner of the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response indicating success or failure |
+| user | OwnerOnly | Authenticated user with owner privileges |
 
 #### Internal Logic
-1. Retrieve the dataset to be updated from the database using either `dataset_id` or `tracking_id`.
-2. Verify the user's ownership of the organization.
-3. Update the dataset in the database using `update_dataset_query`.
-4. Return an HTTP response with the updated dataset.
+1. Retrieves the current dataset based on dataset_id or tracking_id
+2. Verifies the user's ownership of the organization
+3. Updates the dataset with the new information
+4. Returns the updated dataset
 
 ### `delete_dataset`
 #### Description
-This handler function soft deletes a dataset by ID. It verifies the user's ownership of the organization and marks the dataset as deleted in the database.
+Handler for deleting a dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Path&lt;uuid::Uuid&gt; | Dataset ID to be deleted |
+| data | web::Path&lt;uuid::Uuid&gt; | Dataset ID to delete |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
 | redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Middleware providing dataset, organization, plan, and subscription details |
-| user | OwnerOnly | Authentication middleware ensuring the user is an owner of the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response indicating success or failure |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| user | OwnerOnly | Authenticated user with owner privileges |
 
 #### Internal Logic
-1. Verify that the dataset ID in the request matches the one provided by the middleware.
-2. Verify the user's ownership of the organization.
-3. Soft delete the dataset in the database using `soft_delete_dataset_by_id_query`.
-4. Return an HTTP response with a 204 No Content status.
+1. Verifies the dataset ID matches the one in the request header
+2. Checks user's ownership of the organization
+3. Soft deletes the dataset
+4. Returns a no-content response
 
 ### `clear_dataset`
 #### Description
-This handler function clears a dataset by removing all chunks, files, and groups while retaining the analytics and dataset itself. It verifies the user's ownership of the organization and performs the clearing operation.
+Handler for clearing all chunks, files, and groups from a dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Path&lt;uuid::Uuid&gt; | Dataset ID to be cleared |
+| data | web::Path&lt;uuid::Uuid&gt; | Dataset ID to clear |
 | redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Middleware providing dataset, organization, plan, and subscription details |
-| user | OwnerOnly | Authentication middleware ensuring the user is an owner of the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response indicating success or failure |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| user | OwnerOnly | Authenticated user with owner privileges |
 
 #### Internal Logic
-1. Verify that the dataset ID in the request matches the one provided by the middleware.
-2. Verify the user's ownership of the organization.
-3. Clear the dataset in the database using `clear_dataset_by_dataset_id_query`.
-4. Return an HTTP response with a 204 No Content status.
+1. Verifies the dataset ID matches the one in the request header
+2. Checks user's ownership of the organization
+3. Clears the dataset
+4. Returns a no-content response
 
 ### `delete_dataset_by_tracking_id`
 #### Description
-This handler function soft deletes a dataset by its tracking ID. It verifies the user's ownership of the organization and marks the dataset as deleted in the database.
+Handler for deleting a dataset using its tracking ID.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| tracking_id | web::Path&lt;String&gt; | Dataset tracking ID to be deleted |
+| tracking_id | web::Path&lt;String&gt; | Tracking ID of the dataset to delete |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Middleware providing dataset, organization, plan, and subscription details |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 | redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
-| user | OwnerOnly | Authentication middleware ensuring the user is an owner of the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response indicating success or failure |
+| user | OwnerOnly | Authenticated user with owner privileges |
 
 #### Internal Logic
-1. Verify that the dataset tracking ID in the request matches the one provided by the middleware.
-2. Verify the user's ownership of the organization.
-3. Soft delete the dataset in the database using `soft_delete_dataset_by_id_query`.
-4. Return an HTTP response with a 204 No Content status.
+Similar to `delete_dataset`, but uses tracking ID instead of dataset ID.
 
 ### `get_dataset`
 #### Description
-This handler function retrieves a dataset by ID. It verifies the user's admin or owner role for the dataset's organization and returns the dataset in the response.
+Handler for retrieving a dataset by its ID.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| dataset_id | web::Path&lt;uuid::Uuid&gt; | Dataset ID to be retrieved |
-| user | AdminOnly | Authentication middleware ensuring the user has admin or owner role for the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response containing the retrieved dataset |
+| dataset_id | web::Path&lt;uuid::Uuid&gt; | Dataset ID to retrieve |
+| user | AdminOnly | Authenticated user with admin privileges |
 
 #### Internal Logic
-1. Retrieve the dataset from the database using `get_dataset_by_id_query`.
-2. Verify the user's admin or owner role for the organization.
-3. Return an HTTP response with the retrieved dataset.
+1. Retrieves the dataset by ID
+2. Verifies the user's admin rights for the organization
+3. Returns the dataset information
 
 ### `get_usage_by_dataset_id`
 #### Description
-This handler function retrieves the usage statistics for a dataset by ID. It verifies the user's admin or owner role for the dataset's organization and returns the usage count in the response.
+Handler for retrieving usage statistics for a dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
 | dataset_id | web::Path&lt;uuid::Uuid&gt; | Dataset ID to retrieve usage for |
-| user | AdminOnly | Authentication middleware ensuring the user has admin or owner role for the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response containing the dataset usage count |
+| user | AdminOnly | Authenticated user with admin privileges |
 
 #### Internal Logic
-1. Retrieve the dataset usage count from the database using `get_dataset_usage_query`.
-2. Return an HTTP response with the retrieved usage count.
+1. Retrieves usage statistics for the specified dataset
+2. Returns the usage information
 
 ### `get_dataset_by_tracking_id`
 #### Description
-This handler function retrieves a dataset by its tracking ID. It verifies the user's admin or owner role for the dataset's organization and returns the dataset in the response.
+Handler for retrieving a dataset by its tracking ID.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| tracking_id | web::Path&lt;String&gt; | Dataset tracking ID to be retrieved |
+| tracking_id | web::Path&lt;String&gt; | Tracking ID of the dataset to retrieve |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| user | AdminOnly | Authentication middleware ensuring the user has admin or owner role for the organization |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response containing the retrieved dataset |
+| user | AdminOnly | Authenticated user with admin privileges |
 
 #### Internal Logic
-1. Retrieve the dataset from the database using `get_dataset_by_id_query`.
-2. Verify the user's admin or owner role for the organization.
-3. Return an HTTP response with the retrieved dataset.
-
-### `GetDatasetsPagination`
-#### Description
-This struct defines the pagination parameters for retrieving datasets from an organization.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| limit | Option&lt;i64&gt; | The number of records to return |
-| offset | Option&lt;i64&gt; | The number of records to skip |
-
-#### Outputs
-None
+Similar to `get_dataset`, but uses tracking ID instead of dataset ID.
 
 ### `get_datasets_from_organization`
 #### Description
-This handler function retrieves a list of datasets belonging to a specific organization. It verifies the user's admin or owner role for the organization and returns the datasets in the response.
+Handler for retrieving all datasets belonging to an organization.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | organization_id | web::Path&lt;uuid::Uuid&gt; | Organization ID to retrieve datasets for |
 | pagination | web::Query&lt;GetDatasetsPagination&gt; | Pagination parameters |
-| user | AdminOnly | Authentication middleware ensuring the user has admin or owner role for the organization |
+| user | AdminOnly | Authenticated user with admin privileges |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| HttpResponse | actix_web::HttpResponse | HTTP response containing the list of datasets |
-
 #### Internal Logic
-1. Verify the user's admin or owner role for the organization.
-2. Retrieve the datasets from the database using `get_datasets_by_organization_id`.
-3. Return an HTTP response with the retrieved datasets.
-
-### `GetAllTagsReqPayload`
-#### Description
-This struct defines the request payload for retrieving all tags in a dataset.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| page_size | Option&lt;i64&gt; | Number of items to return per page |
-| page | Option&lt;i64&gt; | Page number to return |
-
-#### Outputs
-None
-
-### `TagsWithCount`
-#### Description
-This struct represents a tag and its count in a dataset.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| tag | String | The tag |
-| count | i64 | The count of the tag in the dataset |
-
-#### Outputs
-None
-
-### `GetAllTagsResponse`
-#### Description
-This struct defines the response payload for retrieving all tags in a dataset.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| tags | Vec&lt;TagsWithCount&gt; | List of tags and their counts |
-| total | i64 | Total number of unique tags in the dataset |
-
-#### Outputs
-None
+1. Verifies the user's admin rights for the organization
+2. Retrieves datasets for the organization with pagination
+3. Returns the list of datasets and their usage information
 
 ### `get_all_tags`
 #### Description
-This handler function retrieves all tags in a dataset and their counts. It returns a paginated list of tags and the total number of unique tags in the response.
+Handler for retrieving all tags in a dataset.
 
 #### Inputs
-|
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | web::Json&lt;GetAllTagsReqPayload&gt; | Request payload with pagination info |
+| _user | LoggedUser | Authenticated user |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+
+#### Internal Logic
+1. Retrieves tags for the dataset with pagination
+2. Returns the list of tags and their counts, along with the total number of unique tags
+
+## Dependencies
+- `actix-web`: Web framework
+- `serde`: Serialization/deserialization
+- `uuid`: UUID handling
+- `utoipa`: API documentation
+
+## Error Handling
+The code uses `ServiceError` for error handling, which is then converted to HTTP responses.
+
+## Logging
+The code uses the `tracing` crate for instrumentation and logging.
+
+## API/Interface Reference
+The file defines several API endpoints for dataset operations, including:
+- POST `/dataset`: Create a new dataset
+- PUT `/dataset`: Update an existing dataset
+- DELETE `/dataset/{dataset_id}`: Delete a dataset
+- PUT `/dataset/clear/{dataset_id}`: Clear a dataset
+- GET `/dataset/{dataset_id}`: Get a dataset by ID
+- GET `/dataset/usage/{dataset_id}`: Get dataset usage
+- GET `/dataset/tracking_id/{tracking_id}`: Get a dataset by tracking ID
+- GET `/dataset/organization/{organization_id}`: Get datasets for an organization
+- POST `/dataset/get_all_tags`: Get all tags in a dataset
+
+Each endpoint is documented with Utoipa annotations for API documentation generation.

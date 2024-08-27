@@ -3,61 +3,66 @@ title: "health-configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap named `redis-health` that contains shell scripts and an awk script used for Redis health checks. These scripts test connectivity to Redis instances (local, master, and sentinel) and return a success or failure status based on the response.
+This YAML file defines a Kubernetes ConfigMap for Redis health checks. It contains shell scripts for checking the readiness and liveness of Redis instances, including local instances, master instances, and Sentinel instances (if enabled). These scripts use `redis-cli` to ping Redis servers and verify their responses.
 
 ## Code Structure
-This code defines a single Kubernetes ConfigMap resource. The ConfigMap contains multiple data entries, each representing a shell script or an awk script. The scripts are used for different health check scenarios, such as pinging the local Redis instance, the master Redis instance, or a Redis sentinel.
+The ConfigMap is structured with metadata and data sections. The data section contains multiple shell scripts for different health check scenarios, including TLS support and authentication handling.
 
 ## Symbols
-### `helm/charts/redis/templates/health-configmap.yaml`
+
+### ConfigMap
 #### Description
-This code defines a Kubernetes ConfigMap resource named `redis-health`. This ConfigMap stores scripts used for Redis health checks. It includes scripts for pinging local and master Redis instances, as well as scripts for interacting with Redis Sentinel.
+This Kubernetes ConfigMap is named using the pattern `&lt;fullname&gt;-health` and is placed in the specified namespace. It includes labels and optional annotations.
 
-#### Inputs
-This code uses values from the `Values` object, which represents the chart's values.yaml file. Relevant values include:
+#### Data
+The ConfigMap contains several shell scripts as data:
 
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `.Values.commonAnnotations` | map[string]string | Optional. Common annotations to add to the ConfigMap. |
-| `.Values.tls.enabled` | bool | Whether TLS is enabled for Redis connections. |
-| `.Values.tls.authClients` | bool | Whether client authentication is enabled for TLS connections. |
-| `.Values.sentinel.enabled` | bool | Whether Redis Sentinel is enabled. |
-| `.Values.auth.sentinel` | bool | Whether authentication is enabled for Redis Sentinel. |
+1. `ping_readiness_local.sh`: Checks readiness of local Redis instance
+2. `ping_liveness_local.sh`: Checks liveness of local Redis instance
+3. `ping_sentinel.sh`: Checks Sentinel instance (if enabled)
+4. `parse_sentinels.awk`: AWK script for parsing Sentinel information
+5. `ping_readiness_master.sh`: Checks readiness of Redis master instance
+6. `ping_liveness_master.sh`: Checks liveness of Redis master instance
+7. `ping_readiness_local_and_master.sh`: Checks readiness of both local and master instances
+8. `ping_liveness_local_and_master.sh`: Checks liveness of both local and master instances
 
-#### Outputs
-This code generates a Kubernetes ConfigMap manifest.
+### Shell Scripts
+#### Description
+Each shell script performs a health check by pinging a Redis instance and verifying the response.
 
 #### Internal Logic
-The code defines a ConfigMap with several data entries. Each entry is a script with a specific purpose:
+1. Set up authentication if required
+2. Use `redis-cli` to ping the Redis instance with appropriate parameters (host, port, TLS settings)
+3. Check for timeout
+4. Verify the response (expecting "PONG" for readiness, allowing "LOADING" or "MASTERDOWN" for liveness in some cases)
+5. Exit with appropriate status code
 
-* **`ping_readiness_local.sh`**: Checks the readiness of the local Redis instance by sending a `PING` command.
-* **`ping_liveness_local.sh`**: Checks the liveness of the local Redis instance. It accepts "LOADING" and "MASTERDOWN" responses in addition to "PONG".
-* **`ping_sentinel.sh`**: Checks the availability of a Redis Sentinel instance.
-* **`parse_sentinels.awk`**: Parses the output of a Redis Sentinel instance to extract information about known sentinels.
-* **`ping_readiness_master.sh`**: Checks the readiness of the master Redis instance.
-* **`ping_liveness_master.sh`**: Checks the liveness of the master Redis instance. It accepts "LOADING" response in addition to "PONG".
-* **`ping_readiness_local_and_master.sh`**: Checks the readiness of both the local and master Redis instances.
-* **`ping_liveness_local_and_master.sh`**: Checks the liveness of both the local and master Redis instances.
-
-The scripts use the `redis-cli` command to interact with Redis. They handle TLS connections and authentication if enabled.
-
-## References
-This code references several other templates and functions:
-
-* `include "common.names.fullname" .`: Returns the full name of the release.
-* `include "common.names.namespace" .`: Returns the namespace of the release.
-* `include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ )`: Includes standard labels for the ConfigMap.
-* `include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ )`: Renders the common annotations for the ConfigMap.
-* `template "redis.tlsCACert" .`: Returns the TLS CA certificate for Redis.
-* `template "redis.tlsCert" .`: Returns the TLS certificate for Redis.
-* `template "redis.tlsCertKey" .`: Returns the TLS key for Redis.
+#### Performance Considerations
+The scripts use a timeout mechanism to prevent hanging in case of unresponsive Redis instances.
 
 ## Dependencies
-This code depends on the following:
-
 | Dependency | Purpose |
 |:-----------|:--------|
-| `redis-cli` | Command-line utility for interacting with Redis. |
+| redis-cli | Used to ping Redis instances and check their health |
 
 ## Configuration
-This code uses configuration options from the `Values` object to determine behavior, such as enabling TLS or Sentinel, and configuring authentication.
+The ConfigMap uses several template functions and values from the Helm chart:
+
+| Option | Description |
+|:-------|:------------|
+| .Values.commonLabels | Custom labels to be added to the ConfigMap |
+| .Values.commonAnnotations | Custom annotations to be added to the ConfigMap |
+| .Values.tls.enabled | Enables TLS configuration for Redis connections |
+| .Values.tls.authClients | Enables client authentication for TLS |
+| .Values.sentinel.enabled | Enables Redis Sentinel configuration |
+
+## Error Handling
+The scripts handle various error scenarios:
+1. Timeout: If the Redis instance doesn't respond within the specified time
+2. Unexpected responses: If the response is not "PONG" (with some exceptions for liveness checks)
+3. Authentication failures: Implicitly handled by using the provided passwords
+
+## Notes
+- The ConfigMap includes conditional logic for TLS support and Sentinel configuration.
+- The scripts handle both password-based and TLS-based authentication methods.
+- The `parse_sentinels.awk` script is included for parsing Sentinel information when Sentinel is enabled.

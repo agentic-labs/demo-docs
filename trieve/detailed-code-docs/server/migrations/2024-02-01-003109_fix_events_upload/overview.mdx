@@ -3,39 +3,43 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for a database schema change related to event tracking in datasets. The migration renames a table and updates a function to reflect a shift from tracking "notifications" to a broader concept of "events" associated with datasets.
+This directory contains SQL migration scripts for fixing events upload functionality. It includes two files: `up.sql` and `down.sql`, which are responsible for applying and reverting changes to the database schema and functions related to dataset event counting.
 
 ## What does it do?
-The migration performs two main tasks:
+The migration scripts in this directory perform the following tasks:
 
-1. It renames the table `dataset_notification_counts` to `dataset_event_counts`. This change suggests that the system is now tracking a wider range of events related to datasets, not just notifications.
+1. Rename the `dataset_notification_counts` table to `dataset_event_counts`, indicating a shift from tracking notifications to a broader concept of events related to datasets.
 
-2. It updates the `update_notification_count()` function to work with the renamed table. This function is responsible for maintaining an accurate count of events for each dataset. When a new event is added or removed, the function automatically updates the count in the `dataset_event_counts` table.
+2. Create or replace a function called `update_notification_count()` that automatically updates the `dataset_event_counts` table when notifications are inserted or deleted. This function acts as a trigger to maintain an accurate count of events for each dataset.
 
-These changes allow the system to more accurately track and report on various events associated with datasets, providing a more comprehensive view of dataset activity.
+3. Provide a way to revert these changes if needed, by renaming the table back to its original name and dropping the created function.
+
+These changes improve the system's ability to track and manage events related to datasets, potentially enhancing reporting and analytics capabilities.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL commands to apply the migration:
+This file contains the SQL statements to apply the migration:
 
-1. It renames the `dataset_notification_counts` table to `dataset_event_counts`:
+1. Renames the `dataset_notification_counts` table to `dataset_event_counts`:
 
 ```sql
 ALTER TABLE dataset_notification_counts RENAME TO dataset_event_counts;
 ```
 
-2. It creates or replaces the `update_notification_count()` function:
+2. Creates or replaces the `update_notification_count()` function:
 
 ```sql
 CREATE OR REPLACE FUNCTION public.update_notification_count()
-RETURNS TRIGGER AS $$
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO dataset_event_counts (dataset_uuid, notification_count)
         VALUES (NEW.dataset_uuid, 1)
-        ON CONFLICT (dataset_uuid) DO UPDATE
-        SET notification_count = dataset_event_counts.notification_count + 1;
+        ON CONFLICT (dataset_uuid)
+        DO UPDATE SET notification_count = dataset_event_counts.notification_count + 1;
     ELSIF (TG_OP = 'DELETE') THEN
         UPDATE dataset_event_counts
         SET notification_count = notification_count - 1
@@ -43,38 +47,30 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$function$
 ```
 
-This function is designed to be used as a trigger. When a new event is inserted, it either creates a new record in `dataset_event_counts` with a count of 1 or increments the existing count. When an event is deleted, it decrements the count.
+This function is designed to be used as a trigger, automatically updating the `dataset_event_counts` table when notifications are inserted or deleted.
 
 ### down.sql
-This file contains the SQL commands to revert the migration:
+This file contains the SQL statements to revert the migration:
 
-1. It drops the `update_notification_count()` function:
+1. Drops the `update_notification_count()` function:
 
 ```sql
 DROP FUNCTION IF EXISTS public.update_notification_count() CASCADE;
 ```
 
-2. It renames the `dataset_event_counts` table back to `dataset_notification_counts`:
+2. Renames the `dataset_event_counts` table back to `dataset_notification_counts`:
 
 ```sql
 ALTER TABLE dataset_event_counts RENAME TO dataset_notification_counts;
 ```
 
-## Configuration
-This migration doesn't require any specific configuration. It's designed to be run as part of a database migration process, typically managed by an ORM or migration tool.
-
-The migration is identified by its timestamp and description: `2024-02-01-003109_fix_events_upload`. This naming convention likely corresponds to the migration management system in use, allowing for ordered execution of migrations.
-
 ## Dependencies
-This migration assumes the existence of a PostgreSQL database. It uses PostgreSQL-specific syntax and features, such as:
+This migration relies on PostgreSQL's built-in functionality for table alterations, function creation, and trigger management. No external libraries or frameworks are used.
 
-- The `CREATE OR REPLACE FUNCTION` syntax
-- PL/pgSQL language for stored procedures
-- PostgreSQL's trigger mechanism
+## Configuration
+There are no specific configuration files or environment variables used in this migration. The migration is designed to be run as part of a database migration process, likely managed by an ORM or migration tool in the larger application context.
 
-The exact version of PostgreSQL is not specified, but these features are available in PostgreSQL 9.5 and later.
-
-No external libraries or frameworks are directly used in these SQL scripts. However, the migration files are likely to be executed by a database migration tool or ORM that supports running SQL migrations.
+The migration assumes the existence of a `dataset_notification_counts` table before applying the changes and a `dataset_event_counts` table when reverting the changes. It also assumes that the application has the necessary permissions to create and modify tables and functions in the database.

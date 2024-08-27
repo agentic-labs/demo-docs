@@ -3,48 +3,45 @@ title: "embeddings-deployment.yaml"
 ---
 
 ## High-level description
-This code defines a Helm template for deploying multiple text embedding inference services as Kubernetes Deployments. Each service is configured with a specific embedding model, revision, and optional arguments.
+This Helm template generates Kubernetes Deployment manifests for embedding services. It iterates over a list of embedding services defined in the Helm values, creating a separate Deployment for each service with specific configurations based on the provided values.
 
 ## Code Structure
-The code uses a range loop to iterate over a list of embedding service configurations provided in the `Values.embeddings` object. For each service, it renders a Kubernetes Deployment resource with specific settings derived from the configuration.
+The template uses a range loop to iterate over `.Values.embeddings`, creating a Deployment for each embedding service. It extracts values for revision, model, name, and args from each service configuration and uses them to populate the Deployment specification.
 
 ## Symbols
-### `helm/templates/embeddings-deployment.yaml`
+
+### Deployment Template
 #### Description
-This file is a Helm template that defines a Kubernetes Deployment for a text embedding inference service. It allows deploying multiple instances of the service, each with a different embedding model and configuration.
+This template creates a Kubernetes Deployment for each embedding service defined in the Helm values.
 
 #### Inputs
-This template uses values from `Values.yaml` or provided during Helm install/upgrade. The key values used are:
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.embeddings` | list | A list of embedding service configurations. Each configuration is a dictionary with keys like `name`, `model`, `revision`, and `args`. |
-| `.Values.environment` | string | The environment where the deployment is happening. Used to determine node selectors. |
-| `.Values.useGpu` | boolean | Whether to use GPU for the embedding service. |
-
-#### Outputs
-Renders a Kubernetes Deployment resource for each embedding service defined in `.Values.embeddings`.
+| .Values.embeddings | List | List of embedding service configurations |
+| .Values.environment | String | Deployment environment (e.g., "gcloud") |
+| .Values.useGpu | Boolean | Flag to determine if GPU should be used |
+| $.Release.Name | String | Helm release name |
 
 #### Internal Logic
-1. **Iterate through Embeddings:** The template iterates through the `.Values.embeddings` list.
-2. **Extract Configuration:** For each embedding service, it extracts the `name`, `model`, `revision`, and `args`.
-3. **Conditional Rendering:** It conditionally adds a `---` separator between deployments.
-4. **Define Deployment:** It defines a Kubernetes Deployment with the extracted configuration:
-    - `metadata.name`: Set to `embedding-{name}`.
-    - `spec.selector`: Selects pods with matching labels.
-    - `spec.template.metadata.labels`: Sets labels for the pods.
-    - `spec.template.spec.nodeSelector`: If `environment` is "gcloud", it adds a node selector for GPU nodes.
-    - `spec.template.spec.containers`: Defines a container named `embedding-{name}`:
-        - `readinessProbe`: Checks service readiness on port 80.
-        - `image`: Uses either the GPU or CPU image based on `useGpu`.
-        - `args`: Passes model ID, revision, and additional arguments to the container.
-        - `ports`: Exposes port 80.
-        - `resources`: If `useGpu` is true, requests a GPU resource.
+1. Iterates over each embedding service in `.Values.embeddings`.
+2. Extracts revision, model, name, and args for each service.
+3. Creates a Deployment with metadata and labels based on the service name and release.
+4. Sets up a container with the appropriate image, args, and port.
+5. Configures node selector for GCloud environment if applicable.
+6. Adds GPU resources if `useGpu` is true.
+7. Sets up a readiness probe for the container.
 
 ## Dependencies
-This template relies on Kubernetes and Helm for deployment and management. It also depends on the Docker images for text embedding inference provided by Hugging Face.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Kubernetes | The template generates Kubernetes Deployment manifests |
+| Helm | The template uses Helm templating syntax and values |
 
 ## Configuration
-This template uses values from `Values.yaml` or provided during Helm install/upgrade. See the "Inputs" section for details.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| useGpu | Boolean | N/A | Determines whether to use GPU resources |
+| environment | String | N/A | Specifies the deployment environment |
 
-## Side Effects
-This template creates Kubernetes Deployments, which in turn create Pods and other resources. It might also schedule pods on specific nodes based on the configured node selectors.
+## Performance Considerations
+The template includes conditional logic for GPU usage, which can significantly affect the performance and resource allocation of the deployed embedding services. When `useGpu` is true, the Deployment is configured to use NVIDIA GPUs, which can greatly accelerate embedding computations but also requires specific node selection in cloud environments like GCloud.

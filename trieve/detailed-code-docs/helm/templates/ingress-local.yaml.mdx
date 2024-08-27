@@ -3,39 +3,44 @@ title: "ingress-local.yaml"
 ---
 
 ## High-level description
-This code defines four Kubernetes Ingress resources for different services: `dashboard-service`, `chat-service`, `server-service`, and `search-service`. These Ingress resources are applied only when the `environment` value in the Helm chart is set to "local".
+This Helm template defines Ingress resources for a Kubernetes cluster in a local environment. It sets up routing rules for different services (dashboard, chat, server, and search) using domain-based host routing.
+
+## Code Structure
+The file contains four separate Ingress resource definitions, each targeting a different service. They all share a common structure but differ in the host and backend service configuration.
 
 ## Symbols
-### `ingress-local.yaml`
+
+### Ingress Resources
 #### Description
-This file defines four Kubernetes Ingress resources that route traffic from specific hostnames to corresponding services within the cluster. The Ingress resources are applied conditionally based on the `environment` value being "local".
+Each Ingress resource defines routing rules for a specific service in the Kubernetes cluster. They use the NGINX ingress controller and set up path-based routing to direct traffic to the appropriate service.
 
 #### Inputs
-This file uses values from a Helm chart:
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.domain` | string | The domain name used for the Ingress hostnames. |
-| `.Values.environment` | string | The environment for which the Ingress resources are applied. |
+| .Values.domain | String | The base domain for the Ingress hosts |
+| .Values.environment | String | The environment setting, used to conditionally apply the Ingress resources |
 
 #### Internal Logic
-The file uses a conditional block (`{{- if eq .Values.environment "local" }}`) to apply the Ingress resources only when the `environment` value is "local".
+1. The template checks if the environment is "local" using an if statement.
+2. If true, it defines four Ingress resources:
+   - ingress-dashboard: Routes traffic for dashboard.{{ $domain }}
+   - ingress-chat: Routes traffic for chat.{{ $domain }}
+   - ingress-server: Routes traffic for api.{{ $domain }}
+   - ingress-search: Routes traffic for search.{{ $domain }}
+3. Each Ingress uses the NGINX ingress controller and sets up a single rule with a host and path.
+4. The path for each Ingress is set to "/" with a Prefix path type, meaning it will match all requests for the specified host.
+5. Each Ingress routes traffic to a corresponding service with a specified port.
 
-For each service (dashboard, chat, server, search), the file defines an Ingress resource with the following structure:
-- `apiVersion`: networking.k8s.io/v1
-- `kind`: Ingress
-- `metadata.name`: A unique name for the Ingress resource.
-- `spec.ingressClassName`: `nginx` (assumes an Nginx Ingress controller is installed).
-- `spec.rules`: A list of rules that define how traffic should be routed. Each rule specifies:
-    - `host`: The hostname that the rule should match.
-    - `http.paths`: A list of paths that the rule should match. Each path specifies:
-        - `path`: The path to match.
-        - `pathType`: The type of path matching to use (in this case, `Prefix`).
-        - `backend`: The service to which traffic should be routed. The backend specifies:
-            - `service.name`: The name of the service.
-            - `service.port.number`: The port number of the service.
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.domain | String | N/A | The base domain for Ingress hosts |
+| .Values.environment | String | N/A | The environment setting, used to conditionally apply the Ingress resources |
 
-#### Side Effects
-This code, when applied to a Kubernetes cluster, creates Ingress resources that expose the defined services on the specified hostnames. This allows external access to these services.
-
-#### Performance Considerations
-The performance of the Ingress resources depends on the underlying Ingress controller and the configuration of the services. 
+## Notes
+1. This template is specifically for the local environment, as indicated by the condition `{{- if eq .Values.environment "local" }}`.
+2. The Ingress resources use the NGINX ingress controller, as specified by `ingressClassName: nginx`.
+3. Each service (dashboard, chat, server, and search) is exposed on a subdomain of the main domain specified in `.Values.domain`.
+4. The server service uses port 8090, while the others use port 80.
+5. All paths are set to "/" with Prefix type, which means they will catch all requests for their respective hosts.
+6. This template does not include any annotations or additional configurations like SSL/TLS, which might be necessary for production environments.

@@ -3,13 +3,102 @@ title: "Overview"
 ---
 
 ## High-level description
-The `frontends/search/src/layouts` directory houses layout components for the search functionality of the application. These layouts provide a consistent structure and shared functionality across different search-related pages.
+This directory contains layout components for the search functionality of the application. It includes two main layout components: `HomeLayout` and `SearchLayout`. These components provide consistent structure and functionality across different pages of the search interface, handling theme management, service worker registration, and rendering of common UI elements.
 
 ## What does it do?
-This directory contains components that define the overall layout of search-related pages. They handle common UI elements like the navigation bar, theme management (light or dark mode), and toast notifications. They also manage service worker registration for offline capabilities. Essentially, these layouts provide a skeleton structure that other search-specific components can slot into.
+The layouts in this directory serve as wrappers for different pages in the search application. They perform several important functions:
+
+1. Theme Management: Both layouts determine and apply the appropriate theme (light or dark) based on user preferences or system settings.
+
+2. Service Worker Registration: They register a service worker, if supported by the browser, which can enable offline functionality and improve performance.
+
+3. Rendering Common UI Elements: The layouts render shared components like the navigation bar and toast notifications, ensuring a consistent user interface across different pages.
+
+4. Structuring Content: They provide a consistent structure for page content, wrapping child components in appropriate containers.
 
 ## Key Files
-- **`HomeLayout.tsx`:** This component defines the layout for the main search page. It includes the main search interface (`HomeSearch` component) and the toast notification system (`ShowToast` component).
-- **`SearchLayout.tsx`:** This component provides a more general layout structure for search-related pages. It includes a navbar, the toast notification system, and wraps its children (the content specific to each page) in a consistent layout.
 
-Both layouts handle theme management and service worker registration. They determine the theme based on user preferences (local storage) or system settings and apply it by toggling the "dark" class on the document's root element. They also attempt to register a service worker to enable offline functionality, logging the registration status to the console.
+### HomeLayout.tsx
+This file defines the `Home` component, which serves as the main layout for the search homepage. It includes:
+- Theme management logic
+- Service worker registration
+- Rendering of the `HomeSearch` component
+- Integration of the `ShowToast` component for notifications
+
+### SearchLayout.tsx
+This file defines the `SearchLayout` component, which is used as a wrapper for search result pages. It includes:
+- Theme management logic (similar to HomeLayout)
+- Service worker registration (similar to HomeLayout)
+- Rendering of the `Navbar` component
+- A flexible container for child components
+- Integration of the `ShowToast` component for notifications
+
+## Dependencies
+Both layout components rely on several external dependencies and internal components:
+
+1. React: Implied by the use of JSX and functional components.
+2. solid-js: Used for JSX types in SearchLayout.
+3. Internal Components:
+   - `HomeSearch`: Main search interface component used in HomeLayout.
+   - `ShowToast`: Notification component used in both layouts.
+   - `Navbar`: Navigation bar component used in SearchLayout.
+
+## Configuration
+While there are no explicit configuration files, both layouts use browser APIs and local storage for configuration:
+
+1. Theme Configuration:
+   - Uses `localStorage.getItem('theme')` to retrieve user theme preference.
+   - Falls back to `window.matchMedia('(prefers-color-scheme: dark)').matches` for system theme preference.
+
+2. Service Worker:
+   - Registers the service worker from "/sw.js" if supported by the browser.
+
+## Performance Considerations
+1. Theme Determination: In both layouts, the theme determination logic runs on every render. This could be optimized by moving it to a useEffect hook or creating a custom hook to memoize the result.
+
+2. Service Worker Registration: The service worker registration is performed only once when the component mounts, which is efficient. However, it could be moved to a separate utility function for better separation of concerns.
+
+3. Component Structure: The use of layout components promotes code reuse and consistency, which can lead to better performance and maintainability.
+
+Here's an example of how the theme logic could be optimized using a custom hook:
+
+```typescript
+import { useState, useEffect } from 'react';
+
+function useTheme() {
+  const [theme, setTheme] = useState(() =&gt; {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) return savedTheme;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() =&gt; {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  return theme;
+}
+```
+
+This hook could then be used in both layout components:
+
+```typescript
+function HomeLayout() {
+  const theme = useTheme();
+  // ... rest of the component
+}
+
+function SearchLayout({ children }: { children: JSX.Element }) {
+  const theme = useTheme();
+  // ... rest of the component
+}
+```
+
+By implementing this optimization, the theme logic would only run when necessary, improving the overall performance of the layouts.
+
+In conclusion, the layouts directory provides essential structure and functionality for the search application, ensuring consistent theming, service worker registration, and UI rendering across different pages. While there are some potential optimizations, particularly in theme management, the current implementation provides a solid foundation for the application's user interface.

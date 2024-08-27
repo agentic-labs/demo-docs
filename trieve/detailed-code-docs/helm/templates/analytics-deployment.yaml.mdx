@@ -3,44 +3,45 @@ title: "analytics-deployment.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Deployment for an "analytics" service. It specifies how the service should be deployed, including container image, ports, and environment variables. The deployment is configured using values from a Helm chart, allowing for customization based on the environment.
-
-## References
-This code references values from a Helm chart, including:
-- `.Release.Name`: The name of the Helm release.
-- `.Values.environment`: The target environment (e.g., "local").
-- `.Values.containers.analytics.tag`: The Docker tag for the analytics container image.
-- `.Values.config.vite.apiHost`: The hostname of the API used by the analytics service.
-- `.Values.config.vite.dashboardUrl`: The URL of the dashboard used by the analytics service.
+This YAML file defines a Kubernetes Deployment for an analytics application. It specifies the deployment configuration, including container image, port, and environment variables, using Helm templating for dynamic value insertion.
 
 ## Symbols
-### `analytics` Deployment
+
+### Deployment
 #### Description
-This deployment defines how the "analytics" service should be deployed to a Kubernetes cluster. It specifies the container image, port mappings, environment variables, and other configuration options.
-
-#### Inputs
-This deployment does not take direct inputs. It relies on values provided by a Helm chart during deployment.
-
-#### Outputs
-This deployment creates a Kubernetes Deployment object that manages the lifecycle of the "analytics" service pods.
+This Kubernetes Deployment resource defines how to deploy and manage the analytics application.
 
 #### Internal Logic
-The deployment uses a selector to identify pods labeled with `app.kubernetes.io/name: analytics` and `app.kubernetes.io/instance: {{ .Release.Name }}`. It defines a single container named "analytics" with the following specifications:
-- **Image:** The image is dynamically constructed based on the environment. For the "local" environment, it uses `localhost:5001/analytics-site`, otherwise it uses `trieve/analytics-site`. The image tag is appended from `.Values.containers.analytics.tag`.
-- **Ports:** Exposes container port 80.
-- **Environment Variables:**
-    - `VITE_API_HOST`: Sets the API hostname from `.Values.config.vite.apiHost`.
-    - `VITE_DASHBOARD_URL`: Sets the dashboard URL from `.Values.config.vite.dashboardUrl`.
+1. Sets metadata for the deployment, including name and labels.
+2. Defines a selector to match pods managed by this deployment.
+3. Specifies the pod template, including labels and container specifications.
+4. Configures a single container named "analytics" with:
+   - Dynamic image selection based on environment
+   - Exposed port 80
+   - Environment variables for API host and dashboard URL
 
 ## Dependencies
-This code depends on Kubernetes and Helm.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Kubernetes | For deploying and managing the application |
+| Helm | For templating and value substitution |
 
 ### Configuration
-This deployment is configured using values from a Helm chart. The following values are used:
 | Option | Type | Description |
 |:-------|:-----|:------------|
-| `.Release.Name` | string | The name of the Helm release. |
-| `.Values.environment` | string | The target environment (e.g., "local"). |
-| `.Values.containers.analytics.tag` | string | The Docker tag for the analytics container image. |
-| `.Values.config.vite.apiHost` | string | The hostname of the API used by the analytics service. |
-| `.Values.config.vite.dashboardUrl` | string | The URL of the dashboard used by the analytics service. |
+| .Release.Name | string | Helm release name, used in labels |
+| .Values.environment | string | Environment setting, affects image repository |
+| .Values.containers.analytics.tag | string | Tag for the analytics container image |
+| .Values.config.vite.apiHost | string | API host for the VITE_API_HOST environment variable |
+| .Values.config.vite.dashboardUrl | string | Dashboard URL for the VITE_DASHBOARD_URL environment variable |
+
+## Notes
+1. The image repository is dynamically set based on the environment:
+   - If not "local", it uses "trieve/"
+   - If "local", it uses "localhost:5001/"
+2. The full image name is constructed using the repository, "analytics-site", and the specified tag.
+3. The deployment uses app.kubernetes.io/name and app.kubernetes.io/instance labels for identification and selection.
+4. The container exposes port 80, suggesting it might be serving web content.
+5. Two environment variables (VITE_API_HOST and VITE_DASHBOARD_URL) are set, indicating this might be a Vite-based application.
+
+This deployment configuration allows for flexible deployment across different environments while maintaining consistent labeling and selection criteria.

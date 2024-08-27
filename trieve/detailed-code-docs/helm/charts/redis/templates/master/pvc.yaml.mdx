@@ -3,68 +3,51 @@ title: "pvc.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes PersistentVolumeClaim (PVC) template for the master Redis instance in a standalone architecture. It's used only when persistence is enabled, the master is deployed as a Deployment, and no existing claim is provided.
+This YAML template defines a PersistentVolumeClaim (PVC) for Redis master in a Kubernetes environment. It's designed to create persistent storage for Redis data when specific conditions are met, such as standalone architecture and enabled persistence.
 
 ## Code Structure
-The code uses conditional logic to determine whether to create the PVC based on the provided values. It then defines the PVC metadata, spec (including access modes, storage requests, selector, and data source), and storage class.
-
-## References
-* `common.names.fullname`: Used to construct the PVC name.
-* `common.names.namespace`: Used to specify the Kubernetes namespace.
-* `common.tplvalues.merge`: Merges labels from different sources.
-* `common.labels.standard`: Generates standard labels for the PVC.
-* `common.tplvalues.render`: Renders values for selector and data source.
-* `common.storage.class`: Includes the storage class definition.
+The template uses conditional statements and Helm templating functions to dynamically generate the PVC based on the values provided in the Helm chart.
 
 ## Symbols
-### `redis/templates/master/pvc.yaml`
+
+### PersistentVolumeClaim
 #### Description
-This code defines a Kubernetes PersistentVolumeClaim (PVC) template for the master Redis instance.
+Defines a PersistentVolumeClaim for Redis master data storage.
 
 #### Inputs
-This template uses values from the `Values` object passed to it by Helm. The relevant values are:
-
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `.Values.architecture` | string | The architecture of the Redis deployment (e.g., "standalone"). |
-| `.Values.master.kind` | string | The type of Kubernetes object used for the master (e.g., "Deployment"). |
-| `.Values.master.persistence.enabled` | boolean | Whether persistence is enabled for the master instance. |
-| `.Values.master.persistence.existingClaim` | string | The name of an existing PVC to use (optional). |
-| `.Values.master.persistence.labels` | map | Custom labels to apply to the PVC. |
-| `.Values.commonLabels` | map | Common labels to apply to all resources. |
-| `.Values.master.persistence.annotations` | map | Custom annotations to apply to the PVC. |
-| `.Values.master.persistence.accessModes` | list | List of access modes for the PVC (e.g., "ReadWriteOnce"). |
-| `.Values.master.persistence.size` | string | The requested storage size for the PVC. |
-| `.Values.master.persistence.selector` | map | Selectors to match the PVC to a specific PersistentVolume. |
-| `.Values.master.persistence.dataSource` | map | Data source for the PVC (for pre-populated volumes). |
-| `.Values.global` | map | Global values from the Helm chart. |
-
-#### Outputs
-This template renders a Kubernetes PersistentVolumeClaim object definition in YAML format.
+| .Values.architecture | string | Redis architecture type |
+| .Values.master.kind | string | Type of Kubernetes workload for master |
+| .Values.master.persistence.enabled | boolean | Whether persistence is enabled |
+| .Values.master.persistence.existingClaim | string | Name of an existing PVC to use |
 
 #### Internal Logic
-1. **Conditional Creation:** The PVC is created only if the following conditions are met:
-    * `architecture` is "standalone".
-    * `master.kind` is "Deployment".
-    * `master.persistence.enabled` is true.
-    * `master.persistence.existingClaim` is not set.
-2. **Metadata:** The PVC name is generated using `redis-data-{fullname}-master`. Labels are merged from `master.persistence.labels` and `commonLabels`. Annotations are applied from `master.persistence.annotations`.
-3. **Spec:**
-    * `accessModes` are set from `master.persistence.accessModes`.
-    * `resources.requests.storage` is set from `master.persistence.size`.
-    * `selector` is set from `master.persistence.selector` if provided.
-    * `dataSource` is set from `master.persistence.dataSource` if provided.
-    * The storage class is included using the `common.storage.class` template.
-
-## Side Effects
-This code defines a Kubernetes PersistentVolumeClaim object, which, when applied to a cluster, will trigger the provisioning of persistent storage according to the defined specifications.
+1. Checks if the PVC should be created based on architecture, master kind, persistence enabled, and no existing claim.
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Defines spec with access modes, storage size, selector, and storage class.
 
 ## Dependencies
-* This template relies on Helm for rendering and on Kubernetes for deploying the PVC.
-* It also depends on the following sub-templates:
-    * `common.names.fullname`
-    * `common.names.namespace`
-    * `common.tplvalues.merge`
-    * `common.labels.standard`
-    * `common.tplvalues.render`
-    * `common.storage.class` 
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.names.fullname | Generates a full name for the Redis instance |
+| common.names.namespace | Retrieves the namespace |
+| common.tplvalues.merge | Merges label values |
+| common.labels.standard | Generates standard labels |
+| common.tplvalues.render | Renders template values |
+| common.storage.class | Includes storage class configuration |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| architecture | string | - | Redis architecture (standalone or replication) |
+| master.kind | string | - | Workload kind for master (Deployment, StatefulSet, or DaemonSet) |
+| master.persistence.enabled | boolean | - | Enable persistence for master |
+| master.persistence.existingClaim | string | - | Name of an existing PVC to use |
+| master.persistence.accessModes | list | - | Access modes for the PVC |
+| master.persistence.size | string | - | Storage size for the PVC |
+| master.persistence.selector | object | - | Selector for the PVC |
+| master.persistence.dataSource | object | - | Data source for the PVC |
+| master.persistence.annotations | object | - | Annotations for the PVC |
+
+Note: The actual default values are not provided in the given YAML template. They would typically be defined in the `values.yaml` file of the Helm chart.

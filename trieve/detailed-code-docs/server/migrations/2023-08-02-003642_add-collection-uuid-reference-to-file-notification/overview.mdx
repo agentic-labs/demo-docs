@@ -3,68 +3,81 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding a foreign key constraint to the `collection_uuid` column in the `file_upload_completed_notifications` table. The migration references the `id` column of the `card_collection` table. The directory includes both "up" and "down" migration scripts to apply and revert the changes, respectively.
+This directory contains SQL migration scripts for adding a foreign key constraint to the `collection_uuid` column in the `file_upload_completed_notifications` table, referencing the `id` column of the `card_collection` table. The migration is designed to be reversible, with separate scripts for applying (up.sql) and reverting (down.sql) the changes.
 
 ## What does it do?
-The migration scripts in this directory modify the structure of the `file_upload_completed_notifications` table in the database. Here's what they do in simple terms:
+The migration accomplishes the following:
 
-1. The "up" migration adds a connection (foreign key constraint) between the `file_upload_completed_notifications` table and the `card_collection` table. This connection ensures that every `collection_uuid` in the `file_upload_completed_notifications` table corresponds to an existing `id` in the `card_collection` table.
+1. In the "up" direction:
+   - It adds a foreign key constraint to the `collection_uuid` column in the `file_upload_completed_notifications` table.
+   - This constraint references the `id` column of the `card_collection` table.
+   - The process involves creating a temporary table, copying data, recreating the original table with the new constraint, and then copying the data back.
 
-2. The "down" migration removes this connection, returning the `file_upload_completed_notifications` table to its original state without the link to the `card_collection` table.
+2. In the "down" direction:
+   - It removes the foreign key constraint from the `file_upload_completed_notifications` table.
+   - This effectively reverts the table to its original state without the reference to the `collections` table.
+   - The process is similar to the "up" direction, using a temporary table to preserve data while modifying the table structure.
 
-Both scripts carefully preserve all existing data in the `file_upload_completed_notifications` table while making these structural changes.
+These changes allow for maintaining referential integrity between file upload notifications and card collections in the database.
 
 ## Key Files
-1. `up.sql`: This file contains the SQL commands to add the foreign key constraint to the `file_upload_completed_notifications` table.
 
-2. `down.sql`: This file contains the SQL commands to remove the foreign key constraint from the `file_upload_completed_notifications` table, effectively undoing the changes made by `up.sql`.
+1. `up.sql`:
+   - This file contains the SQL script to apply the migration.
+   - It adds the foreign key constraint to the `file_upload_completed_notifications` table.
+   - The script uses a six-step process involving temporary tables to preserve existing data.
 
-Both files use a similar approach of creating a temporary table, moving data, recreating the main table with or without the constraint, and then moving the data back. This method ensures that no data is lost during the structural changes.
+2. `down.sql`:
+   - This file contains the SQL script to revert the migration.
+   - It removes the foreign key constraint from the `file_upload_completed_notifications` table.
+   - The script uses a similar process to `up.sql`, creating a temporary table to preserve data while modifying the table structure.
 
 ## Configuration
-These migration scripts don't rely on any external configuration. They are designed to be run as part of a database migration process, likely managed by an ORM or migration tool in the main application.
+Both scripts use SQL commands and do not require additional configuration. However, they assume the existence of certain tables and columns:
 
-The scripts assume the existence of two tables:
-1. `file_upload_completed_notifications`
-2. `card_collection`
-
-The `card_collection` table must have an `id` column that the new foreign key will reference.
+- `file_upload_completed_notifications` table
+- `card_collection` table
+- `collection_uuid` column in the `file_upload_completed_notifications` table
+- `id` column in the `card_collection` table
 
 ## Performance Considerations
-Both the "up" and "down" migrations involve copying all data from the `file_upload_completed_notifications` table twice:
-1. From the original table to a temporary table
-2. From the temporary table back to the recreated original table
+Both the `up.sql` and `down.sql` scripts involve copying potentially large amounts of data twice (to and from a temporary table). For large tables, these operations could be time-consuming and resource-intensive. It's advisable to run these migrations during low-traffic periods to minimize impact on system performance.
 
-This process can be resource-intensive and time-consuming if the `file_upload_completed_notifications` table contains a large amount of data. It's recommended to run these migrations during periods of low database activity to minimize potential disruptions to the application's performance.
+## Error Handling
+Neither script includes explicit error handling. If an error occurs during execution, the database system will likely roll back the entire transaction, leaving the database in its original state. However, because the operations are not atomic, there's a risk of leaving the database in an inconsistent state if an error occurs mid-process. Manual intervention may be required in such cases.
+
+## Side Effects
+- The `up.sql` script adds a foreign key constraint to the `file_upload_completed_notifications` table. This means that any existing rows in this table with `collection_uuid` values that don't exist in the `card_collection` table will cause the migration to fail.
+- Both scripts temporarily duplicate data in a temporary table and involve dropping and recreating the `file_upload_completed_notifications` table.
 
 ## Code Snippets
-Here's a key part of the `up.sql` script that adds the foreign key constraint:
+Here's a simplified version of the key operations in `up.sql`:
 
 ```sql
+-- Create temporary table
+CREATE TABLE file_upload_completed_notifications_temp (
+    -- ... (column definitions)
+);
+
+-- Copy data to temporary table
+INSERT INTO file_upload_completed_notifications_temp SELECT * FROM file_upload_completed_notifications;
+
+-- Drop original table
+DROP TABLE file_upload_completed_notifications;
+
+-- Recreate original table with foreign key constraint
 CREATE TABLE file_upload_completed_notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_uuid UUID NOT NULL,
-    collection_uuid UUID NOT NULL,
-    user_read BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    -- ... (column definitions)
     FOREIGN KEY (collection_uuid) REFERENCES card_collection(id)
 );
+
+-- Copy data back to original table
+INSERT INTO file_upload_completed_notifications SELECT * FROM file_upload_completed_notifications_temp;
+
+-- Drop temporary table
+DROP TABLE file_upload_completed_notifications_temp;
 ```
 
-And here's the corresponding part of the `down.sql` script that removes the constraint:
+The `down.sql` script follows a similar pattern but omits the foreign key constraint when recreating the table.
 
-```sql
-CREATE TABLE file_upload_completed_notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_uuid UUID NOT NULL,
-    collection_uuid UUID NOT NULL,
-    user_read BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-```
-
-Note the absence of the `FOREIGN KEY` clause in the `down.sql` version.
-
-These scripts demonstrate a careful approach to database schema changes, ensuring data integrity while modifying table structures. The use of temporary tables to preserve data during structural changes is a common and reliable pattern in database migrations.
+In conclusion, these migration scripts provide a mechanism for adding and removing a foreign key constraint to maintain referential integrity between file upload notifications and card collections, while preserving existing data during the process.

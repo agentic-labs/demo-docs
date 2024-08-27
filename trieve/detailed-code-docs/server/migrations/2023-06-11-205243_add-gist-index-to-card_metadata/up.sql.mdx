@@ -3,27 +3,27 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script adds a new column `card_metadata_tsvector` to the `card_metadata` table for storing full-text search vectors generated from the `content` column. It then populates this new column with tsvector values for existing rows and creates a GIN index on the `card_metadata_tsvector` column to speed up full-text searches. 
+This SQL script adds a new column `card_metadata_tsvector` to the `card_metadata` table for storing full-text search vectors generated from the `content` column. It then populates this new column with tsvector values for existing rows and creates a GIN index on the new column to speed up full-text searches. 
 
 ## Symbols
 
 ### `ALTER TABLE card_metadata ADD COLUMN card_metadata_tsvector TSVECTOR;`
 #### Description
-This statement adds a new column named `card_metadata_tsvector` to the `card_metadata` table. The data type of the new column is `TSVECTOR`, which is used to store text search vectors.
+This statement adds a new column named `card_metadata_tsvector` of type `TSVECTOR` to the existing table `card_metadata`. `TSVECTOR` is a data type specifically designed for storing pre-processed text for full-text search operations in PostgreSQL.
 
 #### Internal Logic
-This statement modifies the structure of the `card_metadata` table by adding a new column specifically designed for storing tsvector data.
+This statement modifies the structure of the `card_metadata` table to include an additional column intended for storing full-text search vectors.
 
 ### `UPDATE card_metadata SET card_metadata_tsvector = to_tsvector('english', content);`
 #### Description
-This statement populates the newly added `card_metadata_tsvector` column with tsvector values generated from the existing `content` column.
+This statement populates the newly added `card_metadata_tsvector` column. It uses the `to_tsvector` function to generate a tsvector representation of the text in the `content` column, assuming the text is in English.
 
 #### Internal Logic
-This statement iterates through each row in the `card_metadata` table and updates the `card_metadata_tsvector` column. For each row, it uses the `to_tsvector` function to generate a tsvector value from the `content` column, specifying 'english' as the language for text search parsing.
+This statement iterates through each row in the `card_metadata` table and for each row, it invokes the `to_tsvector` function, passing the text from the `content` column and the language 'english' as arguments. The function processes the text, removing stop words, stemming words, and converting the remaining words into lexemes, which are then stored in the `card_metadata_tsvector` column.
 
 ### `CREATE INDEX idx_card_metadata_tsvector ON card_metadata USING GIN(card_metadata_tsvector);`
 #### Description
-This statement creates a Generalized Inverted Index (GIN) named `idx_card_metadata_tsvector` on the `card_metadata_tsvector` column.
+This statement creates a Generalized Inverted Index (GIN) named `idx_card_metadata_tsvector` on the `card_metadata_tsvector` column. GIN indexes are specifically designed for efficiently searching through tsvector values, making full-text searches significantly faster.
 
 #### Internal Logic
-This statement creates an index specifically designed for optimizing full-text search queries using the tsvector data stored in the `card_metadata_tsvector` column. The GIN index is chosen because it is well-suited for indexing tsvector values and provides efficient performance for full-text searches.
+This statement instructs the database to create an index on the `card_metadata_tsvector` column. The index is of type GIN, which is optimized for searching within tsvector values. This index will store the lexemes from the tsvector values along with the corresponding row locations in the `card_metadata` table, allowing for fast retrieval of rows that match a given full-text search query.

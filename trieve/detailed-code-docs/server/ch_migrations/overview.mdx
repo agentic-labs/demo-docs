@@ -3,38 +3,47 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for a ClickHouse database, focusing on creating, modifying, and managing tables related to dataset events, search queries, recommendations, and other analytics-related data. The migrations are organized chronologically and include both "up" and "down" scripts for applying and reverting changes.
+This directory contains SQL migration scripts for a ClickHouse database, focusing on creating, modifying, and managing tables related to dataset events, search queries, recommendations, and other analytics-related data. The migrations are part of a versioned database schema management system, allowing for controlled evolution of the database structure over time.
 
 ## What does it do?
-The migration scripts in this directory perform various database schema modifications:
+The migrations in this directory perform several key functions:
 
 1. Create initial tables for storing dataset events, search queries, cluster topics, search cluster memberships, RAG queries, and recommendations.
-2. Add and remove columns for tracking duplicates, CTR (Click-Through Rate) data, and query ratings.
-3. Recreate the recommendations table with a new structure.
-4. Remove and add back TTL (Time-To-Live) settings for data retention management.
-5. Add user identification to relevant tables.
+2. Add and remove columns to existing tables, such as adding a 'type' column to the ctr_data table and a 'user_id' column to several tables.
+3. Modify table properties, such as removing Time-To-Live (TTL) settings from multiple tables.
+4. Create new tables for specific purposes, like tracking the last collapsed dataset or storing CTR (Click-Through Rate) data.
 
-These changes enable the system to store, track, and analyze various aspects of user interactions, search behaviors, and recommendation performance.
+These migrations allow the database schema to evolve to support new features, improve performance, or adjust data retention policies. They provide a structured way to apply changes to the database and roll them back if necessary.
+
+## Entry points
+The main entry points for these migrations are the individual SQL files within each numbered directory. Each migration typically consists of two files:
+
+1. `up.sql`: Contains SQL commands to apply the migration, such as creating tables or adding columns.
+2. `down.sql`: Contains SQL commands to revert the migration, such as dropping tables or removing columns.
+
+The migrations are likely executed in order based on their timestamp or numerical prefix. The `chm.toml` file in the root of the directory provides configuration for connecting to the ClickHouse database.
 
 ## Key Files
-
-1. Migration scripts (e.g., `1720668303_create_inital_tables`, `1721414235_last_row_processed_for_collapse`, etc.):
-   Each migration directory contains `up.sql` and `down.sql` files for applying and reverting changes respectively.
-
-2. `chm.toml`:
-   Configuration file for connecting to the ClickHouse database, specifying URL, user credentials, and default database.
+1. `1720668303_create_inital_tables/up.sql`: Creates the initial set of tables for the application.
+2. `1721414235_last_row_processed_for_collapse/up.sql`: Creates a table to track the last collapsed dataset.
+3. `1721705174_mark_rows_as_duplicates/up.sql`: Adds an `is_duplicate` column to the `search_queries` table.
+4. `1721754801_ctr_table/up.sql`: Creates a table for storing CTR data.
+5. `1721845099_add_ctr_type/up.sql`: Adds a 'type' column to the ctr_data table.
+6. `1722546114_add-bad-query-flag/up.sql`: Adds a `query_rating` column to the `search_queries` table.
+7. `1722913965_recreate_recommendations_table/up.sql`: Recreates the `recommendations` table with a new structure.
+8. `1722983788_remove_table_ttl/up.sql`: Removes TTL settings from multiple tables.
+9. `1723680843_add_user_ids/up.sql`: Adds a `user_id` column to several tables.
 
 ## Dependencies
-The migration scripts are designed for ClickHouse, a column-oriented database management system. They rely on ClickHouse-specific features such as:
+The migrations are designed for ClickHouse, a column-oriented database management system. They rely on ClickHouse-specific features such as:
 
 - MergeTree and ReplacingMergeTree storage engines
-- Support for UUID data type
 - Array data types
 - TTL (Time-To-Live) functionality
 - Partitioning and ordering capabilities
 
 ## Configuration
-The `chm.toml` file contains the following configuration for connecting to the ClickHouse database:
+The `chm.toml` file in the root of the directory provides configuration for connecting to the ClickHouse database:
 
 ```toml
 url = "http://localhost:8123"
@@ -43,27 +52,12 @@ password = "password"
 database = "default"
 ```
 
-These settings specify the connection details for the ClickHouse server, including the URL, user credentials, and default database.
+This configuration specifies the URL, user credentials, and the default database to be used for ClickHouse migrations. In a production environment, it would be advisable to use environment variables or a secure secrets management system rather than hardcoding credentials in a configuration file.
 
-Additionally, many of the migration scripts contain configurable aspects within the SQL commands, such as:
+The migrations themselves often include configurable aspects within the SQL scripts, such as:
 
-1. TTL settings: Most tables initially had a 30-day TTL, which was later removed and can be added back.
-2. Partitioning: Tables are often partitioned by month and dataset_id.
-3. Ordering: The columns used for ordering in each table are chosen to optimize common query patterns.
+- TTL settings (e.g., 30-day retention period)
+- Partitioning schemes (e.g., by month and dataset_id)
+- Column data types and default values
 
-## Performance Considerations
-1. The use of MergeTree and ReplacingMergeTree engines optimizes for efficient read and write operations on large datasets.
-2. Partitioning and ordering strategies are implemented to improve query performance.
-3. TTL settings (when used) help manage table sizes by automatically removing old data.
-4. Adding or removing columns and changing table structures may temporarily impact database performance during migration execution.
-
-When applying these migrations, especially in a production environment, it's crucial to:
-- Run migrations during low-traffic periods to minimize disruptions.
-- Test migrations in a non-production environment first.
-- Monitor table sizes and query performance after applying changes.
-- Have a plan for managing data growth, especially after removing TTL settings.
-
-## Security Considerations
-The `chm.toml` file contains database credentials in plain text. In a production environment, it would be advisable to use environment variables or a secure secret management system to handle sensitive information like passwords.
-
-Overall, these migration scripts provide a comprehensive system for managing the evolution of a ClickHouse database schema, enabling the development team to track and analyze user interactions, search behaviors, and recommendation performance in a structured and efficient manner.
+These can be adjusted in the SQL scripts to fine-tune the database behavior for specific requirements.

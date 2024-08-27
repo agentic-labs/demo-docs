@@ -11,11 +11,11 @@ The migration scripts set up a database structure to store and manage various as
 1. It creates tables to store dataset events, which could be any significant actions or changes related to datasets.
 2. It sets up a table for search queries, allowing the system to log and analyze user searches.
 3. It establishes a structure for clustering topics, which can be used for organizing and categorizing data.
-4. It creates a table to track memberships of search queries in clusters, enabling advanced analysis of search patterns.
-5. It sets up storage for RAG (Retrieval-Augmented Generation) queries, which likely involve using a language model to generate responses based on retrieved information.
-6. Finally, it creates a table for storing recommendations, which can be used to track and analyze the system's suggestions to users.
+4. It creates a table to manage search cluster memberships, linking searches to topic clusters.
+5. It sets up storage for RAG (Retrieval-Augmented Generation) queries, which combine search with language model responses.
+6. Finally, it creates a table for storing recommendations, which can be used to track and improve the system's suggestion capabilities.
 
-The `down.sql` script provides a way to revert these changes by dropping all the created tables.
+The `down.sql` script provides a way to revert these changes by dropping all the created tables, ensuring that the database can be rolled back to its previous state if needed.
 
 ## Key Files
 
@@ -23,16 +23,16 @@ The `down.sql` script provides a way to revert these changes by dropping all the
 This file contains the SQL commands to create six tables:
 
 1. `dataset_events`: Stores events related to datasets, including event type and associated data.
-2. `search_queries`: Logs search queries with details like query type, parameters, latency, and results.
-3. `cluster_topics`: Stores information about cluster topics, including density and average score.
-4. `search_cluster_memberships`: Tracks the membership of search queries in clusters.
+2. `search_queries`: Logs search queries, their parameters, results, and performance metrics.
+3. `cluster_topics`: Manages information about topic clusters, including density and average score.
+4. `search_cluster_memberships`: Links search queries to cluster topics.
 5. `rag_queries`: Stores RAG query information, including user messages and language model responses.
-6. `recommendations`: Logs recommendation data, including positive and negative ratings.
+6. `recommendations`: Tracks recommendation data, including positive and negative ratings.
 
 Each table is created with specific columns, storage engines (mostly MergeTree), ordering, partitioning, and TTL (Time-To-Live) settings where applicable.
 
 ### down.sql
-This file contains SQL commands to drop all the tables created by `up.sql`. It uses `DROP TABLE IF EXISTS` statements to ensure that the script can be run multiple times without errors, even if some tables don't exist.
+This file contains SQL commands to drop all the tables created by `up.sql`. It uses `DROP TABLE IF EXISTS` statements to ensure that the script can be run safely even if some tables don't exist.
 
 ## Dependencies
 The migration scripts are designed for ClickHouse, a column-oriented database management system. They rely on ClickHouse's specific features such as:
@@ -50,98 +50,13 @@ While there are no explicit configuration files, the migration scripts contain s
 2. Partitioning: Tables are partitioned by month and dataset_id, which can be modified to suit different data distribution patterns.
 3. Ordering: The columns used for ordering in each table are chosen to optimize common query patterns and can be adjusted based on specific use cases.
 
-Here's an example of how these configurations are set in the `dataset_events` table creation:
+Example of TTL and partitioning configuration in the `dataset_events` table:
 
 ```sql
-CREATE TABLE dataset_events
-(
-    id UUID,
-    created_at DateTime,
-    dataset_id UUID,
-    event_type String,
-    event_data String
-)
-ENGINE = MergeTree
+ENGINE = MergeTree()
 ORDER BY (dataset_id, created_at, event_type, id)
 PARTITION BY (toYYYYMM(created_at), dataset_id)
-TTL created_at + INTERVAL 30 DAY;
+TTL created_at + INTERVAL 30 DAY
 ```
 
-In this example:
-- The TTL is set to 30 days from the `created_at` timestamp.
-- The table is partitioned by month and dataset_id.
-- The ordering is set to optimize queries filtering by dataset_id and time range.
-
-These settings can be adjusted in each table creation statement to fine-tune the database performance and data management strategies.
-
-## High-level description
-This directory contains SQL migration scripts for creating and dropping several tables in a ClickHouse database. These tables are designed to support a dataset-centric search and recommendation system. The migration consists of two files: `up.sql` for creating the tables and `down.sql` for dropping them.
-
-## What does it do?
-The migration scripts set up a database structure to store and manage various aspects of a search and recommendation system:
-
-1. It creates tables to store dataset events, which could be any significant actions or changes related to datasets.
-2. It sets up a table for search queries, allowing the system to log and analyze user searches.
-3. It establishes a structure for clustering topics, which can be used for organizing and categorizing data.
-4. It creates a table to track memberships of search queries in clusters, enabling advanced analysis of search patterns.
-5. It sets up storage for RAG (Retrieval-Augmented Generation) queries, which likely involve using a language model to generate responses based on retrieved information.
-6. Finally, it creates a table for storing recommendations, which can be used to track and analyze the system's suggestions to users.
-
-The `down.sql` script provides a way to revert these changes by dropping all the created tables.
-
-## Key Files
-
-### up.sql
-This file contains the SQL commands to create six tables:
-
-1. `dataset_events`: Stores events related to datasets, including event type and associated data.
-2. `search_queries`: Logs search queries with details like query type, parameters, latency, and results.
-3. `cluster_topics`: Stores information about cluster topics, including density and average score.
-4. `search_cluster_memberships`: Tracks the membership of search queries in clusters.
-5. `rag_queries`: Stores RAG query information, including user messages and language model responses.
-6. `recommendations`: Logs recommendation data, including positive and negative ratings.
-
-Each table is created with specific columns, storage engines (mostly MergeTree), ordering, partitioning, and TTL (Time-To-Live) settings where applicable.
-
-### down.sql
-This file contains SQL commands to drop all the tables created by `up.sql`. It uses `DROP TABLE IF EXISTS` statements to ensure that the script can be run multiple times without errors, even if some tables don't exist.
-
-## Dependencies
-The migration scripts are designed for ClickHouse, a column-oriented database management system. They rely on ClickHouse's specific features such as:
-
-- MergeTree and ReplacingMergeTree storage engines
-- Support for UUID data type
-- Array data types
-- TTL (Time-To-Live) functionality
-- Partitioning and ordering capabilities
-
-## Configuration
-While there are no explicit configuration files, the migration scripts contain several configurable aspects:
-
-1. TTL settings: Most tables have a 30-day TTL, which can be adjusted as needed.
-2. Partitioning: Tables are partitioned by month and dataset_id, which can be modified to suit different data distribution patterns.
-3. Ordering: The columns used for ordering in each table are chosen to optimize common query patterns and can be adjusted based on specific use cases.
-
-Here's an example of how these configurations are set in the `dataset_events` table creation:
-
-```sql
-CREATE TABLE dataset_events
-(
-    id UUID,
-    created_at DateTime,
-    dataset_id UUID,
-    event_type String,
-    event_data String
-)
-ENGINE = MergeTree
-ORDER BY (dataset_id, created_at, event_type, id)
-PARTITION BY (toYYYYMM(created_at), dataset_id)
-TTL created_at + INTERVAL 30 DAY;
-```
-
-In this example:
-- The TTL is set to 30 days from the `created_at` timestamp.
-- The table is partitioned by month and dataset_id.
-- The ordering is set to optimize queries filtering by dataset_id and time range.
-
-These settings can be adjusted in each table creation statement to fine-tune the database performance and data management strategies.
+These settings can be fine-tuned based on the expected data volume, query patterns, and retention requirements of the system.

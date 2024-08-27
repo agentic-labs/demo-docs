@@ -3,68 +3,53 @@ title: "service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service for Redis master nodes. It exposes the Redis master nodes on a configurable service type (ClusterIP, NodePort, or LoadBalancer) and allows for customization of service parameters like external traffic policy, load balancer configuration, and session affinity. The service is only created if Sentinel is disabled and there is at least one Redis master node.
+This YAML template defines a Kubernetes Service for Redis master nodes in a Helm chart. It creates a Service resource to expose Redis master instances, configuring various service-related settings based on the provided values.
 
 ## Code Structure
-The code uses a series of nested `if` statements to conditionally render different parts of the service definition based on the provided values. It leverages various template functions like `include`, `printf`, `semverCompare`, and `toYaml` to generate the final YAML output.
-
-## References
-* `common.names.fullname`: Generates the full name of the service.
-* `common.names.namespace`: Retrieves the namespace for the service.
-* `common.labels.standard`: Generates standard labels for the service.
-* `common.tplvalues.merge`: Merges multiple values into a single dictionary.
-* `common.tplvalues.render`: Renders a template value.
-* `common.capabilities.kubeVersion`: Retrieves the Kubernetes version.
-* `common.labels.matchLabels`: Generates label selectors for the service.
+The template uses conditional statements and helper functions to dynamically generate the Service configuration based on the chart's values. It leverages Helm's templating syntax to include common labels, annotations, and other shared configurations.
 
 ## Symbols
-### `helm/charts/redis/templates/master/service.yaml`
+
+### Service Resource
 #### Description
-This file defines a Kubernetes Service resource for Redis master nodes. It allows for customization of various service parameters through values passed to the Helm chart.
+Defines a Kubernetes Service resource for Redis master nodes.
 
 #### Inputs
-This code snippet doesn't have explicit input parameters. It relies on values passed to the Helm chart during deployment.
-
-#### Outputs
-The code generates a Kubernetes YAML manifest for a Service object.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values | object | Values provided to the Helm chart |
+| $ | object | The root context of the template |
 
 #### Internal Logic
-1. **Conditional Rendering:** The code uses multiple `if` statements to conditionally render different parts of the service definition based on the provided values.
-2. **Template Functions:** It leverages various template functions like `include`, `printf`, `semverCompare`, and `toYaml` to generate the final YAML output.
-3. **Service Configuration:** The code configures the service type, external traffic policy, load balancer settings, session affinity, and ports based on the provided values.
-4. **Labels and Selectors:** It uses template functions to generate standard labels and selectors for the service, ensuring proper identification and routing of traffic.
+1. Checks if sentinel is not enabled and master count is greater than 0.
+2. Sets metadata including name, namespace, labels, and annotations.
+3. Configures the service type and related settings (e.g., externalTrafficPolicy, loadBalancer options).
+4. Defines the service ports, including the main Redis port and any extra ports.
+5. Sets the selector for targeting Redis master pods.
 
 ## Side Effects
-This code, when deployed, will create a new Kubernetes Service object in the specified namespace.
+Creates a Kubernetes Service resource when conditions are met.
 
 ## Dependencies
-* Kubernetes
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper functions for naming, labels, and template rendering |
 
 ## Configuration
-This code relies on values passed to the Helm chart during deployment. Some of the key configurable options include:
+The Service configuration is highly customizable through various `.Values` options. Key configurations include:
 
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| `sentinel.enabled` | bool |  | Enables or disables Redis Sentinel. The service is only created if Sentinel is disabled. |
-| `master.count` | int | | Number of Redis master nodes. The service is only created if there is at least one master node. |
-| `master.service.type` | string | | Type of Kubernetes service (e.g., ClusterIP, NodePort, LoadBalancer). |
-| `master.service.externalTrafficPolicy` | string | | Policy for external traffic routing (e.g., Cluster, Local). |
-| `master.service.internalTrafficPolicy` | string | | Policy for internal traffic routing (e.g., Cluster, Local). Available in Kubernetes 1.22+. |
-| `master.service.loadBalancerIP` | string | | Static IP address to assign to the load balancer. |
-| `master.service.loadBalancerClass` | string | | Load balancer class to use for the service. |
-| `master.service.loadBalancerSourceRanges` | list | | List of IP CIDR ranges allowed to access the load balancer. |
-| `master.service.clusterIP` | string | | ClusterIP address to assign to the service. |
-| `master.service.sessionAffinity` | string | | Session affinity mode (e.g., None, ClientIP). |
-| `master.service.sessionAffinityConfig` | map | | Configuration for session affinity. |
-| `master.service.externalIPs` | list | | List of external IPs to assign to the service. |
-| `master.service.ports.redis` | int | | Port number for the Redis service. |
-| `master.service.nodePorts.redis` | int | | NodePort to expose the Redis service on. |
-| `master.service.extraPorts` | list | | List of additional ports to expose on the service. |
-| `master.podLabels` | map | | Custom labels to apply to the Redis master pods. |
-| `commonLabels` | map | | Common labels to apply to all resources. |
+| .Values.master.service.type | string | N/A | Defines the Kubernetes Service type |
+| .Values.master.service.ports.redis | number | N/A | Specifies the port for Redis traffic |
+| .Values.master.service.nodePorts.redis | number | N/A | Specifies the node port for Redis (if applicable) |
 
 ## Error Handling
-This code snippet doesn't implement specific error handling.
+The template uses conditional statements to handle different service types and Kubernetes versions, ensuring compatibility and preventing configuration errors.
 
-## Logging
-This code snippet doesn't implement logging.
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| `:6379` | TCP | Redis protocol | Redis protocol | Exposes the Redis master instance(s) |
+
+This Service resource creates an endpoint for accessing the Redis master instance(s) within the Kubernetes cluster. The exact accessibility depends on the service type and other configuration options set in the values.

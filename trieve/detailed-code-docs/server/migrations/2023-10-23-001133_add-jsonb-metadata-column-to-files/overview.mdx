@@ -16,43 +16,48 @@ The migration scripts in this directory perform the following actions:
    - Remove the `metadata` column from the `files` table.
    - Add back the `mime_type` column to the `files` table.
 
-These changes enable the application to store more flexible and detailed metadata for files, moving from a simple text-based `mime_type` to a structured JSON object that can contain various properties related to the file.
+These changes enable the application to store more flexible and comprehensive metadata for files, moving from a simple text-based `mime_type` to a structured JSON object that can contain various properties related to the file.
 
 ## Key Files
-
 1. `up.sql`: This file contains the SQL commands to apply the migration, adding the `metadata` column and removing the `mime_type` column.
 
 2. `down.sql`: This file contains the SQL commands to revert the migration, removing the `metadata` column and adding back the `mime_type` column.
 
-Both files are crucial for managing the database schema changes and ensuring that the changes can be applied and rolled back as needed.
-
 ## Configuration
-The migration scripts use standard SQL syntax and do not require additional configuration. However, the following details are important to note:
+The migration scripts use standard SQL syntax and do not require any specific configuration. However, the database system must support JSONB data type for the `up.sql` script to work correctly.
 
-- The `metadata` column in `up.sql` is configured as follows:
-  - Type: JSONB
-  - Nullable: Yes
-  - Default value: An empty JSON object (`'{}'::JSONB`)
+Here's a breakdown of the configurable fields in the migration:
 
-- The `mime_type` column in `down.sql` is configured as follows:
-  - Type: TEXT
-  - Nullable: Yes
-  - Default value: NULL
+1. In `up.sql`:
+   - `metadata JSONB NULL DEFAULT '{}'::JSONB`: This defines the new `metadata` column with the following properties:
+     - Type: JSONB (JSON Binary)
+     - Nullable: Yes
+     - Default value: An empty JSON object
 
-These configurations ensure that the new `metadata` column can store structured data with a default empty object, while the `mime_type` column (when restored) maintains its original properties.
+2. In `down.sql`:
+   - `mime_type TEXT NULL DEFAULT NULL`: This defines the restored `mime_type` column with the following properties:
+     - Type: TEXT
+     - Nullable: Yes
+     - Default value: NULL
 
-Here's a sample of how the `up.sql` script modifies the `files` table:
+## Side Effects
+Applying this migration will have the following side effects:
 
-```sql
-ALTER TABLE files ADD COLUMN metadata JSONB NULL DEFAULT '{}'::JSONB;
-ALTER TABLE files DROP COLUMN mime_type;
-```
+1. When applying the "up" migration:
+   - Any existing data in the `mime_type` column will be permanently lost.
+   - Applications or queries that rely on the `mime_type` column will need to be updated to use the new `metadata` column.
+   - The table structure will change, potentially affecting the performance of queries and the size of the table.
 
-And here's how the `down.sql` script reverts these changes:
+2. When applying the "down" migration:
+   - All data stored in the `metadata` column will be permanently lost.
+   - The newly added `mime_type` column will be empty (NULL values) and won't contain any data from before the "up" migration was applied.
+   - Applications that were updated to use the `metadata` column will need to be reverted to use the `mime_type` column again.
 
-```sql
-ALTER TABLE files DROP COLUMN metadata;
-ALTER TABLE files ADD COLUMN mime_type TEXT NULL DEFAULT NULL;
-```
+## Performance Considerations
+1. Adding the JSONB column may slightly increase the table size and affect insert/update performance, especially for large tables.
+2. Removing the `mime_type` column will slightly reduce the table's storage requirements.
+3. Queries that previously used the `mime_type` column might need to be rewritten to use JSONB operators, which could affect query performance.
+4. Depending on the size of the `files` table and the database system being used, these migrations could potentially be time-consuming operations, especially if the table contains a large number of rows.
+5. Some database systems may require a table rewrite when adding or removing columns, which can be a resource-intensive operation for large tables.
 
-It's important to note that running these migrations will permanently alter the database schema and may affect existing data and application functionality. Proper testing and data migration strategies should be implemented when applying these changes in a production environment.
+It's recommended to test these migrations on a staging environment with a representative dataset to assess their impact on performance and ensure that all dependent applications and queries are updated accordingly.

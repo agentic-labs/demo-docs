@@ -3,55 +3,50 @@ title: "server-service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service named "server-service" that exposes a server application running in a Kubernetes cluster. It also conditionally creates a Google Cloud BackendConfig for health checks when deployed to Google Cloud Platform (GCP).
+This Helm template defines a Kubernetes Service for a server application. It also includes a Google Cloud-specific BackendConfig for health checks when deployed in a Google Cloud environment. The template uses variables and conditional statements to customize the configuration based on the deployment environment.
 
 ## Code Structure
-The code uses conditional logic to define a BackendConfig resource only when the `environment` value is set to "gcloud". The BackendConfig is then referenced in the Service's annotations to configure health checks.
+The template is divided into two main parts:
+1. A conditional BackendConfig resource for Google Cloud deployments.
+2. A Kubernetes Service resource for exposing the server application.
 
 ## Symbols
 
-### `server-service.yaml`
+### BackendConfig (Google Cloud specific)
 #### Description
-This code defines a Kubernetes Service and, conditionally, a Google Cloud BackendConfig. The service exposes a server application on port 8090, and the BackendConfig configures health checks for the service when deployed to GCP.
-
-#### Inputs
-This code snippet takes its input from values passed in by Helm during deployment. The most important input is:
-
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| $.Values.environment | string | The deployment environment. If set to "gcloud", a BackendConfig is created. |
-
-#### Outputs
-This code defines two Kubernetes resources:
-
-* **Service:** Exposes the server application on port 8090 within the cluster.
-* **BackendConfig (conditional):** Configures health checks for the service when deployed to GCP.
+Defines a Google Cloud BackendConfig resource for configuring health checks on the server service. This is only included when the deployment environment is set to "gcloud".
 
 #### Internal Logic
-1. **Define template variables:**
-   - `$name`: Sets the name of the service to "server-service".
-   - `$selector`: Sets the selector label to "server".
-2. **Conditional BackendConfig creation:**
-   - An `if` block checks if `$.Values.environment` is equal to "gcloud".
-   - If true, it defines a BackendConfig resource named "server-backend-config" with a health check on port 8090 at the path "/api/health".
-3. **Service definition:**
-   - Defines a Service resource named "server-service".
-   - Sets annotations to link the service with the BackendConfig (if created) for health checks.
-   - Sets labels for service identification.
-   - Specifies `ClusterIP` type to expose the service internally within the cluster.
-   - Defines a port mapping for the service (port 8090).
-   - Sets selectors to target pods with specific labels.
+- Checks if the environment is "gcloud" using a conditional statement.
+- If true, creates a BackendConfig resource with specific health check settings.
+
+### Service
+#### Description
+Defines a Kubernetes Service resource to expose the server application within the cluster.
+
+#### Internal Logic
+- Uses variables `$name` and `$selector` for consistent naming and selection.
+- Sets metadata including name, annotations, and labels.
+- Configures the service type as ClusterIP.
+- Defines a port configuration for the server.
+- Sets up a selector to target the appropriate server pods.
 
 ## Dependencies
-This code depends on Kubernetes and, conditionally, Google Cloud Platform.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | Template rendering and variable substitution |
+| Kubernetes | Service resource definition |
+| Google Cloud (conditional) | BackendConfig resource for GCP deployments |
 
-### Configuration
-The code's behavior can be configured using Helm values:
-
+## Configuration
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| environment | string | N/A | Determines whether a BackendConfig is created. Set to "gcloud" to enable. |
-
+| environment | string | N/A | Determines whether to include GCP-specific configurations |
+| Release.Name | string | N/A | Used in the selector to identify the correct instance |
 
 ## API/Interface Reference
-This code does not define an API or public interface. It defines Kubernetes resources. 
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /api/health | GET | N/A | N/A | Health check endpoint for the server service |
+
+This template defines a Kubernetes Service that exposes port 8090 for the server application. When deployed in a Google Cloud environment, it also includes a BackendConfig for health checks. The Service uses ClusterIP type, making it internally accessible within the Kubernetes cluster. The health check, when applicable, is configured to check the `/api/health` endpoint every 15 seconds.

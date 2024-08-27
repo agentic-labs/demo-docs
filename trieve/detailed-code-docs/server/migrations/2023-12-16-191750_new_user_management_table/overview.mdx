@@ -3,65 +3,68 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for implementing a new user management system. The migration introduces a many-to-many relationship between users and organizations, replacing the previous one-to-many relationship. This change allows users to belong to multiple organizations with different roles.
+This directory contains SQL migration scripts for implementing a new user management system in the database. The migration introduces a many-to-many relationship between users and organizations, replacing a previous one-to-one relationship. The directory includes two files: `up.sql` for applying the changes and `down.sql` for rolling them back.
 
 ## What does it do?
-The migration scripts in this directory perform the following actions:
+The migration accomplishes the following:
 
-1. In the "up" migration:
-   - Removes the `organization_id` column from the `users` table.
-   - Creates a new `user_organizations` table to manage user-organization relationships.
-   - Adds foreign key constraints to link the `user_organizations` table with the `users` and `organizations` tables.
+1. It removes the direct association between users and organizations by dropping the `organization_id` column from the `users` table.
+2. It creates a new `user_organizations` table to manage the relationships between users and organizations. This table allows a user to be associated with multiple organizations and vice versa.
+3. It sets up foreign key constraints to ensure data integrity between the `user_organizations` table and the `users` and `organizations` tables.
+4. It includes fields for tracking when these relationships are created and updated, as well as a role field to define a user's role within an organization.
 
-2. In the "down" migration:
-   - Removes the foreign key constraints from the `user_organizations` table.
-   - Drops the `user_organizations` table.
-   - Adds the `organization_id` column back to the `users` table.
-
-These changes enable a more flexible user management system where users can be associated with multiple organizations, each with a specific role. This is particularly useful for scenarios where users might need different levels of access or responsibilities across various organizations within the system.
+The rollback script (`down.sql`) reverses these changes, allowing the database to be returned to its previous state if needed.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to implement the new user management structure. It creates the `user_organizations` table and modifies the `users` table.
+### up.sql
+This file contains the SQL commands to implement the new user management system. Here's a breakdown of its main operations:
 
-2. `down.sql`: This file contains the SQL commands to revert the changes made by `up.sql`, restoring the database to its previous state.
+1. Remove the `organization_id` column from the `users` table:
+   ```sql
+   ALTER TABLE users DROP COLUMN IF EXISTS organization_id;
+   ```
+
+2. Create the new `user_organizations` table:
+   ```sql
+   CREATE TABLE user_organizations (
+       id UUID PRIMARY KEY,
+       user_id UUID NOT NULL,
+       organization_id UUID NOT NULL,
+       role INTEGER NOT NULL,
+       created_at TIMESTAMP NOT NULL,
+       updated_at TIMESTAMP NOT NULL
+   );
+   ```
+
+3. Add foreign key constraints:
+   ```sql
+   ALTER TABLE user_organizations ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users (id);
+   ALTER TABLE user_organizations ADD CONSTRAINT fk_organization_id FOREIGN KEY (organization_id) REFERENCES organizations (id);
+   ```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`:
+
+1. Drop the foreign key constraints:
+   ```sql
+   ALTER TABLE user_organizations DROP CONSTRAINT IF EXISTS fk_user_id;
+   ALTER TABLE user_organizations DROP CONSTRAINT IF EXISTS fk_organization_id;
+   ```
+
+2. Drop the `user_organizations` table:
+   ```sql
+   DROP TABLE IF EXISTS user_organizations;
+   ```
+
+3. Add back the `organization_id` column to the `users` table:
+   ```sql
+   ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID;
+   ```
 
 ## Configuration
-The migration scripts use SQL commands and do not require additional configuration. However, they rely on the existence of `users` and `organizations` tables in the database.
+This migration doesn't require any specific configuration files or environment variables. However, it assumes the existence of `users` and `organizations` tables in the database.
 
-Key configurable fields in the `user_organizations` table include:
+The `user_organizations` table uses UUID types for `id`, `user_id`, and `organization_id` fields, which suggests that the application is using UUIDs for primary keys across these tables.
 
-- `user_id`: UUID linking to the `users` table
-- `organization_id`: UUID linking to the `organizations` table
-- `role`: An integer representing the user's role in the organization
-
-## Side Effects and Considerations
-
-1. Data Migration: When applying this migration to an existing system, careful consideration must be given to migrating existing user-organization relationships from the `users` table to the new `user_organizations` table.
-
-2. Application Code Updates: Any existing application code that relies on the `organization_id` column in the `users` table will need to be updated to use the new `user_organizations` table for querying user-organization relationships.
-
-3. Performance: Queries involving user-organization relationships may become more complex and potentially slower, as they now require joining with the `user_organizations` table. Proper indexing should be considered for performance optimization.
-
-4. Data Integrity: The new structure enforces referential integrity through foreign key constraints, ensuring that user-organization relationships always refer to valid users and organizations.
-
-5. Flexibility: The new structure allows for more flexible user management, supporting scenarios where users need different roles or access levels across multiple organizations.
-
-6. Reversibility: The `down.sql` script allows for reverting the changes, but care must be taken to ensure no data loss occurs when transitioning back to the old structure.
-
-Example of how the new structure might be used in application code:
-
-```sql
--- Query to get all organizations a user belongs to
-SELECT o.* 
-FROM organizations o
-JOIN user_organizations uo ON o.id = uo.organization_id
-WHERE uo.user_id = 'user_uuid_here';
-
--- Query to get a user's role in a specific organization
-SELECT role 
-FROM user_organizations 
-WHERE user_id = 'user_uuid_here' AND organization_id = 'org_uuid_here';
-```
-
-These migration scripts represent a significant change in the database schema and should be applied with caution, ensuring that all related application code is updated accordingly to work with the new structure.
+The `role` field in the `user_organizations` table is defined as an INTEGER. This implies that the application might use integer values to represent different roles, which should be documented elsewhere in the application code or documentation.

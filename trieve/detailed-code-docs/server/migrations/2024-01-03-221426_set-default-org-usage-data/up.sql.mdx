@@ -3,39 +3,36 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script defines a trigger and a function to automatically create a corresponding record in the `organization_usage_counts` table whenever a new organization is added to the `organizations` table. It also drops a unique constraint on the `name` column of the `organizations` table.
-
-## Code Structure
-The code defines a PostgreSQL function `set_default_org_usage_data` which is used by the trigger `set_default_org_usage_data_trigger`. The trigger is executed after an insert operation on the `organizations` table.
+This SQL script defines a PostgreSQL function and trigger to automatically create a corresponding record in the `organization_usage_counts` table whenever a new organization is added to the `organizations` table. It also drops a unique constraint on the `name` column of the `organizations` table.
 
 ## Symbols
 
-### `set_default_org_usage_data`
+### `set_default_org_usage_data()`
 #### Description
-This function inserts a new row into the `organization_usage_counts` table for the newly inserted organization. If a row with the same `org_id` already exists, it does nothing.
+This function inserts a new row into the `organization_usage_counts` table with the `org_id` set to the `id` of the newly created organization. If a row with the same `org_id` already exists, the function does nothing.
 
 #### Inputs
-This function does not take any explicit inputs. It accesses the newly inserted organization's ID using `NEW.id` within the trigger context.
+This function does not take any explicit inputs. It implicitly relies on the `NEW` record available in the trigger context.
 
 #### Outputs
-This function returns `NEW` which represents the newly inserted row in the `organizations` table. This is a convention in PostgreSQL triggers.
+This function returns `NEW` which represents the newly inserted row in the `organizations` table.
 
 #### Internal Logic
-1. **Insert or Do Nothing:** The function attempts to insert a new row into `organization_usage_counts` with the `org_id` set to the ID of the newly inserted organization (`NEW.id`).
-2. **Conflict Resolution:** If a conflict occurs on the `org_id` (meaning a row with the same `org_id` already exists), the function does nothing. This ensures that only one row exists per organization in the `organization_usage_counts` table.
-3. **Return:** The function returns `NEW`, which represents the newly inserted row in the `organizations` table.
+1. **Insert Statement:** Attempts to insert a new row into the `organization_usage_counts` table.
+   - The `org_id` for the new row is set to the `id` of the newly inserted organization (accessible via `NEW.id`).
+2. **Conflict Handling:** Uses `ON CONFLICT (org_id) DO NOTHING` to handle cases where a row with the same `org_id` already exists. In such cases, the insert is skipped.
+3. **Return Value:** Returns `NEW`, representing the newly inserted organization record.
 
 ### `set_default_org_usage_data_trigger`
 #### Description
-This trigger automatically calls the `set_default_org_usage_data` function after a new row is inserted into the `organizations` table.
-
-#### Inputs
-This trigger implicitly receives the newly inserted row in the `organizations` table as input.
+This trigger automatically executes the `set_default_org_usage_data()` function after a new row is inserted into the `organizations` table.
 
 #### Internal Logic
-1. **Trigger Activation:** The trigger is activated after each row insertion into the `organizations` table.
-2. **Function Execution:** The trigger executes the `set_default_org_usage_data` function.
+- **Trigger Type:** `AFTER INSERT` specifies that the trigger should fire after a new row is inserted.
+- **Triggering Event:** `ON organizations` indicates that the trigger is associated with the `organizations` table.
+- **Trigger Level:** `FOR EACH ROW` ensures that the trigger fires for each inserted row individually.
+- **Action:** `EXECUTE FUNCTION set_default_org_usage_data()` calls the defined function to create the corresponding usage data record.
 
-### `ALTER TABLE organizations DROP CONSTRAINT organizations_name_key;`
+### `ALTER TABLE organizations DROP CONSTRAINT organizations_name_key`
 #### Description
-This statement drops the unique constraint named `organizations_name_key` from the `organizations` table. This likely means that the `name` column in the `organizations` table no longer needs to be unique.
+This statement drops the unique constraint named `organizations_name_key` from the `organizations` table. This implies that the `name` column no longer needs to be unique in the `organizations` table.

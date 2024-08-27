@@ -3,35 +3,40 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script defines a function `set_default_dataset_usage_data` and a trigger `set_default_dataset_usage_data_trigger`. The trigger automatically inserts a new record into the `dataset_usage_counts` table whenever a new dataset is added to the `datasets` table.
+This SQL script defines a function and a trigger to automatically create a default record in the `dataset_usage_counts` table whenever a new dataset is added to the `datasets` table. This ensures that every dataset has a corresponding entry in the usage counts table, even if the initial usage count is zero.
+
+## Code Structure
+The code defines two SQL objects: a function named `set_default_dataset_usage_data` and a trigger named `set_default_dataset_usage_data_trigger`. The trigger is set to execute the function after each new row insertion in the `datasets` table.
 
 ## Symbols
 
 ### `set_default_dataset_usage_data`
 #### Description
-This function inserts a new row into the `dataset_usage_counts` table with the `dataset_id` of the newly inserted dataset. If a record with the same `dataset_id` already exists, it does nothing.
+This function inserts a new record into the `dataset_usage_counts` table for the newly inserted dataset. It uses `ON CONFLICT DO NOTHING` to handle cases where a record for the dataset might already exist, preventing duplicate entries.
 
 #### Inputs
-This function does not take any explicit inputs. It implicitly uses the `NEW` record from the triggering `INSERT` statement on the `datasets` table.
+This function doesn't take any explicit inputs. It implicitly uses the `NEW` record from the triggering `INSERT` statement on the `datasets` table.
 
 #### Outputs
-This function returns a trigger signal (`NEW`) indicating that the operation was successful.
+This function returns a trigger result (`TRIGGER`), indicating successful execution.
 
 #### Internal Logic
 1. **Insert Statement:** Attempts to insert a new row into the `dataset_usage_counts` table.
-    - The `dataset_id` for the new row is taken from the `NEW.id` value, which represents the `id` of the newly inserted dataset.
-2. **Conflict Handling:** Uses `ON CONFLICT (dataset_id) DO NOTHING` to handle cases where a record with the same `dataset_id` already exists. In such cases, the insert is skipped.
+   - The `dataset_id` for the new row is taken from the `NEW.id` value, which represents the ID of the newly inserted dataset.
+2. **Conflict Handling:** Uses `ON CONFLICT (dataset_id) DO NOTHING` to handle potential duplicate key violations. If a record with the same `dataset_id` already exists, the insert is skipped.
+3. **Return:** Returns `NEW`, indicating successful trigger execution.
 
 ### `set_default_dataset_usage_data_trigger`
 #### Description
-This trigger automatically executes the `set_default_dataset_usage_data` function after a new row is inserted into the `datasets` table.
+This trigger automatically executes the `set_default_dataset_usage_data` function after each new row is inserted into the `datasets` table.
 
 #### Inputs
-This trigger implicitly uses the `NEW` record from the `INSERT` statement on the `datasets` table.
+This trigger implicitly uses the `NEW` record from the triggering `INSERT` statement on the `datasets` table.
 
 #### Outputs
-This trigger does not have any explicit outputs. It ensures that a corresponding record is created in the `dataset_usage_counts` table whenever a new dataset is added.
+This trigger doesn't have any explicit outputs. It ensures the execution of the associated function.
 
 #### Internal Logic
-1. **Trigger Activation:** The trigger is activated `AFTER INSERT` on the `datasets` table.
-2. **Trigger Execution:** For each row inserted into the `datasets` table, the trigger executes the `set_default_dataset_usage_data` function.
+1. **Trigger Activation:** The trigger is activated `AFTER INSERT` on the `datasets` table, meaning it runs after a successful insertion into the `datasets` table.
+2. **Trigger Scope:** It uses `FOR EACH ROW`, indicating that it runs once for every new row inserted.
+3. **Function Execution:** It executes the `set_default_dataset_usage_data()` function.

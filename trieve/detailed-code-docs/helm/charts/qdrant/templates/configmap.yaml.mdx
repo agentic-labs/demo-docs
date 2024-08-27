@@ -3,43 +3,59 @@ title: "configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap named "qdrant" that holds configuration data for a Qdrant deployment. It specifically contains two data keys: "initialize.sh" - a shell script for initializing Qdrant pods, and "production.yaml" - a YAML configuration file for Qdrant.
-
-## Code Structure
-The code defines a Kubernetes ConfigMap resource with two data entries. The "initialize.sh" entry contains a shell script that uses conditional logic based on `Values.snapshotRestoration.enabled` and `Values.replicaCount` to determine the initialization command for Qdrant. The "production.yaml" entry uses the `toYaml` function to convert the `Values.config` object into a YAML string.
-
-## References
-- `qdrant.fullname`: This appears to be a template function provided by Helm, used to generate the full name of the Qdrant deployment.
-- `.Values.snapshotRestoration.enabled`: This refers to a configuration value that determines whether snapshot restoration is enabled.
-- `.Values.replicaCount`: This refers to a configuration value that specifies the number of replicas for the deployment.
-- `.Values.snapshotRestoration.snapshots`: This refers to a list of snapshots to be restored if snapshot restoration is enabled.
-- `.Values.config`: This refers to a configuration object that contains the Qdrant configuration.
+This Kubernetes ConfigMap YAML file defines configuration for a Qdrant deployment. It includes an initialization script and a production configuration, tailored for different scenarios such as single-node deployments, multi-node clusters, and snapshot restoration.
 
 ## Symbols
-### `initialize.sh`
+
+### ConfigMap
 #### Description
-This shell script is responsible for initializing Qdrant pods. It determines the appropriate initialization command based on whether snapshot restoration is enabled and the number of replicas.
+This Kubernetes ConfigMap resource contains two main data items: an initialization script (`initialize.sh`) and a production configuration (`production.yaml`).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.snapshotRestoration.enabled | boolean | Indicates if snapshot restoration is enabled |
+| .Values.replicaCount | integer | The number of replicas in the Qdrant deployment |
+| .Values.snapshotRestoration.snapshots | list | List of snapshots to restore |
+| .Values.config | map | Configuration values for Qdrant |
 
 #### Internal Logic
-1. **Set Index:** The script first sets the `SET_INDEX` variable to the hostname of the pod with any prefix removed.
-2. **Snapshot Restoration Check:** It checks if snapshot restoration is enabled and if the replica count is 1.
-    - **If True:** It executes the `entrypoint.sh` script with the `--uri` flag pointing to the first pod's address and includes all specified snapshots using the `--snapshot` flag.
-    - **If False:** It checks the `SET_INDEX`.
-        - **If 0:** It executes the `entrypoint.sh` script with the `--uri` flag pointing to the first pod's address.
-        - **Otherwise:** It executes the `entrypoint.sh` script with the `--bootstrap` flag pointing to the first pod's address and the `--uri` flag pointing to the current pod's address.
+1. The ConfigMap is named using the `qdrant.fullname` template function.
+2. The `initialize.sh` script:
+   - Extracts the pod index from the hostname.
+   - Handles two main scenarios:
+     a. Snapshot restoration for single-node deployments.
+     b. Normal initialization for multi-node deployments.
+3. The `production.yaml` directly includes the configuration from `.Values.config`.
 
-### `production.yaml`
-#### Description
-This data entry contains a YAML string generated from the `Values.config` object. This YAML string likely represents the Qdrant configuration.
-
-#### Internal Logic
-The `toYaml` function is used to convert the `Values.config` object into a YAML string with an indentation of 4 spaces.
+## Side Effects
+- This ConfigMap will be used to configure Qdrant pods in the Kubernetes cluster.
+- The initialization script affects how Qdrant nodes are bootstrapped and potentially restored from snapshots.
 
 ## Dependencies
-- **Helm:** The code uses Helm template functions like `include` and `toYaml`.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Helm | This is a Helm chart template, processed by Helm during deployment |
 
 ## Configuration
-- **.Values.snapshotRestoration.enabled (boolean):**  Enables or disables snapshot restoration during initialization.
-- **.Values.replicaCount (integer):** Specifies the number of replicas for the Qdrant deployment.
-- **.Values.snapshotRestoration.snapshots (list):**  A list of snapshot URLs to restore from if snapshot restoration is enabled.
-- **.Values.config (object):** Contains the Qdrant configuration options.
+The configuration is primarily driven by Helm values, particularly:
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Values.snapshotRestoration.enabled | boolean | Enables snapshot restoration |
+| .Values.replicaCount | integer | Sets the number of Qdrant replicas |
+| .Values.snapshotRestoration.snapshots | list | Specifies snapshots for restoration |
+| .Values.config | map | Defines the Qdrant configuration |
+
+## Error Handling
+The initialization script includes basic error handling:
+- It checks the pod index to determine if it's the first pod (index 0) or a subsequent pod.
+- Different initialization commands are used based on the pod index and deployment scenario.
+
+## API/Interface Reference
+The ConfigMap exposes two main interfaces:
+| Key | Type | Description |
+|:----|:-----|:------------|
+| initialize.sh | shell script | Initialization script for Qdrant pods |
+| production.yaml | YAML | Qdrant configuration file |
+
+These interfaces are typically consumed by other Kubernetes resources, such as Pod specifications, to configure the Qdrant deployment.

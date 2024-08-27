@@ -3,54 +3,48 @@ title: "SearchUsageGraph.tsx"
 ---
 
 ## High-level description
-The `SearchUsageGraph` component displays a bar chart visualizing the number of search requests over time. It fetches usage data based on provided filters and granularity, then renders a dynamic chart using Chart.js.
+The `SearchUsageGraph` component renders a bar chart visualizing the number of search requests over time. It fetches search usage data based on provided filters and granularity, then dynamically updates a Chart.js instance.
 
 ## Code Structure
-The `SearchUsageGraph` component uses the `createQuery` hook from `@tanstack/solid-query` to fetch and manage search usage data. It also utilizes the `Chart` object from `chart.js` to render the bar chart. The component leverages SolidJS's reactive primitives like `createEffect` and `createSignal` to update the chart when data or props change.
+The `SearchUsageGraph` component uses the `createQuery` hook to fetch search usage data. The `createEffect` hook handles creating and updating the Chart.js instance based on the fetched data and component props. The `onCleanup` hook ensures proper cleanup of the chart instance when the component unmounts.
 
 ## References
 - `getRpsUsageGraph`: Fetches search usage data from the API.
 - `DatasetContext`: Provides access to the selected dataset's ID.
-- `AnalyticsFilter`, `AnalyticsParams`: Defines the types for filter and granularity parameters.
+- `AnalyticsFilter`, `AnalyticsParams`: Define the structure of filter and granularity parameters.
 
 ## Symbols
-
 ### `SearchUsageGraph`
 #### Description
-A SolidJS component that renders a bar chart of search usage over time. It fetches data based on provided filters and granularity, dynamically updates the chart when data changes, and handles chart cleanup.
+A SolidJS component that renders a bar chart displaying search usage over time. It fetches data based on provided filters and granularity, then dynamically updates the chart.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| props | `SearchUsageProps` | An object containing filter and granularity parameters for the search usage data. |
+| props | `SearchUsageProps` | An object containing filter and granularity settings for the search usage data. |
 
 #### Outputs
-This component renders a `&lt;canvas&gt;` element containing the search usage bar chart.
+Renders a `&lt;canvas&gt;` element containing the search usage bar chart.
 
 #### Internal Logic
-1. **Data Fetching:**
-   - Uses `createQuery` to fetch search usage data from the `getRpsUsageGraph` API function.
-   - The query key depends on the provided `params` and the selected dataset's ID from `DatasetContext`.
-2. **Chart Initialization:**
-   - When the component mounts and data is available, it initializes a new `Chart` instance on the `&lt;canvas&gt;` element.
-   - The chart is configured as a bar chart with basic styling and axes labels.
-3. **Chart Updating:**
-   - A `createEffect` hook observes changes to the `usageQuery.data` and `props`.
-   - When data or props change, the chart's labels, data points, and granularity settings are updated.
-   - The `chartInstance.update()` method redraws the chart with the new data.
-4. **Cleanup:**
-   - An `onCleanup` hook ensures that the `chartInstance` is destroyed when the component unmounts to prevent memory leaks.
+1. **Data Fetching:** Uses `createQuery` to fetch search usage data from the `getRpsUsageGraph` API function based on the provided `props.params` (filter and granularity) and the selected dataset ID from `DatasetContext`.
+2. **Chart Initialization:** When the component mounts and data is fetched, a Chart.js instance is created on the `&lt;canvas&gt;` element. The chart is initialized with basic styling and configuration for a bar chart.
+3. **Chart Updating:** The `createEffect` hook observes changes to the fetched data and component props. When changes occur:
+    - The chart's data labels are updated with timestamps from the fetched data points.
+    - The chart's dataset is updated with the `requests` values from the fetched data points.
+    - The chart's x-axis scale is dynamically adjusted based on the selected granularity (`day`, `minute`, or other).
+    - The chart's bar thickness is adjusted based on the number of data points.
+    - The `chartInstance.update()` method is called to redraw the chart with the new data and configuration.
+4. **Cleanup:** The `onCleanup` hook ensures that the Chart.js instance is properly destroyed when the component unmounts to prevent memory leaks.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| `@tanstack/solid-query` | Used for data fetching and caching. |
-| `chart.js` | Used for rendering the bar chart. |
-| `chartjs-adapter-date-fns` | Used for date formatting on the chart's x-axis. |
-| `date-fns` | Used for date manipulation and formatting. |
+| @tanstack/solid-query | Used for data fetching and caching. |
+| chart.js | Used for rendering the bar chart. |
+| chartjs-adapter-date-fns | Used for date formatting and manipulation on the chart's x-axis. |
+| date-fns/locale/enUS | Provides English (US) locale for date formatting. |
 
-## Error Handling
-The code includes basic error handling by checking the response status of the API call in the `usageQuery`. If the API call fails, an error is thrown. However, there is no specific error handling or display implemented within the component.
-
-## Logging
-The code does not implement any specific logging mechanisms.
+## Side Effects
+- Fetches data from the `/analytics/search` API endpoint.
+- Renders and updates a Chart.js instance on the page.

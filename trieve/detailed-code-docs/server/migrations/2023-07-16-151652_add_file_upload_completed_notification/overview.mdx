@@ -3,51 +3,57 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for adding a new table called `file_upload_completed_notifications` to the database schema. The migration is part of a series, as indicated by the timestamp in the directory name (2023-07-16-151652). The purpose of this migration is to introduce a new feature for tracking and managing notifications related to completed file uploads associated with specific collections and users.
+This directory contains SQL migration scripts for adding a new feature to the database schema: file upload completed notifications. The migration introduces a new table to store information about notifications sent to users when file uploads are completed successfully.
 
 ## What does it do?
-The migration creates a new table in the database to store notifications for users when file uploads are completed. Each notification is associated with a specific user and collection. The table keeps track of whether the user has read the notification and when it was created or last updated. This allows the system to inform users about completed file uploads and manage the notification status effectively.
+The migration scripts in this directory add functionality to track and manage notifications for completed file uploads. Here's a breakdown of what it accomplishes:
 
-When the migration is reversed, it removes this table from the database, effectively undoing the changes made by the initial migration.
+1. Creates a new table called `file_upload_completed_notifications` to store information about these notifications.
+2. Each notification entry includes:
+   - A unique identifier
+   - The user who should receive the notification
+   - The collection the uploaded file belongs to
+   - A flag indicating whether the user has read the notification
+   - Timestamps for creation and last update
+3. Provides a way to revert these changes if needed
+
+This allows the application to keep track of which users should be notified about completed file uploads, whether they've seen these notifications, and when the notifications were created or updated. This can be used to improve user experience by informing users when their file uploads are complete and allowing them to manage these notifications.
 
 ## Key Files
-The directory contains two important SQL files:
 
-1. `up.sql`: This file contains the SQL commands to create the new `file_upload_completed_notifications` table. It defines the structure of the table, including columns for identification, user and collection association, read status, and timestamps.
+### up.sql
+This file contains the SQL commands to create the new `file_upload_completed_notifications` table. It defines the structure of the table with the following columns:
 
-2. `down.sql`: This file contains the SQL command to drop the `file_upload_completed_notifications` table, effectively reversing the changes made by the `up.sql` file.
+- `id`: A UUID serving as the primary key for each notification
+- `user_uuid`: The UUID of the user who should receive the notification
+- `collection_uuid`: The UUID of the collection the uploaded file belongs to
+- `user_read`: A boolean flag indicating whether the user has read the notification (defaults to false)
+- `created_at`: A timestamp for when the notification was created (defaults to the current time)
+- `updated_at`: A timestamp for when the notification was last updated (defaults to the current time)
 
-## Dependencies
-The migration scripts rely on the PostgreSQL database system, as evidenced by the use of PostgreSQL-specific data types like UUID.
+### down.sql
+This file contains the SQL command to revert the changes made by the up.sql script. It simply drops the `file_upload_completed_notifications` table if it exists. This allows for easy rollback of the migration if needed.
 
 ## Configuration
-The `file_upload_completed_notifications` table is configured with the following structure and default behaviors:
+The migration is identified by its timestamp: 2023-07-16-151652. This timestamp is part of the directory name and helps maintain the order of migrations in the database schema evolution.
+
+Here's an example of how the `file_upload_completed_notifications` table is created in `up.sql`:
 
 ```sql
 CREATE TABLE file_upload_completed_notifications (
     id UUID PRIMARY KEY,
     user_uuid UUID NOT NULL,
     collection_uuid UUID NOT NULL,
-    user_read BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    user_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-Key configuration details:
-- The `id`, `user_uuid`, and `collection_uuid` fields use UUID data type for globally unique identifiers.
-- The `user_read` field is a boolean defaulting to `false`, indicating an unread notification by default.
-- Both `created_at` and `updated_at` fields default to the current timestamp (`NOW()`).
-
-This configuration allows for efficient tracking and management of file upload completion notifications, enabling features such as:
-- Associating notifications with specific users and collections
-- Marking notifications as read or unread
-- Sorting and filtering notifications based on creation or update times
-
-The `down.sql` file is configured to safely remove the table if it exists:
+And here's how it's dropped in `down.sql`:
 
 ```sql
 DROP TABLE IF EXISTS file_upload_completed_notifications;
 ```
 
-This ensures that the migration can be reversed without causing errors, even if the table has already been removed.
+These scripts are typically executed by a migration tool or framework that manages database schema changes. The tool would run `up.sql` when applying the migration and `down.sql` when rolling it back.

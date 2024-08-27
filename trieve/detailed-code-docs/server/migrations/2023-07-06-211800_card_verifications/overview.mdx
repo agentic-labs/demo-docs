@@ -3,40 +3,59 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for creating and dropping a `card_verification` table in a database. The migration is dated 2023-07-06, and it's designed to manage the structure for storing card verification data, particularly focusing on similarity scores for cards.
+This directory contains SQL migration scripts for creating and dropping a `card_verification` table in the database. The migration is dated 2023-07-06-211800, indicating when it was created or last modified. These scripts are part of a database versioning system, allowing for controlled changes to the database schema over time.
 
 ## What does it do?
-These migration scripts allow the database to be updated or rolled back as needed. The "up" migration creates a new table called `card_verification` to store information about card verifications, including a unique identifier, a reference to a card's metadata, and a similarity score. This table is likely used in a process that checks the similarity or authenticity of cards, possibly involving image comparison.
+The migration scripts in this directory perform two main functions:
 
-The "down" migration provides the ability to remove this table, which is useful for development purposes or if the feature needs to be rolled back.
+1. Creating a new table: The "up" migration creates a `card_verification` table. This table is designed to store information about the verification of cards, specifically their similarity to other cards in the system. Each record in this table represents a verification entry for a specific card, including a similarity score.
+
+2. Removing the table: The "down" migration provides a way to undo the changes made by the "up" migration. It drops the `card_verification` table, effectively removing it from the database schema.
+
+These scripts allow developers to easily apply or revert changes to the database structure, ensuring consistency across different environments and facilitating collaborative development.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL script to create the `card_verification` table. It defines the structure of the table, including its columns and relationships to other tables.
+1. `up.sql`: This file contains the SQL commands to create the `card_verification` table. It defines the structure of the table, including its columns and constraints.
 
-2. `down.sql`: This file contains the SQL script to drop the `card_verification` table, effectively reversing the changes made by the up migration.
+2. `down.sql`: This file contains the SQL command to drop the `card_verification` table, effectively undoing the changes made by the `up.sql` script.
 
-## Configuration
-The migration scripts use SQL statements that are likely compatible with PostgreSQL, given the use of UUID data types. The scripts don't require any additional configuration, but they do assume the existence of a `card_metadata` table in the database.
+Let's look at each file in more detail:
 
-Here's a breakdown of the `card_verification` table structure created by the `up.sql` script:
+### up.sql
+
+This script creates the `card_verification` table with the following structure:
 
 ```sql
 CREATE TABLE card_verification (
     id UUID PRIMARY KEY,
-    card_id UUID REFERENCES card_metadata(id),
-    similarity_score BIGINT NOT NULL
+    card_id UUID NOT NULL,
+    similarity_score BigInt NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES card_metadata(id)
 );
 ```
 
-- `id`: A UUID that serves as the primary key for each verification record.
-- `card_id`: A UUID that references the `id` column in the `card_metadata` table, establishing a relationship between a verification and a specific card.
-- `similarity_score`: A large integer (BIGINT) that must have a value (NOT NULL), likely representing the result of a similarity check.
+The table has three columns:
+- `id`: A UUID that serves as the primary key for the table.
+- `card_id`: A UUID that references the `id` column in the `card_metadata` table, establishing a relationship between the two tables.
+- `similarity_score`: A BigInt value representing the similarity of the card to other cards in the system.
 
-The `down.sql` script simply drops this table:
+The `FOREIGN KEY` constraint ensures that each `card_id` in the `card_verification` table corresponds to a valid `id` in the `card_metadata` table, maintaining referential integrity.
+
+### down.sql
+
+This script contains a single command to drop the `card_verification` table:
 
 ```sql
 DROP TABLE IF EXISTS card_verification;
 ```
 
-This structure suggests that the application is dealing with card verifications, possibly as part of a security or authenticity check system. The similarity score could be used to determine how closely a card matches a reference image or data, which might be useful in detecting counterfeit or altered cards.
+The `IF EXISTS` clause is used to prevent errors if the table doesn't exist when the script is run.
+
+## Dependencies
+The `up.sql` script depends on the existence of a `card_metadata` table, as it references this table in its foreign key constraint. This implies that the `card_metadata` table should be created before this migration is applied.
+
+## Configuration
+These migration scripts don't require any specific configuration. However, they are typically executed by a database migration tool or framework (such as Diesel for Rust, or Flyway for Java) that manages the order and execution of migrations. The naming convention of the directory (2023-07-06-211800_card_verifications) suggests that this migration system uses timestamps to order migrations.
+
+In conclusion, this directory contains a simple but important database migration for adding and removing a `card_verification` table. This table appears to be part of a larger system for managing and verifying cards, possibly in a game or collectible card application. The migration scripts provide a controlled way to evolve the database schema, allowing for easy application and rollback of changes during development and deployment processes.

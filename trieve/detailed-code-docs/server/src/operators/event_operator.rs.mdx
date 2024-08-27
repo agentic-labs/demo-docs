@@ -3,56 +3,59 @@ title: "event_operator.rs"
 ---
 
 ## High-level description
-This code defines the `get_events` function, which is an API endpoint handler for retrieving events associated with a specific dataset. It processes the request parameters, calls the `get_events_query` function to fetch the events, and returns the results as a JSON response.
+This code defines the `get_events_query` function, which retrieves events from a ClickHouse database for a specific dataset. It also includes the `EventReturn` struct, which represents the structure of the returned event data.
 
 ## Code Structure
-The main function `get_events` takes several parameters including user authentication, dataset information, request data, and a Clickhouse client. It uses these to fetch and return events based on the specified criteria.
+The main function `get_events_query` interacts with the ClickHouse database to fetch events based on the provided parameters. The `EventReturn` struct is used to structure the response data.
 
 ## Symbols
 
-### `GetEventsData`
+### `EventReturn`
 #### Description
-A struct that represents the request payload for getting events.
+A struct that represents the structure of the event data returned by the query.
+
+#### Fields
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| events | Vec&lt;WorkerEvent&gt; | A vector of WorkerEvent objects |
+| page_count | i32 | The total number of pages |
+
+### `get_events_query`
+#### Description
+An asynchronous function that queries the ClickHouse database for events based on the provided parameters.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| page | Option&lt;i64&gt; | The page number to get (optional, default is 1) |
-| page_size | Option&lt;i64&gt; | The number of items per page (optional, default is 10) |
-| event_types | Option&lt;Vec&lt;EventTypeRequest&gt;&gt; | The types of events to get (optional) |
-
-### `get_events`
-#### Description
-An asynchronous function that handles the GET request for events.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| _user | LoggedUser | The authenticated user (unused in the function body) |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
-| get_events_data | web::Json&lt;GetEventsData&gt; | The request payload |
-| clickhouse_client | web::Data&lt;clickhouse::Client&gt; | The Clickhouse database client |
+| dataset_id | uuid::Uuid | The ID of the dataset |
+| page | i64 | The page number |
+| page_size | i64 | The number of items per page |
+| event_types | Vec&lt;EventTypeRequest&gt; | The types of events to retrieve |
+| clickhouse_client | web::Data&lt;clickhouse::Client&gt; | The ClickHouse client |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| Result | Result&lt;HttpResponse, actix_web::Error&gt; | HTTP response with events or an error |
+| Result&lt;EventReturn, ServiceError&gt; | Result | The query result or an error |
 
 #### Internal Logic
-1. Determine the event types to fetch based on the request payload.
-2. Call `get_events_query` with the dataset ID, pagination parameters, event types, and Clickhouse client.
-3. Return the events as a JSON response or an error if the query fails.
+1. Constructs a SQL query to fetch events from the ClickHouse database.
+2. Executes the query to retrieve the events.
+3. Constructs another SQL query to count the total number of events.
+4. Executes the count query to get the total page count.
+5. Returns the events and page count in an `EventReturn` struct.
+
+## Error Handling
+The function uses the `ServiceError` enum to handle and return errors. It specifically handles errors related to fetching events and counting events.
+
+## Logging
+The function uses the `#[tracing::instrument]` attribute for logging, which will log the function call with its parameters (except for the `clickhouse_client`).
 
 ## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| actix_web | Web framework for handling HTTP requests and responses |
-| serde | Serialization and deserialization of structs |
-| utoipa | API documentation generation |
+- `actix_web`: For web-related types like `web::Data`.
+- `serde`: For serialization and deserialization of data structures.
+- `utoipa`: For API documentation.
+- `uuid`: For handling UUIDs.
+- `clickhouse`: For interacting with the ClickHouse database.
 
-## API/Interface Reference
-| Endpoint | Method | Request | Response | Description |
-|:---------|:-------|:--------|:---------|:------------|
-| /api/events | POST | GetEventsData | EventReturn | Get events for the specified dataset |
-
-Note: The endpoint uses POST method despite being a read operation, likely to accommodate complex query parameters.
+This code is part of a larger system that handles event retrieval for datasets, likely in a web application context. It provides a paginated query mechanism for fetching events from a ClickHouse database, with filtering capabilities based on event types.

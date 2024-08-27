@@ -3,55 +3,53 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding and removing timestamp columns (`created_at` and `updated_at`) to the `card_collisions` table in the database. The migration is dated 2023-06-23 and is identified by the timestamp 002015.
+This directory contains SQL migration scripts for adding and removing `created_at` and `updated_at` columns to the `card_collisions` table in a database. The migration is dated 2023-06-23 and is identified by the timestamp 002015. These scripts are typically used in database version control systems to manage schema changes over time.
 
 ## What does it do?
-These migration scripts modify the structure of the `card_collisions` table in the database. The "up" migration adds two new columns:
-1. `created_at`: This column will store the timestamp when a record is created.
-2. `updated_at`: This column will store the timestamp when a record is last updated.
+The migration scripts in this directory perform the following actions:
 
-Both columns are set to not allow null values and have a default value of the current timestamp when a new record is inserted.
+1. The "up" migration (`up.sql`):
+   - Adds two new columns to the `card_collisions` table: `created_at` and `updated_at`.
+   - Both columns are of type TIMESTAMP and are set to NOT NULL with a default value of the current timestamp (NOW()).
 
-The "down" migration does the opposite by removing these two columns from the table. This allows for reverting the changes if needed.
+2. The "down" migration (`down.sql`):
+   - Removes the `created_at` and `updated_at` columns from the `card_collisions` table.
+
+These scripts allow developers to track when card collision records are created and last updated, and also provide the ability to revert these changes if needed.
 
 ## Key Files
-1. `up.sql`: This file contains the SQL commands to add the `created_at` and `updated_at` columns to the `card_collisions` table.
 
-   ```sql
-   ALTER TABLE card_collisions
-   ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-   ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW();
-   ```
+### up.sql
+This file contains the SQL commands to add the new columns:
 
-2. `down.sql`: This file contains the SQL commands to remove the `created_at` and `updated_at` columns from the `card_collisions` table.
+```sql
+ALTER TABLE card_collisions
+ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW();
+```
 
-   ```sql
-   ALTER TABLE card_collisions
-   DROP COLUMN created_at,
-   DROP COLUMN updated_at;
-   ```
+This script modifies the `card_collisions` table by adding two new columns:
+- `created_at`: Stores the timestamp when a record is created.
+- `updated_at`: Stores the timestamp when a record is last updated.
+
+Both columns are set to NOT NULL, ensuring they always have a value, and DEFAULT NOW() sets them to the current timestamp when a new record is inserted.
+
+### down.sql
+This file contains the SQL commands to remove the added columns:
+
+```sql
+ALTER TABLE card_collisions
+DROP COLUMN created_at,
+DROP COLUMN updated_at;
+```
+
+This script reverts the changes made by `up.sql` by removing the `created_at` and `updated_at` columns from the `card_collisions` table.
+
+## Configuration
+The migration is identified by its timestamp in the directory name: `2023-06-23-002015`. This naming convention is likely used by the migration system to determine the order in which migrations should be applied or rolled back.
+
+## Dependencies
+These migration scripts assume the existence of a `card_collisions` table in the database. They also rely on the database system supporting standard SQL ALTER TABLE commands and the TIMESTAMP data type.
 
 ## Side Effects
-When applying the "up" migration:
-- The structure of the `card_collisions` table will be modified.
-- Existing rows in the table will have their `created_at` and `updated_at` columns populated with the current timestamp at the time of migration.
-- Future inserts into this table will automatically set these timestamp values.
-
-When applying the "down" migration:
-- The `created_at` and `updated_at` columns will be permanently removed from the `card_collisions` table.
-- Any data stored in these columns will be lost.
-- Applications or queries that rely on these columns will need to be updated to avoid errors.
-
-## Performance Considerations
-1. For the "up" migration:
-   - Adding new columns to an existing table can be a potentially expensive operation, especially if the table contains a large number of rows.
-   - The execution time of this migration may vary depending on the size of the `card_collisions` table.
-
-2. For the "down" migration:
-   - Dropping columns is generally a fast operation, but it may take longer if the table contains a large amount of data.
-   - This operation may briefly lock the table, potentially affecting concurrent operations on the `card_collisions` table.
-
-## Notes
-- The `updated_at` column will need to be manually updated or managed through application logic or database triggers to reflect the actual last update time of each record. The migration scripts only handle the initial setup of these columns.
-- When implementing these changes, it's important to update any related application code or database queries that interact with the `card_collisions` table to account for these new columns.
-- Always test these migrations in a non-production environment before applying them to a production database to ensure they work as expected and don't cause any unintended side effects.
+It's important to note that running the down migration (`down.sql`) will result in the permanent loss of any data stored in the `created_at` and `updated_at` columns of the `card_collisions` table. This should be considered carefully before executing the down migration in any environment, especially in production.

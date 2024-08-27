@@ -3,43 +3,52 @@ title: "psp.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Pod Security Policy (PSP) for PostgreSQL deployments using Helm. It sets security constraints for pods, controlling aspects like volume usage, host access, user permissions, and more. The PSP is applied only if enabled in the Helm values and the cluster supports PSPs.
+This YAML file defines a Kubernetes PodSecurityPolicy (PSP) for a PostgreSQL deployment using Helm. It sets up security constraints for pods running PostgreSQL, ensuring they operate with specific privileges and restrictions.
 
-## References
-* `common.capabilities.psp.supported`: This function likely checks if the Kubernetes cluster supports Pod Security Policies.
-* `common.names.fullname`: This function probably generates the full name for the PSP resource based on the Helm release and chart name.
-* `common.labels.standard`: This function likely generates standard labels for the PSP resource.
-* `common.tplvalues.render`: This function probably renders the provided annotations with the given context.
+## Code Structure
+The file consists of a single Kubernetes resource definition (PodSecurityPolicy) wrapped in a conditional block. It uses Helm templating to dynamically generate values and include common labels and annotations.
 
 ## Symbols
-### `psp.yaml`
+
+### PodSecurityPolicy
 #### Description
-This code defines a Kubernetes Pod Security Policy resource in YAML format. It specifies various security restrictions for pods created within its scope.
+Defines a PodSecurityPolicy named after the release fullname, setting security constraints for PostgreSQL pods.
 
 #### Inputs
-This code snippet doesn't define a function and therefore doesn't have explicit inputs. It relies on Helm values passed during deployment.
-
-#### Outputs
-This code defines a Kubernetes Pod Security Policy resource that will be applied to the cluster.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.psp.create | Boolean | Determines if the PSP should be created |
+| .Values.commonLabels | Map | Custom labels to be applied |
+| .Values.commonAnnotations | Map | Custom annotations to be applied |
 
 #### Internal Logic
-The code uses conditional logic to determine whether the PSP should be created:
-* It checks if the `psp.create` value is set to true.
-* It verifies if the cluster supports Pod Security Policies using the `common.capabilities.psp.supported` function.
-
-If both conditions are met, the PSP is defined with the following specifications:
-* **Basic Settings:** Disables privileged mode, host networking, IPC, and PID sharing.
-* **Volumes:** Allows specific volume types like ConfigMaps, Secrets, PersistentVolumeClaims, EmptyDirs, and Projected volumes.
-* **User and Group IDs:** Allows running containers as any user and group but enforces that supplemental groups and fsGroup must be within a specific range.
-* **Other:** Disables read-only root filesystem and sets default SELinux rules.
+1. Checks if PSP is supported and creation is enabled
+2. Sets metadata (name, namespace, labels, annotations)
+3. Defines spec with security constraints:
+   - Disables privileged mode
+   - Allows specific volume types
+   - Disables host network, IPC, and PID access
+   - Sets rules for user, group, and SELinux contexts
+   - Configures filesystem permissions
 
 ## Dependencies
-This code depends on Helm for templating and rendering the YAML manifest. It also relies on several custom functions likely defined within the Helm chart or a common library.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.capabilities.psp.supported | Checks if PSP is supported in the cluster |
+| common.names.fullname | Generates the full name for the resource |
+| common.labels.standard | Applies standard labels |
+| common.tplvalues.render | Renders template values |
 
-### Configuration
-The PSP creation and its specifications can be configured using Helm values:
+## Configuration
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| `psp.create` | boolean |  | Enables or disables the creation of the Pod Security Policy. |
-| `commonLabels` | object |  | Allows adding custom labels to the PSP resource. |
-| `commonAnnotations` | object |  | Allows adding custom annotations to the PSP resource. | 
+| psp.create | Boolean | N/A | Enables creation of the PodSecurityPolicy |
+| commonLabels | Map | N/A | Custom labels to apply to the resource |
+| commonAnnotations | Map | N/A | Custom annotations to apply to the resource |
+
+## Notes
+1. This file is part of a Helm chart for PostgreSQL deployment.
+2. It uses conditional rendering based on PSP support and the `psp.create` value.
+3. The PSP is relatively permissive, allowing various volume types and not enforcing a read-only root filesystem.
+4. The policy uses "RunAsAny" for user and SELinux contexts, which may need to be tightened in high-security environments.
+5. Supplemental groups and fsGroup are restricted to the range 1-65535.

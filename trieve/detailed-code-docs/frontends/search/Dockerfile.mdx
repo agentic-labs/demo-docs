@@ -1,0 +1,77 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for a search frontend application. It builds the application using Node.js and then creates a lightweight Nginx-based image to serve the static files. The final image includes custom Nginx configuration and a script to inject environment variables into the HTML file at runtime.
+
+## Code Structure
+The Dockerfile consists of two main stages:
+1. Build stage: Uses Node.js to build the search frontend application.
+2. Production stage: Uses Nginx to serve the built static files.
+
+## Symbols
+
+### Build Stage
+#### Description
+This stage sets up the Node.js environment, copies the necessary files, and builds the search frontend application.
+
+#### Internal Logic
+1. Uses `node:18` as the base image
+2. Sets the working directory to `/app`
+3. Copies package files, yarn lock, and turbo configuration
+4. Copies frontend and client SDK files
+5. Installs dependencies using yarn
+6. Builds the search frontend using the turbo build system
+
+### Production Stage
+#### Description
+This stage creates a lightweight Nginx-based image to serve the built static files.
+
+#### Internal Logic
+1. Uses `nginx:1.25.4-alpine-slim` as the base image
+2. Copies the built files from the build stage to the Nginx HTML directory
+3. Adds a custom Nginx configuration for serving single-page applications
+4. Adds a script to inject environment variables into the HTML file at runtime
+5. Sets execute permissions for the injection script
+6. Exposes port 80 for web traffic
+
+### Nginx Configuration
+#### Description
+Custom Nginx configuration to serve the single-page application correctly.
+
+#### Internal Logic
+- Listens on port 80
+- Sets the root directory to `/usr/share/nginx/html`
+- Configures URL handling to support client-side routing
+
+### Environment Variable Injection Script
+#### Description
+A shell script that injects environment variables into the HTML file at container startup.
+
+#### Internal Logic
+1. Creates a template from the original index.html
+2. Uses `envsubst` to replace environment variables in the template
+3. Overwrites the original index.html with the processed version
+4. Removes the temporary template file
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| Node.js | Used for building the frontend application |
+| Nginx | Used to serve the static files in production |
+| yarn | Package manager for installing dependencies |
+| turbo | Build system for the frontend application |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| PORT | number | 80 | The port on which Nginx listens |
+
+## Error Handling
+The Dockerfile does not implement specific error handling mechanisms beyond the default behavior of the used tools and commands.
+
+## Performance Considerations
+- The multi-stage build process helps to keep the final image size small by excluding build tools and dependencies.
+- Using Nginx to serve static files provides good performance for serving the frontend application.
+- The Alpine-based Nginx image further reduces the final image size.

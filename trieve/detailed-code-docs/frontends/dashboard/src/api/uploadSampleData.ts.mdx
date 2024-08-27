@@ -3,57 +3,32 @@ title: "uploadSampleData.ts"
 ---
 
 ## High-level description
-This code defines a function `uploadSampleData` that uploads sample data to a dataset. It uses the Papa Parse library to parse a CSV file from a remote URL, transforms the data, and sends it to a Trieve API endpoint in batches.
+This code defines a function `uploadSampleData` that uploads sample data to a Trieve dataset. It parses a CSV file, transforms the data, and sends it to the Trieve API in batches. The code also includes utility functions for data transformation and API communication.
 
 ## Code Structure
-The main function `uploadSampleData` uses helper functions `sendDataToTrieve` and `transformRow` to process and upload the data. The code also defines several TypeScript types to ensure type safety throughout the process.
+The main function `uploadSampleData` uses `Papa.parse` to read and process a CSV file. It then transforms each row using the `transformRow` function and sends the data to the Trieve API using the `sendDataToTrieve` function. The code also defines types for the input and output data structures.
 
 ## Symbols
 
-### `uploadSampleData`
-#### Description
-This function is the main entry point for uploading sample data to a dataset. It parses a CSV file, transforms the data, and sends it to the Trieve API.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| datasetId | string | The ID of the dataset to upload data to |
-| reportProgress | function (optional) | A callback function to report upload progress |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| Promise&lt;boolean&gt; | Promise&lt;boolean&gt; | A promise that resolves to true if the upload is successful, or rejects with false if there's an error |
-
-#### Internal Logic
-1. Creates an array to store the data to be uploaded
-2. Uses Papa.parse to download and parse the CSV file
-3. For each row in the CSV:
-   - Transforms the row data
-   - Adds the transformed data to the upload array
-   - Creates a new array when the current one reaches 120 items
-4. After parsing is complete, sends the data to the Trieve API
-5. Reports progress if a progress callback is provided
-
 ### `sendDataToTrieve`
 #### Description
-Sends the transformed data to the Trieve API in batches.
+This function sends transformed data to the Trieve API in batches.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | UploadDataArray | The data to be sent to the API |
-| datasetId | string | The ID of the dataset |
-| reportProgress | function (optional) | A callback function to report upload progress |
+| data | UploadDataArray | An array of arrays containing the transformed data to be sent |
+| datasetId | string | The ID of the dataset to which the data will be uploaded |
+| reportProgress | (progress: number) =&gt; void | Optional callback function to report upload progress |
 
 #### Internal Logic
 1. Iterates through the data array
-2. Sends each batch to the API using a POST request
-3. Reports progress after each batch if a progress callback is provided
+2. Sends each batch to the Trieve API using a POST request
+3. Reports progress if a callback function is provided
 
 ### `transformRow`
 #### Description
-Transforms a row of CSV data into the format expected by the API.
+Transforms a row of CSV data into the format expected by the Trieve API.
 
 #### Inputs
 | Name | Type | Description |
@@ -63,14 +38,38 @@ Transforms a row of CSV data into the format expected by the API.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| Data \| undefined | Object or undefined | The transformed data object, or undefined if the row is invalid |
+| transformedRow | Data \| undefined | The transformed data row, or undefined if the row is invalid |
 
 #### Internal Logic
-1. Checks if the row data exists and has non-empty "Chunk HTML"
-2. Transforms the data, replacing semicolons with commas in certain fields
-3. Splits the "Tag Set" into an array
-4. Parses the "Metadata" field as JSON
-5. Returns undefined if there's an error during transformation
+1. Checks if the row data is valid
+2. Transforms the data, including:
+   - Replacing semicolons with commas in certain fields
+   - Splitting the tag set into an array
+   - Parsing the metadata as JSON
+3. Returns undefined if any error occurs during transformation
+
+### `uploadSampleData`
+#### Description
+The main function that orchestrates the process of uploading sample data to a Trieve dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| datasetId | string | The ID of the dataset to which the data will be uploaded |
+| reportProgress | (progress: number) =&gt; void | Optional callback function to report upload progress |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Promise&lt;boolean&gt; | A promise that resolves to true if the upload is successful, or rejects with false if an error occurs |
+
+#### Internal Logic
+1. Initializes an array to store the data to be uploaded
+2. Uses Papa.parse to download and parse a CSV file from a specified URL
+3. Transforms each row of the CSV data using the `transformRow` function
+4. Batches the transformed data into arrays of up to 120 items each
+5. After parsing is complete, sends the data to the Trieve API using `sendDataToTrieve`
+6. Resolves the promise with true if successful, or rejects with false if an error occurs
 
 ## Dependencies
 | Dependency | Purpose |
@@ -82,5 +81,7 @@ Transforms a row of CSV data into the format expected by the API.
 |:-------|:-----|:--------|:------------|
 | api_host | string | import.meta.env.VITE_API_HOST | The host URL for the Trieve API |
 
-## Performance Considerations
-The code processes the CSV data in batches of 120 items to optimize memory usage and API calls. It also reports progress, which can be useful for providing feedback on long-running uploads.
+## Error Handling
+The code includes basic error handling, such as skipping invalid rows during transformation and rejecting the promise if an error occurs during parsing or uploading.
+
+Your response should not exceed 3000 words or 4000 tokens. Focus on providing clear, concise information that can be directly inferred from the code. Include optional sections only when they provide significant value for understanding the code.

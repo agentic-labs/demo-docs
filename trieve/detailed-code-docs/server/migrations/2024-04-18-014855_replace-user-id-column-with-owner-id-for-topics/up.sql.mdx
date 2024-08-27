@@ -3,41 +3,22 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script migrates the `topics` table by replacing the `user_id` column with an `owner_id` column. It also creates an index on the `dataset_id` and `owner_id` columns.
+This SQL script migrates the `topics` table by replacing the existing `user_id` column with a new `owner_id` column. It also creates an index on `dataset_id` and `owner_id` for improved query performance.
 
 ## Symbols
-### `ALTER TABLE topics ADD COLUMN owner_id TEXT NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'`
+### `up.sql`
 #### Description
-This statement adds a new column named `owner_id` to the `topics` table. 
+This SQL script defines the "up" migration for replacing the `user_id` column with `owner_id` in the `topics` table. It performs the following steps:
+
+1. **Add `owner_id` column:** Adds a new column named `owner_id` to the `topics` table. The column is of type `TEXT`, not nullable, and has a default value of '00000000-0000-0000-0000-000000000000'.
+2. **Populate `owner_id`:** Copies the values from the `user_id` column to the newly added `owner_id` column for all rows where `user_id` is not NULL.
+3. **Drop `user_id` column:** Removes the existing `user_id` column from the `topics` table.
+4. **Create index:** Creates an index named `topics_dataset_id_owner_id_idx` on the `topics` table using the `dataset_id` and `owner_id` columns. This index is expected to speed up queries that filter or order by these columns. 
 
 #### Internal Logic
-*  `ALTER TABLE topics`: This part specifies that we are modifying the `topics` table.
-*  `ADD COLUMN owner_id`: This adds a new column named `owner_id`.
-*  `TEXT NOT NULL`: This defines the data type of the column as TEXT and makes it mandatory (cannot be NULL).
-*  `DEFAULT '00000000-0000-0000-0000-000000000000'`: This sets a default value for the column if no value is provided during insertion.
+The script uses standard SQL `ALTER TABLE`, `UPDATE`, and `CREATE INDEX` statements to perform the migration. 
 
-### `UPDATE topics SET owner_id = user_id WHERE user_id IS NOT NULL`
-#### Description
-This statement updates the newly added `owner_id` column with the values from the existing `user_id` column.
-
-#### Internal Logic
-*  `UPDATE topics`: This specifies that we are updating data in the `topics` table.
-*  `SET owner_id = user_id`: This sets the value of the `owner_id` column to the value of the `user_id` column for each row.
-*  `WHERE user_id IS NOT NULL`: This condition ensures that only rows where `user_id` is not NULL are updated.
-
-### `ALTER TABLE topics DROP COLUMN user_id`
-#### Description
-This statement removes the `user_id` column from the `topics` table.
-
-#### Internal Logic
-*  `ALTER TABLE topics`: This specifies that we are modifying the `topics` table.
-*  `DROP COLUMN user_id`: This removes the column named `user_id`.
-
-### `CREATE INDEX topics_dataset_id_owner_id_idx ON topics (dataset_id, owner_id)`
-#### Description
-This statement creates an index named `topics_dataset_id_owner_id_idx` on the `dataset_id` and `owner_id` columns of the `topics` table.
-
-#### Internal Logic
-*  `CREATE INDEX topics_dataset_id_owner_id_idx`: This creates an index with the specified name.
-*  `ON topics`: This specifies that the index is being created on the `topics` table.
-*  `(dataset_id, owner_id)`: This defines the columns included in the index. 
+#### Side Effects
+- Modifies the schema of the `topics` table by adding and removing columns.
+- Adds data to the newly created `owner_id` column.
+- Creates a new index on the `topics` table. 

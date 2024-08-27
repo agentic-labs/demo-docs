@@ -3,63 +3,68 @@ title: "sync-qdrant.rs"
 ---
 
 ## High-level description
-The code in `sync-qdrant.rs` is a command-line utility that synchronizes data between a PostgreSQL database and a Qdrant vector database. It identifies and removes points from Qdrant that are not present in the PostgreSQL database, ensuring consistency between the two data sources.
+This code defines the main function for a Rust web server using the Actix framework. It sets up database connections, configures middleware, and defines the API routes for a service called Trieve. The server handles various operations related to authentication, data management, and search functionality.
 
 ## Code Structure
-The code defines a single asynchronous `main` function that performs the synchronization process. It first establishes connections to both the PostgreSQL database and Qdrant. Then, it iterates through each collection in Qdrant, retrieving point IDs in batches. For each batch, it checks if the corresponding point IDs exist in the PostgreSQL database. If not, the points are deleted from Qdrant.
-
-## References
-- `trieve_server::errors::ServiceError`: Custom error type used for error handling.
-- `trieve_server::establish_connection`: Function to establish a connection to the PostgreSQL database.
-- `trieve_server::get_env`: Macro to retrieve environment variables.
-- `trieve_server::operators::chunk_operator::get_pg_point_ids_from_qdrant_point_ids`: Function to retrieve PostgreSQL point IDs corresponding to Qdrant point IDs.
-- `trieve_server::operators::qdrant_operator::{delete_points_from_qdrant, get_qdrant_collections, scroll_qdrant_collection_ids}`: Functions to interact with the Qdrant database.
+The main function initializes the server configuration, including database connections, Redis session store, and various middleware. It then defines the API routes and their corresponding handler functions. The code also includes OpenAPI documentation for the API endpoints.
 
 ## Symbols
 
 ### `main`
 #### Description
-This asynchronous function is the entry point of the synchronization process. It establishes connections to the PostgreSQL and Qdrant databases, iterates through Qdrant collections, and removes points not present in PostgreSQL.
-
-#### Inputs
-None
-
-#### Outputs
-- `Result&lt;(), ServiceError&gt;`: Indicates success or failure of the synchronization process.
+The main function that sets up and runs the Actix web server.
 
 #### Internal Logic
-1. **Establish connections:**
-    - Retrieves the database URL from the environment variable `DATABASE_URL`.
-    - Creates a connection pool for the PostgreSQL database using `diesel_async`.
-    - Creates a connection to Qdrant using `qdrant_client`.
-2. **Iterate through Qdrant collections:**
-    - Retrieves a list of Qdrant collections using `get_qdrant_collections`.
-    - For each collection:
-        - Initialize an offset for scrolling through point IDs.
-        - While there are more point IDs to retrieve:
-            - Retrieve a batch of Qdrant point IDs using `scroll_qdrant_collection_ids`.
-            - Retrieve corresponding PostgreSQL point IDs using `get_pg_point_ids_from_qdrant_point_ids`.
-            - Identify Qdrant point IDs not present in PostgreSQL.
-            - Delete the identified points from Qdrant using `delete_points_from_qdrant`.
-            - Update the offset for the next batch.
-3. **Return result:**
-    - Returns `Ok(())` if the synchronization process completes successfully.
-    - Returns `Err(ServiceError)` if any error occurs during the process.
+1. Initializes environment variables and logging.
+2. Sets up database connections (PostgreSQL and Redis).
+3. Runs database migrations.
+4. Configures server settings, including CORS, session management, and logging.
+5. Sets up API routes and their corresponding handlers.
+6. Starts the HTTP server.
 
-## Side Effects
-- Modifies the Qdrant database by deleting points.
+### `ApiDoc`
+#### Description
+A struct that generates OpenAPI documentation for the API endpoints.
+
+### `SecurityAddon`
+#### Description
+A struct that modifies the OpenAPI documentation to include security schemes.
 
 ## Dependencies
-- `diesel_async`: Asynchronous connection pool for PostgreSQL.
-- `trieve_server`: Library containing database interaction logic and error handling.
-- `qdrant_client`: Client library for interacting with Qdrant.
-- `uuid`: Library for generating and parsing UUIDs.
-- `tokio`: Asynchronous runtime for Rust.
-- `dotenvy`: Library for loading environment variables from a `.env` file.
-- `actix_web`: Web framework for Rust.
+| Dependency | Purpose |
+|:-----------|:--------|
+| actix_web | Web framework for building the server |
+| diesel | ORM for database operations |
+| utoipa | Generates OpenAPI documentation |
+| sentry | Error tracking and monitoring |
+| redis | Session storage |
+| clickhouse | Analytics database |
+
+## Configuration
+The server uses various environment variables for configuration:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DATABASE_URL | String | Required | PostgreSQL database URL |
+| REDIS_URL | String | Required | Redis URL for session storage |
+| SENTRY_URL | String | Optional | Sentry URL for error tracking |
+| QUANTIZE_VECTORS | bool | false | Whether to quantize vectors in Qdrant |
+| REPLICATION_FACTOR | u32 | 2 | Replication factor for Qdrant collections |
+| VECTOR_SIZES | Vec&lt;u64&gt; | [384,512,768,1024,1536,3072] | Vector sizes for Qdrant collections |
 
 ## Error Handling
-The code uses the custom error type `ServiceError` to handle errors during the synchronization process. Errors are logged and propagated to the caller.
+The server uses custom error handlers for JSON parsing errors and path errors. It also integrates with Sentry for error tracking if configured.
 
 ## Logging
-The code uses the `println!` macro to print messages to the console, providing information about the progress of the synchronization process.
+The server uses the `tracing` crate for logging, with different configurations based on whether Sentry is enabled or not.
+
+## API/Interface Reference
+The server exposes numerous API endpoints, which are documented using OpenAPI specifications. The main categories include:
+- Authentication
+- User management
+- Organization management
+- Dataset operations
+- Chunk operations (search, recommendations, etc.)
+- File operations
+- Analytics
+
+The full API documentation is available through the `/redoc` and `/swagger-ui/` endpoints when the server is running.

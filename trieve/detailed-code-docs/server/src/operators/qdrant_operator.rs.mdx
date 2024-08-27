@@ -2,224 +2,164 @@
 title: "qdrant_operator.rs"
 ---
 
-## High-level description
-The `qdrant_operator.rs` file defines functions for interacting with a Qdrant vector database. These functions include creating and managing collections, upserting and updating points, searching and recommending points, and managing bookmarks.
+Here's a high-level description of the `qdrant_operator.rs` file:
+
+The `qdrant_operator.rs` file contains functions for interacting with the Qdrant vector database. It provides operations for connecting to Qdrant, creating collections, inserting and updating points, searching, and managing dataset configurations. This module serves as an interface between the application's data models and the Qdrant database, handling vector operations for semantic search and similarity-based retrieval.
 
 ## Code Structure
-The code defines several functions that interact with the Qdrant database using the `qdrant_client` library. These functions are used to create and manage collections, upsert and update points, search and recommend points, and manage bookmarks. The code also defines several structs that represent data structures used in Qdrant, such as `PointStruct`, `Filter`, and `QdrantPayload`.
 
-## References
-This code references symbols from `crate::data::models`, `crate::errors::ServiceError`, and `qdrant_client::qdrant`.
+The file defines several functions that interact with Qdrant:
+
+1. Connection functions:
+   - `get_qdrant_connection`: Establishes a connection to the Qdrant server.
+
+2. Collection management:
+   - `get_qdrant_collection_from_dataset_config`: Determines the appropriate Qdrant collection name based on dataset configuration.
+   - `create_new_qdrant_collection_query`: Creates new Qdrant collections with specified parameters.
+
+3. Point operations:
+   - `bulk_upsert_qdrant_points_query`: Inserts or updates multiple points in Qdrant.
+   - `create_new_qdrant_point_query`: Creates a new point in Qdrant.
+   - `update_qdrant_point_query`: Updates an existing point in Qdrant.
+   - `add_bookmark_to_qdrant_query`: Adds a bookmark to a Qdrant point.
+   - `remove_bookmark_from_qdrant_query`: Removes a bookmark from a Qdrant point.
+
+4. Search and retrieval:
+   - `search_over_groups_query`: Performs a search over groups of points.
+   - `recommend_qdrant_query`: Recommends points based on positive and negative examples.
+   - `recommend_qdrant_groups_query`: Recommends groups of points.
+   - `point_ids_exists_in_qdrant`: Checks if specific point IDs exist in Qdrant.
+   - `scroll_qdrant_collection_ids`: Retrieves point IDs from a collection using pagination.
+
+5. Deletion:
+   - `delete_points_from_qdrant`: Deletes points from Qdrant.
+
+6. Utility functions:
+   - `get_qdrant_collections`: Retrieves a list of all Qdrant collections.
+   - `count_qdrant_query`: Counts the number of points matching a query.
+   - `update_group_tag_sets_in_qdrant_query`: Updates tag sets for groups in Qdrant.
+
+These functions work together to provide a comprehensive interface for managing vector data in Qdrant, supporting the application's search and recommendation features.
 
 ## Symbols
 
-### `get_qdrant_connection`
+### get_qdrant_connection
+
 #### Description
-Establishes a connection to the Qdrant database using the provided URL and API key. If no URL or API key is provided, it retrieves them from environment variables.
+Establishes a connection to the Qdrant server using provided or environment-based configuration.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `qdrant_url` | `Option&lt;&str&gt;` | The URL of the Qdrant database. |
-| `qdrant_api_key` | `Option&lt;&str&gt;` | The API key for the Qdrant database. |
+| qdrant_url | Option&lt;&str&gt; | Optional URL for the Qdrant server |
+| qdrant_api_key | Option&lt;&str&gt; | Optional API key for authentication |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `Result&lt;Qdrant, ServiceError&gt;` |  | A `Result` containing either a `Qdrant` client on success or a `ServiceError` on failure. |
+| - | Result&lt;Qdrant, ServiceError&gt; | A Qdrant client instance or an error |
 
 #### Internal Logic
-- Retrieves the Qdrant URL and API key from the provided arguments or environment variables.
-- Uses the `qdrant_client` library to build a `Qdrant` client with the specified URL, API key, and a timeout of 60 seconds.
-- Returns a `Result` containing either the `Qdrant` client on success or a `ServiceError::BadRequest` if the connection fails.
+1. Retrieves Qdrant URL and API key from parameters or environment variables.
+2. Builds a Qdrant client with the provided configuration.
+3. Sets a timeout of 60 seconds for the connection.
 
-### `get_qdrant_collection_from_dataset_config`
+### create_new_qdrant_collection_query
+
 #### Description
-Generates the name of a Qdrant collection based on the provided dataset configuration. The collection name is formatted as "{embedding_size}_vectors_{distance_metric}", where the distance metric is omitted for cosine distance.
+Creates new Qdrant collections with specified parameters for vector storage and indexing.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `dataset_config` | `&DatasetConfiguration` | The dataset configuration containing the embedding size and distance metric. |
+| qdrant_url | Option&lt;&str&gt; | Optional URL for the Qdrant server |
+| qdrant_api_key | Option&lt;&str&gt; | Optional API key for authentication |
+| quantize | bool | Whether to use vector quantization |
+| recreate_indexes | bool | Whether to recreate existing indexes |
+| replication_factor | u32 | Replication factor for the collection |
+| accepted_vectors | Vec&lt;u64&gt; | Vector sizes to create collections for |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `String` |  | The name of the Qdrant collection. |
+| - | Result&lt;(), ServiceError&gt; | Success or error result |
 
 #### Internal Logic
-- Uses a `match` statement to determine the distance metric from the `dataset_config`.
-- Formats the collection name based on the embedding size and distance metric.
+1. Establishes a connection to Qdrant.
+2. Generates collection names based on vector sizes and distance metrics.
+3. For each collection:
+   - Checks if the collection exists.
+   - If not, creates the collection with specified parameters (vector size, distance metric, etc.).
+   - Sets up sparse vector configurations.
+   - Configures quantization if enabled.
+4. Creates field indexes for various metadata fields.
 
-### `create_new_qdrant_collection_query`
+### bulk_upsert_qdrant_points_query
+
 #### Description
-Creates a new Qdrant collection with the specified configuration. It also creates indexes for various fields in the collection.
+Inserts or updates multiple points in a Qdrant collection.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `qdrant_url` | `Option&lt;&str&gt;` | The URL of the Qdrant database. |
-| `qdrant_api_key` | `Option&lt;&str&gt;` | The API key for the Qdrant database. |
-| `quantize` | `bool` | Whether to quantize the vectors in the collection. |
-| `recreate_indexes` | `bool` | Whether to recreate the indexes for the collection. |
-| `replication_factor` | `u32` | The replication factor for the collection. |
-| `accepted_vectors` | `Vec&lt;u64&gt;` | A vector of accepted vector sizes for the collection. |
+| points | Vec&lt;PointStruct&gt; | Vector of points to upsert |
+| dataset_config | DatasetConfiguration | Configuration for the dataset |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure. |
+| - | Result&lt;(), ServiceError&gt; | Success or error result |
 
 #### Internal Logic
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Iterates through the accepted vector sizes and creates a collection for each size and distance metric (cosine, manhattan, dot, euclidean).
-- If the collection doesn't exist, it creates it with the specified configuration, including vector parameters, sparse vector configuration, HNSW configuration, and replication factor.
-- If `recreate_indexes` is true, it deletes existing indexes and creates new ones for various fields like "link", "tag_set", "dataset_id", "metadata", "time_stamp", "group_ids", "location", "content", and "num_value".
+1. Checks if the points vector is empty and returns an error if so.
+2. Determines the Qdrant collection name from the dataset configuration.
+3. Establishes a connection to Qdrant.
+4. Uses the Qdrant client to upsert the points into the specified collection.
 
-### `bulk_upsert_qdrant_points_query`
+### search_over_groups_query
+
 #### Description
-Upserts a batch of points into the specified Qdrant collection.
+Performs a search over groups of points in Qdrant.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `points` | `Vec&lt;PointStruct&gt;` | A vector of `PointStruct` representing the points to upsert. |
-| `dataset_config` | `DatasetConfiguration` | The dataset configuration used to determine the Qdrant collection name. |
+| page | u64 | Page number for pagination |
+| filter | Filter | Qdrant filter for the search |
+| limit | u64 | Number of results per page |
+| score_threshold | Option&lt;f32&gt; | Minimum score threshold for results |
+| group_size | u32 | Size of each group in the results |
+| vector | VectorType | Vector to search with |
+| dataset_config | DatasetConfiguration | Configuration for the dataset |
+| get_total_pages | bool | Whether to retrieve the total number of pages |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure. |
+| - | Result&lt;(Vec&lt;GroupSearchResults&gt;, u64), ServiceError&gt; | Search results and total count |
 
 #### Internal Logic
-- Checks if the `points` vector is empty. If it is, returns an error.
-- Retrieves the Qdrant collection name using `get_qdrant_collection_from_dataset_config`.
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Uses the `qdrant_client` library to upsert the points into the specified collection.
-- Returns an error if the upsert operation fails.
+1. Determines the Qdrant collection name from the dataset configuration.
+2. Constructs a `SearchPointGroups` query based on the input parameters.
+3. Executes the search query on Qdrant.
+4. Processes the results into `GroupSearchResults` structures.
+5. Calculates the total number of pages if requested.
 
-### `create_new_qdrant_point_query`
-#### Description
-Creates a new point in the specified Qdrant collection.
+## Dependencies
+The module relies on several external crates and internal modules:
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `point_id` | `uuid::Uuid` | The ID of the point. |
-| `embedding_vector` | `Vec&lt;f32&gt;` | The embedding vector for the point. |
-| `chunk_metadata` | `ChunkMetadata` | The metadata for the chunk associated with the point. |
-| `splade_vector` | `Vec&lt;(u32, f32)&gt;` | The sparse vector for the point. |
-| `group_ids` | `Option&lt;Vec&lt;uuid::Uuid&gt;&gt;` | The IDs of the groups the point belongs to. |
-| `dataset_config` | `DatasetConfiguration` | The dataset configuration used to determine the Qdrant collection name. |
-| `pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
+- `qdrant_client`: For interacting with the Qdrant vector database.
+- `actix_web`: For web-related functionalities.
+- `serde`: For serialization and deserialization.
+- `uuid`: For handling UUIDs.
+- Internal modules: `data::models`, `errors::ServiceError`, and various operator modules.
 
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure. |
+## Error Handling
+The module uses the `ServiceError` type for error handling, which is likely defined in the `errors` module. Most functions return `Result&lt;T, ServiceError&gt;` to propagate errors up the call stack.
 
-#### Internal Logic
-- Retrieves the tags associated with the groups the point belongs to using `get_groups_from_group_ids_query`.
-- Creates a `QdrantPayload` from the chunk metadata, group IDs, and tags.
-- Retrieves the Qdrant collection name using `get_qdrant_collection_from_dataset_config`.
-- Determines the vector name based on the length of the embedding vector.
-- Creates a `PointStruct` from the point ID, embedding vector, sparse vector, and payload.
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Upserts the point into the specified collection.
-- Returns an error if the upsert operation fails.
+## Performance Considerations
+- The module uses asynchronous programming with `async/await` for non-blocking I/O operations.
+- Bulk operations are used where possible (e.g., `bulk_upsert_qdrant_points_query`) to minimize network round-trips.
+- The `scroll_qdrant_collection_ids` function implements pagination to handle large datasets efficiently.
 
-### `update_qdrant_point_query`
-#### Description
-Updates an existing point in the specified Qdrant collection.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `metadata` | `ChunkMetadata` | The updated metadata for the chunk associated with the point. |
-| `updated_vector` | `Option&lt;Vec&lt;f32&gt;&gt;` | The updated embedding vector for the point. |
-| `group_ids` | `Option&lt;Vec&lt;uuid::Uuid&gt;&gt;` | The updated IDs of the groups the point belongs to. |
-| `dataset_id` | `uuid::Uuid` | The ID of the dataset the point belongs to. |
-| `splade_vector` | `Vec&lt;(u32, f32)&gt;` | The updated sparse vector for the point. |
-| `bm25_vector` | `Option&lt;Vec&lt;(u32, f32)&gt;&gt;` | The updated BM25 vector for the point. |
-| `dataset_config` | `DatasetConfiguration` | The dataset configuration used to determine the Qdrant collection name. |
-| `web_pool` | `web::Data&lt;Pool&gt;` | A database connection pool. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `Result&lt;(), actix_web::Error&gt;` |  | A `Result` indicating success or failure. |
-
-#### Internal Logic
-- Retrieves the Qdrant point ID from the chunk metadata.
-- Retrieves the Qdrant collection name using `get_qdrant_collection_from_dataset_config`.
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Fetches the current point from Qdrant using `get_points`.
-- Extracts the group IDs from the current point's payload if they exist.
-- Retrieves the tags associated with the groups using `get_groups_from_group_ids_query`.
-- Creates a `QdrantPayload` from the updated chunk metadata, group IDs, dataset ID, and tags.
-- If `updated_vector` is provided, it updates the embedding vector and sparse vector in the point and upserts the updated point into the collection.
-- If `updated_vector` is not provided, it overwrites the payload of the existing point with the new payload.
-- Returns an error if any of the operations fail.
-
-### `add_bookmark_to_qdrant_query`
-#### Description
-Adds a bookmark to a point in the specified Qdrant collection.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `point_id` | `uuid::Uuid` | The ID of the point to bookmark. |
-| `group_id` | `uuid::Uuid` | The ID of the group to add the bookmark to. |
-| `dataset_config` | `DatasetConfiguration` | The dataset configuration used to determine the Qdrant collection name. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure. |
-
-#### Internal Logic
-- Retrieves the Qdrant collection name using `get_qdrant_collection_from_dataset_config`.
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Fetches the current point from Qdrant using `get_points`.
-- Extracts the existing group IDs from the point's payload if they exist.
-- Appends the new `group_id` to the existing group IDs.
-- Creates a new `QdrantPayload` from the current point and the updated group IDs.
-- Overwrites the payload of the existing point with the new payload.
-- Returns an error if any of the operations fail.
-
-### `remove_bookmark_from_qdrant_query`
-#### Description
-Removes a bookmark from a point in the specified Qdrant collection.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `point_id` | `uuid::Uuid` | The ID of the point to remove the bookmark from. |
-| `group_id` | `uuid::Uuid` | The ID of the group to remove the bookmark from. |
-| `dataset_config` | `DatasetConfiguration` | The dataset configuration used to determine the Qdrant collection name. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `Result&lt;(), ServiceError&gt;` |  | A `Result` indicating success or failure. |
-
-#### Internal Logic
-- Retrieves the Qdrant collection name using `get_qdrant_collection_from_dataset_config`.
-- Establishes a connection to the Qdrant database using `get_qdrant_connection`.
-- Fetches the current point from Qdrant using `get_points`.
-- Extracts the existing group IDs from the point's payload if they exist.
-- Removes the `group_id` from the existing group IDs.
-- Creates a new `QdrantPayload` from the current point and the updated group IDs.
-- Overwrites the payload of the existing point with the new payload.
-- Returns an error if any of the operations fail.
-
-### `search_over_groups_query`
-#### Description
-Searches for points grouped by a specific field in the specified Qdrant collection.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| `page` | `u64` | The page number of the search results. |
-| `filter` | `Filter` | A Qdrant filter to apply to the search. |
-| `limit` | `u64` | The maximum number
+This module is crucial for the application's vector search capabilities, providing a high-level interface to Qdrant's functionality while abstracting away the complexities of direct vector database interactions.

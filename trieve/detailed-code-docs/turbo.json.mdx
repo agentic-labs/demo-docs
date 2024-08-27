@@ -7,84 +7,99 @@ This `turbo.json` file is a configuration file for Turborepo, a high-performance
 
 ## Symbols
 
-### Root Configuration
+### `$schema`
 #### Description
-The root configuration object defines the overall structure and settings for the Turborepo build system.
+Specifies the JSON schema for the Turborepo configuration file.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| $schema | string | The JSON schema URL for Turborepo configuration |
-| ui | string | Specifies the user interface type, set to "tui" (Text User Interface) |
-| tasks | object | Defines the various tasks and their configurations |
+| $schema | string | URL of the JSON schema |
 
-### Tasks
+### `ui`
 #### Description
-The `tasks` object defines different build and development tasks along with their configurations.
+Defines the user interface type for Turborepo.
 
-#### Internal Logic
-Each task is defined as a key-value pair, where the key is the task name and the value is an object containing task-specific configurations.
-
-### build
-#### Description
-Defines the build task configuration.
-
-#### Outputs
+#### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| outputs | array | Specifies the output directory for build artifacts |
+| ui | string | Type of user interface (set to "tui" for Text User Interface) |
 
-#### Internal Logic
-- Outputs are set to `"dist/**"`, indicating that all files and subdirectories in the `dist` directory are considered outputs.
-- Depends on the build tasks of all dependencies (specified by `"^build"`).
-
-### lint
+### `tasks`
 #### Description
-Defines the lint task configuration.
+Defines the various tasks that can be run in the project, along with their configurations.
 
-#### Internal Logic
-- Caching is disabled for this task.
-- Depends on the build tasks of all dependencies.
-
-### lint:CI
-#### Description
-Defines a separate lint task for CI environments.
-
-#### Internal Logic
-- Identical configuration to the `lint` task.
-- Caching is disabled.
-- Depends on the build tasks of all dependencies.
-
-### dev
-#### Description
-Defines the development task configuration.
-
-#### Internal Logic
-- Set as a persistent task, meaning it runs continuously.
-- Caching is disabled.
-- Depends specifically on the build task of the `trieve-fetch-client` package.
-
-### trieve-fetch-client#build
-#### Description
-Defines a specific build task for the `trieve-fetch-client` package.
-
-#### Outputs
+#### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| outputs | array | Specifies the output directory for build artifacts |
+| tasks | object | Collection of task configurations |
 
-#### Internal Logic
-- Outputs are set to `"dist"`, indicating that the `dist` directory is considered the output.
+### `build`
+#### Description
+Configures the build task for the project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| outputs | array | Specifies the output directories for the build task |
+| dependsOn | array | Lists the tasks that must be completed before this task can run |
+
+### `lint`
+#### Description
+Configures the lint task for the project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cache | boolean | Determines whether the task results should be cached |
+| dependsOn | array | Lists the tasks that must be completed before this task can run |
+
+### `lint:CI`
+#### Description
+Configures a separate lint task for CI environments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cache | boolean | Determines whether the task results should be cached |
+| dependsOn | array | Lists the tasks that must be completed before this task can run |
+
+### `dev`
+#### Description
+Configures the development task for the project.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| persistent | boolean | Indicates whether the task should run continuously |
+| cache | boolean | Determines whether the task results should be cached |
+| dependsOn | array | Lists the tasks that must be completed before this task can run |
+
+### `trieve-ts-sdk#build`
+#### Description
+Configures a specific build task for the `trieve-ts-sdk` package.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| outputs | array | Specifies the output directories for this specific build task |
 
 ## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| Turborepo | Build system for managing monorepo tasks and dependencies |
+This configuration file doesn't directly use external libraries, but it defines dependencies between tasks within the project.
 
 ## Configuration
+The entire file serves as a configuration for Turborepo. Key configurations include:
+
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| $schema | string | "https://turbo.build/schema.json" | Specifies the JSON schema for Turborepo configuration |
 | ui | string | "tui" | Sets the user interface type to Text User Interface |
+| build.outputs | array | ["dist/**"] | Specifies the output directory for build tasks |
+| lint.cache | boolean | false | Disables caching for lint tasks |
+| dev.persistent | boolean | true | Makes the dev task run continuously |
+| dev.cache | boolean | false | Disables caching for the dev task |
 
-This configuration file sets up a structured build pipeline for a monorepo project, defining various tasks such as building, linting, and development. It specifies dependencies between tasks, output directories, and caching behaviors to optimize the build process.
+## Performance Considerations
+- The `build` task specifies outputs, which allows Turborepo to cache the results and potentially skip unnecessary rebuilds.
+- Linting tasks (`lint` and `lint:CI`) have caching disabled, ensuring they always run.
+- The `dev` task is set to be persistent and not cached, suitable for continuous development work.
+- Task dependencies are clearly defined, allowing Turborepo to optimize the execution order and parallelization of tasks.

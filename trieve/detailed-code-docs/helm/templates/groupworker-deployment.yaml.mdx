@@ -3,49 +3,60 @@ title: "groupworker-deployment.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Deployment for a "group-worker" application. It specifies the container image, environment variables, resource limits, and other configuration options for the deployment. The deployment ensures that a specified number of replicas (in this case, 1) of the group-worker application are running at all times.
+This Kubernetes Deployment manifest defines the configuration for deploying a "group-worker" application. It specifies the container image, environment variables, and other settings necessary for running the application in a Kubernetes cluster. The deployment includes various configuration options for connecting to external services and setting up the application's environment.
 
 ## Code Structure
-The code defines a Kubernetes Deployment object with specifications for selecting pods, defining a template for creating pods, and configuring containers within those pods. The container specification includes the image to use, environment variables to set, and optional sidecar containers for specific environments.
+The manifest is structured as a standard Kubernetes Deployment resource, with metadata, spec, and container definitions. It uses Helm templating to inject values from a values file, allowing for flexible configuration across different environments.
 
 ## Symbols
 
-### `group-worker` Deployment
+### Deployment
 #### Description
-This deployment manages the deployment of the "group-worker" application, which likely handles background tasks related to grouping data. It specifies a single replica, meaning only one instance of the application will be running at a time.
-
-#### Inputs
-This deployment takes inputs from a Helm chart's values file, including:
-* `.Release.Name`: The name of the Helm release.
-* `.Values.environment`: The environment the application is deploying to (e.g., "local", "gcloud").
-* `.Values.containers.group_worker.tag`: The Docker tag for the group-worker image.
-* `.Values.config.*`: Various configuration options for the application, including API keys, database connection strings, and other settings.
-
-#### Outputs
-This deployment creates a single-replica deployment in the Kubernetes cluster, running the specified group-worker container image with the provided configuration.
+Defines a Kubernetes Deployment for the "group-worker" application.
 
 #### Internal Logic
-The deployment uses a ternary operator to determine the image repository based on the environment. It also conditionally includes a sidecar container for Cloud SQL Proxy if the environment is "gcloud".
-
-## Side Effects
-This deployment creates Kubernetes resources (Deployment, ReplicaSet, Pods) and configures them according to the provided specifications. It also potentially pulls container images from a registry.
+1. Sets up metadata with name and labels
+2. Defines selector for pod management
+3. Specifies pod template with container configurations
+4. Configures environment variables for the application
+5. Conditionally includes a Cloud SQL Proxy container for Google Cloud deployments
 
 ## Dependencies
-This deployment depends on the following:
 | Dependency | Purpose |
 |:-----------|:--------|
-| Kubernetes API server | To create and manage the deployment and its associated resources. |
-| Container registry | To pull the specified container images. |
-| Various services (Redis, Qdrant, PostgreSQL, etc.) | The application running in the container depends on these services, as indicated by the environment variables. |
+| Helm | Used for templating and value injection |
+| Kubernetes | Target platform for deployment |
 
-## Configuration
-The deployment is configured through various values passed from a Helm chart, including:
-* Image tag for the group-worker container.
-* Environment-specific settings (e.g., database connection strings).
-* Application-specific configuration options (API keys, service URLs, etc.).
+### Configuration
+The deployment uses numerous configuration options, injected as environment variables. Key configurations include:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| ADMIN_API_KEY | string | API key for admin access |
+| BASE_SERVER_URL | string | Base URL for the server |
+| REDIS_URL | string | Connection URL for Redis |
+| QDRANT_URL | string | URL for Qdrant vector database |
+| DATABASE_URL | string | PostgreSQL database connection string |
+| OPENAI_API_KEY | string | API key for OpenAI services |
+| S3_ENDPOINT | string | Endpoint for S3 storage |
+| STRIPE_SECRET | string | Secret key for Stripe integration |
+| OIDC_CLIENT_SECRET | string | Client secret for OpenID Connect |
+| GPU_SERVER_ORIGIN | string | Origin for GPU server |
+| CLICKHOUSE_URL | string | URL for ClickHouse analytics database |
 
 ## Error Handling
-This deployment does not implement specific error handling mechanisms within the YAML itself. Error handling is expected to be handled within the application code running in the container.
+The manifest doesn't explicitly define error handling mechanisms. Error handling would be managed by the application code and Kubernetes itself.
 
 ## Logging
-This deployment does not explicitly define logging mechanisms. Logging is expected to be handled within the application code running in the container.
+No specific logging configuration is defined in this manifest. Logging would be handled by the application and Kubernetes cluster's logging mechanisms.
+
+## Performance Considerations
+1. The deployment uses a single replica (`replicas: 1`), which may limit scalability.
+2. For Google Cloud deployments, a Cloud SQL Proxy is included with specific resource requests (2Gi memory, 1 CPU), which should be adjusted based on application needs.
+3. The use of environment variables for configuration allows for easy updates without changing the container image.
+
+## Notes
+1. The manifest uses conditional logic to determine image repository and certain configuration values based on the deployment environment.
+2. It includes configurations for various external services like Redis, Qdrant, PostgreSQL, S3, OpenAI, and ClickHouse.
+3. The deployment uses a service account named "cloud-postgres-service-account".
+4. For Google Cloud deployments, an additional container for Cloud SQL Proxy is included to securely connect to Cloud SQL instances.

@@ -5,16 +5,24 @@ title: "organization_handler.rs"
 Here's a detailed documentation of the `organization_handler.rs` file:
 
 ## High-level description
-This file contains handler functions for organization-related operations in the Trieve API. It includes functionality for creating, updating, deleting, and retrieving organizations, as well as managing users within organizations and handling organization-wide configurations.
+This file contains handler functions for organization-related operations in the Trieve API. It includes functionality for creating, updating, deleting, and retrieving organizations, as well as managing users within organizations and handling organization-wide dataset configurations.
 
 ## Code Structure
-The file defines several handler functions that correspond to different API endpoints. These functions interact with the database through the `organization_operator` module and other related operators. They also use various models defined in `data::models`.
+The file defines several handler functions that correspond to different API endpoints. These functions interact with the database through the `Pool` connection and often use the `organization_operator` module for database operations. Many functions also interact with Redis for caching purposes.
+
+## References
+- `auth_handler.rs`: For authentication-related structs and functions
+- `models.rs`: For data models used throughout the handlers
+- `errors.rs`: For custom error handling
+- `middleware/auth_middleware.rs`: For authentication and authorization checks
+- `operators/organization_operator.rs`: For database operations related to organizations
+- `operators/user_operator.rs`: For user-related database operations
 
 ## Symbols
 
 ### `get_organization`
 #### Description
-Fetches the details of an organization by its ID. The authenticated user or API key must have an admin or owner role for the specified organization.
+Fetches the details of an organization by its ID. Requires admin or owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -26,16 +34,16 @@ Fetches the details of an organization by its ID. The authenticated user or API 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response containing the organization details |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with organization details or an error |
 
 #### Internal Logic
-1. Verifies that the user has admin privileges for the organization.
-2. Retrieves the organization details from the database.
-3. Returns the organization details as a JSON response.
+1. Verifies if the user has admin privileges for the organization
+2. Retrieves the organization details from the database
+3. Returns the organization details as a JSON response
 
 ### `delete_organization`
 #### Description
-Deletes an organization by its ID. The authenticated user must be an owner of the organization to delete it.
+Deletes an organization by its ID. Requires owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -49,16 +57,16 @@ Deletes an organization by its ID. The authenticated user must be an owner of th
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on successful deletion |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on success or an error |
 
 #### Internal Logic
-1. Verifies that the user has owner privileges for the organization.
-2. Calls the `delete_organization_query` function to perform the deletion.
-3. Returns a no content response on success.
+1. Verifies if the user has owner privileges for the organization
+2. Calls the `delete_organization_query` function to perform the deletion
+3. Returns a no content response on success
 
 ### `update_organization`
 #### Description
-Updates an organization's details. Only the owner of the organization can update it.
+Updates an organization's details. Only the owner can update it.
 
 #### Inputs
 | Name | Type | Description |
@@ -71,17 +79,17 @@ Updates an organization's details. Only the owner of the organization can update
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response containing the updated organization details |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with updated organization details or an error |
 
 #### Internal Logic
-1. Verifies that the user has owner privileges for the organization.
-2. Retrieves the current organization details.
-3. Updates the organization with the new name if provided.
-4. Returns the updated organization details as a JSON response.
+1. Verifies if the user has owner privileges for the organization
+2. Retrieves the current organization details
+3. Updates the organization with the new name if provided
+4. Returns the updated organization details as a JSON response
 
 ### `create_organization`
 #### Description
-Creates a new organization. The authenticated user who creates the organization will be the default owner.
+Creates a new organization. The authenticated user becomes the default owner.
 
 #### Inputs
 | Name | Type | Description |
@@ -95,16 +103,16 @@ Creates a new organization. The authenticated user who creates the organization 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response containing the created organization details |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with created organization details or an error |
 
 #### Internal Logic
-1. Creates a new organization with the provided name.
-2. Adds the authenticated user as the owner of the new organization.
-3. Returns the created organization details as a JSON response.
+1. Creates a new organization with the provided name
+2. Adds the authenticated user as the owner of the new organization
+3. Returns the created organization details as a JSON response
 
 ### `get_organization_usage`
 #### Description
-Fetches the current usage specification of an organization by its ID.
+Fetches the current usage specification of an organization. Requires admin or owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -116,16 +124,16 @@ Fetches the current usage specification of an organization by its ID.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response containing the organization's usage details |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with organization usage details or an error |
 
 #### Internal Logic
-1. Verifies that the user has admin privileges for the organization.
-2. Retrieves the organization's usage details from the database.
-3. Returns the usage details as a JSON response.
+1. Verifies if the user has admin privileges for the organization
+2. Retrieves the organization usage details from the database
+3. Returns the usage details as a JSON response
 
 ### `get_organization_users`
 #### Description
-Fetches the users of an organization by its ID.
+Fetches the users of an organization. Requires admin or owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -137,16 +145,16 @@ Fetches the users of an organization by its ID.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response containing an array of users belonging to the organization |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with organization users or an error |
 
 #### Internal Logic
-1. Verifies that the user has admin privileges for the organization.
-2. Retrieves the list of users belonging to the organization from the database.
-3. Returns the list of users as a JSON response.
+1. Verifies if the user has admin privileges for the organization
+2. Retrieves the users associated with the organization from the database
+3. Returns the list of users as a JSON response
 
 ### `remove_user_from_org`
 #### Description
-Removes a user from an organization.
+Removes a user from an organization. Requires admin or owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -159,17 +167,17 @@ Removes a user from an organization.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on successful removal |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on success or an error |
 
 #### Internal Logic
-1. Verifies that the user has admin privileges for the organization.
-2. Retrieves the role of the authenticated user in the organization.
-3. Removes the specified user from the organization.
-4. Returns a no content response on success.
+1. Verifies if the user has admin privileges for the organization
+2. Removes the specified user from the organization
+3. Clears the user's cache in Redis
+4. Returns a no content response on success
 
 ### `update_all_org_dataset_configs`
 #### Description
-Updates the configurations for all datasets in an organization.
+Updates the configurations for all datasets in an organization. Requires owner role.
 
 #### Inputs
 | Name | Type | Description |
@@ -181,21 +189,26 @@ Updates the configurations for all datasets in an organization.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on successful update |
+| HttpResponse | Result&lt;HttpResponse, actix_web::Error&gt; | No content response on success or an error |
 
 #### Internal Logic
-1. Verifies that the user has owner privileges for the organization.
-2. Updates the configurations for all datasets in the organization.
-3. Returns a no content response on success.
+1. Verifies if the user has owner privileges for the organization
+2. Updates the configurations for all datasets in the organization
+3. Returns a no content response on success
 
 ## Dependencies
-- `actix_web`: Web framework for handling HTTP requests and responses.
-- `serde`: For serialization and deserialization of JSON data.
-- `utoipa`: For API documentation generation.
-- Custom modules: `auth_handler`, `models`, `errors`, `middleware`, `operators`.
+- actix-web
+- diesel
+- serde
+- utoipa
+- uuid
 
 ## Error Handling
 The handlers use the `ServiceError` enum for error handling, which is then converted to appropriate HTTP responses.
 
-## API/Interface Reference
-Each handler function is annotated with `#[utoipa::path]`, which generates OpenAPI documentation for the endpoints. These annotations describe the HTTP method, path, request body, responses, and security requirements for each endpoint.
+## Performance Considerations
+- Redis is used for caching user data to improve performance
+- Database operations are performed asynchronously to avoid blocking
+
+## TODOs
+None explicitly mentioned in the code.

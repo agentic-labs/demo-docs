@@ -3,47 +3,42 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script defines a trigger function `update_files_storage_counts_with_update` and a trigger `update_files_storage_with_update_trigger` to maintain the `file_storage` count in the `organization_usage_counts` table based on changes (insert, update, delete) to the `files` table. It ensures that the `file_storage` count accurately reflects the total size of files associated with each organization.
+This SQL script updates the database schema by creating a trigger named `update_files_storage_with_update_trigger` on the `files` table. This trigger automatically updates the `file_storage` column in the `organization_usage_counts` table whenever a file is inserted, updated, or deleted in the `files` table. 
+
+This ensures that the `file_storage` accurately reflects the total size of files associated with each organization.
 
 ## Code Structure
-The code defines a PostgreSQL function `update_files_storage_counts_with_update` which is used as the trigger function for the `update_files_storage_with_update_trigger`. The trigger is defined on the `files` table and executes the function for each row affected by INSERT, UPDATE, and DELETE operations.
+The code defines a PostgreSQL function `update_files_storage_counts_with_update()` which is used as the trigger function. It then drops any existing triggers or functions with the same names and finally creates the new trigger `update_files_storage_with_update_trigger` that calls the defined function.
 
 ## Symbols
-### `update_files_storage_counts_with_update`
+
+### `update_files_storage_counts_with_update()`
 #### Description
-This function is a trigger function written in PL/pgSQL that updates the `file_storage` count in the `organization_usage_counts` table based on changes to the `files` table. It handles INSERT, UPDATE, and DELETE operations on the `files` table and adjusts the `file_storage` count accordingly.
+This function is a PostgreSQL trigger function that is executed automatically after an INSERT, UPDATE, or DELETE operation on the `files` table. It updates the `file_storage` column in the `organization_usage_counts` table based on the operation performed.
 
 #### Inputs
-This function implicitly receives the following inputs from the trigger context:
+This function implicitly receives its input from the `files` table trigger. The following variables are available within the function:
 
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `NEW` | RECORD | Represents the new state of the row being inserted or updated in the `files` table. |
-| `OLD` | RECORD | Represents the old state of the row being updated or deleted in the `files` table. |
-| `TG_OP` | TEXT | Indicates the type of operation being performed (INSERT, UPDATE, or DELETE). |
+| `NEW` | Record | Represents the new state of the row being inserted or updated in the `files` table. |
+| `OLD` | Record | Represents the old state of the row being updated or deleted in the `files` table. |
+| `TG_OP` | Text | Represents the type of operation being performed (INSERT, UPDATE, or DELETE). |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `NEW` | RECORD | Returns the new state of the row in the `files` table after the trigger function has executed. This is mainly for consistency and doesn't directly impact the `organization_usage_counts` table. |
+| `NEW` | Record | Returns the `NEW` record, which represents the new state of the row in the `files` table after the trigger has been executed. |
 
 #### Internal Logic
 1. **Determine operation type:** The function first checks the value of `TG_OP` to determine if the triggering event is an INSERT, UPDATE, or DELETE operation.
-2. **INSERT:** If it's an INSERT, it retrieves the `organization_id` from the `datasets` table based on the `dataset_id` of the newly inserted file (`NEW.dataset_id`). It then tries to insert a new row into `organization_usage_counts` with the `org_id` and the file size (`NEW.size`). If a row with the same `org_id` already exists, it updates the existing row by adding the new file size to the current `file_storage` value.
-3. **UPDATE:** If it's an UPDATE, it calculates the new `file_storage` value by subtracting the old file size (`OLD.size`) and adding the new file size (`NEW.size`) to the current `file_storage` value in the `organization_usage_counts` table. It ensures that the `file_storage` value is never negative by using `GREATEST(0, ...)`.
-4. **DELETE:** If it's a DELETE, it retrieves the `organization_id` from the `datasets` table based on the `dataset_id` of the deleted file (`OLD.dataset_id`). It then updates the corresponding row in `organization_usage_counts` by subtracting the deleted file size (`OLD.size`) from the `file_storage` value. It ensures that the `file_storage` value doesn't go below zero.
+2. **INSERT operation:** If it's an INSERT, it inserts a new row into `organization_usage_counts` with the organization's ID and the new file's size. If a row for the organization already exists, it updates the existing row by adding the new file's size to the current `file_storage` value.
+3. **UPDATE operation:** If it's an UPDATE, it updates the `file_storage` for the corresponding organization by subtracting the old file size (`OLD.size`) and adding the new file size (`NEW.size`). It uses `GREATEST(0, ...)` to ensure the `file_storage` doesn't become negative.
+4. **DELETE operation:** If it's a DELETE, it updates the `file_storage` for the corresponding organization by subtracting the deleted file's size (`OLD.size`) from the current value. It uses a CASE statement to ensure that `file_storage` doesn't become negative if the deleted file size is greater than the current `file_storage` value.
 
 ### `update_files_storage_with_update_trigger`
 #### Description
-This trigger is defined on the `files` table and is set to fire `AFTER` an `INSERT`, `UPDATE`, or `DELETE` operation on each row. It executes the `update_files_storage_counts_with_update` function for each affected row, ensuring that the `file_storage` count in the `organization_usage_counts` table is updated accordingly.
+This is a PostgreSQL trigger that is defined on the `files` table. It is set to fire after an INSERT, UPDATE, or DELETE operation on the table. 
 
-## Side Effects
-- **Modifies `organization_usage_counts` table:** The trigger function modifies the `file_storage` column in the `organization_usage_counts` table based on the changes made to the `files` table.
-
-## Error Handling
-- The code uses `ON CONFLICT DO UPDATE` to handle potential duplicate key violations during the INSERT operation in the trigger function.
-- It uses `CASE WHEN ... THEN ... ELSE ... END` to handle cases where deleting a file might result in a negative `file_storage` value, defaulting it to 0.
-
-## Performance Considerations
-- The trigger function uses indexed lookups (`SELECT ... WHERE id = ...`) to efficiently retrieve data from the `datasets` table.
-- The `ON CONFLICT DO UPDATE` clause helps avoid potential race conditions and improves performance by handling duplicate key violations within the same SQL statement.
+#### Internal Logic
+The trigger executes the `update_files_storage_counts_with_update()` function for each row affected by the triggering operation. This ensures that the `organization_usage_counts` table is updated correctly to reflect the changes in file storage caused by the operation on the `files` table. 

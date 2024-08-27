@@ -3,44 +3,44 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script is designed to revert changes made in a corresponding `up.sql` file. It drops newly created triggers and functions, then recreates the original function and trigger for managing chunk metadata counts in a PostgreSQL database.
+This SQL script reverts a database migration that modified triggers related to chunk metadata counts. It drops the existing triggers and function, then recreates a function and trigger to update chunk counts in the `dataset_usage_counts` table based on insertions and deletions in the `chunk_metadata` table. This effectively reverts to a row-level trigger approach for maintaining chunk counts.
 
 ## Symbols
 
-### `update_chunk_metadata_counts()`
+### `DROP TRIGGER increase_chunk_metadata_counts_trigger ON chunk_metadata;`
 #### Description
-This function is a trigger function that updates the `dataset_usage_counts` table when rows are inserted into or deleted from the `chunk_metadata` table.
+This statement drops the trigger named `increase_chunk_metadata_counts_trigger` associated with the `chunk_metadata` table. This trigger was likely responsible for incrementing chunk counts in the `dataset_usage_counts` table.
+
+### `DROP TRIGGER delete_chunk_metadata_counts_trigger ON chunk_metadata;`
+#### Description
+Similar to the previous statement, this drops the `delete_chunk_metadata_counts_trigger` from the `chunk_metadata` table. This trigger was likely responsible for decrementing chunk counts.
+
+### `DROP FUNCTION update_chunk_metadata_counts;`
+#### Description
+This statement drops the function named `update_chunk_metadata_counts`. This function was likely used by the triggers to update the chunk counts in `dataset_usage_counts`.
+
+### `CREATE OR REPLACE FUNCTION update_chunk_metadata_counts()`
+#### Description
+This statement defines or replaces a function named `update_chunk_metadata_counts`. This function is designed to be used as a trigger function for the `chunk_metadata` table. It updates the `chunk_count` in the `dataset_usage_counts` table based on insert or delete operations on the `chunk_metadata` table.
 
 #### Inputs
-This function doesn't take explicit inputs but operates on the `NEW` and `OLD` special variables provided by the trigger context.
+This function implicitly takes the inserted or deleted row from the `chunk_metadata` table as input through the `NEW` and `OLD` records within the trigger context.
 
 #### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| NULL | NULL | The function always returns NULL as it's a trigger function |
+This function returns `NULL` as it is primarily performing side effects on the database.
 
 #### Internal Logic
-1. For INSERT operations:
-   - Attempts to insert a new row into `dataset_usage_counts` with the dataset_id and a count of 1
-   - If a row with the dataset_id already exists, it increments the existing count by 1
-2. For DELETE operations:
-   - Decrements the `chunk_count` for the corresponding dataset_id in `dataset_usage_counts`
-   - Ensures the count never goes below 0
+- It checks the type of operation (`TG_OP`) to determine if it's an insert or delete.
+- **If it's an insert:**
+    - It attempts to insert a new row into `dataset_usage_counts` with a `chunk_count` of 1.
+    - If a row with the same `dataset_id` already exists, it increments the existing `chunk_count` by 1.
+- **If it's a delete:**
+    - It decrements the `chunk_count` in `dataset_usage_counts` for the corresponding `dataset_id`.
+    - It ensures that the `chunk_count` doesn't go below 0.
 
-### `update_chunk_metadata_counts_trigger`
+### `CREATE OR REPLACE TRIGGER update_chunk_metadata_counts_trigger`
 #### Description
-This is a trigger that calls the `update_chunk_metadata_counts()` function after INSERT or DELETE operations on the `chunk_metadata` table.
+This statement defines or replaces a trigger named `update_chunk_metadata_counts_trigger` on the `chunk_metadata` table. This trigger is set to fire `AFTER` each `INSERT` or `DELETE` operation on the table for each affected row.
 
 #### Internal Logic
-- Executes for each row affected by INSERT or DELETE operations
-- Calls the `update_chunk_metadata_counts()` function
-
-## Side Effects
-- Modifies the `dataset_usage_counts` table by inserting new rows or updating existing ones
-- Affects the `chunk_metadata` table indirectly through the trigger
-
-## Error Handling
-The script doesn't implement explicit error handling, relying on PostgreSQL's default error handling mechanisms.
-
-## TODOs
-The comment "This file should undo anything in `up.sql`" suggests that this script is meant to revert changes made by a corresponding `up.sql` migration file. Developers should ensure that this script accurately undoes all changes made in the `up.sql` file.
+The trigger executes the `update_chunk_metadata_counts` function after each insert or delete operation on the `chunk_metadata` table. This ensures that the `chunk_count` in the `dataset_usage_counts` table is kept consistent.

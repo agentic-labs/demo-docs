@@ -3,37 +3,29 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for modifying the database schema, specifically focusing on adding and removing indexes on the `chunk_metadata` table. The migration is dated 2024-04-02 and is identified by the timestamp 051011. The purpose of these migrations is to optimize query performance by creating new indexes and removing an existing one.
+This directory contains SQL migration scripts for modifying the indexing strategy of the `chunk_metadata` table in the database. The migration adds new indexes to improve query performance for operations involving dataset IDs, creation timestamps, and specific time stamps, while removing an existing index on the `qdrant_point_id` column.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
 1. In the "up" migration:
-   - Create three new indexes on the `chunk_metadata` table:
+   - Add three new indexes to the `chunk_metadata` table:
      - An index on the `dataset_id` column
      - An index on the `created_at` column
      - An index on the `time_stamp` column
-   - Remove an existing index named `idx_card_metadata_qdrant_point_id`
+   - Remove an existing index on the `qdrant_point_id` column
 
-2. In the "down" migration (to revert the changes):
-   - Drop the three newly created indexes
-   - Recreate the previously removed index on the `qdrant_point_id` column
+2. In the "down" migration (reverting the changes):
+   - Remove the three newly added indexes
+   - Recreate the index on the `qdrant_point_id` column
 
-These changes are likely intended to improve the performance of queries that filter, join, or order by the `dataset_id`, `created_at`, and `time_stamp` columns, while removing an index that may no longer be necessary or efficient.
+These changes are likely intended to optimize database performance for queries that frequently filter or sort by dataset IDs, creation times, or specific timestamps, while potentially reducing the importance of queries based on the `qdrant_point_id` column.
 
 ## Key Files
-1. `up.sql`: This file contains the SQL statements to apply the migration, creating new indexes and dropping an existing one.
-
-2. `down.sql`: This file contains the SQL statements to revert the migration, dropping the newly created indexes and recreating the previously removed index.
-
-Both files work together to ensure that the database schema can be updated and rolled back if necessary.
-
-## Configuration
-The migration is identified by its timestamp: 2024-04-02-051011. This naming convention is likely used by a database migration tool to track and apply migrations in the correct order.
-
-Here's a breakdown of the changes made in each file:
 
 ### up.sql
+This file contains the SQL statements to apply the new indexing strategy:
+
 ```sql
 CREATE INDEX idx_chunk_metadata_dataset_id ON chunk_metadata(dataset_id);
 CREATE INDEX idx_chunk_metadata_created_at ON chunk_metadata(created_at);
@@ -42,6 +34,8 @@ DROP INDEX idx_card_metadata_qdrant_point_id;
 ```
 
 ### down.sql
+This file contains the SQL statements to revert the changes made by the up migration:
+
 ```sql
 DROP INDEX idx_chunk_metadata_dataset_id;
 DROP INDEX idx_chunk_metadata_created_at;
@@ -49,19 +43,5 @@ DROP INDEX idx_chunk_metadata_time_stamp;
 CREATE INDEX idx_card_metadata_qdrant_point_id ON chunk_metadata(qdrant_point_id);
 ```
 
-These migrations will affect the performance of queries on the `chunk_metadata` table. After applying the "up" migration:
-
-1. Queries filtering or joining on `dataset_id` should be faster.
-2. Queries filtering or ordering by `created_at` should be faster.
-3. Queries filtering or ordering by `time_stamp` should be faster.
-4. Queries using the `qdrant_point_id` column might be slower due to the removal of its index.
-
-The "down" migration reverses these effects, returning the database schema to its previous state.
-
-It's important to note that while adding indexes can improve query performance, they also have drawbacks:
-
-1. Indexes consume additional storage space.
-2. Write operations (INSERT, UPDATE, DELETE) may become slower due to the need to update the indexes.
-3. The database server needs to maintain these indexes, which can impact overall system performance.
-
-Therefore, the decision to add or remove indexes should be based on the specific query patterns and performance requirements of the application using this database.
+## Configuration
+The migration is identified by its timestamp: 2024-04-02-051011. This timestamp is used to order migrations and ensure they are applied in the correct sequence.

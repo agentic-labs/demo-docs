@@ -3,47 +3,35 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script creates a PostgreSQL function named `update_notification_count()`. The function is designed to maintain an accurate count of notifications for each user by incrementing the count when a new notification is inserted and decrementing it when a notification is deleted.
+This SQL script defines a PostgreSQL function `update_notification_count()` that automatically manages the count of unread notifications for each user in a system. It leverages triggers to increment the count upon notification insertion and decrement upon deletion.
 
 ## Symbols
 
 ### `update_notification_count()`
 #### Description
-This is a PostgreSQL function that serves as a trigger function to automatically update the notification count for users when notifications are inserted or deleted.
+This function is a PostgreSQL trigger function designed to keep the `user_notification_counts` table updated whenever a notification is added or removed from the system. It utilizes the special trigger variables `TG_OP`, `NEW`, and `OLD` to determine the operation (insert or delete) and access the relevant data.
 
 #### Inputs
-This function doesn't explicitly take any inputs. It operates on the `NEW` and `OLD` pseudo-records provided by the trigger context.
+This function implicitly receives data from the triggers, it does not have explicit input parameters.
+
+*   **`TG_OP` (Trigger Variable)**: A string indicating the triggering operation ('INSERT' or 'DELETE').
+*   **`NEW` (Trigger Variable)**: A record representing the new row being inserted (available for 'INSERT' operations).
+*   **`OLD` (Trigger Variable)**: A record representing the old row being deleted (available for 'DELETE' operations).
 
 #### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| RETURN | TRIGGER | Returns the `NEW` record as required by trigger functions |
+This function uses `RETURN NEW` for 'INSERT' operations, which signifies that the trigger should continue with the insertion. For 'DELETE', there's no explicit return value as the trigger's action is a side effect.
 
 #### Internal Logic
-1. The function checks the operation type (`TG_OP`):
-   - For 'INSERT' operations:
-     - It attempts to insert a new record into the `user_notification_counts` table with a count of 1.
-     - If a record for the user already exists, it updates the existing record by incrementing the `notification_count` by 1.
-   - For 'DELETE' operations:
-     - It updates the `user_notification_counts` table, decrementing the `notification_count` by 1 for the corresponding user.
-2. Finally, it returns the `NEW` record, which is required for trigger functions.
+1.  **Operation Check:** It first checks the value of `TG_OP` to determine if it's an 'INSERT' or 'DELETE' operation.
+2.  **INSERT Case:** If it's an 'INSERT', it attempts to insert a new row into `user_notification_counts` with an initial count of 1. If a row for the user already exists, it increments the existing `notification_count` by 1 using `ON CONFLICT DO UPDATE`.
+3.  **DELETE Case:** If it's a 'DELETE', it decrements the `notification_count` in `user_notification_counts` for the corresponding `user_uuid`.
 
 ## Side Effects
-This function modifies the `user_notification_counts` table, either by inserting new records or updating existing ones.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| plpgsql | The function is written in PL/pgSQL language |
+*   **Modifies `user_notification_counts` table:** This function directly updates the `notification_count` for users in the `user_notification_counts` table based on notification insertions and deletions.
 
 ## Error Handling
-The function doesn't implement explicit error handling. It relies on PostgreSQL's default error handling mechanisms.
+The code does not implement specific error handling beyond the built-in mechanisms of PostgreSQL. For instance, if the `user_notification_counts` table or columns do not exist, the function would throw an error.
 
 ## Performance Considerations
-- The function uses an `INSERT ... ON CONFLICT DO UPDATE` statement for INSERT operations, which is an efficient way to handle potential conflicts without separate existence checks.
-- For large-scale systems with frequent notifications, the constant updating of the count might become a performance bottleneck. In such cases, consider alternative designs like periodic batch updates or eventual consistency models.
-
-## TODOs
-- Consider adding error handling for unexpected operation types.
-- Evaluate if additional indexes on the `user_notification_counts` table might be beneficial for performance, especially on the `user_uuid` column.
-- Consider adding a check to ensure the notification count doesn't go below zero on DELETE operations.
+*   **Trigger Efficiency:** Using triggers ensures that the notification count is updated automatically with each relevant database operation, potentially offering better performance than manual updates.
+*   **`ON CONFLICT DO UPDATE`:** This clause optimizes the insert operation by updating the count in place if a row for the user already exists, preventing unnecessary rows.

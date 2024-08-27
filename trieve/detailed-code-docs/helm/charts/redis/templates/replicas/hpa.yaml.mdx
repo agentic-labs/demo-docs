@@ -3,48 +3,49 @@ title: "hpa.yaml"
 ---
 
 ## High-level description
-This code defines a HorizontalPodAutoscaler (HPA) for the Redis replicas in a Kubernetes cluster. It automatically scales the number of replica pods based on CPU and/or memory usage. The HPA is applied only if autoscaling is enabled and Sentinel is not enabled.
+This YAML file defines a Horizontal Pod Autoscaler (HPA) for Redis replicas in a Kubernetes cluster. It automatically scales the number of Redis replica pods based on CPU and memory utilization metrics, ensuring optimal performance and resource usage.
 
 ## Code Structure
-This code defines a single Kubernetes resource of kind `HorizontalPodAutoscaler`. It uses values from `Values` object to set up the HPA.
-
-## References
-* `common.capabilities.hpa.apiVersion`: Determines the apiVersion for the HPA based on Kubernetes version.
-* `common.names.fullname`: Generates the full name of the HPA resource.
-* `common.names.namespace`: Retrieves the namespace for the HPA.
-* `common.labels.standard`: Includes standard labels for the HPA.
-* `common.tplvalues.render`: Renders template values for annotations.
-* `common.capabilities.deployment.apiVersion`: Determines the apiVersion for the StatefulSet.
-* `common.capabilities.kubeVersion`: Retrieves the Kubernetes version.
+The file uses Helm templating to generate a Kubernetes HorizontalPodAutoscaler resource. It references various helper templates from the common chart to generate names, labels, and determine API versions.
 
 ## Symbols
-### `hpa.yaml`
+
+### HorizontalPodAutoscaler
 #### Description
-This code defines a HorizontalPodAutoscaler (HPA) for Redis replicas, enabling autoscaling based on CPU and/or memory usage.
+Defines an HPA resource for Redis replicas, which automatically scales the number of replica pods based on CPU and memory utilization.
 
 #### Inputs
-This code snippet doesn't have explicit inputs. It relies on values provided in the `Values` object. The following fields within `Values` are used:
-* `Values.replica.autoscaling.enabled`: Boolean indicating whether autoscaling is enabled.
-* `Values.sentinel.enabled`: Boolean indicating whether Redis Sentinel is enabled.
-* `Values.replica.autoscaling.minReplicas`: Minimum number of replica pods.
-* `Values.replica.autoscaling.maxReplicas`: Maximum number of replica pods.
-* `Values.replica.autoscaling.targetCPU`: Target CPU utilization percentage for triggering scaling.
-* `Values.replica.autoscaling.targetMemory`: Target memory utilization percentage for triggering scaling.
-
-#### Outputs
-This code defines a Kubernetes YAML configuration file for an HPA. When applied to a Kubernetes cluster, it creates an HPA resource.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.replica.autoscaling.enabled | boolean | Enables/disables autoscaling for replicas |
+| .Values.sentinel.enabled | boolean | Enables/disables Redis Sentinel mode |
+| .Values.replica.autoscaling.minReplicas | integer | Minimum number of replica pods |
+| .Values.replica.autoscaling.maxReplicas | integer | Maximum number of replica pods |
+| .Values.replica.autoscaling.targetCPU | integer | Target CPU utilization percentage |
+| .Values.replica.autoscaling.targetMemory | integer | Target memory utilization percentage |
 
 #### Internal Logic
-1. **Conditional HPA Creation:** The HPA is created only if `Values.replica.autoscaling.enabled` is true and `Values.sentinel.enabled` is false.
-2. **Metadata:** The HPA's metadata includes its name, namespace, labels, and annotations.
-3. **Scale Target:** The HPA targets the Redis replica StatefulSet.
-4. **Scaling Limits:** The `minReplicas` and `maxReplicas` fields define the lower and upper bounds for the number of replicas.
-5. **Metrics:** The HPA scales based on CPU and/or memory utilization. The `targetAverageUtilization` field specifies the target utilization percentage for each metric. The code handles different Kubernetes versions by using `semverCompare` to adjust the resource metric definition.
+1. Checks if autoscaling is enabled and Sentinel mode is disabled.
+2. Uses helper functions to determine appropriate API versions and generate names.
+3. Sets the target StatefulSet for scaling.
+4. Defines scaling metrics based on CPU and memory utilization.
+5. Adjusts the metric format based on the Kubernetes version.
 
 ## Dependencies
-This code depends on the following Kubernetes resources and APIs:
-* `HorizontalPodAutoscaler`
-* `StatefulSet`
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper templates for naming, labels, and version checks |
 
 ## Configuration
-This code relies on configuration values provided through the `Values` object. See the "Inputs" section for details on the specific configuration options.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| replica.autoscaling.enabled | boolean | - | Enables/disables autoscaling for replicas |
+| replica.autoscaling.minReplicas | integer | - | Minimum number of replica pods |
+| replica.autoscaling.maxReplicas | integer | - | Maximum number of replica pods |
+| replica.autoscaling.targetCPU | integer | - | Target CPU utilization percentage |
+| replica.autoscaling.targetMemory | integer | - | Target memory utilization percentage |
+
+## Notes
+- The HPA is only created if `replica.autoscaling.enabled` is true and `sentinel.enabled` is false.
+- The file uses semantic versioning to adjust the metric format for different Kubernetes versions.
+- Common labels and annotations are applied to the HPA resource.

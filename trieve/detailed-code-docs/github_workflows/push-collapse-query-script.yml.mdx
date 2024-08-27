@@ -3,82 +3,57 @@ title: "push-collapse-query-script.yml"
 ---
 
 ## High-level description
-This code defines a GitHub Actions workflow named "Create Clickhouse Search Query Collapsing Script" that builds and pushes a Docker image for a Clickhouse search query collapsing script whenever changes are pushed to the 'main' branch or the 'docker/collapse-query-script/**' path. The workflow utilizes Docker Buildx for building and pushing the image to Docker Hub.
+This GitHub Actions workflow is designed to build and push a Docker image for a Clickhouse Search Query Collapsing Script. It is triggered on pushes to the main branch that affect the 'docker/collapse-query-script/' directory, or manually via workflow dispatch.
 
 ## Code Structure
-The code defines a single job named `build_collapse_query_script` which consists of several steps executed sequentially. These steps involve checking out the repository, setting up Docker Buildx, logging in to Docker Hub, extracting image metadata, and finally building and pushing the Docker image.
+The workflow consists of a single job named "build_collapse_query_script" with several steps that checkout the repository, set up Docker buildx, log in to Docker Hub, prepare metadata for the Docker image, and finally build and push the image.
 
 ## Symbols
-### `name: Create Clickhouse Search Query Collapsing Script`
+
+### `name`
 #### Description
-This line defines the name of the GitHub Actions workflow as "Create Clickhouse Search Query Collapsing Script".
+Defines the name of the GitHub Actions workflow.
 
 ### `concurrency`
 #### Description
-This section configures concurrency for the workflow, ensuring that only one workflow run is active for the same workflow and branch/head ref combination.
+Configures concurrency settings for the workflow to prevent multiple instances from running simultaneously.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| group | string |  The concurrency group. It uses the expression `${{ github.workflow }}-${{ github.head_ref }}` to create a group based on the workflow name and the head ref. |
-| cancel-in-progress | boolean | If set to `true`, it cancels any in-progress workflow runs that are part of the same concurrency group. |
-
-### `on: workflow_dispatch`
+### `on`
 #### Description
-This line specifies that the workflow can be triggered manually using the GitHub Actions workflow dispatch event.
+Specifies the events that trigger the workflow: manual dispatch and pushes to the main branch affecting specific paths.
 
-### `on: push`
+### `jobs`
 #### Description
-This section defines the trigger for the workflow, which is a push event to the 'main' branch or any path matching 'docker/collapse-query-script/**'.
+Defines the jobs to be executed in the workflow. In this case, there's only one job named "build_collapse_query_script".
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| branches | string array | Specifies the branches that trigger the workflow on push events. In this case, it's only the 'main' branch. |
-| paths | string array | Specifies the paths that trigger the workflow on push events. In this case, it's any path matching 'docker/collapse-query-script/**'. |
-
-### `jobs: build_collapse_query_script`
+### `build_collapse_query_script`
 #### Description
-This section defines a single job named `build_collapse_query_script` within the workflow.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| name | string | The name of the job, displayed in the GitHub Actions workflow run log. |
-| runs-on | string | Specifies the runner type to use for the job. In this case, it's `blacksmith-2vcpu-ubuntu-2204`. |
-| steps | list | A list of steps to be executed sequentially within the job. |
-
-### `steps`
-#### Description
-This section lists the steps that are executed sequentially within the `build_collapse_query_script` job.
+The main job of the workflow that builds and pushes the Docker image.
 
 #### Internal Logic
-1. **Checkout the repo:** This step uses the `actions/checkout@v4` action to check out the repository's code.
-2. **Setup buildx:** This step uses the `docker/setup-buildx-action@v3` action to set up Docker Buildx for building multi-platform images.
-3. **Login to Docker Hub:** This step uses the `docker/login-action@v3` action to log in to Docker Hub using the provided username and password from the `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets.
-4. **Docker meta:** This step uses the `docker/metadata-action@v5` action to generate Docker image metadata based on the provided configuration. It extracts tags and labels for the image.
-5. **Build and push Docker image:** This step uses the `docker/build-push-action@v5` action to build and push the Docker image. It uses the context, Dockerfile path, tags, and labels from previous steps to build and push the image to Docker Hub.
+1. Checks out the repository
+2. Sets up Docker buildx
+3. Logs in to Docker Hub
+4. Prepares metadata for the Docker image
+5. Builds and pushes the Docker image
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| actions/checkout | Used to check out the repository's code. |
-| docker/setup-buildx-action | Used to set up Docker Buildx for building multi-platform images. |
-| docker/login-action | Used to log in to Docker Hub. |
-| docker/metadata-action | Used to generate Docker image metadata. |
-| docker/build-push-action | Used to build and push the Docker image. |
+| actions/checkout@v4 | Checks out the repository |
+| docker/setup-buildx-action@v3 | Sets up Docker buildx |
+| docker/login-action@v3 | Logs in to Docker Hub |
+| docker/metadata-action@v5 | Prepares metadata for the Docker image |
+| docker/build-push-action@v5 | Builds and pushes the Docker image |
 
 ## Configuration
-The workflow is configured through various inputs and settings:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DOCKER_USERNAME | secret | N/A | Docker Hub username for authentication |
+| DOCKER_PASSWORD | secret | N/A | Docker Hub password for authentication |
 
-* **`concurrency`**: Defines the concurrency group and cancellation behavior for the workflow.
-* **`on`**: Specifies the events that trigger the workflow.
-* **`jobs.&lt;job_id&gt;.runs-on`**: Defines the runner type for the job.
-* **`steps`**: Lists the steps to be executed within the job, including actions and their configurations.
-* **Environment variables**: The workflow uses secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD` for logging into Docker Hub.
-
-## Error Handling
-The workflow relies on the error handling mechanisms of the used GitHub Actions. If any step fails, the workflow run will be marked as failed, and the logs will contain information about the error.
-
-## Logging
-The workflow steps, especially the actions used, provide logging information that is captured in the GitHub Actions workflow run logs. This information can be used to debug and troubleshoot issues with the workflow.
+## Notes
+1. The QEMU setup step is commented out, suggesting that multi-architecture builds might have been considered but are not currently in use.
+2. The workflow is configured to run on a custom runner: "blacksmith-2vcpu-ubuntu-2204".
+3. The Docker image is tagged with "latest" and the commit SHA.
+4. The build context and Dockerfile are located in the "docker/collapse-query-script/" directory.

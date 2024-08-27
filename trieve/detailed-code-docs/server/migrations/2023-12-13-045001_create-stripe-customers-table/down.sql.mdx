@@ -3,40 +3,24 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL migration script is designed to undo the changes made by the corresponding `up.sql` file. It removes a unique constraint on the `email` column in the `users` table and drops the `stripe_customers` table if it exists.
+This SQL script handles the database migration rollback for removing the Stripe customer integration feature. It drops the `stripe_customers` table and removes the unique constraint on the `email` column in the `users` table.
 
 ## Symbols
 
-### ALTER TABLE users DROP CONSTRAINT users_email_unique
+### `DROP TABLE IF EXISTS stripe_customers;`
 #### Description
-This SQL command removes the unique constraint named `users_email_unique` from the `users` table.
+This statement attempts to drop the `stripe_customers` table. The `IF EXISTS` clause ensures that the statement executes successfully even if the table doesn't exist. This is important for rollback operations, as the table might not be present if the migration failed during the `up.sql` execution.
 
 #### Internal Logic
-1. Identifies the `users` table.
-2. Removes the constraint named `users_email_unique`, which was likely enforcing uniqueness on the `email` column.
+1. **Check for existence:** The database checks if a table named `stripe_customers` exists.
+2. **Conditional drop:**
+   - If the table exists, it is dropped from the database.
+   - If the table doesn't exist, no action is taken.
 
-### DROP TABLE IF EXISTS stripe_customers
+### `ALTER TABLE users DROP CONSTRAINT users_email_unique;`
 #### Description
-This SQL command drops (deletes) the `stripe_customers` table if it exists in the database.
+This statement removes the uniqueness constraint on the `email` column in the `users` table. This likely reverses a change made in the `up.sql` migration where the email was made unique to potentially serve as a foreign key reference for the `stripe_customers` table.
 
 #### Internal Logic
-1. Checks if a table named `stripe_customers` exists in the database.
-2. If the table exists, it is completely removed from the database schema.
-3. If the table doesn't exist, the command does nothing, preventing errors.
-
-## Side Effects
-- Removes the unique constraint on the `email` column in the `users` table, potentially allowing duplicate email addresses.
-- Deletes the entire `stripe_customers` table and all its data if it exists.
-
-## Dependencies
-This migration script doesn't rely on any external libraries or modules. It uses standard SQL commands that are compatible with most relational database management systems.
-
-## Error Handling
-The script uses the `IF EXISTS` clause in the `DROP TABLE` statement to prevent errors if the `stripe_customers` table doesn't exist. However, there's no explicit error handling for the `ALTER TABLE` statement, so it may fail if the constraint doesn't exist or if there are dependent objects.
-
-## Performance Considerations
-Dropping a table and removing a constraint are generally fast operations, but the impact could be significant if:
-1. The `stripe_customers` table contains a large amount of data.
-2. There are foreign key constraints or indexes related to the `users_email_unique` constraint.
-
-It's advisable to run this migration during low-traffic periods to minimize potential disruptions.
+1. **Identify constraint:** The database identifies the constraint named `users_email_unique` on the `users` table.
+2. **Remove constraint:** The constraint is removed, allowing duplicate email addresses in the `users` table.

@@ -3,41 +3,26 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script removes null values from the `qdrant_point_id` column in the `chunk_metadata` table, makes the column not nullable, and drops the `chunk_collisions` table. The purpose is to clean up the database schema and ensure data integrity.
+This SQL script migrates the database by removing the `chunk_collisions` table and updating the `chunk_metadata` table to make the `qdrant_point_id` column non-nullable. This suggests a shift in data structure or relationships within the application.
 
 ## Symbols
-
-### DELETE Statement
+### `up.sql`
 #### Description
-Removes all rows from the `chunk_metadata` table where the `qdrant_point_id` is null.
+This SQL script defines the "up" migration for removing potential collisions in the database. It performs the following actions:
+
+1. **Deletes orphaned records:** Removes entries from the `chunk_metadata` table where the `qdrant_point_id` is NULL. This cleans up data inconsistencies before enforcing the non-nullable constraint.
+2. **Alters table schema:** Modifies the `chunk_metadata` table to make the `qdrant_point_id` column non-nullable. This ensures data integrity by requiring a valid `qdrant_point_id` for each chunk metadata entry.
+3. **Drops obsolete table:** Removes the `chunk_collisions` table entirely. This suggests that the concept of chunk collisions is no longer relevant or handled differently in the updated schema.
 
 #### Internal Logic
-1. Selects all rows in the `chunk_metadata` table where `qdrant_point_id` is NULL.
-2. Deletes these selected rows from the table.
+The script uses standard SQL commands to perform the migration:
 
-### ALTER TABLE Statement
-#### Description
-Modifies the `chunk_metadata` table to make the `qdrant_point_id` column not nullable.
+* **`DELETE FROM`**: Removes rows from the `chunk_metadata` table based on the specified condition.
+* **`ALTER TABLE ... ALTER COLUMN ... SET NOT NULL`**: Modifies the column definition to enforce the non-nullable constraint.
+* **`DROP TABLE IF EXISTS`**: Safely removes the table only if it exists, preventing errors if the table was already removed in a previous migration attempt. 
 
-#### Internal Logic
-1. Alters the `chunk_metadata` table.
-2. Changes the `qdrant_point_id` column to disallow NULL values.
+#### Side Effects
+This migration script directly modifies the database schema and potentially deletes data:
 
-### DROP TABLE Statement
-#### Description
-Removes the `chunk_collisions` table from the database if it exists.
-
-#### Internal Logic
-1. Checks if the `chunk_collisions` table exists.
-2. If it does, drops (deletes) the table from the database schema.
-
-## Side Effects
-- Rows with null `qdrant_point_id` in the `chunk_metadata` table will be permanently deleted.
-- The `chunk_metadata` table structure will be modified, disallowing null values in the `qdrant_point_id` column.
-- The `chunk_collisions` table will be completely removed from the database if it exists.
-
-## Error Handling
-The script uses the `IF EXISTS` clause in the DROP TABLE statement to prevent errors if the `chunk_collisions` table doesn't exist.
-
-## TODOs
-There are no explicit TODOs in this migration script.
+* **Data deletion:** Rows in the `chunk_metadata` table with a NULL `qdrant_point_id` will be permanently deleted.
+* **Schema change:** The `chunk_metadata` table will be altered, and the `chunk_collisions` table will be removed. This may impact applications or other database scripts that rely on the previous schema. 

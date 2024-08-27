@@ -3,61 +3,75 @@ title: "UserAuthContext.tsx"
 ---
 
 ## High-level description
-This code defines a UserAuthContext and a UserAuthContextProvider component in React using SolidJS. It manages user authentication, handles login, and provides user information to child components through context. The component also integrates with OrgContextProvider and TopBarLayout for organization and layout management.
+The `UserAuthContextProvider` component in `UserAuthContext.tsx` manages user authentication and authorization for the application. It fetches user data from the API, handles redirects for login, and provides user context to child components. This context is crucial for displaying user-specific data and controlling access to features based on user roles and permissions.
 
 ## Code Structure
-The main components are:
-1. UserContext: A context for storing user information.
-2. UserAuthContextProvider: A component that manages user authentication and provides user context.
-3. login function: Handles user authentication and fetches user data.
+The `UserAuthContextProvider` component uses the `UserContext` context to share user data with its children. It fetches user data on mount and updates the context, triggering re-renders for components that depend on this information. The `OrgContextProvider` and `TopBarLayout` components are nested within the provider, ensuring they have access to the user context.
 
-The UserAuthContextProvider uses SolidJS's createSignal, createContext, and other hooks to manage state and context. It also utilizes the OrgContextProvider and TopBarLayout components for additional functionality.
+## References
+- `UserContext`: A context object that holds the user information.
+- `SlimUser`: A type definition from "shared/types" representing a simplified user object.
+- `OrgContextProvider`: A component that provides organization context.
+- `TopBarLayout`: A layout component that likely uses the user context.
+- `apiHost`: A utility function to get the API base URL.
 
 ## Symbols
 
-### UserContext
+### `UserContext`
 #### Description
-A context created to store and provide user information throughout the application.
+A SolidJS context object that stores and provides the authenticated user's information to the application.
 
-### UserAuthContextProvider
+### `UserContextType`
 #### Description
-A component that manages user authentication and provides user context to its children.
+A TypeScript type definition that defines the structure of the user context object. It includes a single property:
 
 #### Inputs
+None
+
+#### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| props | ParentComponent | The child components to be wrapped by this provider |
+| user | Accessor&lt;SlimUser&gt; | A SolidJS accessor that provides the `SlimUser` object representing the logged-in user. |
 
-#### Internal Logic
-1. Creates a signal for storing user information.
-2. Defines a login function to authenticate the user and fetch user data.
-3. Uses onMount to call the login function when the component mounts.
-4. Renders the UserContext.Provider, OrgContextProvider, and TopBarLayout components when user information is available.
-
-### login
+### `UserAuthContextProvider`
 #### Description
-An asynchronous function that handles user authentication and fetches user data.
+A SolidJS component that manages the authentication state of the user and provides the user information to its children components through the `UserContext`.
+
+#### Inputs
+This component does not accept any specific props.
+
+#### Outputs
+This component renders its children within a `UserContext.Provider` if the user is logged in. Otherwise, it conditionally renders nothing using the `Show` component.
 
 #### Internal Logic
-1. Sends a request to the authentication endpoint.
-2. Redirects to the login page if the user is not authenticated.
-3. Fetches and sets the user data if authentication is successful.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| solid-js | Provides core functionality for state management and component rendering |
-| @solidjs/router | Used for navigation and redirection |
-| shared/types | Imports type definitions |
-| ../utils/apiHost | Imports the API host configuration |
-| ./OrgContext | Imports the OrgContextProvider component |
-| ../layouts/TopBarLayout | Imports the TopBarLayout component |
-
-## Configuration
-The component uses the `apiHost` configuration from `../utils/apiHost` for API requests.
-
-## Error Handling
-The login function handles authentication errors by redirecting to the login page if the user is not authenticated (status 401).
+1. **State Initialization:**
+    - `userInfo`: A SolidJS signal initialized with `null`, representing the user's information. It will be populated after successful login.
+2. **Login Function (`login`):**
+    - An asynchronous function that attempts to fetch user data from the `/auth/me` endpoint.
+    - If the response status is 401 (Unauthorized), it redirects the user to the login page (`/auth`) with a redirect URI pointing back to the current origin.
+    - If the response is successful, it parses the response JSON as a `SlimUser` object and updates the `userInfo` signal.
+3. **Mount Effect:**
+    - When the component mounts, it immediately calls the `login` function to attempt authentication.
+4. **Conditional Rendering:**
+    - The component uses the `Show` component to conditionally render its children.
+    - If `userInfo()` returns a truthy value (indicating a logged-in user), it renders the following:
+        - `UserContext.Provider`: Provides the `userInfo` to its children.
+        - `OrgContextProvider`: A component that likely uses the user information to fetch and manage organization-related data.
+        - `TopBarLayout`: A layout component that likely uses the user information to display user-specific UI elements.
 
 ## Side Effects
-The component has a side effect of fetching user data when mounted, which may trigger API calls and state updates.
+- **Redirects:** The `login` function redirects the user to the login page if the user is not authenticated.
+- **API Calls:** The `login` function makes an API call to fetch user data.
+
+## Dependencies
+- `solid-js`: A declarative JavaScript library for building user interfaces.
+- `shared/types`: A module that exports shared type definitions, including `SlimUser`.
+- `../utils/apiHost`: A module that exports the API base URL.
+- `./OrgContext`: A module that exports the `OrgContextProvider` component.
+- `../layouts/TopBarLayout`: A module that exports the `TopBarLayout` component.
+
+## Error Handling
+- **Unauthorized (401) Response:** The `login` function handles 401 responses from the API by redirecting the user to the login page.
+
+## Logging
+The code does not implement any specific logging mechanisms.

@@ -3,23 +3,26 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script performs a database migration that reverts changes introduced in a previous migration, specifically related to automatic `updated_at` timestamp updates. It removes columns, functions, and triggers associated with this functionality.
+This SQL script reverts the changes made by the corresponding `up.sql` migration file. It removes the `created_at` and `updated_at` columns from the `card_verification` table and drops all triggers and functions related to updating the `updated_at` column in various tables.
 
 ## Symbols
-### `down.sql`
+### `down.sql` migration script
 #### Description
-This SQL script undoes the changes made by the corresponding `up.sql` script, reverting the database to its state before the introduction of automatic `updated_at` timestamp updates.
+This script undoes the database changes applied by the `up.sql` migration. It specifically targets the addition of `created_at` and `updated_at` columns and related triggers for automatic timestamp updates.
 
 #### Internal Logic
-1. **Drop Columns:**
-   - Removes the `created_at` and `updated_at` columns from the `card_verification` table.
+1. **Column Removal:**
+   - `ALTER TABLE card_verification DROP COLUMN created_at;`: Removes the `created_at` column from the `card_verification` table.
+   - `ALTER TABLE card_verification DROP COLUMN updated_at;`: Removes the `updated_at` column from the `card_verification` table.
 
-2. **Drop Functions:**
-   - Drops the `update_updated_at()` and `update_main_table_updated_at()` functions, which were likely responsible for updating the timestamps.
+2. **Function Removal:**
+   - `DROP FUNCTION IF EXISTS update_updated_at() CASCADE;`: Drops the `update_updated_at()` function if it exists. The `CASCADE` option ensures any dependent objects are also dropped.
+   - `DROP FUNCTION IF EXISTS update_main_table_updated_at() CASCADE;`: Drops the `update_main_table_updated_at()` function if it exists, also with cascading dependencies.
 
-3. **Drop Triggers:**
-   - Drops triggers named `update_updated_at` from various tables. These triggers were likely set up to automatically call the `update_updated_at()` function upon data modification.
+3. **Trigger Removal:**
+   - The script then proceeds to drop a series of triggers named `update_updated_at` from various tables (`card_collection`, `card_collection_bookmarks`, etc.). These triggers were likely responsible for automatically updating the `updated_at` column on specific events.
 
 #### Side Effects
-- The database schema is modified by removing columns, functions, and triggers.
-- Automatic updating of `updated_at` timestamps will no longer occur for the affected tables.
+- Removes the `created_at` and `updated_at` columns from the `card_verification` table.
+- Removes the `update_updated_at()` and `update_main_table_updated_at()` functions.
+- Disables automatic updating of the `updated_at` column in the affected tables.

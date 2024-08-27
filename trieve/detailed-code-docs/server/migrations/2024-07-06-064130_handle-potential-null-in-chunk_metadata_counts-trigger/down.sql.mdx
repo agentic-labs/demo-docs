@@ -6,50 +6,41 @@ title: "down.sql"
 This SQL script reverts a migration that aimed to handle potential null values in chunk metadata counts. It drops triggers and a function related to updating chunk counts in the `dataset_usage_counts` table and recreates them with the previous logic.
 
 ## Code Structure
-The code first drops existing triggers and a function, then recreates them with a different logic. The triggers `increase_chunk_metadata_counts_trigger` and `delete_chunk_metadata_counts_trigger` are defined on the `chunk_metadata` table and call the `update_chunk_metadata_counts` function.
+The code first drops existing triggers and a function, then recreates them with modified logic. The triggers `increase_chunk_metadata_counts_trigger` and `delete_chunk_metadata_counts_trigger` are defined on the `chunk_metadata` table and call the `update_chunk_metadata_counts` function.
 
 ## Symbols
-
-### `DROP TRIGGER increase_chunk_metadata_counts_trigger ON chunk_metadata`
+### `DROP TRIGGER increase_chunk_metadata_counts_trigger ON chunk_metadata;`
 #### Description
-This statement drops the trigger named `increase_chunk_metadata_counts_trigger` on the `chunk_metadata` table. This trigger was presumably created in the `up.sql` migration script to handle updates to chunk metadata counts.
+This statement drops the trigger named `increase_chunk_metadata_counts_trigger` on the `chunk_metadata` table. This trigger was presumably created in the `up.sql` migration script.
 
-### `DROP TRIGGER delete_chunk_metadata_counts_trigger ON chunk_metadata`
+### `DROP TRIGGER delete_chunk_metadata_counts_trigger ON chunk_metadata;`
 #### Description
-This statement drops the trigger named `delete_chunk_metadata_counts_trigger` on the `chunk_metadata` table. This trigger was presumably created in the `up.sql` migration script to handle deletions related to chunk metadata counts.
+Similar to the previous statement, this one drops the `delete_chunk_metadata_counts_trigger` from the `chunk_metadata` table.
 
-### `DROP FUNCTION update_chunk_metadata_counts`
+### `DROP FUNCTION update_chunk_metadata_counts;`
 #### Description
 This statement drops the function named `update_chunk_metadata_counts`. This function was likely responsible for updating the `dataset_usage_counts` table based on changes in the `chunk_metadata` table.
 
 ### `CREATE OR REPLACE FUNCTION update_chunk_metadata_counts()`
 #### Description
-This statement recreates the `update_chunk_metadata_counts` function. This function is triggered after INSERT or DELETE operations on the `chunk_metadata` table. It updates the `chunk_count` in the `dataset_usage_counts` table based on the operation performed.
+This statement recreates the `update_chunk_metadata_counts` function. This function is designed to be called by triggers on the `chunk_metadata` table. It updates the `chunk_count` in the `dataset_usage_counts` table based on whether a row is inserted into or deleted from the `chunk_metadata` table.
 
 #### Inputs
-This function implicitly takes the inserted or deleted rows from the `chunk_metadata` table as input through the `NEW` and `OLD` references within the triggers.
+This function implicitly takes the `NEW` and `OLD` records from the triggers as input.
 
 #### Outputs
-This function does not explicitly return any value (returns `NULL`). Its output is the side effect of updating the `dataset_usage_counts` table.
+This function doesn't return any values directly (returns `NULL`). Its output is the side effect of updating the `dataset_usage_counts` table.
 
 #### Internal Logic
-1. **Determine operation type:** Checks if the triggering event is an INSERT or DELETE operation using `TG_OP`.
-2. **Get dataset ID:** Retrieves the `dataset_id` from the `modified` table (which represents either `NEW` or `OLD` data depending on the trigger).
-3. **Calculate new count:** Counts the number of records in the `modified` table.
-4. **Update `dataset_usage_counts` table:**
-    - **For INSERT:** Inserts a new record with the `dataset_id` and `new_count` or updates the existing record by adding the `new_count` to the current `chunk_count`.
-    - **For DELETE:** Updates the existing record by subtracting the `new_count` from the current `chunk_count`.
+1. **Retrieves dataset ID:** It fetches the `dataset_id` from the `modified` table (which represents either the `NEW` or `OLD` table based on the triggering event).
+2. **Calculates new count:** It counts the number of records in the `modified` table.
+3. **Handles INSERT event:** If the triggering event is an INSERT, it either inserts a new record into `dataset_usage_counts` with the calculated `new_count` or updates the existing record by adding the `new_count` to the current `chunk_count`.
+4. **Handles DELETE event:** If the triggering event is a DELETE, it updates the corresponding record in `dataset_usage_counts` by subtracting the `new_count` from the current `chunk_count`.
 
 ### `CREATE TRIGGER increase_chunk_metadata_counts_trigger`
 #### Description
-This statement recreates the `increase_chunk_metadata_counts_trigger` trigger. This trigger is executed after an INSERT operation on the `chunk_metadata` table.
-
-#### Internal Logic
-This trigger executes the `update_chunk_metadata_counts` function for each row inserted into the `chunk_metadata` table, passing the inserted row as the `NEW` reference to the function.
+This statement recreates the `increase_chunk_metadata_counts_trigger` trigger. This trigger is set to fire after an INSERT operation on the `chunk_metadata` table. It references the `NEW` table as `modified` and executes the `update_chunk_metadata_counts` function for each inserted row.
 
 ### `CREATE TRIGGER delete_chunk_metadata_counts_trigger`
 #### Description
-This statement recreates the `delete_chunk_metadata_counts_trigger` trigger. This trigger is executed after a DELETE operation on the `chunk_metadata` table.
-
-#### Internal Logic
-This trigger executes the `update_chunk_metadata_counts` function for each row deleted from the `chunk_metadata` table, passing the deleted row as the `OLD` reference to the function.
+This statement recreates the `delete_chunk_metadata_counts_trigger` trigger. This trigger is set to fire after a DELETE operation on the `chunk_metadata` table. It references the `OLD` table as `modified` and executes the `update_chunk_metadata_counts` function for each deleted row.

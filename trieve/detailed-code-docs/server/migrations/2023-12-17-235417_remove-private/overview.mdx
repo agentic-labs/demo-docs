@@ -3,48 +3,44 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for removing the 'private' column from the 'card_metadata' and 'files' tables in a database schema. It includes both an 'up' migration to remove the column and a 'down' migration to add it back if needed.
+This directory contains SQL migration scripts for removing the `private` column from the `card_metadata` and `files` tables in a database. The migration is identified by the timestamp 2023-12-17-235417 and is named "remove-private". The directory includes two SQL files: `up.sql` for applying the migration and `down.sql` for reverting it.
 
 ## What does it do?
-These migration scripts modify the database structure by removing a feature related to privacy settings. The 'up' migration removes the 'private' column from two tables: 'card_metadata' and 'files'. This action effectively eliminates the ability to mark individual cards or files as private within the database.
+This migration modifies the database structure by removing a feature related to privacy settings for card metadata and files. Here's what happens:
 
-The 'down' migration does the opposite: it adds the 'private' column back to both tables. This column is set as a boolean (true/false) value, with a default of false, meaning that by default, items are not private.
+1. When the migration is applied (`up.sql`):
+   - The `private` column is removed from the `card_metadata` table.
+   - The `private` column is removed from the `files` table.
 
-This change suggests that the application is moving away from a per-item privacy model, possibly towards a different privacy management approach or removing the concept of private items altogether.
+2. If the migration needs to be reverted (`down.sql`):
+   - A `private` column is added back to the `card_metadata` table.
+   - A `private` column is added back to the `files` table.
+   - Both new columns are set as boolean, not allowing null values, with a default value of `false`.
+
+This migration essentially removes a privacy feature from the system, possibly simplifying the data model or changing how privacy is managed for cards and files.
 
 ## Key Files
 
-1. up.sql
-   - Purpose: Removes the 'private' column from 'card_metadata' and 'files' tables.
-   - Key operations:
-     ```sql
-     ALTER TABLE card_metadata DROP COLUMN private;
-     ALTER TABLE files DROP COLUMN private;
-     ```
+1. `up.sql`:
+   This file contains the SQL commands to apply the migration. It removes the `private` column from both the `card_metadata` and `files` tables. Here's the content:
 
-2. down.sql
-   - Purpose: Adds back the 'private' column to 'card_metadata' and 'files' tables.
-   - Key operations:
-     ```sql
-     ALTER TABLE card_metadata ADD COLUMN private BOOLEAN NOT NULL DEFAULT false;
-     ALTER TABLE files ADD COLUMN private BOOLEAN NOT NULL DEFAULT false;
-     ```
+   ```sql
+   ALTER TABLE card_metadata DROP COLUMN private;
+   ALTER TABLE files DROP COLUMN private;
+   ```
+
+2. `down.sql`:
+   This file contains the SQL commands to revert the migration. It adds back the `private` column to both tables with specific constraints. Here's the content:
+
+   ```sql
+   ALTER TABLE card_metadata
+   ADD COLUMN private boolean NOT NULL DEFAULT false;
+
+   ALTER TABLE files
+   ADD COLUMN private boolean NOT NULL DEFAULT false;
+   ```
+
+These files work together to provide a reversible database change, allowing the system to either remove or re-add the `private` column as needed.
 
 ## Configuration
-The migration is identified by its timestamp: 2023-12-17-235417. This timestamp is likely used by a database migration tool to track which migrations have been applied and in what order.
-
-## Side Effects and Considerations
-
-1. Data Loss: The 'up' migration will permanently remove the 'private' column and all its data from both tables. This operation is irreversible unless a backup is made or the 'down' migration is run.
-
-2. Application Impact: Any part of the application that previously used the 'private' column in these tables will need to be updated. This could include queries, API endpoints, or user interface elements that dealt with privacy settings for individual cards or files.
-
-3. Performance: For large tables, these operations could be time-consuming. It's advisable to run these migrations during low-traffic periods.
-
-4. Error Handling: The scripts don't include explicit error handling. If the 'private' column doesn't exist when running the 'up' migration, or if it already exists when running the 'down' migration, the operation will likely fail.
-
-5. Default Behavior: In the 'down' migration, the 'private' column is added with a default value of false. This means that if the column is re-added, all existing records will be set as not private by default.
-
-6. Consistency: The same change is applied to both 'card_metadata' and 'files' tables, suggesting that these entities shared a common privacy model in the previous schema.
-
-When implementing these changes, developers should ensure that all related application code is updated to reflect the new schema, and that any features or user expectations regarding item-level privacy are addressed in the updated system design.
+The migration is identified by its timestamp (2023-12-17-235417) and name (remove-private). This naming convention is likely used by a database migration tool to track and apply changes in the correct order.

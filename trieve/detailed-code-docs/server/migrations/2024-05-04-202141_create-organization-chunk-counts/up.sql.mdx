@@ -3,47 +3,45 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script adds a new column to the `organization_usage_counts` table to store aggregated chunk counts for organizations. It then calculates the total chunk count for each organization by summing up the chunk counts from related datasets and updates the new column with these aggregated values.
+This SQL script updates the `organization_usage_counts` table by adding a new column `chunk_count` to store the aggregated chunk counts from the `dataset_usage_counts` table. 
+
+The script performs this update in three steps: adding the new column, calculating the aggregated chunk counts, and updating the `organization_usage_counts` table with the calculated values.
+
+## Code Structure
+The code consists of three SQL statements executed sequentially. The first statement adds a new column to the `organization_usage_counts` table. The second statement uses a Common Table Expression (CTE) to calculate aggregated chunk counts from the `dataset_usage_counts` table. The third statement updates the `organization_usage_counts` table with the aggregated counts calculated in the CTE.
 
 ## Symbols
-
-### ALTER TABLE organization_usage_counts
+### `ALTER TABLE organization_usage_counts ...`
 #### Description
-This SQL command adds a new column named `chunk_count` to the `organization_usage_counts` table.
+This SQL statement adds a new column named `chunk_count` to the `organization_usage_counts` table. The column is of type `INT` and has a default value of `0`.
 
 #### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| chunk_count | INT | The new column to store aggregated chunk counts |
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
 
 #### Internal Logic
-- Adds the `chunk_count` column with a default value of 0.
+The statement uses the `ALTER TABLE` command to modify the existing `organization_usage_counts` table. The `ADD COLUMN` clause specifies that a new column is being added. `chunk_count` is the name of the new column, `INT` defines its data type as integer, and `DEFAULT 0` sets the default value of the column to 0 for existing rows.
 
-### WITH AggregatedCounts AS (...)
+### `WITH AggregatedCounts AS (...) UPDATE organization_usage_counts ...`
 #### Description
-This Common Table Expression (CTE) calculates the total chunk count for each organization by summing up the chunk counts from related datasets.
+This SQL statement calculates the aggregated chunk counts for each organization from the `dataset_usage_counts` table and updates the `organization_usage_counts` table with these counts.
+
+#### Inputs
+N/A - This is a SQL statement, not a function.
+
+#### Outputs
+N/A - This is a SQL statement, not a function.
 
 #### Internal Logic
-1. Joins the `dataset_usage_counts` table with the `datasets` table using the `dataset_id`.
-2. Groups the results by `organization_id`.
-3. Calculates the sum of `chunk_count` for each organization.
+1. **Calculate Aggregated Counts:**
+    - A Common Table Expression (CTE) called `AggregatedCounts` is defined. 
+    - The CTE selects the `organization_id` and the sum of `chunk_count` (aliased as `total_chunk_count`) from the `dataset_usage_counts` table.
+    - It joins the `dataset_usage_counts` table with the `datasets` table on their respective `dataset_id` and `id` columns to get the corresponding `organization_id`.
+    - The `GROUP BY` clause groups the results by `organization_id` to calculate the sum of `chunk_count` for each organization.
 
-### UPDATE organization_usage_counts
-#### Description
-This SQL command updates the newly added `chunk_count` column in the `organization_usage_counts` table with the aggregated values calculated in the CTE.
-
-#### Internal Logic
-1. Uses the results from the `AggregatedCounts` CTE.
-2. Matches the `org_id` in the `organization_usage_counts` table with the `organization_id` from the CTE.
-3. Sets the `chunk_count` column to the calculated `total_chunk_count` for each matching organization.
-
-## Side Effects
-- Modifies the structure of the `organization_usage_counts` table by adding a new column.
-- Updates the `chunk_count` values in the `organization_usage_counts` table based on aggregated data from related tables.
-
-## Performance Considerations
-- The script performs a join between `dataset_usage_counts` and `datasets` tables, which could be potentially expensive for large datasets.
-- The aggregation operation (SUM) is performed on potentially large datasets, which might impact performance for organizations with many datasets.
-
-## TODOs
-The comment "-- This will update the chunk_count column in the organization_usage_counts table, but keep the old table so that we can rollback if needed" suggests that there might be a plan for a potential rollback mechanism, which is not implemented in this script. This could be a future consideration or a reminder for the development team.
+2. **Update `organization_usage_counts` Table:**
+    - The `UPDATE` statement modifies the `organization_usage_counts` table (aliased as `o`).
+    - It sets the `chunk_count` column of each row in `organization_usage_counts` to the corresponding `total_chunk_count` from the `AggregatedCounts` CTE (aliased as `ac`).
+    - The `FROM` clause joins the `organization_usage_counts` table with the `AggregatedCounts` CTE on the condition that `o.org_id` is equal to `ac.organization_id`. This ensures that the correct `total_chunk_count` is used to update the `chunk_count` for each organization. 

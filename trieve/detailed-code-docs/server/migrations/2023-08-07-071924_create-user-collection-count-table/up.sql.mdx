@@ -6,13 +6,13 @@ title: "up.sql"
 This SQL script creates a table `user_collection_counts` to store the number of collections each user has and sets up a trigger to keep this count updated. It also initializes the table with existing data from the `card_collection` table.
 
 ## Code Structure
-The code first creates the `user_collection_counts` table. Then it defines a function `update_collection_counts` which is triggered after each insert, update, or delete operation on the `card_collection` table. Finally, it initializes the `user_collection_counts` table with existing data from the `card_collection` table.
+The code first creates the `user_collection_counts` table. Then it defines a function `update_collection_counts` which is used in the trigger `update_collection_counts_trigger`. The trigger is defined to execute the function after any insert, update, or delete operation on the `card_collection` table. Finally, the code initializes the `user_collection_counts` table with existing data from the `card_collection` table.
 
 ## References
-This script references the `users` table (for the `user_id` foreign key) and the `card_collection` table (for the trigger and initial data).
+- `users` table (referenced in the `user_collection_counts` table definition)
+- `card_collection` table (referenced in the trigger and the initialization script)
 
 ## Symbols
-
 ### `user_collection_counts` table
 #### Description
 This table stores the number of collections each user has.
@@ -20,47 +20,50 @@ This table stores the number of collections each user has.
 #### Columns
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| id | UUID | Primary key of the table, generated automatically. |
-| user_id | UUID | Foreign key referencing the `users` table, ensuring each user has only one entry. |
-| collection_count | INTEGER | The number of collections a user has. Defaults to 0. |
+| id | UUID | Unique identifier for each row, generated automatically |
+| user_id | UUID | Foreign key referencing the `users` table, ensures each user has only one entry |
+| collection_count | INTEGER | The number of collections a user has, defaults to 0 |
 
 ### `update_collection_counts` function
 #### Description
-This function is a trigger function that updates the `user_collection_counts` table whenever a row is inserted, updated, or deleted in the `card_collection` table.
+This function is triggered after any INSERT, UPDATE, or DELETE operation on the `card_collection` table. It updates the `collection_count` in the `user_collection_counts` table based on the operation performed.
 
 #### Inputs
-This function implicitly receives the `NEW` and `OLD` records from the trigger context.
+This function implicitly takes the `NEW` and `OLD` records from the `card_collection` table as input, depending on the triggering operation (INSERT, UPDATE, or DELETE).
 
 #### Outputs
 This function returns `NULL` as it primarily performs side effects on the `user_collection_counts` table.
 
 #### Internal Logic
-- It checks the type of operation (`TG_OP`) being performed on the `card_collection` table:
-  - **INSERT**: Inserts a new row into `user_collection_counts` with a count of 1. If a row for the user already exists, it increments the `collection_count` by 1.
-  - **DELETE**: Decrements the `collection_count` for the corresponding user in `user_collection_counts`.
-- It uses `ON CONFLICT (user_id) DO UPDATE` to handle cases where a user might create multiple collections simultaneously, ensuring the count is updated correctly.
+- **On INSERT**: Inserts a new row into `user_collection_counts` with `collection_count` as 1. If a row already exists for the user, it increments the `collection_count` by 1.
+- **On DELETE**: Decrements the `collection_count` by 1 for the corresponding user in the `user_collection_counts` table.
 
 ### `update_collection_counts_trigger` trigger
 #### Description
-This trigger calls the `update_collection_counts` function after every insert, update, or delete operation on the `card_collection` table.
+This trigger executes the `update_collection_counts` function after any INSERT, UPDATE, or DELETE operation on the `card_collection` table.
 
-#### Internal Logic
-- It is defined as a `FOR EACH ROW` trigger, meaning it executes the function for each affected row in the `card_collection` table.
+#### Events
+- `AFTER INSERT`
+- `AFTER UPDATE`
+- `AFTER DELETE`
 
-### Initialization query
+#### Target
+- `card_collection` table
+
+#### Action
+- Executes the `update_collection_counts` function for each row affected by the triggering event.
+
+### Initialization Script
 #### Description
-This query initializes the `user_collection_counts` table with data from the `card_collection` table.
+This part of the script initializes the `user_collection_counts` table with existing data from the `card_collection` table.
 
 #### Internal Logic
-- It uses a subquery to count the number of collections for each distinct `author_id` in the `card_collection` table.
-- It inserts this data into the `user_collection_counts` table, generating a new UUID for each row.
+- It selects distinct `author_id` values from the `card_collection` table.
+- For each distinct `author_id`, it inserts a new row into `user_collection_counts` with a generated UUID, the `author_id`, and the count of collections associated with that `author_id` in the `card_collection` table.
 
 ## Side Effects
 - Creates the `user_collection_counts` table.
 - Creates the `update_collection_counts` function.
 - Creates the `update_collection_counts_trigger` trigger.
-- Populates the `user_collection_counts` table with initial data.
-
-## Dependencies
-- Assumes the existence of a `users` table with an `id` column (UUID).
-- Assumes the existence of a `card_collection` table with `id` and `author_id` columns.
+- Populates the `user_collection_counts` table with data from the `card_collection` table.
+- After the script is run, any changes to the `card_collection` table will automatically update the `user_collection_counts` table.

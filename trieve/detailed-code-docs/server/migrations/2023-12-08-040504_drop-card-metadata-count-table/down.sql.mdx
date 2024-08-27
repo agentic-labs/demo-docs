@@ -3,42 +3,43 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script is designed to undo the changes made in the corresponding `up.sql` file. It recreates the `card_metadata_count` table, initializes it with the current count of rows in the `card_metadata` table, and sets up a trigger to automatically update this count when rows are inserted or deleted from the `card_metadata` table.
+This SQL script reverts a database migration by recreating the `card_metadata_count` table and its associated trigger. This table and trigger are responsible for maintaining a count of the total rows in the `card_metadata` table.
 
 ## Symbols
-
-### `card_metadata_count` table
+### `CREATE TABLE card_metadata_count`
 #### Description
-This table is created to store the total number of rows in the `card_metadata` table.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| id | UUID | Primary key, automatically generated |
-| total_rows | BIGINT | The total number of rows in the `card_metadata` table |
-
-### `update_card_metadata_count()` function
-#### Description
-This is a trigger function that updates the `total_rows` count in the `card_metadata_count` table whenever a row is inserted or deleted from the `card_metadata` table.
+This statement creates a new table named `card_metadata_count` to store the count of rows in the `card_metadata` table.
 
 #### Internal Logic
-1. If the operation is an INSERT, increment the `total_rows` count by 1.
-2. If the operation is a DELETE, decrement the `total_rows` count by 1.
+- The table has a single column `total_rows` of type `BIGINT` to store the row count.
+- The `id` column is a UUID that serves as the primary key.
 
-### `card_metadata_count_trigger` trigger
+### `INSERT INTO card_metadata_count`
 #### Description
-This trigger is set up to call the `update_card_metadata_count()` function after each INSERT or DELETE operation on the `card_metadata` table.
+This statement inserts the initial row count into the newly created `card_metadata_count` table.
+
+#### Internal Logic
+- It retrieves the total number of rows from the `card_metadata` table using a subquery (`SELECT COUNT(*) FROM card_metadata`).
+- This count is then inserted as the value for the `total_rows` column in the `card_metadata_count` table.
+
+### `CREATE OR REPLACE FUNCTION update_card_metadata_count()`
+#### Description
+This statement defines a trigger function named `update_card_metadata_count` written in PL/pgSQL. This function is executed by the trigger `card_metadata_count_trigger` whenever rows are inserted into or deleted from the `card_metadata` table.
+
+#### Internal Logic
+- It checks the type of operation being performed (`INSERT` or `DELETE`) using `TG_OP`.
+- If it's an `INSERT`, it increments the `total_rows` in `card_metadata_count` by 1.
+- If it's a `DELETE`, it decrements the `total_rows` in `card_metadata_count` by 1.
+
+### `CREATE TRIGGER card_metadata_count_trigger`
+#### Description
+This statement creates a trigger named `card_metadata_count_trigger` on the `card_metadata` table.
+
+#### Internal Logic
+- The trigger is set to fire `AFTER` an `INSERT` or `DELETE` operation on the `card_metadata` table.
+- It executes the `update_card_metadata_count()` function for each row affected by the triggering statement. This ensures that the `card_metadata_count` table is updated accordingly whenever rows are added or removed from the `card_metadata` table.
 
 ## Side Effects
-- Creates a new table `card_metadata_count`.
-- Inserts an initial row into `card_metadata_count` with the current count of rows in `card_metadata`.
-- Creates a new trigger function `update_card_metadata_count()`.
-- Sets up a new trigger `card_metadata_count_trigger` on the `card_metadata` table.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| card_metadata | The main table whose row count is being tracked |
-
-## Error Handling
-This script does not implement explicit error handling. Any SQL errors that occur during execution will be handled by the database system's default error handling mechanisms.
+- **Creates a table:** A new table `card_metadata_count` is created in the database.
+- **Creates a trigger:** A trigger `card_metadata_count_trigger` is created on the `card_metadata` table.
+- **Modifies data:** The `total_rows` value in the `card_metadata_count` table is updated whenever rows are inserted into or deleted from the `card_metadata` table. 

@@ -3,63 +3,44 @@ title: "svc-headless.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service of type `ClusterIP` for read replicas of a PostgreSQL database in a replication setup. It exposes the PostgreSQL port and configures the service to publish addresses of all pods, even if they are not ready yet.
-
-## Code Structure
-The code uses a conditional block to only define the service if the `architecture` value is set to `replication`. It leverages several template functions and includes to generate names, labels, annotations, and port numbers.
-
-## References
-* `postgresql.v1.readReplica.svc.headless`: Template function to generate the service name.
-* `common.labels.standard`: Template function to generate standard labels.
-* `common.tplvalues.merge`: Template function to merge annotations.
-* `common.tplvalues.render`: Template function to render annotations.
-* `postgresql.v1.readReplica.service.port`: Template function to get the PostgreSQL port number.
-* `common.labels.matchLabels`: Template function to generate label selectors.
+This YAML file defines a headless Kubernetes Service for PostgreSQL read replicas in a replication architecture. It's designed to expose all read replica pods, including those not yet ready, to facilitate communication between PostgreSQL pods during the initialization process.
 
 ## Symbols
-### `helm/charts/postgresql/templates/read/svc-headless.yaml`
+
+### Service Definition
 #### Description
-This code defines a Kubernetes Service resource for read replicas in a PostgreSQL replication setup. It sets up a headless service, meaning it does not assign a cluster IP and instead directly exposes the pods backing the service.
+Defines a headless Kubernetes Service for PostgreSQL read replicas.
 
 #### Inputs
-This code uses values from the Helm chart's `Values` object. Relevant values include:
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `Values.architecture` | string | The architecture of the PostgreSQL deployment (e.g., "replication"). |
-| `Values.commonLabels` | map | Common labels to apply to the service. |
-| `Values.readReplicas.service.headless.annotations` | map | Annotations specific to the read replica headless service. |
-| `Values.commonAnnotations` | map | Common annotations to apply to the service. |
-| `Values.readReplicas.podLabels` | map | Labels specific to the read replica pods. |
-
-#### Outputs
-This code generates a Kubernetes YAML manifest for a Service object.
+| .Values.architecture | string | The PostgreSQL deployment architecture |
+| .Release.Namespace | string | The Kubernetes namespace for the release |
+| .Values.commonLabels | map | Common labels to be applied to the service |
+| .Values.readReplicas.service.headless.annotations | map | Annotations for the headless service |
+| .Values.commonAnnotations | map | Common annotations to be applied to the service |
+| .Values.readReplicas.podLabels | map | Labels for the read replica pods |
 
 #### Internal Logic
-1. **Conditional Definition:** The service is defined only if `Values.architecture` is set to `replication`.
-2. **Metadata:**
-    * The service name is generated using the `postgresql.v1.readReplica.svc.headless` template function.
-    * Standard labels are applied using `common.labels.standard`, including custom labels from `Values.commonLabels`.
-    * Annotations are merged from `Values.readReplicas.service.headless.annotations` and `Values.commonAnnotations` and rendered using `common.tplvalues.merge` and `common.tplvalues.render`.
-    * The `service.alpha.kubernetes.io/tolerate-unready-endpoints` annotation is set to `true` for compatibility.
-3. **Spec:**
-    * The service type is set to `ClusterIP`.
-    * `clusterIP` is set to `None` to create a headless service.
-    * `publishNotReadyAddresses` is set to `true` to expose pod addresses even before they are ready.
-4. **Ports:**
-    * A port named `tcp-postgresql` is defined with the port number obtained from `postgresql.v1.readReplica.service.port` and targeting the `tcp-postgresql` port on the pods.
-5. **Selector:**
-    * The service selector is generated using `common.labels.matchLabels`, matching pods with the `app.kubernetes.io/component: read` label and any custom labels defined in `Values.readReplicas.podLabels` and `Values.commonLabels`.
-
-## Side Effects
-This code, when applied to a Kubernetes cluster, will create a new Service object.
+1. Checks if the architecture is "replication".
+2. Sets the service name using a template function.
+3. Applies labels and annotations, merging common and specific ones.
+4. Configures the service as headless (ClusterIP: None) with publishNotReadyAddresses set to true.
+5. Defines a port for PostgreSQL traffic.
+6. Sets the selector to match read replica pods.
 
 ## Dependencies
-This code depends on the following Helm template functions:
-* `postgresql.v1.readReplica.svc.headless`
-* `common.labels.standard`
-* `common.tplvalues.merge`
-* `common.tplvalues.render`
-* `postgresql.v1.readReplica.service.port`
-* `common.labels.matchLabels`
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper templates for labels, annotations, and value merging |
 
-It also relies on Kubernetes APIs for creating and managing Service objects.
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.architecture | string | N/A | Must be "replication" for this service to be created |
+| .Values.readReplicas.service.headless.annotations | map | {} | Custom annotations for the headless service |
+| .Values.readReplicas.service.port | number | N/A | Port number for the PostgreSQL service |
+
+## Notes
+1. The service uses the `service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"` annotation to ensure compatibility with older Kubernetes versions that have issues with the `publishNotReadyAddresses` field.
+2. The service is designed to publish addresses for all pods, including those not ready, to facilitate inter-pod communication during the PostgreSQL cluster initialization process.

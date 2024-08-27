@@ -3,88 +3,74 @@ title: "Overview"
 ---
 
 ## High-level description
-The `helm` directory contains Helm charts and templates for deploying the Trieve application and its dependencies on Kubernetes. It includes configurations for the main Trieve application, as well as charts for essential services like PostgreSQL, Qdrant (a vector database), and Redis. The directory is structured to support deployment across different environments (local, AWS, Google Cloud) with environment-specific configurations.
+This directory contains Helm charts and templates for deploying and managing the Trieve application and its dependencies on Kubernetes. It includes configurations for the main Trieve components, as well as essential services like PostgreSQL, Redis, and Qdrant. The charts are designed to be flexible, allowing for deployment across different environments (local, AWS, Google Cloud) with customizable configurations.
 
 ## What does it do?
-This Helm chart automates the deployment and configuration of the Trieve application ecosystem in a Kubernetes environment. It handles:
+The Helm charts in this directory automate the deployment and configuration of a complex microservices-based application stack. Specifically, they:
 
-1. Deployment of core Trieve services (dashboard, chat, search, server)
-2. Setup of background workers (file worker, group worker, delete worker, sync-qdrant)
-3. Configuration of supporting services (Apache Tika, Keycloak for authentication)
-4. Database deployments (ClickHouse for analytics, PostgreSQL for persistent storage)
-5. Networking setup with environment-specific ingress rules
-6. Integration of external services (Redis, Qdrant, OpenAI)
-7. Configuration of monitoring, scaling, and resource allocation
-
-The chart is designed to be flexible, allowing for customization through a comprehensive `values.yaml` file and supporting different deployment environments.
+1. Deploy core Trieve services including analytics, chat, search, and server components.
+2. Set up supporting services such as Keycloak for authentication, ClickHouse for analytics, and Apache Tika for content analysis.
+3. Configure networking through Services and Ingress rules to enable inter-service communication and external access.
+4. Manage database deployments (PostgreSQL, Redis, Qdrant) with options for using subcharts or external instances.
+5. Provide environment-specific configurations for local, AWS, and Google Cloud deployments.
+6. Set up worker deployments for background tasks like file processing and data synchronization.
+7. Define ConfigMaps and environment variables to configure application components.
+8. Enable optional features like analytics, GPU usage, and unlimited usage based on configuration.
 
 ## Entry points
 The main entry points for this Helm chart are:
 
-1. `Chart.yaml`: Defines the chart metadata, version, and dependencies.
-2. `values.yaml`: Contains the default configuration values for the chart.
-3. `templates/` directory: Contains Kubernetes resource templates for various components.
+1. `Chart.yaml`: Defines the chart metadata and dependencies.
+2. `local-values.yaml`: Provides default configuration values for a local deployment.
+3. `templates/ingress-*.yaml`: Define how external traffic reaches the services.
+4. `templates/*-deployment.yaml`: Set up the core application components and their configurations.
+5. `templates/*-service.yaml`: Expose the deployments within the cluster.
 
-The deployment process typically starts with customizing the `values.yaml` file (or using `local-values.yaml` for local deployments) and then using the Helm CLI to install or upgrade the chart.
+The control flow typically follows this pattern:
+1. External requests come through the Ingress rules.
+2. Requests are routed to appropriate Services.
+3. Services direct traffic to the corresponding Deployments.
+4. Deployments manage the pods running the application components.
 
 ## Key Files
-1. `templates/server-deployment.yaml`: Defines the main Trieve server deployment.
-2. `templates/ingress-*.yaml`: Environment-specific ingress configurations.
-3. `templates/clickhouse-deployment.yaml`: ClickHouse analytics database deployment.
-4. `templates/keycloak.yaml` and `templates/keycloak-realm-configmap.yaml`: Keycloak authentication setup.
-5. `templates/embeddings-deployment.yaml`: Text embedding inference services deployment.
-6. `local-values.yaml`: Configuration values for local development deployments.
+1. `Chart.yaml`: Specifies chart metadata and dependencies on Redis, PostgreSQL, and Qdrant.
+2. `local-values.yaml`: Contains comprehensive configuration settings for local deployment.
+3. `templates/server-deployment.yaml`: Defines the main application server deployment.
+4. `templates/clickhouse-deployment.yaml`: Sets up the ClickHouse database for analytics.
+5. `templates/keycloak.yaml`: Configures Keycloak for authentication and user management.
+6. `templates/*-worker-deployment.yaml`: Set up background processing tasks.
+7. `charts/`: Contains subcharts for PostgreSQL, Qdrant, and Redis.
 
 ## Dependencies
-The chart relies on several external dependencies:
+The Helm charts rely on several external services and tools:
 
-1. Kubernetes (typically v1.24+)
-2. Helm (v3+)
-3. Docker images for various services (PostgreSQL, Redis, Qdrant, etc.)
-4. Keycloak for authentication
-5. ClickHouse for analytics
-6. Apache Tika for content extraction
-7. OpenAI API for language model capabilities
-8. Cloud-specific services (e.g., Google Cloud SQL, AWS ALB) depending on the deployment environment
+1. Kubernetes: The target platform for deployment (version 1.23+).
+2. Helm: Used for templating and managing Kubernetes resources (v3).
+3. Docker: Container images are used for all deployments.
+4. PostgreSQL: Primary database (chart version 15.2.5).
+5. Redis: Used for caching or as a message broker (chart version 18.9.0).
+6. Qdrant: Vector database for similarity search (chart version 0.8.4).
+7. Keycloak: Authentication and authorization.
+8. ClickHouse: Analytics database.
+9. Apache Tika: File parsing.
+10. External APIs: OpenAI, Anthropic, Jina AI (for embeddings).
+11. Cloud services: S3-compatible storage, SMTP (Gmail), Stripe for payments.
 
 ## Configuration
-The chart is highly configurable through the `values.yaml` file and environment-specific value files. Key configuration areas include:
+Configuration is primarily managed through Helm values, with key settings including:
 
-1. Environment selection (local, AWS, Google Cloud)
-2. Container image versions
-3. Database connection strings and configurations
-4. API keys and credentials for external services
-5. Resource allocation for containers
-6. Networking and ingress settings
-7. Feature flags and application-specific settings
+1. `environment`: Determines the deployment environment (local, aws, gcloud).
+2. `domain`: Sets the base domain for services.
+3. `useGpu`: Flag to enable/disable GPU usage.
+4. `containers`: Specifies container images and tags for various services.
+5. `postgres`, `config.redis`, `config.qdrant`: Database configurations, including options to use subcharts.
+6. `config.analytics`: Controls analytics features.
+7. `config.trieve`: Trieve-specific settings, including unlimited usage and cookie security.
+8. `config.oidc`: OpenID Connect configuration for authentication.
+9. `config.smtp`: Email configuration settings.
+10. `config.llm`, `config.openai`: Language model and OpenAI API configurations.
+11. `config.s3`: S3 storage configuration.
+12. `config.stripe`: Stripe payment configuration.
+13. `embeddings`: Defines embedding models used in the application.
 
-Example configuration options:
-
-```yaml
-environment: local
-domain: localtrieve.com
-useGpu: false
-containers:
-  keycloak:
-    tag: 21.1.1
-postgres:
-  useSubchart: true
-  dbURI: postgres://postgres:postgres@postgres-postgresql:5432/postgres
-config:
-  vite:
-    apiHost: http://api.localtrieve.com/api
-  redis:
-    useSubchart: true
-    uri: redis://redis-master:6379
-  qdrant:
-    useSubchart: true
-    qdrantUrl: http://qdrant:6333
-  trieve:
-    unlimited: true
-  openai:
-    apiKey: sk-...
-```
-
-These configurations allow for fine-tuning the deployment to specific requirements and infrastructure setups.
-
-The Helm chart provides a comprehensive and flexible way to deploy the Trieve application stack, handling complex dependencies and configurations across different environments.
+The templates make extensive use of environment variables to configure the application components, allowing for easy customization and secret management through Kubernetes mechanisms. The configuration options provide flexibility for deploying Trieve across different environments and with various optional features enabled or disabled as needed.

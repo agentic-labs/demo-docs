@@ -3,30 +3,47 @@ title: "tika-service.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service named "tika" that exposes a ClusterIP service for the Tika server. It routes traffic to pods with specific labels, ensuring internal communication within the Kubernetes cluster.
-
-## References
-- This service targets pods with the label `app.kubernetes.io/name: tika` and `app.kubernetes.io/instance: trieve`, likely defined in a corresponding Deployment.
-- The related file `helm/templates/ingest-deployment.yaml` shows an environment variable `TIKA_URL` set to `tika.default.svc.cluster.local`, indicating that the Ingest service relies on this Tika service.
+This YAML file defines a Kubernetes Service resource for a Tika application. It exposes the Tika service within the cluster, allowing other components to communicate with it using a stable internal IP address and port.
 
 ## Symbols
-### `tika` (Service)
+
+### Service
 #### Description
-This Kubernetes Service exposes the Tika server on port 9998 within the cluster. It uses the `ClusterIP` type, making it accessible only from within the Kubernetes cluster.
-
-#### Inputs
-This symbol does not take direct inputs. It is configured through the Kubernetes API.
-
-#### Outputs
-This symbol does not produce direct outputs. It provides network connectivity to the Tika pods.
+This Kubernetes Service resource named "tika" is designed to provide network access to Tika pods within the cluster. It uses the ClusterIP type, which means it's only accessible within the cluster.
 
 #### Internal Logic
-- The service uses a selector to target pods with the labels `app.kubernetes.io/name: tika` and `app.kubernetes.io/instance: trieve`.
-- It exposes a single port (9998) that maps to port 9998 on the target pods, using the TCP protocol.
+The Service selects pods with specific labels and forwards traffic to them on a specified port.
 
-## Side Effects
-- This service creates a new Kubernetes Service object.
-- It enables internal communication between pods within the cluster that need to access the Tika server.
+1. **Metadata**: 
+   - Name: "tika"
+   - Label: app.kubernetes.io/name: tika
+
+2. **Spec**:
+   - Type: ClusterIP (internal cluster access only)
+   - Port configuration:
+     - Port: 9998 (the port on which the Service is exposed)
+     - TargetPort: 9998 (the port on the pod to which traffic is forwarded)
+     - Protocol: TCP
+     - Name: tika
+   - Selector:
+     - app.kubernetes.io/name: tika (uses a variable `$selector`)
+     - app.kubernetes.io/instance: trieve
 
 ## Dependencies
-- This code depends on Kubernetes and its API for service discovery and load balancing.
+This YAML file is a Kubernetes resource definition and depends on the Kubernetes API server to process and apply it.
+
+## Configuration
+The configuration is defined inline within the YAML structure. Key configurations include:
+
+| Option | Type | Value | Description |
+|:-------|:-----|:------|:------------|
+| metadata.name | string | tika | The name of the Service |
+| spec.type | string | ClusterIP | The type of Service (internal cluster access) |
+| spec.ports[0].port | integer | 9998 | The port on which the Service is exposed |
+| spec.ports[0].targetPort | integer | 9998 | The port on the pod to which traffic is forwarded |
+| spec.selector | map | app.kubernetes.io/name: tika, app.kubernetes.io/instance: trieve | Labels used to select pods that this Service will route traffic to |
+
+## Notes
+1. The file uses a Helm template variable `$selector` to set the value for the `app.kubernetes.io/name` selector. This allows for potential customization of the selector when rendering the template.
+2. The Service is configured to work with Tika pods running on port 9998, which is likely the default port for Tika server.
+3. The `app.kubernetes.io/instance: trieve` label in the selector suggests that this Service is part of a larger application or deployment named "trieve".

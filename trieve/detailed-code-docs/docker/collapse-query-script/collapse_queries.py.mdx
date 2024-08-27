@@ -3,10 +3,10 @@ title: "collapse_queries.py"
 ---
 
 ## High-level description
-This code defines a Python script that processes and collapses search queries stored in a ClickHouse database. It identifies and marks duplicate queries within specified time windows and datasets, updating the database accordingly.
+This code defines a Python script that processes and collapses duplicate search queries in a ClickHouse database. It iterates through datasets, identifies and marks duplicate queries based on specific criteria, and updates the database accordingly.
 
 ## Code Structure
-The script consists of several functions that interact with the ClickHouse database to retrieve, process, and update search query data. The main function orchestrates the overall process, iterating through datasets and collapsing queries in batches.
+The script consists of several functions that interact with a ClickHouse database to retrieve, process, and update search query data. The main function orchestrates the overall process of collapsing queries across multiple datasets.
 
 ## Symbols
 
@@ -68,11 +68,11 @@ Updates the timestamp of the last collapse operation for a specific dataset.
 |:-----|:-----|:------------|
 | client | ClickHouseClient | ClickHouse database client |
 | dataset_id | uuid.UUID | ID of the dataset to update |
-| last_collapsed | datetime.datetime | New timestamp of the last collapse operation |
+| last_collapsed | datetime.datetime | New timestamp for the last collapse operation |
 
 ### `collapse_queries`
 #### Description
-Identifies duplicate queries within a set of rows based on time proximity and query similarity.
+Identifies duplicate queries within a set of rows based on similarity and time proximity.
 
 #### Inputs
 | Name | Type | Description |
@@ -87,7 +87,7 @@ Identifies duplicate queries within a set of rows based on time proximity and qu
 | rows_to_be_deleted | List[Tuple] | List of rows identified as duplicates |
 
 #### Internal Logic
-Iterates through the rows, comparing each query with nearby queries within the specified time window. Marks shorter queries as duplicates if they are substrings of longer queries.
+Iterates through sorted rows, comparing each query with nearby queries within the specified time window. Marks shorter queries as duplicates if they are substrings of longer queries.
 
 ### `insert_duplicate_rows`
 #### Description
@@ -101,7 +101,7 @@ Inserts identified duplicate rows back into the database with the `is_duplicate`
 
 ### `main`
 #### Description
-Orchestrates the overall process of collapsing queries for all datasets.
+The main function that orchestrates the entire process of collapsing queries across all datasets.
 
 #### Internal Logic
 1. Connects to the ClickHouse database
@@ -109,9 +109,10 @@ Orchestrates the overall process of collapsing queries for all datasets.
 3. For each dataset:
    a. Retrieves the last collapse timestamp
    b. Fetches search queries in batches
-   c. Collapses queries and marks duplicates
-   d. Updates the last collapse timestamp
-4. Optimizes the database tables
+   c. Identifies and marks duplicate queries
+   d. Updates the database with duplicate information
+   e. Updates the last collapse timestamp
+4. Optimizes the affected tables
 
 ## Dependencies
 | Dependency | Purpose |
@@ -126,4 +127,4 @@ Orchestrates the overall process of collapsing queries for all datasets.
 The main function includes a try-except block to catch and print any exceptions that occur during the process.
 
 ## Performance Considerations
-The script processes queries in batches (default 5000) to manage memory usage and improve performance when dealing with large datasets.
+The script processes queries in batches of 5000 to manage memory usage and improve performance when dealing with large datasets. It also uses database-side sorting and filtering to minimize data transfer and processing on the application side.

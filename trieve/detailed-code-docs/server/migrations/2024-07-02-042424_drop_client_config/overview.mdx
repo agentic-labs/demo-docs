@@ -3,64 +3,42 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for modifying the structure of the `datasets` table in a database. Specifically, these scripts are designed to remove the `client_configuration` column from the table and provide a way to revert this change if needed.
+This directory contains SQL migration scripts for modifying the `datasets` table in a database. The migration is specifically focused on removing the `client_configuration` column from the `datasets` table. The directory includes two SQL files: `up.sql` for applying the change and `down.sql` for reverting it.
 
 ## What does it do?
-The migration scripts in this directory perform the following actions:
+This migration performs a structural change to the database by removing a column that was previously used to store client configuration data. Here's a breakdown of the process:
 
-1. Remove a column: The "up" migration removes the `client_configuration` column from the `datasets` table. This column likely stored JSON data related to client-specific configurations.
+1. When the migration is applied (using the `up.sql` script):
+   - The `client_configuration` column is removed from the `datasets` table.
+   - Any data stored in this column will be permanently deleted.
 
-2. Add a column (for reverting): The "down" migration adds the `client_configuration` column back to the `datasets` table. This column is defined as `jsonb` type, which is used for storing JSON data in a binary format for efficient processing and querying.
+2. If the migration needs to be reverted (using the `down.sql` script):
+   - A new `client_configuration` column is added back to the `datasets` table.
+   - The new column is set to store JSON data (using the `jsonb` data type in PostgreSQL).
 
-These migrations allow database administrators or developers to update the database schema by removing potentially unused or deprecated data, while also providing a way to undo this change if necessary.
+This migration likely reflects a change in how the application handles client configuration data. Perhaps this data is being moved to a separate table or is no longer needed in the database at all.
 
 ## Key Files
 
 1. `up.sql`:
-   - Purpose: Removes the `client_configuration` column from the `datasets` table.
-   - Content: 
+   - This file contains the SQL command to drop the `client_configuration` column from the `datasets` table.
+   - The command used is: 
      ```sql
-     ALTER TABLE datasets DROP COLUMN client_configuration
+     ALTER TABLE datasets DROP COLUMN client_configuration;
      ```
-   - This file is executed when applying the migration to update the database schema.
+   - When executed, this will permanently remove the column and all data it contains.
 
 2. `down.sql`:
-   - Purpose: Adds the `client_configuration` column back to the `datasets` table.
-   - Content:
+   - This file contains the SQL command to add the `client_configuration` column back to the `datasets` table if the migration needs to be reversed.
+   - The command used is:
      ```sql
      ALTER TABLE datasets ADD COLUMN client_configuration jsonb;
      ```
-   - This file is executed when rolling back the migration to revert the database schema to its previous state.
+   - This will create a new `client_configuration` column with the `jsonb` data type, which is used for storing JSON data in PostgreSQL.
+
+It's important to note that while the `down.sql` script can add the column back, it cannot restore any data that was in the column before it was dropped. If data recovery is necessary, it should be handled separately from this migration.
 
 ## Configuration
-The migration is identified by its timestamp: `2024-07-02-042424`. This timestamp is likely used by a migration management system to track which migrations have been applied and in what order.
+The migration is identified by its timestamp: `2024-07-02-042424`. This timestamp is likely used by the migration tool to track which migrations have been applied and in what order.
 
-## Side Effects
-Executing these migrations will have the following effects:
-
-1. When applying the "up" migration:
-   - The `client_configuration` column and all its data will be permanently removed from the `datasets` table.
-   - Queries or application code relying on this column will need to be updated.
-   - Storage space used by the column will be freed up.
-
-2. When applying the "down" migration:
-   - A new `client_configuration` column of type `jsonb` will be added to the `datasets` table.
-   - Existing rows will have NULL values in this new column unless otherwise specified.
-   - Applications will regain access to this column, but without the original data.
-
-## Performance Considerations
-1. The impact of these migrations depends on the size of the `datasets` table:
-   - For small to medium-sized tables, the operations should be relatively quick.
-   - For very large tables, the migrations might take considerable time and could potentially lock the table during execution.
-
-2. It's recommended to perform these schema changes during low-traffic periods to minimize disruption to applications using the database.
-
-3. The use of `jsonb` type in the "down" migration allows for efficient storage and querying of JSON data, which can be beneficial for performance if the column is heavily used.
-
-## TODOs
-1. Ensure that the SQL commands in both files are correct and final before executing in a production environment.
-2. Update any application code, queries, or data access layers that might be affected by the removal of the `client_configuration` column.
-3. If rolling back the migration, consider how to handle the loss of data that was in the original `client_configuration` column before it was dropped.
-4. Review and update any database indexes, constraints, or triggers that might have referenced the `client_configuration` column.
-
-By following these migration scripts, database administrators can effectively manage the evolution of the database schema, ensuring that it aligns with the current needs of the application while maintaining the ability to revert changes if necessary.
+No additional configuration appears to be required for this migration. However, the database connection details and migration tool configuration would typically be specified elsewhere in the project.

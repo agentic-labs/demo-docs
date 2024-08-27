@@ -42,10 +42,13 @@ Copies all data from the temporary table back to the newly created `file_upload_
 #### Description
 Drops the temporary `file_upload_completed_notifications_temp` table.
 
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| card_collection table | The `id` column is referenced by the new foreign key constraint |
+## Side Effects
+- The `file_upload_completed_notifications` table now has a foreign key constraint on the `collection_uuid` column, referencing the `card_collection` table.
+- Any existing rows in the `file_upload_completed_notifications` table with `collection_uuid` values that don't exist in the `card_collection` table will cause the migration to fail.
 
 ## Performance Considerations
-This migration might take longer to execute on tables with a large amount of data, as it involves copying all data twice (to and from the temporary table). It's recommended to run this migration during low-traffic periods.
+- This migration involves copying all data twice (to and from a temporary table), which may impact performance for large datasets.
+- The operation is not atomic, meaning that if an error occurs during the migration, the database may be left in an inconsistent state.
+
+## Error Handling
+There is no explicit error handling in this SQL script. If any step fails, the entire migration will fail, and manual intervention may be required to resolve issues and revert changes.

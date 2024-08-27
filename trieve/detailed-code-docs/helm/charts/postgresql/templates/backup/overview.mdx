@@ -3,48 +3,82 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Kubernetes resource definitions for implementing a backup system for a PostgreSQL database using Helm charts. The main components include a CronJob for scheduled backups, a NetworkPolicy for controlling network access, and a PersistentVolumeClaim (PVC) for storing the backups.
+
+This directory contains Helm chart templates for managing PostgreSQL backups in a Kubernetes environment. It includes configurations for a CronJob to perform scheduled backups, a NetworkPolicy to control network traffic for the backup process, and a PersistentVolumeClaim (PVC) for storing backup data.
 
 ## What does it do?
-This backup system performs the following tasks:
 
-1. Schedules regular backups of the PostgreSQL database using a CronJob.
-2. Executes the `pg_dumpall` utility to create a full database backup.
-3. Stores the backup data in a persistent volume.
-4. Controls network access to the backup process using a NetworkPolicy.
-5. Manages storage resources for backups using a PersistentVolumeClaim.
+This set of templates enables automated, scheduled backups of a PostgreSQL database cluster running in Kubernetes. Here's a breakdown of the functionality:
 
-The backup process is highly configurable, allowing users to adjust schedules, resource allocations, storage settings, and security policies through Helm values.
+1. Scheduled Backups: A CronJob is set up to run `pg_dumpall` at specified intervals, creating full backups of the PostgreSQL cluster.
+
+2. Network Security: A NetworkPolicy is implemented to control the outbound traffic from the backup pods, ensuring they can only connect to the PostgreSQL service on its default port (5432).
+
+3. Persistent Storage: A PVC is created to provide durable storage for the backup data, ensuring that backups are retained even if the backup pod is terminated.
+
+These components work together to create a robust, secure, and configurable backup solution for PostgreSQL databases in a Kubernetes environment.
 
 ## Key Files
 
-1. **cronjob.yaml**: Defines a Kubernetes CronJob resource that schedules and executes the PostgreSQL backup process. It uses the `pg_dumpall` utility to create a full database dump and stores it in a persistent volume.
+1. `cronjob.yaml`: This file defines the CronJob resource for scheduled PostgreSQL backups. It specifies the backup schedule, container configuration, and volume mounts for storing backups and certificates.
 
-2. **networkpolicy.yaml**: Creates a Kubernetes NetworkPolicy resource to control network traffic for the backup process. It specifically allows egress traffic on port 5432 (the standard PostgreSQL port) to facilitate backups.
+2. `networkpolicy.yaml`: This file creates a NetworkPolicy resource to control egress traffic for the backup CronJob, allowing outbound connections only to the PostgreSQL port.
 
-3. **pvc.yaml**: Defines a Kubernetes PersistentVolumeClaim (PVC) resource for allocating and managing storage for the database backups.
-
-## Configuration
-The backup system is highly configurable through Helm values. Key configuration options include:
-
-- `.Values.backup.enabled`: Enables or disables the entire backup system.
-- `.Values.backup.cronjob.schedule`: Sets the backup schedule using cron syntax.
-- `.Values.backup.cronjob.storage.*`: Configures storage settings for backups, including size and access modes.
-- `.Values.backup.cronjob.networkPolicy.enabled`: Enables or disables the NetworkPolicy for backups.
-- `.Values.auth.*`: Provides authentication details for accessing the PostgreSQL database.
-- `.Values.tls.enabled`: Indicates whether TLS is enabled for the PostgreSQL connection.
-
-For a complete list of configuration options, refer to the `values.schema.json` file in the chart.
+3. `pvc.yaml`: This file defines a PersistentVolumeClaim for storing PostgreSQL backups, providing persistent storage for the backup data.
 
 ## Dependencies
-This backup system relies on the following Kubernetes APIs:
-- `batch/v1`: For defining CronJob resources.
-- `networking.k8s.io/v1`: For defining NetworkPolicy resources.
-- `v1`: For defining PersistentVolumeClaim and other core resources.
 
-The system also depends on the PostgreSQL image specified in the Helm values for running the `pg_dumpall` utility.
+The templates in this directory primarily depend on the PostgreSQL database itself, which is the target of the backup operations. They also rely on Kubernetes resources and APIs, including CronJob, NetworkPolicy, and PersistentVolumeClaim.
 
-## Error Handling and Logging
-Error handling and logging are primarily managed by Kubernetes. Errors during CronJob execution, such as failures in connecting to the database or writing the backup, will be handled by Kubernetes and can be viewed in the container logs. The backup system does not implement additional error handling or logging mechanisms beyond what is provided by Kubernetes.
+## Configuration
 
-In conclusion, this directory provides a comprehensive and configurable backup solution for PostgreSQL databases deployed in a Kubernetes environment using Helm charts. It ensures data safety through scheduled backups, manages storage efficiently, and implements network security measures for the backup process.
+The backup functionality is highly configurable through Helm values. Key configuration options include:
+
+1. Enabling/disabling backups: 
+   ```yaml
+   backup:
+     enabled: true
+   ```
+
+2. CronJob schedule:
+   ```yaml
+   backup:
+     cronjob:
+       schedule: "0 1 * * *"  # Daily at 1 AM
+   ```
+
+3. Network policy:
+   ```yaml
+   backup:
+     cronjob:
+       networkPolicy:
+         enabled: true
+   ```
+
+4. Persistent storage:
+   ```yaml
+   backup:
+     cronjob:
+       storage:
+         enabled: true
+         size: "10Gi"
+         accessModes:
+           - ReadWriteOnce
+   ```
+
+5. Resource limits and requests for the backup container:
+   ```yaml
+   backup:
+     cronjob:
+       resources:
+         limits:
+           cpu: 100m
+           memory: 128Mi
+         requests:
+           cpu: 100m
+           memory: 128Mi
+   ```
+
+These configurations allow users to fine-tune the backup process according to their specific requirements, including scheduling, network security, storage capacity, and resource allocation.
+
+The templates make extensive use of conditional logic to create resources only when they are enabled in the configuration, providing flexibility in deployment scenarios.

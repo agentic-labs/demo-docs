@@ -3,7 +3,7 @@ title: "TopBarLayout.tsx"
 ---
 
 ## High-level description
-The `TopBarLayout` component provides the main layout structure for the analytics dashboard. It fetches the available datasets for the selected organization and manages the selection of a dataset. It also handles redirection for unauthorized users and displays a "No Datasets" error page if no datasets are found.
+The `TopBarLayout` component provides the main layout structure for the analytics dashboard. It fetches the available datasets for the selected organization and manages the selection of a specific dataset. It also handles redirection for unauthorized users and displays a "No Datasets" error page if no datasets are found.
 
 ## Code Structure
 The `TopBarLayout` component uses the `OrgContext` to access the selected organization and the `DatasetContext` to provide the selected dataset to its children. It fetches the datasets using the `createQuery` hook from `@tanstack/solid-query` and manages the selected dataset with the `createSignal` hook. The component also uses the `Show` component from `solid-js` to conditionally render content based on the status of the datasets query and the selected dataset.
@@ -11,6 +11,10 @@ The `TopBarLayout` component uses the `OrgContext` to access the selected organi
 ## References
 - `OrgContext`
 - `DatasetContext`
+- `createQuery` from `@tanstack/solid-query`
+- `apiHost`
+- `redirect`, `useSearchParams` from `@solidjs/router`
+- `DatasetAndUsage` from `shared/types`
 - `Sidebar`
 - `NoDatasetsErrorPage`
 
@@ -27,44 +31,31 @@ This component defines the top bar layout of the analytics dashboard, including 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| JSX.Element | `JSX.Element` | The rendered layout of the top bar. |
+| JSX.Element | `JSX.Element` | The rendered layout structure of the top bar. |
 
 #### Internal Logic
-1. **Fetches Datasets:** Uses `createQuery` to fetch datasets for the selected organization.
-2. **Handles Redirection:** Redirects to the login page if the user is unauthorized (401 status code).
-3. **Sets Selected Dataset:** Sets the initially selected dataset based on the URL parameters or the first dataset in the list.
-4. **Updates Selected Dataset:** Updates the selected dataset when the URL parameters or the datasets query data changes.
-5. **Renders Layout:**
-   - Renders the `Sidebar` component with the fetched datasets, selected dataset, and a function to update the selected dataset.
-   - Conditionally renders the `NoDatasetsErrorPage` if no datasets are found.
-   - Conditionally renders the children components within a `DatasetContext.Provider` if a dataset is selected.
-
-## Side Effects
-- Modifies the URL parameters when the selected dataset changes.
-- Redirects the user to the login page if unauthorized.
+1. **Retrieves URL parameters:** Uses `useSearchParams` to get and set URL parameters, specifically for tracking the selected dataset.
+2. **Fetches datasets:** Utilizes `createQuery` from `@tanstack/solid-query` to fetch the list of datasets associated with the selected organization. The query function makes a GET request to the `/dataset/organization/{orgId}` endpoint.
+3. **Handles unauthorized access:** If the API request returns a 401 status (Unauthorized), redirects the user to the login page with a redirect URI pointing back to the dashboard.
+4. **Manages selected dataset:** Uses `createSignal` to store and update the currently selected dataset. The selection is based on the `dataset` URL parameter or defaults to the first dataset in the list.
+5. **Provides dataset context:** Employs `DatasetContext.Provider` to make the selected dataset accessible to all child components within the layout.
+6. **Renders layout:**
+    - Displays a sidebar (`Sidebar` component) with the list of datasets and handles dataset selection.
+    - Conditionally renders a "No Datasets" error page (`NoDatasetsErrorPage` component) if no datasets are found for the selected organization.
+    - Renders the main content area (`props.children`) within a container, only if a dataset is selected.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
 | solid-js | Provides core reactivity primitives and components. |
-| @tanstack/solid-query | Provides data fetching and caching functionalities. |
-| @solidjs/router | Provides routing functionalities. |
-| shared/types | Provides shared types. |
-
-### `DatasetContext`
-#### Description
-A SolidJS context that provides the selected dataset to its children components.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| value | `Accessor&lt;DatasetAndUsage&gt;` | The selected dataset. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| DatasetContext.Provider | `JSX.Element` | A provider component that makes the selected dataset available to its children. |
+| @tanstack/solid-query | Enables data fetching and caching. |
+| @solidjs/router | Provides routing functionality. |
+| shared/types | Defines shared types used across the application. |
 
 ## Error Handling
-- Redirects to the login page if the user is unauthorized (401 status code).
-- Displays a "No Datasets" error page if no datasets are found for the selected organization.
+- Redirects the user to the login page if the API request for datasets returns a 401 (Unauthorized) status.
+
+## Side Effects
+- Modifies the URL parameters to reflect the selected dataset.
+- Fetches data from the `/dataset/organization/{orgId}` endpoint.
+- Redirects the user to the login page if unauthorized.

@@ -3,48 +3,54 @@ title: "metrics-svc.yaml"
 ---
 
 ## High-level description
-This Kubernetes YAML file defines a Service resource named `&lt;release-name&gt;-postgresql-metrics` that exposes metrics from the primary PostgreSQL instance. It uses a ClusterIP type by default and allows customization of ports, session affinity, and annotations.
+This YAML template defines a Kubernetes Service resource for exposing metrics from a PostgreSQL primary instance. It is conditionally created based on whether metrics are enabled in the Helm chart values.
 
 ## Code Structure
-This code snippet defines a Kubernetes Service resource using a YAML template. It leverages conditional logic (`if`) and includes other templates to generate the final resource definition.
-
-## References
-* `postgresql.v1.primary.fullname`: This template likely defines the full name of the primary PostgreSQL instance.
-* `common.labels.standard`: This template likely defines standard labels to be applied to the service.
-* `common.tplvalues.merge`: This template likely merges multiple values into a single dictionary.
-* `common.tplvalues.render`: This template likely renders values into a string representation.
-* `common.labels.matchLabels`: This template likely generates label selectors for the service.
+The template uses various Helm functions and includes to generate a Service resource with appropriate labels, annotations, and specifications based on the provided values.
 
 ## Symbols
-### `helm/charts/postgresql/templates/primary/metrics-svc.yaml`
+
+### Service Resource
 #### Description
-This code defines a Kubernetes Service resource for exposing metrics from the primary PostgreSQL instance. It uses a ClusterIP type by default and allows customization of ports, session affinity, and annotations.
+Defines a Kubernetes Service resource for exposing PostgreSQL metrics.
 
 #### Inputs
-This code snippet doesn't have explicit input parameters. It relies on values passed from the Helm chart or parent templates.
-
-#### Outputs
-A Kubernetes YAML definition for a Service resource.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.metrics.enabled | boolean | Determines if the metrics service should be created |
+| .Values.commonLabels | map | Common labels to be applied to the service |
+| .Values.commonAnnotations | map | Common annotations to be applied to the service |
+| .Values.metrics.service.annotations | map | Specific annotations for the metrics service |
+| .Values.metrics.service.sessionAffinity | string | Session affinity setting for the service |
+| .Values.metrics.service.clusterIP | string | Specific cluster IP for the service (optional) |
+| .Values.metrics.service.ports.metrics | number | Port number for the metrics endpoint |
+| .Values.primary.podLabels | map | Labels for the primary PostgreSQL pod |
 
 #### Internal Logic
-1. **Conditional Creation:** The service is created only if `.Values.metrics.enabled` is true.
-2. **Name and Namespace:** The service name is generated using the release name and `-postgresql-metrics` suffix. The namespace is taken from `.Release.Namespace`.
-3. **Labels:** Standard labels are applied using the `common.labels.standard` template. An additional label `app.kubernetes.io/component: metrics` is added.
-4. **Annotations:**  Annotations are added from `.Values.metrics.service.annotations` and `.Values.commonAnnotations` using the `common.tplvalues.merge` and `common.tplvalues.render` templates.
-5. **Spec:**
-    * `type`: Set to `ClusterIP` by default.
-    * `sessionAffinity`: Configured using `.Values.metrics.service.sessionAffinity`.
-    * `clusterIP`: Can be set to a specific IP using `.Values.metrics.service.clusterIP`.
-    * `ports`: Defines a port named `http-metrics` with the port number from `.Values.metrics.service.ports.metrics`.
-    * `selector`: Selects pods with labels matching those defined in `.Values.primary.podLabels` and `.Values.commonLabels` using the `common.labels.matchLabels` template. The selector also includes `app.kubernetes.io/component: primary`.
+1. Checks if metrics are enabled using a conditional statement.
+2. Generates the service name using a combination of a prefix and the primary fullname.
+3. Sets metadata including name, namespace, labels, and annotations.
+4. Defines the service spec with type ClusterIP, session affinity, and port configuration.
+5. Sets the selector to target the primary PostgreSQL pod.
 
 ## Dependencies
-This code snippet depends on the following Helm templates:
-
 | Dependency | Purpose |
 |:-----------|:--------|
-| `postgresql.v1.primary.fullname` | Provides the full name of the primary PostgreSQL instance. |
-| `common.labels.standard` | Provides standard labels for the service. |
-| `common.tplvalues.merge` | Merges multiple values into a single dictionary. |
-| `common.tplvalues.render` | Renders values into a string representation. |
-| `common.labels.matchLabels` | Generates label selectors for the service. | 
+| common.labels.standard | Generates standard labels |
+| common.tplvalues.merge | Merges multiple values |
+| common.tplvalues.render | Renders template values |
+| common.labels.matchLabels | Generates matching labels for selector |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| metrics.enabled | boolean | - | Enables or disables the metrics service |
+| metrics.service.sessionAffinity | string | - | Sets the session affinity for the service |
+| metrics.service.clusterIP | string | - | Sets a specific cluster IP (optional) |
+| metrics.service.ports.metrics | number | - | Defines the port for the metrics endpoint |
+
+## Notes
+- The service is only created if `.Values.metrics.enabled` is true.
+- The service uses ClusterIP type, making it only accessible within the cluster.
+- The service targets pods with the label `app.kubernetes.io/component: primary`, indicating it's for the primary PostgreSQL instance.
+- The template includes logic for merging and rendering labels and annotations from various sources.

@@ -3,61 +3,64 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for altering the `search_queries` table in a PostgreSQL database. The migration is designed to add and remove a column named `is_duplicate` to flag duplicate entries in the table.
+This directory contains SQL migration scripts for altering the `search_queries` table in a database. The migration is specifically designed to add and remove a column named `is_duplicate` to flag duplicate entries in the table.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
-1. Add a new column called `is_duplicate` to the `search_queries` table. This column is used to mark certain rows as duplicates.
-2. Set up the new column with a default value of 0, indicating that by default, rows are not considered duplicates.
-3. Provide a way to revert the changes by removing the `is_duplicate` column if needed.
+1. Add a new column: The "up" migration adds a column called `is_duplicate` to the `search_queries` table. This column is designed to flag whether a row is a duplicate or not. By default, all rows are marked as non-duplicates (with a value of 0).
 
-These changes allow the system to flag and potentially handle duplicate search queries, which could be useful for data analysis, cleaning, or optimization purposes.
+2. Remove the column: The "down" migration removes the `is_duplicate` column from the `search_queries` table, effectively undoing the changes made by the "up" migration.
+
+These scripts allow database administrators or developers to easily add functionality for marking duplicate entries in the `search_queries` table, and to revert this change if needed.
 
 ## Key Files
 
-### up.sql
-This file contains the SQL commands to apply the migration:
+1. `up.sql`: This file contains the SQL script to add the `is_duplicate` column to the `search_queries` table.
 
-```sql
-ALTER TABLE search_queries
-ADD COLUMN IF NOT EXISTS is_duplicate UInt8 DEFAULT 0
-```
+   ```sql
+   ALTER TABLE search_queries
+   ADD COLUMN IF NOT EXISTS is_duplicate UInt8 DEFAULT 0
+   ```
 
-This script adds the `is_duplicate` column to the `search_queries` table. The column is of type `UInt8` (8-bit unsigned integer) and has a default value of 0, meaning rows are not considered duplicates unless explicitly marked otherwise.
+   This script adds an 8-bit unsigned integer column named `is_duplicate` with a default value of 0, indicating that rows are not duplicates by default.
 
-### down.sql
-This file contains the SQL commands to revert the migration:
+2. `down.sql`: This file contains the SQL script to remove the `is_duplicate` column from the `search_queries` table.
 
-```sql
-ALTER TABLE search_queries
-DROP COLUMN IF EXISTS is_duplicate
-```
+   ```sql
+   ALTER TABLE search_queries
+   DROP COLUMN IF EXISTS is_duplicate
+   ```
 
-This script removes the `is_duplicate` column from the `search_queries` table, effectively undoing the changes made by the up migration.
-
-## Dependencies
-The migration scripts are designed for PostgreSQL databases. They use standard SQL syntax compatible with PostgreSQL.
+   This script removes the `is_duplicate` column if it exists, reverting the changes made by the "up" migration.
 
 ## Configuration
-No specific configuration is required for these migration scripts. However, they should be executed within the context of a database migration system that manages the order and application of migrations.
+These migration scripts do not require any specific configuration. They are designed to be run as part of a database migration system, likely using a tool that can execute "up" and "down" migrations based on version numbers or timestamps.
+
+The migration is identified by the timestamp `1721705174` in the directory name, which suggests that this migration system uses Unix timestamps to order migrations.
+
+## Side Effects
+Running these migrations will have the following effects:
+
+1. `up.sql`:
+   - Modifies the structure of the `search_queries` table by adding the `is_duplicate` column.
+   - All existing rows in the table will have the `is_duplicate` column added with a default value of 0.
+   - Future insertions into this table will include this new column, defaulting to 0 unless specified otherwise.
+
+2. `down.sql`:
+   - Removes the `is_duplicate` column from the `search_queries` table.
+   - Any data stored in the `is_duplicate` column will be permanently lost.
 
 ## Performance Considerations
 1. Adding a new column (`up.sql`):
-   - This operation may temporarily lock the `search_queries` table.
-   - For large tables, this could potentially impact database performance during execution.
-   - The `IF NOT EXISTS` clause prevents errors if the column already exists, making the script idempotent and safe to re-run.
+   - This operation can be potentially expensive, especially if the `search_queries` table is large.
+   - The `IF NOT EXISTS` clause helps prevent accidental re-runs of this migration, which could lead to errors or unnecessary operations.
 
 2. Removing a column (`down.sql`):
-   - This operation may also temporarily lock the `search_queries` table.
-   - It will result in the loss of any data stored in the `is_duplicate` column.
-   - The `IF EXISTS` clause prevents errors if the column doesn't exist, making the script idempotent.
-
-In both cases, it's recommended to execute these migrations during low-traffic periods to minimize potential disruptions to database operations.
+   - Dropping a column is generally a quick operation but may briefly lock the table.
+   - The impact on performance should be minimal, especially if the table is not actively being used during the migration.
 
 ## Error Handling
-Both scripts use conditional clauses to prevent errors:
-- `up.sql` uses `IF NOT EXISTS` when adding the column.
-- `down.sql` uses `IF EXISTS` when dropping the column.
+Both scripts use `IF EXISTS` or `IF NOT EXISTS` clauses to prevent errors if the column already exists (when adding) or doesn't exist (when removing). This makes the scripts idempotent, meaning they can be run multiple times without causing errors or unintended side effects.
 
-These conditions make the scripts more robust and allow them to be safely re-run without causing errors due to the column already existing or not existing.
+In conclusion, these migration scripts provide a straightforward way to add and remove a column for flagging duplicate entries in the `search_queries` table. They are designed to be reversible and include basic error prevention measures.

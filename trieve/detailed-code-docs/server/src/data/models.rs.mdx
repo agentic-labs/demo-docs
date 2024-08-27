@@ -3,15 +3,33 @@ title: "models.rs"
 ---
 
 ## High-level description
-This code defines data structures (structs and enums) representing various entities and concepts within the Trieve application, such as users, topics, messages, chunks, datasets, organizations, and more. These data structures are used for database interactions, API requests and responses, and internal data processing.
+This file defines the data models used in the Trieve application. It includes structs for users, topics, messages, chunks, files, organizations, and various other entities related to the application's functionality. These structs are used for database interactions, API requests and responses, and internal data processing.
 
 ## Code Structure
-The code defines a series of structs and enums, each representing a specific entity or concept. Some structs have associated `impl` blocks that define methods for creating, manipulating, and converting between different representations of the data.
+The code defines a series of structs representing different entities in the Trieve application. These structs are mostly independent of each other, but some have relationships through foreign keys or shared data types. For example, `Message` references `Topic` through `topic_id`, and both `ChunkMetadata` and `File` use `serde_json::Value` for their `metadata` field.
 
 ## References
-This code references the `schema` module, which likely defines the database schema used for storing these entities. It also references various `operator` modules, which likely contain functions for interacting with databases, external APIs, and performing data processing tasks.
+This file references the `schema` module, which defines the database schema for the application. It also references several other modules, including `errors`, `handlers`, and `operators`, which contain code for error handling, request handling, and data processing, respectively.
 
 ## Symbols
+
+### `uuid_between`
+#### Description
+Generates a random UUID that falls between two given UUIDs. This is used to select a random chunk from a dataset.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uuid1 | `uuid::Uuid` | The first UUID. |
+| uuid2 | `uuid::Uuid` | The second UUID. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | `uuid::Uuid` | A random UUID that falls between `uuid1` and `uuid2`. |
+
+#### Internal Logic
+The function converts the UUIDs to `u128` values, determines the minimum and maximum values, calculates the difference, generates a random offset within that difference, adds the offset to the minimum value, and converts the resulting `u128` back to a UUID.
 
 ### `User`
 #### Description
@@ -24,12 +42,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `User` instance from email and optional name.
-- `from_details_with_id`: Creates a new `User` instance with a specified ID, email, and optional name.
+The struct defines fields for the user's ID, email, creation and update timestamps, and optional name. It also provides methods for creating new user instances from details.
 
 ### `Topic`
 #### Description
-Represents a chat topic within a dataset.
+Represents a chat topic in the Trieve application.
 
 #### Inputs
 None
@@ -38,11 +55,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `Topic` instance from name, owner ID, and dataset ID.
+The struct defines fields for the topic's ID, name, deletion status, creation and update timestamps, dataset ID, and owner ID. It also provides a method for creating new topic instances from details.
 
 ### `Message`
 #### Description
-Represents a message within a chat topic.
+Represents a message in a chat topic.
 
 #### Inputs
 None
@@ -51,61 +68,24 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `Message` instance to an `openai_dive::v1::resources::chat::ChatMessage`.
-- `from_details`: Creates a new `Message` instance from content, topic ID, sort order, role, prompt and completion token counts, and dataset ID.
-
-### `RoleProxy`
-#### Description
-An enum representing the role of a chat message (system, user, or assistant).
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-#### Internal Logic
-- `from`: Converts a `RoleProxy` instance to an `openai_dive::v1::resources::chat::Role`.
-
-### `ChatMessageProxy`
-#### Description
-A struct representing a chat message with role and content.
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-#### Internal Logic
-- `from`: Converts a `ChatMessageProxy` instance to an `openai_dive::v1::resources::chat::ChatMessage`.
-
-### `GeoTypes`
-#### Description
-An enum representing geographic coordinate types (integer or float).
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-#### Internal Logic
-- `from`: Converts a `GeoTypes` instance to an `f64`.
+The struct defines fields for the message's ID, topic ID, sort order, content, role (e.g., "user", "assistant"), deletion status, prompt and completion token counts, creation and update timestamps, and dataset ID. It also provides methods for creating new message instances from details and converting a `Message` to an OpenAI `ChatMessage`.
 
 ### `GeoInfoWithBias`
 #### Description
-A struct representing geographic information with a bias value for location-based ranking.
+Represents a geographical location with a bias value for location-based search ranking.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields for the location (`GeoInfo`) and the bias value (`f64`).
 
 ### `GeoInfo`
 #### Description
-A struct representing geographic coordinates (latitude and longitude).
+Represents a geographical location with latitude and longitude.
 
 #### Inputs
 None
@@ -114,25 +94,11 @@ None
 None
 
 #### Internal Logic
-- `haversine_distance_to`: Calculates the Haversine distance between two `GeoInfo` instances.
-
-### `UpdateSpecificChunkMetadata`
-#### Description
-A struct representing specific fields of `ChunkMetadata` that can be updated.
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-#### Internal Logic
-- `from`: Converts an `UpdateSpecificChunkMetadata` instance to a `ChunkMetadata` instance.
-- `from`: Converts a `ChunkMetadata` instance to an `UpdateSpecificChunkMetadata` instance.
+The struct defines fields for latitude (`lat`) and longitude (`lon`), both represented as `GeoTypes` which can be either `i64` or `f64`. It also provides a method for calculating the Haversine distance to another `GeoInfo`.
 
 ### `ChunkMetadata`
 #### Description
-Represents metadata associated with a chunk of data.
+Represents metadata for a chunk of data.
 
 #### Inputs
 None
@@ -141,14 +107,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `ChunkMetadata` instance from various fields.
-- `from_details_with_id`: Creates a new `ChunkMetadata` instance with a specified ID and other fields.
-- `from_table_and_tag_set`: Creates a new `ChunkMetadata` instance from a `ChunkMetadataTable` and a vector of tags.
-- `from_table_and_tag_set_option_string`: Creates a new `ChunkMetadata` instance from a `ChunkMetadataTable` and an optional vector of tags.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, HTML content, metadata, tracking ID, timestamp, dataset ID, weight, location, image URLs, tag set, and numerical value. It provides methods for creating new chunk metadata instances from details and converting between different representations of chunk metadata.
 
 ### `ChunkMetadataTable`
 #### Description
-Represents the database table structure for storing chunk metadata.
+Represents the structure of the `chunk_metadata` table in the database.
 
 #### Inputs
 None
@@ -157,17 +120,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadata` instance to a `ChunkMetadataTable` instance.
-
-### `IngestSpecificChunkMetadata`
-#### Description
-A struct representing specific fields of `ChunkMetadata` used during data ingestion.
-
-#### Inputs
-None
-
-#### Outputs
-None
+The struct defines fields corresponding to the columns of the `chunk_metadata` table, including ID, link, Qdrant point ID, timestamps, HTML content, metadata, tracking ID, timestamp, dataset ID, weight, location, image URLs, and numerical value.
 
 ### `ChunkMetadataWithScore`
 #### Description
@@ -180,10 +133,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadataWithScore` instance to a `ScoreChunk` instance.
-- `from`: Converts a `ChunkMetadataWithScore` instance to a `ChunkMetadataStringTagSet` instance.
-- `from`: Converts a `ChunkMetadataWithScore` instance to a `ChunkMetadata` instance.
-- `from`: Converts a tuple of `ChunkMetadata` and `f32` (score) to a `ChunkMetadataWithScore` instance.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, tag set, HTML content, metadata, tracking ID, timestamp, dataset ID, weight, and score. It provides methods for converting between different representations of chunk metadata with scores.
 
 ### `ScoreChunkDTO`
 #### Description
@@ -196,7 +146,7 @@ None
 None
 
 #### Internal Logic
-- `slim`: Creates a slimmed-down version of the `ScoreChunkDTO` with only essential metadata.
+The struct defines fields for the chunk's metadata (`Vec&lt;ChunkMetadataTypes&gt;`), highlights (`Option&lt;Vec&lt;String&gt;&gt;`), and score (`f64`). It also provides a method for creating a slimmed-down version of the `ScoreChunkDTO`.
 
 ### `ScoreChunk`
 #### Description
@@ -208,9 +158,12 @@ None
 #### Outputs
 None
 
+#### Internal Logic
+The struct defines fields for the chunk's metadata (`NewChunkMetadataTypes`), highlights (`Option&lt;Vec&lt;String&gt;&gt;`), and score (`f32`).
+
 ### `SlimChunkMetadataWithArrayTagSet`
 #### Description
-Represents a slimmed-down version of chunk metadata with an array of tags.
+Represents a slimmed-down version of chunk metadata with an array-based tag set.
 
 #### Inputs
 None
@@ -219,7 +172,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `SlimChunkMetadata` instance to a `SlimChunkMetadataWithArrayTagSet` instance.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, tag set (`Option&lt;Vec&lt;String&gt;&gt;`), metadata, tracking ID, timestamp, location, dataset ID, weight, image URLs, and numerical value.
 
 ### `NewChunkMetadataTypes`
 #### Description
@@ -230,6 +183,9 @@ None
 
 #### Outputs
 None
+
+#### Internal Logic
+The enum has three variants: `ID` (`SlimChunkMetadataWithArrayTagSet`), `Metadata` (`ChunkMetadata`), and `Content` (`ContentChunkMetadata`).
 
 ### `ChunkMetadataTypes`
 #### Description
@@ -242,11 +198,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadataTypes` instance to a `ChunkMetadata` instance.
-- `from`: Converts a `ChunkMetadata` instance to a `ChunkMetadataTypes` instance.
-- `from`: Converts a `SlimChunkMetadata` instance to a `ChunkMetadataTypes` instance.
-- `from`: Converts a `ContentChunkMetadata` instance to a `ChunkMetadataTypes` instance.
-- `metadata`: Returns the `ChunkMetadata` representation of the `ChunkMetadataTypes` instance.
+The enum has three variants: `ID` (`SlimChunkMetadata`), `Metadata` (`ChunkMetadataStringTagSet`), and `Content` (`ContentChunkMetadata`).
 
 ### `SlimChunkMetadataWithScore`
 #### Description
@@ -259,11 +211,11 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadataWithScore` instance to a `SlimChunkMetadataWithScore` instance.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, tag set (`Option&lt;String&gt;`), metadata, tracking ID, timestamp, weight, and score.
 
 ### `ChunkMetadataStringTagSet`
 #### Description
-Represents chunk metadata with tags stored as a comma-separated string.
+Represents chunk metadata with a comma-separated string representation of the tag set.
 
 #### Inputs
 None
@@ -272,18 +224,20 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadata` instance to a `ChunkMetadataStringTagSet` instance.
-- `from`: Converts a `ContentChunkMetadata` instance to a `ChunkMetadataStringTagSet` instance.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, HTML content, metadata, tracking ID, timestamp, dataset ID, weight, location, image URLs, tag set (`Option&lt;String&gt;`), and numerical value.
 
 ### `SlimChunkMetadataTable`
 #### Description
-Represents the database table structure for storing slimmed-down chunk metadata.
+Represents the structure of a slimmed-down version of the `chunk_metadata` table in the database.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields corresponding to a subset of the columns of the `chunk_metadata` table, including ID, link, Qdrant point ID, timestamps, metadata, tracking ID, timestamp, location, dataset ID, weight, image URLs, and numerical value.
 
 ### `SlimChunkMetadata`
 #### Description
@@ -296,14 +250,11 @@ None
 None
 
 #### Internal Logic
-- `from_table_and_tag_set`: Creates a new `SlimChunkMetadata` instance from a `SlimChunkMetadataTable` and a vector of tags.
-- `from`: Converts a `ChunkMetadata` instance to a `SlimChunkMetadata` instance.
-- `from`: Converts a `ChunkMetadataStringTagSet` instance to a `SlimChunkMetadata` instance.
-- `from`: Converts a `ContentChunkMetadata` instance to a `SlimChunkMetadata` instance.
+The struct defines fields for the chunk's ID, link, Qdrant point ID, creation and update timestamps, tag set (`Option&lt;String&gt;`), metadata, tracking ID, timestamp, location, dataset ID, weight, image URLs, and numerical value.
 
 ### `ContentChunkMetadata`
 #### Description
-Represents metadata for a chunk containing only content, without additional fields like link or tags.
+Represents metadata for a chunk of content.
 
 #### Inputs
 None
@@ -312,11 +263,11 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `ChunkMetadata` instance to a `ContentChunkMetadata` instance.
+The struct defines fields for the chunk's ID, Qdrant point ID, HTML content, tracking ID, timestamp, weight, image URLs, and numerical value.
 
 ### `SlimUser`
 #### Description
-Represents a slimmed-down version of user data, including user organizations and organizations.
+Represents a slimmed-down version of user data.
 
 #### Inputs
 None
@@ -325,17 +276,20 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `SlimUser` instance from a `User`, a vector of `UserOrganization`, and a vector of `Organization`.
+The struct defines fields for the user's ID, name, email, user organizations (`Vec&lt;UserOrganization&gt;`), and organizations (`Vec&lt;Organization&gt;`).
 
 ### `UserDTO`
 #### Description
-Represents a basic user data transfer object.
+Represents a data transfer object for user data.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields for the user's ID, email, and creation timestamp.
 
 ### `ChunkGroup`
 #### Description
@@ -348,8 +302,7 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `ChunkGroup` instance from various fields.
-- `from_details_with_id`: Creates a new `ChunkGroup` instance with a specified ID and other fields.
+The struct defines fields for the group's ID, name, description, creation and update timestamps, dataset ID, tracking ID, metadata, and tag set. It provides methods for creating new chunk group instances from details.
 
 ### `ChunkGroupAndFileId`
 #### Description
@@ -362,12 +315,11 @@ None
 None
 
 #### Internal Logic
-- `from_group`: Creates a new `ChunkGroupAndFileId` instance from a `ChunkGroup` and an optional file ID.
-- `to_group`: Converts a `ChunkGroupAndFileId` instance to a `ChunkGroup` instance.
+The struct defines fields for the group's ID, dataset ID, name, description, tracking ID, tag set, metadata, file ID, creation and update timestamps. It provides methods for converting between `ChunkGroupAndFileId` and `ChunkGroup`.
 
 ### `ChunkGroupBookmark`
 #### Description
-Represents a bookmark linking a chunk to a chunk group.
+Represents a bookmark for a chunk group.
 
 #### Inputs
 None
@@ -376,11 +328,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `ChunkGroupBookmark` instance from group ID and chunk metadata ID.
+The struct defines fields for the bookmark's ID, group ID, chunk metadata ID, creation and update timestamps. It provides a method for creating new chunk group bookmark instances from details.
 
 ### `FileGroup`
 #### Description
-Represents a link between a file and a chunk group.
+Represents a group of files.
 
 #### Inputs
 None
@@ -389,21 +341,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `FileGroup` instance from file ID and group ID.
+The struct defines fields for the group's ID, file ID, group ID, creation and update timestamps. It provides a method for creating new file group instances from details.
 
 ### `UserDTOWithChunks`
 #### Description
-Represents user data with associated chunks.
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-### `File`
-#### Description
-Represents a file uploaded to the system.
+Represents a user data transfer object with associated chunks.
 
 #### Inputs
 None
@@ -412,7 +354,20 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `File` instance from various fields.
+The struct defines fields for the user's ID, email, creation timestamp, total chunks created, and a list of chunks (`Vec&lt;ChunkMetadata&gt;`).
+
+### `File`
+#### Description
+Represents a file.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the file's ID, name, creation and update timestamps, size, metadata, link, timestamp, dataset ID, and tag set. It provides a method for creating new file instances from details.
 
 ### `FileAndGroupId`
 #### Description
@@ -424,9 +379,12 @@ None
 #### Outputs
 None
 
+#### Internal Logic
+The struct defines fields for the file (`File`) and the group ID (`Option&lt;uuid::Uuid&gt;`).
+
 ### `FileDTO`
 #### Description
-Represents a file data transfer object.
+Represents a data transfer object for file data.
 
 #### Inputs
 None
@@ -435,7 +393,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `File` instance to a `FileDTO` instance.
+The struct defines fields for the file's ID, name, creation and update timestamps, size, S3 URL, metadata, and link.
 
 ### `WorkerEventClickhouse`
 #### Description
@@ -447,9 +405,12 @@ None
 #### Outputs
 None
 
+#### Internal Logic
+The struct defines fields for the event's ID, dataset ID, event type, event data, and creation timestamp.
+
 ### `WorkerEvent`
 #### Description
-Represents an event generated by a worker process.
+Represents a worker event.
 
 #### Inputs
 None
@@ -458,9 +419,7 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `WorkerEventClickhouse` instance to a `WorkerEvent` instance.
-- `from`: Converts a `WorkerEvent` instance to a `WorkerEventClickhouse` instance.
-- `from_details`: Creates a new `WorkerEvent` instance from dataset ID and event type.
+The struct defines fields for the event's ID, creation timestamp, dataset ID, event type, and event data. It provides methods for converting between `WorkerEvent` and `WorkerEventClickhouse`.
 
 ### `EventType`
 #### Description
@@ -473,31 +432,37 @@ None
 None
 
 #### Internal Logic
-- `get_all_event_types`: Returns a vector of all possible `EventTypeRequest` values.
+The enum has several variants, each representing a specific event type, such as `FileUploaded`, `FileUploadFailed`, `ChunksUploaded`, etc. Each variant may have associated data, such as file IDs, chunk IDs, or error messages.
 
 ### `DatasetGroupCount`
 #### Description
-Represents the count of chunk groups within a dataset.
+Represents the count of groups in a dataset.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields for the count's ID, group count, and dataset ID.
 
 ### `DatasetEventCount`
 #### Description
-Represents the count of events associated with a dataset.
+Represents the count of events in a dataset.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields for the count's ID, dataset UUID, and notification count.
 
 ### `Dataset`
 #### Description
-Represents a dataset containing chunks and chunk groups.
+Represents a dataset.
 
 #### Inputs
 None
@@ -506,11 +471,11 @@ None
 None
 
 #### Internal Logic
-- `from_details`: Creates a new `Dataset` instance from name, organization ID, tracking ID, and server configuration.
+The struct defines fields for the dataset's ID, name, creation and update timestamps, organization ID, tracking ID, deletionstatus, and server configuration. It provides a method for creating new dataset instances from details.
 
 ### `DatasetDTO`
 #### Description
-Represents a dataset data transfer object.
+Represents a data transfer object for dataset data.
 
 #### Inputs
 None
@@ -519,17 +484,20 @@ None
 None
 
 #### Internal Logic
-- `from`: Converts a `Dataset` instance to a `DatasetDTO` instance.
+The struct defines fields for the dataset's ID, name, tracking ID, creation and update timestamps, and organization ID.
 
 ### `DatasetUsageCount`
 #### Description
-Represents the usage count of a dataset (number of chunks).
+Represents the usage count for a dataset.
 
 #### Inputs
 None
 
 #### Outputs
 None
+
+#### Internal Logic
+The struct defines fields for the usage count's ID, dataset ID, and chunk count.
 
 ### `DatasetAndUsage`
 #### Description
@@ -542,21 +510,11 @@ None
 None
 
 #### Internal Logic
-- `from_components`: Creates a new `DatasetAndUsage` instance from a `DatasetDTO` and a `DatasetUsageCount`.
+The struct defines fields for the dataset (`DatasetDTO`) and the dataset usage (`DatasetUsageCount`).
 
 ### `DistanceMetric`
 #### Description
-An enum representing different distance metrics for embedding similarity.
-
-#### Inputs
-None
-
-#### Outputs
-None
-
-### `DatasetConfiguration`
-#### Description
-Represents the server-side configuration for a dataset.
+An enum representing different distance metrics for scoring embeddings.
 
 #### Inputs
 None
@@ -565,9 +523,1280 @@ None
 None
 
 #### Internal Logic
-- `from_json`: Creates a new `DatasetConfiguration` instance from a JSON value.
-- `to_json`: Converts a `DatasetConfiguration` instance to a JSON value.
+The enum has four variants: `Euclidean`, `Cosine`, `Manhattan`, and `Dot`.
+
+### `DatasetConfiguration`
+#### Description
+Represents the configuration for a dataset.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for various configuration options, including LLM and embedding base URLs, API keys, model names, prompts, retrieval parameters, embedding size, distance metric, LLM default model, BM25 parameters, fulltext and semantic search flags, embedding query prefix, message-to-query prompt flag, frequency penalty, temperature, presence penalty, stop tokens, indexed-only flag, locked flag, system prompt, and maximum limit. It provides methods for creating new dataset configuration instances from JSON data and converting between `DatasetConfiguration` and `DatasetConfigurationDTO`.
 
 ### `DatasetConfigurationDTO`
 #### Description
-Represents a data transfer object for dataset
+Represents a data transfer object for dataset configuration data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for various configuration options, similar to `DatasetConfiguration`, but with all fields optional. It provides methods for converting between `DatasetConfigurationDTO` and `DatasetConfiguration`.
+
+### `DatasetAndOrgWithSubAndPlan`
+#### Description
+Represents a dataset and its associated organization, subscription, and plan.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the dataset (`Dataset`) and the organization (`OrganizationWithSubAndPlan`).
+
+### `Organization`
+#### Description
+Represents an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the organization's ID, name, creation and update timestamps, registerable flag, and deletion status. It provides methods for creating new organization instances from details.
+
+### `Invitation`
+#### Description
+Represents an invitation to join an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the invitation's ID, email, organization ID, used flag, creation and update timestamps, and role. It provides a method for creating new invitation instances from details.
+
+### `StripePlan`
+#### Description
+Represents a Stripe plan.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the plan's ID, Stripe ID, chunk count, file storage, user count, dataset count, message count, amount, creation and update timestamps, and name. It provides methods for creating new Stripe plan instances from details.
+
+### `StripeSubscription`
+#### Description
+Represents a Stripe subscription.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the subscription's ID, Stripe ID, plan ID, organization ID, creation and update timestamps, and current period end. It provides a method for creating new Stripe subscription instances from details.
+
+### `OrganizationWithSubAndPlan`
+#### Description
+Represents an organization with its associated subscription and plan.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the organization (`Organization`), plan (`Option&lt;StripePlan&gt;`), and subscription (`Option&lt;StripeSubscription&gt;`). It provides methods for creating new instances from components and applying default values.
+
+### `UserRole`
+#### Description
+An enum representing different user roles in an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `Owner`, `Admin`, and `User`.
+
+### `UserOrganization`
+#### Description
+Represents a user's membership in an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the membership's ID, user ID, organization ID, role, creation and update timestamps. It provides a method for creating new user organization instances from details.
+
+### `OrganizationUsageCount`
+#### Description
+Represents the usage count for an organization.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the usage count's ID, organization ID, dataset count, user count, file storage, message count, and chunk count.
+
+### `DatasetTags`
+#### Description
+Represents a tag associated with a dataset.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the tag's ID, dataset ID, and tag value.
+
+### `ChunkMetadataTags`
+#### Description
+Represents a tag associated with chunk metadata.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the tag's ID, chunk metadata ID, and tag ID.
+
+### `ApiKeyRole`
+#### Description
+An enum representing different roles for API keys.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Read` and `ReadAndWrite`.
+
+### `UserApiKey`
+#### Description
+Represents an API key associated with a user.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the API key's ID, user ID, API key hash, name, creation and update timestamps, role, Blake3 hash, dataset IDs, organization IDs, and scopes. It provides a method for creating new user API key instances from details.
+
+### `ApiKeyRespBody`
+#### Description
+Represents a response body for API key data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the API key's ID, user ID, name, role, dataset IDs, organization IDs, creation and update timestamps.
+
+### `UnifiedId`
+#### Description
+An enum representing a unified identifier that can be either a Trieve UUID or a tracking ID.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `TrieveUuid` (`uuid::Uuid`) and `TrackingId` (`String`). It provides methods for accessing the UUID or tracking ID value.
+
+### `QdrantPayload`
+#### Description
+Represents a payload for a Qdrant point.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the payload's tag set, link, metadata, timestamp, dataset ID, content, group IDs, location, numerical value, and group tag set. It provides methods for creating new Qdrant payload instances from chunk metadata and converting a `QdrantPayload` to a Qdrant `Payload`.
+
+### `FileWorkerMessage`
+#### Description
+Represents a message for the file worker.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the file ID, dataset ID, upload file data (`UploadFileReqPayload`), and attempt number.
+
+### `RangeCondition`
+#### Description
+An enum representing a range condition for numerical or integer values.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Float` (`f64`) and `Int` (`i64`).
+
+### `Range`
+#### Description
+Represents a range of numerical values.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the lower and upper bounds of the range, both inclusive and exclusive.
+
+### `DateRange`
+#### Description
+Represents a range of dates.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the lower and upper bounds of the range, both inclusive and exclusive, represented as strings.
+
+### `MatchCondition`
+#### Description
+An enum representing a match condition for text, integer, or float values.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `Text` (`String`), `Integer` (`i64`), and `Float` (`f64`). It provides methods for converting the match condition to a string, `i64`, or `f64`.
+
+### `LocationBoundingBox`
+#### Description
+Represents a bounding box for a geographical location.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the top-left and bottom-right corners of the bounding box, both represented as `GeoInfo`.
+
+### `LocationRadius`
+#### Description
+Represents a radius around a geographical location.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the center of the radius (`GeoInfo`) and the radius value (`f64`).
+
+### `LocationPolygon`
+#### Description
+Represents a polygon for a geographical location.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the exterior ring of the polygon (`Vec&lt;GeoInfo&gt;`) and optional interior rings (`Option&lt;Vec&lt;Vec&lt;GeoInfo&gt;&gt;&gt;`).
+
+### `ConditionType`
+#### Description
+An enum representing different types of conditions for filtering chunks.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Field` (`FieldCondition`) and `HasID` (`HasIDCondition`).
+
+### `HasIDCondition`
+#### Description
+Represents a condition for filtering chunks by their IDs or tracking IDs.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the list of IDs (`Option&lt;Vec&lt;uuid::Uuid&gt;&gt;`) and tracking IDs (`Option&lt;Vec&lt;String&gt;&gt;`).
+
+### `FieldCondition`
+#### Description
+Represents a condition for filtering chunks by a specific field.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the field name, match conditions (any or all), range, date range, and geographical location filters. It provides a method for converting the field condition to a Qdrant condition.
+
+### `SearchQueryEvent`
+#### Description
+Represents a search query event.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, search type, query, request parameters, latency, top score, results, dataset ID, creation timestamp, query rating, and user ID.
+
+### `SearchQueryEventClickhouse`
+#### Description
+Represents a search query event stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, search type, query, request parameters, latency, top score, results, dataset ID, creation timestamp, query rating, and user ID.
+
+### `SearchResultType`
+#### Description
+An enum representing different types of search results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Search` (`ScoreChunkDTO`) and `GroupSearch` (`GroupScoreChunk`).
+
+### `RagQueryEvent`
+#### Description
+Represents a RAG query event.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, RAG type, user message, search ID, results, dataset ID, creation timestamp, and user ID.
+
+### `RagQueryEventClickhouse`
+#### Description
+Represents a RAG query event stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, RAG type, user message, search ID, results, LLM response, dataset ID, creation timestamp, and user ID.
+
+### `ClusterTopicsClickhouse`
+#### Description
+Represents cluster topics stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the cluster topic's ID, dataset ID, topic, density, average score, and creation timestamp.
+
+### `SearchClusterTopics`
+#### Description
+Represents search cluster topics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the cluster topic's ID, dataset ID, topic, density, average score, and creation timestamp.
+
+### `RecommendationEventClickhouse`
+#### Description
+Represents a recommendation event stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, recommendation type, positive and negative IDs and tracking IDs, request parameters, results, top score, dataset ID, creation timestamp, and user ID.
+
+### `RecommendationEvent`
+#### Description
+Represents a recommendation event.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the event's ID, recommendation type, positive and negative IDs and tracking IDs, request parameters, results, top score, dataset ID, creation timestamp, and user ID.
+
+### `SearchType`
+#### Description
+An enum representing different types of searches.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has four variants: `Search`, `Autocomplete`, `SearchOverGroups`, and `SearchWithinGroups`.
+
+### `SearchMethod`
+#### Description
+An enum representing different search methods.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has four variants: `FullText`, `Semantic`, `Hybrid`, and `BM25`.
+
+### `SuggestType`
+#### Description
+#### Description
+An enum representing different types of suggestions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `Question`, `Keyword`, and `Semantic`.
+
+### `CountSearchMethod`
+#### Description
+An enum representing different search methods for counting chunks.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `FullText`, `Semantic`, and `BM25`.
+
+### `SearchAnalyticsFilter`
+#### Description
+Represents a filter for search analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for date range, search method, and search type filters. It provides a method for adding the filter conditions to a ClickHouse query string.
+
+### `TopDatasetsResponse`
+#### Description
+Represents a response for top datasets.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the dataset ID, dataset tracking ID, and total queries.
+
+### `TopDatasetsResponseClickhouse`
+#### Description
+Represents a response for top datasets stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the dataset ID and total queries.
+
+### `TopDatasetsRequestTypes`
+#### Description
+An enum representing different types of requests for top datasets.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `Search`, `RAG`, and `Recommendation`.
+
+### `RagTypes`
+#### Description
+An enum representing different types of RAG queries.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `ChosenChunks` and `AllChunks`.
+
+### `RAGAnalyticsFilter`
+#### Description
+Represents a filter for RAG analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for date range and RAG type filters. It provides a method for adding the filter conditions to a ClickHouse query string.
+
+### `ClusterAnalyticsFilter`
+#### Description
+Represents a filter for cluster analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for a date range filter. It provides a method for adding the filter condition to a ClickHouse query string.
+
+### `RecommendationType`
+#### Description
+An enum representing different types of recommendations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Chunk` and `Group`.
+
+### `RecommendationAnalyticsFilter`
+#### Description
+Represents a filter for recommendation analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for date range and recommendation type filters. It provides a method for adding the filter conditions to a ClickHouse query string.
+
+### `DatasetAnalytics`
+#### Description
+Represents dataset analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for total queries, search requests per second, average latency, and percentiles for latency (p99, p95, p50).
+
+### `HeadQueries`
+#### Description
+Represents head queries.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the query and its count.
+
+### `UsageGraphPointClickhouse`
+#### Description
+Represents a usage graph point stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the timestamp and the number of requests.
+
+### `UsageGraphPoint`
+#### Description
+Represents a usage graph point.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the timestamp and the number of requests.
+
+### `SearchLatencyGraphClickhouse`
+#### Description
+Represents a search latency graph point stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the timestamp and the average latency.
+
+### `SearchLatencyGraph`
+#### Description
+Represents a search latency graph point.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the timestamp and the average latency.
+
+### `SearchCTRMetricsClickhouse`
+#### Description
+Represents search CTR metrics stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the number of searches with clicks, the percentage of searches with and without clicks, and the average position of clicks.
+
+### `SearchCTRMetrics`
+#### Description
+Represents search CTR metrics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the number of searches with clicks, the percentage of searches with and without clicks, and the average position of clicks.
+
+### `RecommendationCTRMetrics`
+#### Description
+Represents recommendation CTR metrics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the number of recommendations with clicks, the percentage of recommendations with clicks, and the average position of clicks.
+
+### `ChunkData`
+#### Description
+Represents data for a chunk.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the chunk metadata, content, group IDs, upsert by tracking ID flag, full-text boost, and semantic boost.
+
+### `SearchTypeCount`
+#### Description
+Represents the count of searches for a specific search type.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the search type, search method, and search count.
+
+### `PopularFiltersClickhouse`
+#### Description
+Represents popular filters stored in ClickHouse.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the clause, field, filter type, count, and common values.
+
+### `PopularFilters`
+#### Description
+Represents popular filters.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the clause, field, filter type, count, and common values.
+
+### `StripeInvoice`
+#### Description
+Represents a Stripe invoice.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the invoice's ID, organization ID, total, creation timestamp, status, hosted invoice URL, and Stripe ID. It provides a method for creating new Stripe invoice instances from details.
+
+### `Granularity`
+#### Description
+An enum representing different time granularities.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has four variants: `Minute`, `Second`, `Hour`, and `Day`.
+
+### `SearchSortBy`
+#### Description
+An enum representing different fields to sort search results by.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `CreatedAt`, `Latency`, and `TopScore`.
+
+### `RAGSortBy`
+#### Description
+An enum representing different fields to sort RAG results by.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `CreatedAt` and `Latency`.
+
+### `SortOrder`
+#### Description
+An enum representing different sort orders.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Desc` and `Asc`.
+
+### `SearchAnalytics`
+#### Description
+An enum representing different types of search analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has several variants, each representing a specific type of search analytics, such as `LatencyGraph`, `SearchUsageGraph`, `SearchMetrics`, etc. Each variant may have associated data, such as filters, granularity, page number, or threshold.
+
+### `RAGAnalytics`
+#### Description
+An enum representing different types of RAG analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `RAGQueries`, `RAGUsage`, and `RAGUsageGraph`. Each variant may have associated data, such as filters, page number, sort by, or sort order.
+
+### `RecommendationAnalytics`
+#### Description
+An enum representing different types of recommendation analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `LowConfidenceRecommendations` and `RecommendationQueries`. Each variant may have associated data, such as filters, page number, threshold, sort by, or sort order.
+
+### `ClusterAnalytics`
+#### Description
+An enum representing different types of cluster analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `ClusterTopics` and `ClusterQueries`. Each variant may have associated data, such as filters, cluster ID, or page number.
+
+### `CTRAnalytics`
+#### Description
+An enum representing different types of CTR analytics.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has six variants: `SearchCTRMetrics`, `SearchesWithClicks`, `SearchesWithoutClicks`, `RecommendationCTRMetrics`, `RecommendationsWithClicks`, and `RecommendationsWithoutClicks`. Each variant may have associated data, such as filters or page number.
+
+### `RAGUsageResponse`
+#### Description
+Represents a response for RAG usage.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines a field for the total number of queries.
+
+### `RAGUsageGraphResponse`
+#### Description
+Represents a response for a RAG usage graph.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines a field for a vector of usage points (`Vec&lt;UsageGraphPoint&gt;`).
+
+### `RecommendationStrategy`
+#### Description
+An enum representing different strategies for generating recommendations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `AverageVector` and `BestScore`.
+
+### `RecommendType`
+#### Description
+An enum representing different types of recommendations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has three variants: `Semantic`, `FullText`, and `BM25`.
+
+### `EventTypeRequest`
+#### Description
+An enum representing different types of event requests.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has several variants, each representing a specific event type, such as `FileUploaded`, `FileUploadFailed`, `ChunksUploaded`, etc.
+
+### `MigrationMode`
+#### Description
+An enum representing different modes for migrating Qdrant points.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum currently has one variant: `BM25`, which includes parameters for average length, k, and b.
+
+### `MigratePointMessage`
+#### Description
+Represents a message for migrating Qdrant points.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the Qdrant point IDs, target and source collections, and migration mode.
+
+### `SortByField`
+#### Description
+Represents a field to sort Qdrant results by.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the field name, sort direction, and prefetch amount.
+
+### `SortBySearchType`
+#### Description
+Represents a search type to sort Qdrant results by.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the rerank type, prefetch amount, and rerank query.
+
+### `QdrantSortBy`
+#### Description
+An enum representing different ways to sort Qdrant results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Field` (`SortByField`) and `SearchType` (`SortBySearchType`).
+
+### `ReRankOptions`
+#### Description
+An enum representing different options for reranking search results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has four variants: `Semantic`, `Fulltext`, `BM25`, and `CrossEncoder`.
+
+### `CTRType`
+#### Description
+An enum representing different types of CTR data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Search` and `Recommendation`.
+
+### `SortOptions`
+#### Description
+Represents options for sorting search results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for sort by, location bias, use weights flag, and tag weights.
+
+### `HighlightOptions`
+#### Description
+Represents options for highlighting search results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for highlight results flag, highlight strategy, highlight threshold, highlight delimiters, maximum highlight length and number, and highlight window.
+
+### `LLMOptions`
+#### Description
+Represents options for LLM completions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for completion first flag, stream response flag, temperature, frequency penalty, presence penalty, maximum tokens, stop tokens, and system prompt.
+
+### `SearchChunksReqPayload`
+#### Description
+Represents a request payload for searching chunks.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the search type, query, page, page size, get total pages flag, filters, sort options, highlight options, score threshold, slim chunks flag, content only flag, use quote negated terms flag, remove stop words flag, and user ID.
+
+### `AutocompleteReqPayload`
+#### Description
+Represents a request payload for autocompleting queries.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the search type, extend results flag, query, page size, filters, sort options, highlight options, score threshold, slim chunks flag, content only flag, use quote negated terms flag, remove stop words flag, and user ID.
+
+### `SearchWithinGroupReqPayload`
+#### Description
+Represents a request payload for searching within a group.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+#### Internal Logic
+The struct defines fields for the search type, query, page, page size, group ID, group tracking ID, get total pages flag, filters, sort options, highlight options, score threshold, slim chunks flag, content only flag, use quote negated terms flag, remove stop words flag, and user ID.
+
+### `SearchOverGroupsReqPayload`
+#### Description
+Represents a request payload for searching over groups.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the search type, query, page, page size, get total pages flag, filters, group size, highlight options, score threshold, slim chunks flag, use quote negated terms flag, remove stop words flag, and user ID.
+
+### `CreateMessageReqPayload`
+#### Description
+Represents a request payload for creating a message.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the new message content, topic ID, highlight options, search type, concatenate user messages query flag, search query, page size, filters, score threshold, LLM options, and user ID.
+
+### `RegenerateMessageReqPayload`
+#### Description
+Represents a request payload for regenerating a message.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the topic ID, highlight options, search type, concatenate user messages query flag, search query, page size, filters, score threshold, LLM options, and user ID.
+
+### `EditMessageReqPayload`
+#### Description
+Represents a request payload for editing a message.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the topic ID, message sort order, new message content, highlight options, search type, concatenate user messages query flag, search query, page size, filters, score threshold, LLM options, and user ID.
+
+### `MultiQuery`
+#### Description
+Represents a multi-query for semantic search.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct defines fields for the query and its weight.
+
+### `QueryTypes`
+#### Description
+An enum representing different types of queries.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The enum has two variants: `Single` (`String`) and `Multi` (`Vec&lt;MultiQuery&gt;`). It provides a method for converting a `QueryTypes` to a single query string.

@@ -3,49 +3,53 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for altering the structure of the `card_metadata` and `files` tables in a database. The migration is identified by the timestamp 2023-09-15-061217 and focuses on introducing JSON columns for metadata storage and renaming existing columns.
+This directory contains SQL migration scripts for modifying the database schema, specifically targeting the `card_metadata` and `files` tables. The migration is focused on renaming columns and adding a new JSON-based metadata column, enhancing the flexibility and data storage capabilities of the system.
 
 ## What does it do?
-The migration scripts in this directory perform the following changes to the database schema:
+The migration scripts in this directory perform the following changes to the database:
 
-1. In both the `card_metadata` and `files` tables, they rename the column `oc_file_path` to `tag_set`. This suggests a shift in how the system conceptualizes this data, moving from a file path representation to a set of tags.
+1. In both the `card_metadata` and `files` tables, they rename the `oc_file_path` column to `tag_set`. This suggests a shift in how the system conceptualizes and uses this data, moving from a file path representation to a more abstract tag-based system.
 
-2. In the `card_metadata` table, they add a new column called `metadata` of type JSONB. This allows for flexible storage of additional metadata in JSON format for each card.
+2. In the `card_metadata` table, they add a new column called `metadata` of type JSONB (JSON Binary). This column is nullable and defaults to an empty JSON object. This addition allows for storing flexible, schema-less metadata associated with each card, which can be particularly useful for accommodating various types of metadata without needing to alter the table structure for each new type of information.
 
-These changes enable more versatile data storage and retrieval, particularly for metadata associated with cards. The use of a JSONB column allows for storing complex, nested data structures without needing to define a rigid schema for every possible metadata field.
-
-The migration is reversible, with separate scripts for applying the changes (up.sql) and reverting them (down.sql).
+These changes indicate an evolution in the data model, likely to support more flexible and diverse metadata storage, as well as a potential shift in how files or cards are categorized and accessed within the system.
 
 ## Key Files
 
-1. up.sql
-   - This file contains the SQL statements to apply the migration.
-   - It renames the `oc_file_path` column to `tag_set` in both `card_metadata` and `files` tables.
-   - It adds the `metadata` JSONB column to the `card_metadata` table.
-
-2. down.sql
-   - This file contains the SQL statements to revert the migration.
-   - It renames the `tag_set` column back to `oc_file_path` in both `card_metadata` and `files` tables.
-   - It drops the `metadata` column from the `card_metadata` table.
-
-## Configuration
-The migration uses standard SQL syntax and doesn't require any special configuration. However, it's important to note the following details:
-
-- The new `metadata` column in the `card_metadata` table is defined as nullable (`NULL`) with a default value of an empty JSON object (`'{}'::JSONB`).
-- The migration assumes the existence of `card_metadata` and `files` tables in the database.
-
-Here's a breakdown of the key SQL statements in the migration:
+### up.sql
+This file contains the SQL statements to apply the migration:
 
 ```sql
--- In up.sql
 ALTER TABLE card_metadata RENAME COLUMN oc_file_path TO tag_set;
 ALTER TABLE card_metadata ADD COLUMN metadata JSONB NULL DEFAULT '{}'::JSONB;
 ALTER TABLE files RENAME COLUMN oc_file_path TO tag_set;
+```
 
--- In down.sql
+These statements perform the column renaming in both tables and add the new JSONB column to the `card_metadata` table.
+
+### down.sql
+This file contains the SQL statements to revert the migration:
+
+```sql
 ALTER TABLE card_metadata RENAME COLUMN tag_set TO oc_file_path;
 ALTER TABLE card_metadata DROP COLUMN metadata;
 ALTER TABLE files RENAME COLUMN tag_set TO oc_file_path;
 ```
 
-These statements demonstrate the precise changes being made to the database schema, allowing for easy application and reversal of the migration.
+These statements undo the changes made by the `up.sql` script, reverting the column names and removing the added `metadata` column.
+
+## Configuration
+The migration is identified by its timestamp: `2023-09-15-061217`. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
+
+No additional configuration appears to be required for this migration. The scripts are straightforward SQL statements that can be executed directly on the database.
+
+## Dependencies
+The migration scripts rely on PostgreSQL-specific features:
+
+1. The use of the JSONB data type, which is a PostgreSQL-specific implementation of JSON storage. This allows for efficient storage and querying of JSON data.
+
+2. The `::JSONB` type casting syntax, which is used to set the default value of the new `metadata` column to an empty JSON object.
+
+These features indicate that the application is using PostgreSQL as its database system, likely version 9.4 or later, which introduced the JSONB data type.
+
+The choice of PostgreSQL and JSONB for metadata storage suggests a need for flexible, schema-less data storage within a relational database context. This approach allows for storing varied metadata without requiring frequent schema changes, while still maintaining the benefits of a robust relational database system for other structured data.

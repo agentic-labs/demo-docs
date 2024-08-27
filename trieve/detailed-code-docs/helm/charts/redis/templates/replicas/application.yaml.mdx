@@ -3,101 +3,54 @@ title: "application.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes YAML template for deploying Redis replica instances in a replication architecture. It configures various aspects of the deployment, including container images, ports, environment variables, resource limits, persistence, probes, and security contexts.
+This Kubernetes manifest file defines a Redis replica deployment for a Redis cluster with replication architecture. It creates a StatefulSet or DaemonSet (based on configuration) to manage Redis replica pods, including their configuration, security settings, persistence, and optional metrics exporter.
 
 ## Code Structure
-This code defines a Kubernetes template for a StatefulSet representing Redis replicas. It leverages various Helm template functions and includes other templates to define the replica deployment. The template conditionally includes configurations based on enabled features like TLS, authentication, and metrics.
-
-## References
-- `redis.imagePullSecrets`: Includes a template for defining image pull secrets.
-- `common.labels.standard`: Includes a template for generating standard labels.
-- `common.names.fullname`: Includes a template for generating the full name of the release.
-- `common.names.namespace`: Includes a template for getting the namespace.
-- `redis.replicaServiceAccountName`: Includes a template for the replica service account name.
-- `redis.image`: Includes a template for the Redis image.
-- `redis.secretName`: Includes a template for the secret name.
-- `redis.secretPasswordKey`: Includes a template for the secret password key.
-- `redis.tlsCert`: Includes a template for the TLS certificate.
-- `redis.tlsCertKey`: Includes a template for the TLS certificate key.
-- `redis.tlsCACert`: Includes a template for the TLS CA certificate.
-- `redis.tlsDHParams`: Includes a template for the TLS DH parameters.
-- `redis.metrics.image`: Includes a template for the Redis metrics image.
-- `redis.volumePermissions.image`: Includes a template for the volume permissions image.
-- `redis.sysctl.image`: Includes a template for the sysctl image.
-- `redis.configmapName`: Includes a template for the config map name.
-- `redis.tlsSecretName`: Includes a template for the TLS secret name.
-- `common.tplvalues.render`: Includes a template for rendering values.
-- `common.affinities.pods`: Includes a template for pod affinities.
-- `common.affinities.nodes`: Includes a template for node affinities.
-- `common.storage.class`: Includes a template for storage class.
+The file is a Kubernetes resource template using Helm templating. It defines a StatefulSet or DaemonSet for Redis replicas, including container specifications, volume mounts, and various configuration options. The template is conditionally rendered based on the values provided in the Helm chart.
 
 ## Symbols
-### `helm/charts/redis/templates/replicas/application.yaml`
+
+### Redis Replica Deployment
 #### Description
-This template defines a Kubernetes StatefulSet for deploying Redis replica instances. It configures the replicas to connect to a master instance and includes options for persistence, resource limits, probes, and security contexts.
+This is the main Kubernetes resource (StatefulSet or DaemonSet) that defines the Redis replica deployment.
 
 #### Inputs
-This template uses values from the `Values` object passed to the Helm template engine. Key values used include:
-- `.Values.architecture`: Defines the Redis architecture (standalone or replication).
-- `.Values.sentinel.enabled`: Indicates whether Redis Sentinel is enabled.
-- `.Values.replica.*`: Configuration values specific to Redis replicas.
-- `.Values.master.*`: Configuration values specific to Redis master.
-- `.Values.tls.*`: Configuration values related to TLS.
-- `.Values.auth.*`: Configuration values related to authentication.
-- `.Values.metrics.*`: Configuration values related to metrics.
-- `.Values.volumePermissions.*`: Configuration values related to volume permissions.
-- `.Values.sysctl.*`: Configuration values related to sysctl.
-
-#### Outputs
-This template renders a Kubernetes YAML manifest for a StatefulSet defining the Redis replica deployment.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values | Object | Helm values for configuring the Redis deployment |
 
 #### Internal Logic
-The template conditionally includes configurations based on the enabled features and provided values. It defines:
-- **Metadata**: Name, namespace, labels, and annotations for the StatefulSet and its pods.
-- **Spec**:
-    - **Replicas**: Number of replica instances to deploy.
-    - **Selector**: Labels used to select pods for the StatefulSet.
-    - **ServiceName**: Headless service name for the StatefulSet.
-    - **UpdateStrategy**: Strategy for updating the StatefulSet.
-    - **Template**: Defines the pod template for the StatefulSet, including:
-        - **Metadata**: Labels and annotations for the pods.
-        - **Spec**:
-            - **ImagePullSecrets**: Secrets used to pull container images.
-            - **SecurityContext**: Security context for the pod.
-            - **ServiceAccountName**: Service account used by the pod.
-            - **Containers**: Definitions for the Redis and metrics containers, including:
-                - **Name**: Name of the container.
-                - **Image**: Container image to use.
-                - **Ports**: Ports exposed by the container.
-                - **Env**: Environment variables passed to the container.
-                - **VolumeMounts**: Volumes mounted inside the container.
-            - **Volumes**: Definitions for volumes used by the pod.
+1. Checks if replication architecture is enabled and sentinel is disabled
+2. Sets up metadata, labels, and annotations
+3. Configures pod template with security contexts, affinity rules, and tolerations
+4. Defines the Redis container with appropriate environment variables and volume mounts
+5. Optionally adds a metrics exporter container
+6. Sets up volume claims for persistence (if enabled)
 
 ## Side Effects
-This code defines a Kubernetes StatefulSet, which, when applied to a Kubernetes cluster, will create and manage the desired number of Redis replica pods.
+- Creates Kubernetes resources (StatefulSet or DaemonSet, PersistentVolumeClaims)
+- Mounts configuration and secret volumes
+- Potentially modifies filesystem permissions through init containers
 
 ## Dependencies
-This code depends on the Helm template engine and various Helm template functions. It also includes other templates from the same chart to define specific parts of the deployment.
+| Dependency | Purpose |
+|:-----------|:--------|
+| Redis image | Main application container |
+| Metrics exporter image | Optional container for exposing Prometheus metrics |
 
 ## Configuration
-This template uses a hierarchical structure of configuration values passed through the `Values` object. The configuration options are extensive and cover various aspects of the deployment, including:
-- Redis architecture (standalone or replication)
-- Authentication settings
-- Master and replica configurations
-- Persistence settings
-- Resource limits
-- Probes
-- Security contexts
-- TLS settings
-- Metrics settings
-- Volume permissions
-- Sysctl settings
+The deployment can be extensively configured through Helm values, including:
+- Redis replication settings
+- Security contexts and authentication
+- Persistence options
+- Metrics and monitoring
+- Affinity and tolerations
+- Resource requests and limits
 
 ## Error Handling
-This code does not implement specific error handling beyond the standard error handling provided by the Helm template engine and Kubernetes.
+Error handling is primarily managed through Kubernetes' built-in mechanisms for container restarts and health checks.
 
 ## Logging
-This code does not implement specific logging mechanisms.
+Logging configuration is not explicitly defined in this template but would be handled by the Redis application itself.
 
-## API/Interface Reference
-This code does not expose an API or public interface.
+This template provides a flexible and configurable way to deploy Redis replicas in a Kubernetes environment, with options for high availability, persistence, and monitoring.

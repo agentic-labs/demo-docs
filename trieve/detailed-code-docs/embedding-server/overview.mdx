@@ -3,80 +3,94 @@ title: "Overview"
 ---
 
 ## High-level description
-This code defines a FastAPI application that serves as an embedding server. It loads a pre-trained Hugging Face Transformer model and exposes an API endpoint `/embeddings` to generate embeddings for given text inputs. 
-
-The application can handle both single string inputs and lists of strings, returning the corresponding embeddings in the OpenAI embedding format.
+This code implements an embedding server using FastAPI. It provides an endpoint for generating embeddings from input text using a pre-trained transformer model. The server is designed to be compatible with OpenAI's embedding API format.
 
 ## Code Structure
-The code first loads environment variables and initializes a Hugging Face model. Then, it defines Pydantic models for request and response data structures. Finally, it sets up a FastAPI app with a single POST endpoint `/embeddings` that uses the loaded model to generate embeddings for the input text.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| `transformers` | Provides utilities for loading and using Hugging Face Transformer models. |
-| `fastapi` | Used to build the API server. |
-| `pydantic` | Defines data models for request and response validation. |
-| `numpy` | Used for numerical operations, specifically for calculating vector norms. |
-| `dotenv` | Loads environment variables from a .env file. |
+The main components of the code are:
+1. Model initialization: Loads a pre-trained transformer model specified in the environment.
+2. FastAPI app setup: Creates a FastAPI application and defines the embedding endpoint.
+3. Input/Output models: Defines Pydantic models for request and response data structures.
+4. Embedding generation: Implements the logic to generate embeddings from input text.
 
 ## Symbols
 
-### `model_name`
-#### Description
-This variable stores the name of the Hugging Face Transformer model to be used for generating embeddings. It is loaded from the environment variable `MODEL`.
-
 ### `model`
 #### Description
-This variable holds the instance of the loaded Hugging Face Transformer model. It is initialized with the model specified by `model_name`, configured to use GPU if available (`device_map='cuda'`), and stores downloaded models in the `./models` directory.
+A pre-trained transformer model loaded from the specified `MODEL` environment variable.
+
+#### Inputs
+None (initialized at module level)
+
+#### Outputs
+None (stored as a global variable)
 
 ### `app`
 #### Description
-An instance of the FastAPI application. It serves as the main entry point for handling incoming requests and routing them to the appropriate endpoint.
+The FastAPI application instance.
+
+#### Inputs
+None (initialized at module level)
+
+#### Outputs
+None (used to define routes and run the server)
 
 ### `OpenAIEmbeddingInput`
 #### Description
-A Pydantic model defining the structure of the expected input data for the `/embeddings` endpoint. It accepts either a single string or a list of strings as input.
+A Pydantic model defining the structure of the input data for the embedding endpoint.
 
 #### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| input | `Union[List[str], str]` | The text input for which to generate embeddings. Can be a single string or a list of strings. |
+- `input`: Union[List[str], str] - The text input(s) to generate embeddings for.
 
 ### `_EmbeddingObject`
 #### Description
-A Pydantic model defining the structure of a single embedding object within the response data. It includes the embedding vector, the object type ("embedding"), and the index of the input text corresponding to this embedding.
+A Pydantic model representing a single embedding result.
 
 #### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| embedding | `list[float]` | The generated embedding vector for the input text. |
-| index | `int` | The index of the input text corresponding to this embedding. |
+- `object`: Literal["embedding"] - Always set to "embedding".
+- `embedding`: list[float] - The generated embedding vector.
+- `index`: int - The index of the embedding in the input list.
 
 ### `OpenAIEmbeddingResult`
 #### Description
-A Pydantic model defining the structure of the response data returned by the `/embeddings` endpoint. It includes a list of embedding objects and the object type ("list").
+A Pydantic model representing the overall embedding result.
 
 #### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| data | `List[_EmbeddingObject]` | A list of embedding objects, each containing the embedding vector, object type, and index. |
+- `data`: List[_EmbeddingObject] - A list of embedding objects.
+- `object`: Literal["embedding"] - Always set to "embedding".
 
 ### `embed`
 #### Description
-This function defines the logic for the `/embeddings` endpoint. It receives the input text data, generates embeddings using the loaded Hugging Face model, and returns the results in the OpenAI embedding format.
+The main function handling the `/embeddings` endpoint. It generates embeddings for the given input text(s).
 
 #### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| data | `OpenAIEmbeddingInput` | The input data containing the text to be embedded. |
+- `data`: OpenAIEmbeddingInput - The input data containing text to embed.
 
 #### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| response | `dict` | A dictionary containing the generated embeddings in the OpenAI embedding format. |
+- A dictionary containing the generated embeddings and metadata.
 
 #### Internal Logic
-1. Receives the input text data from the request.
-2. Uses the loaded Hugging Face model (`model`) to generate embeddings for the input text.
-3. Constructs the response dictionary in the OpenAI embedding format, including the embedding vectors, object type, model name, and index for each input text.
-4. Returns the response dictionary.
+1. Prints the input data for debugging.
+2. Generates embeddings using the pre-loaded model.
+3. Prints the generated embeddings for debugging.
+4. Constructs the response based on whether the input is a single string or a list of strings.
+5. Returns the formatted response with embeddings and metadata.
+
+## Dependencies
+- transformers: For loading and using the pre-trained model.
+- fastapi: For creating the API server.
+- pydantic: For input/output data validation and serialization.
+- numpy: For vector operations.
+- dotenv: For loading environment variables.
+- os: For accessing environment variables.
+
+## Configuration
+The code uses the following environment variable:
+- `MODEL`: Specifies the name or path of the pre-trained model to be loaded.
+
+## Error Handling
+The code doesn't implement explicit error handling. It relies on FastAPI's built-in error handling and validation.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /embeddings | POST | OpenAIEmbeddingInput | Dict containing embeddings and metadata | Generates embeddings for given text input(s) |

@@ -3,47 +3,49 @@ title: "psp.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Pod Security Policy (PSP) for Redis master pods in a Helm chart. It specifies security restrictions like disallowing privilege escalation, enforcing specific user and group IDs, and limiting allowed volume types. This policy enhances the security posture of deployed Redis master instances.
-
-## References
-This code references other parts of the Helm chart, including:
-* `"common.capabilities.psp.supported"`: Checks if PSPs are supported in the current environment.
-* `"common.names.fullname"`: Retrieves the full name for the Redis deployment.
-* `"common.names.namespace"`: Retrieves the namespace for the Redis deployment.
-* `"common.labels.standard"`: Includes standard labels for the Redis deployment.
-* `"common.tplvalues.render"`: Renders template values for annotations.
-* `.Values.podSecurityPolicy.create`: Checks if the PSP should be created.
-* `.Values.commonLabels`: Retrieves custom labels for the deployment.
-* `.Values.commonAnnotations`: Retrieves custom annotations for the deployment.
-* `.Values.master.podSecurityContext.fsGroup`: Retrieves the desired fsGroup for Redis master pods.
-* `.Values.master.containerSecurityContext.runAsUser`: Retrieves the desired user ID for running the Redis master container.
+This YAML file defines a Kubernetes PodSecurityPolicy (PSP) for the Redis master pod in a Helm chart. It sets up security constraints for the Redis master pod, including restrictions on privileges, file system access, and user/group permissions.
 
 ## Symbols
-### `psp.yaml`
+
+### PodSecurityPolicy
 #### Description
-This YAML file defines a Pod Security Policy named `&lt;release-name&gt;-master` for Redis master pods. It enforces various security constraints to limit the pod's privileges and capabilities.
+This Kubernetes resource defines the security context constraints for pods. It's specifically tailored for the Redis master pod in this Helm chart.
 
 #### Inputs
-This code snippet doesn't have explicit input parameters. It relies on values passed from the Helm chart engine during deployment.
-
-#### Outputs
-This code defines a Kubernetes PodSecurityPolicy object. When applied, it enforces the defined security restrictions on any Redis master pod created within the specified namespace.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.podSecurityPolicy.create | Boolean | Determines if the PSP should be created |
+| .Values.commonLabels | Map | Custom labels to be applied to the resource |
+| .Values.commonAnnotations | Map | Custom annotations to be applied to the resource |
+| .Values.master.podSecurityContext.fsGroup | Integer | The fsGroup ID for the pod |
+| .Values.master.containerSecurityContext.runAsUser | Integer | The user ID the container should run as |
 
 #### Internal Logic
-The policy definition includes:
-* **Disabling privilege escalation:** `allowPrivilegeEscalation: false` prevents containers from gaining more privileges than their assigned user.
-* **Restricting fsGroup:** `fsGroup` enforces that the pod must run with a specific group ID, limiting access to shared volumes.
-* **Disabling host resources:** `hostIPC`, `hostNetwork`, and `hostPID` are set to `false` to prevent the pod from accessing host resources directly.
-* **Disabling privileged mode:** `privileged: false` prevents the pod from running with root privileges.
-* **Enforcing read-only root filesystem:** `readOnlyRootFilesystem: false` allows write access to the root filesystem within the pod.
-* **Dropping capabilities:** `requiredDropCapabilities` drops all Linux capabilities from the container, further reducing its privileges.
-* **Restricting runAsUser:** `runAsUser` enforces that the container must run with a specific user ID.
-* **Allowing any SELinux context:** `seLinux` allows the pod to run with any SELinux context.
-* **Restricting supplemental groups:** `supplementalGroups` limits the additional groups the pod can belong to.
-* **Allowing specific volume types:** `volumes` whitelists the allowed volume types for the pod.
+1. The PSP is only created if PSP is supported by the cluster and `.Values.podSecurityPolicy.create` is true.
+2. The PSP name is generated using the `common.names.fullname` template with "-master" appended.
+3. Labels and annotations are applied using common templates.
+4. The spec section defines various security constraints:
+   - Disables privilege escalation
+   - Sets fsGroup, runAsUser, and supplementalGroups rules
+   - Disables host IPC, network, and PID access
+   - Disables privileged mode
+   - Drops all capabilities
+   - Allows specific volume types
 
 ## Dependencies
-This code depends on the Kubernetes API version `policy/v1beta1` for the PodSecurityPolicy object definition.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.capabilities.psp.supported | Checks if PSP is supported in the cluster |
+| common.names.fullname | Generates the full name for the resource |
+| common.names.namespace | Retrieves the namespace |
+| common.labels.standard | Applies standard labels |
+| common.tplvalues.render | Renders template values |
 
 ## Configuration
-This code relies on values passed from the Helm chart during deployment. These values, prefixed with `.Values`, configure various aspects of the Pod Security Policy, such as user IDs, group IDs, and allowed volume types.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| podSecurityPolicy.create | Boolean | - | Whether to create the PSP |
+| master.podSecurityContext.fsGroup | Integer | - | The fsGroup for the pod |
+| master.containerSecurityContext.runAsUser | Integer | - | The user ID for the container |
+
+Note: This file is part of a larger Helm chart for Redis, specifically focusing on the master pod's security policy. The actual default values are not provided in this file and would be defined elsewhere in the chart.

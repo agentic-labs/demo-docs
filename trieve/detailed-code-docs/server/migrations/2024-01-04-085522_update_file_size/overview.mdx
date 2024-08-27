@@ -3,67 +3,76 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for updating file size tracking in a database. It includes two files: `up.sql` for applying the changes and `down.sql` for rolling them back. The migration introduces a new trigger and function to maintain accurate file storage counts for organizations based on changes to the `files` table.
+This directory contains SQL migration scripts for updating the file size tracking mechanism in a database. It consists of two files: `up.sql` for applying the changes and `down.sql` for rolling them back. The migration introduces a new trigger and function to automatically update file storage counts for organizations whenever files are inserted, updated, or deleted.
 
 ## What does it do?
-The migration enhances the database to automatically track and update file storage usage for organizations. When files are added, modified, or deleted, the system now automatically recalculates the total file storage used by each organization. This ensures that the organization's usage statistics are always up-to-date without requiring manual intervention.
+The migration enhances the database's ability to track file storage usage per organization. It creates a system where:
+
+1. Whenever a file is added, updated, or deleted in the `files` table, the total file storage for the associated organization is automatically recalculated.
+2. This recalculation is done through a trigger that fires after each relevant operation on the `files` table.
+3. The trigger calls a function that updates the `file_storage` column in the `organization_usage_counts` table, ensuring it always reflects the current total size of files for each organization.
+
+This automated process eliminates the need for manual updates or separate processes to keep track of file storage usage, providing real-time accuracy in storage tracking.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL commands to implement the new file size tracking system. It does the following:
+This file contains the SQL commands to apply the migration:
 
-1. Creates a function `update_files_storage_counts_with_update()` that calculates file storage changes.
-2. Sets up a trigger `update_files_storage_with_update_trigger` on the `files` table.
-3. The trigger fires after INSERT, UPDATE, or DELETE operations on the `files` table.
-4. For each affected row, it updates the `file_storage` count in the `organization_usage_counts` table.
+1. It defines a function `update_files_storage_counts_with_update()` that handles the logic for updating the `file_storage` column in the `organization_usage_counts` table.
+2. It creates a trigger `update_files_storage_with_update_trigger` on the `files` table that calls this function after INSERT, UPDATE, or DELETE operations.
 
-The function handles different scenarios:
-- For new files (INSERT), it adds the file size to the organization's total.
-- For updated files (UPDATE), it adjusts the total by the difference in file sizes.
-- For deleted files (DELETE), it subtracts the file size from the organization's total.
+The function's logic is as follows:
+- For INSERT: It adds the new file's size to the organization's total storage.
+- For UPDATE: It subtracts the old file size and adds the new file size.
+- For DELETE: It subtracts the deleted file's size from the total.
 
-It also includes safeguards to prevent negative storage counts and handles potential conflicts when inserting new organization records.
-
-### down.sql
-This file contains the SQL commands to revert the changes made by `up.sql`. It:
-
-1. Drops the trigger `update_files_storage_with_update_trigger` from the `files` table.
-2. Drops the function `update_files_storage_counts_with_update()`.
-
-Both operations use `IF EXISTS` clauses to prevent errors if the objects don't exist.
-
-## Dependencies
-This migration relies on the existing database structure, particularly:
-- The `files` table, which stores information about individual files.
-- The `datasets` table, which links files to organizations.
-- The `organization_usage_counts` table, which tracks usage statistics for organizations.
-
-No external libraries or frameworks are used in these SQL scripts.
-
-## Configuration
-These migration scripts don't require any additional configuration. They are designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the application layer.
-
-Here's a key code snippet from the `up.sql` file that illustrates the core functionality:
+Here's a simplified version of the function:
 
 ```sql
-CREATE OR REPLACE FUNCTION update_files_storage_counts_with_update()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION update_files_storage_counts_with_update() RETURNS TRIGGER AS $$
 BEGIN
-    IF (TG_OP = 'INSERT') THEN
-        -- Logic for inserting new file
-    ELSIF (TG_OP = 'UPDATE') THEN
-        -- Logic for updating existing file
-    ELSIF (TG_OP = 'DELETE') THEN
-        -- Logic for deleting file
-    END IF;
-    RETURN NEW;
+  IF (TG_OP = 'INSERT') THEN
+    -- Add new file size to organization's storage
+  ELSIF (TG_OP = 'UPDATE') THEN
+    -- Subtract old file size and add new file size
+  ELSIF (TG_OP = 'DELETE') THEN
+    -- Subtract deleted file size
+  END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_files_storage_with_update_trigger
-AFTER INSERT OR UPDATE OR DELETE ON files
-FOR EACH ROW EXECUTE FUNCTION update_files_storage_counts_with_update();
 ```
 
-This code creates a trigger function that handles different file operations and updates the organization's file storage count accordingly. The trigger is then attached to the `files` table to automatically execute this function after relevant operations.
+### down.sql
+This file contains the SQL commands to revert the migration:
+
+1. It drops the trigger `update_files_storage_with_update_trigger` from the `files` table.
+2. It drops the function `update_files_storage_counts_with_update()`.
+
+```sql
+DROP TRIGGER IF EXISTS update_files_storage_with_update_trigger ON files;
+DROP FUNCTION IF EXISTS update_files_storage_counts_with_update();
+```
+
+## Configuration
+This migration doesn't require any specific configuration. However, it assumes the existence of:
+
+1. A `files` table with columns:
+   - `id`
+   - `size`
+   - `organization_id`
+2. An `organization_usage_counts` table with columns:
+   - `organization_id`
+   - `file_storage`
+
+The migration will automatically update these tables when applied.
+
+## Dependencies
+This migration relies on PostgreSQL-specific features:
+
+1. PL/pgSQL language for writing the trigger function.
+2. PostgreSQL's trigger mechanism.
+3. The `GREATEST` function for ensuring non-negative values.
+
+While no specific version is mentioned, these features are available in PostgreSQL 9.1 and later versions.

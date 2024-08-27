@@ -3,7 +3,7 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script creates a Generalized Inverted Index (GIN) index on the `link` column of the `card_metadata` table using the `gin_trgm_ops` operator class. This index is designed to speed up similarity searches on the `link` column using the trigram matching technique. 
+This SQL script creates a Generalized Inverted Index (GIN) on the `link` column of the `card_metadata` table using the `gin_trgm_ops` operator class. This index is designed to speed up similarity searches on the `link` column using the `%` operator. 
 
 ## Symbols
 
@@ -15,11 +15,14 @@ This statement creates a new index named `idx_link_gin` on the `card_metadata` t
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | `card_metadata` | Table | The table on which the index is created. |
-| `link` | Column | The column on which the index is created. |
-| `gin_trgm_ops` | Operator class | Specifies that the index should use the GIN index structure and the `gin_trgm_ops` operator class for trigram matching. |
+| `link` | Column | The column that the index is created on. |
+| `gin_trgm_ops` | Operator class | Specifies that the index should use the GIN operator class for trigram matching. |
 
 #### Outputs
 A new GIN index named `idx_link_gin` on the `link` column of the `card_metadata` table.
 
 #### Internal Logic
-The index utilizes the `gin_trgm_ops` operator class, which enables efficient trigram-based similarity searches. Trigrams are groups of three consecutive characters extracted from a string. The index stores these trigrams and their positions within the `link` column, allowing for fast retrieval of rows containing similar `link` values. 
+The index uses the `gin_trgm_ops` operator class, which enables trigram-based similarity searches. This means the index will break down the values in the `link` column into trigrams (groups of three consecutive characters) and index them. This allows for efficient searching for similar strings using the `%` operator, which performs a "similarity" search based on trigram matching. 
+
+## Side Effects
+This script modifies the database schema by adding a new index. This will consume additional storage space and may slightly impact the performance of write operations (inserts, updates, deletes) on the `card_metadata` table. However, it will significantly improve the performance of similarity searches on the `link` column. 

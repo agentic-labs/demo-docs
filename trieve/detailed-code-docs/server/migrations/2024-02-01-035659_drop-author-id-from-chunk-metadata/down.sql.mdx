@@ -3,65 +3,32 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL migration script is designed to revert changes made in the corresponding `up.sql` file. It adds back the `author_id` column to the `chunk_metadata` table and reestablishes foreign key constraints for several tables that reference the `users` table.
+This SQL script reverts the changes made in the corresponding `up.sql` migration file, specifically re-adding the `author_id` column to the `chunk_metadata` table and restoring foreign key constraints related to the `users` table. This suggests that the `up.sql` migration likely removed the `author_id` column and its associated constraints. 
 
 ## Symbols
 
-### ALTER TABLE chunk_metadata
+### `ALTER TABLE chunk_metadata ...`
 #### Description
-This statement adds the `author_id` column back to the `chunk_metadata` table.
+This statement adds the `author_id` column back to the `chunk_metadata` table. The column is of type `UUID`, cannot be null (`NOT NULL`), and references the `id` column of the `users` table as a foreign key.
 
 #### Internal Logic
-- Adds a new column named `author_id` to the `chunk_metadata` table
-- Sets the column type as UUID
-- Makes the column NOT NULL
-- Establishes a foreign key reference to the `id` column in the `users` table
+- `ALTER TABLE chunk_metadata`: This part specifies that the `chunk_metadata` table is being modified.
+- `ADD COLUMN author_id UUID NOT NULL`: This adds a new column named `author_id` of type `UUID` that cannot be null.
+- `REFERENCES users(id)`: This enforces a foreign key constraint, ensuring that every value in the `author_id` column corresponds to a valid `id` in the `users` table.
 
-### ALTER TABLE user_organizations
+### `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY ...`
 #### Description
-This statement adds a foreign key constraint to the `user_organizations` table.
+These statements add back foreign key constraints to several tables, linking them to the `users` table via the `user_id` column. The `ON DELETE CASCADE` clause ensures that if a user is deleted, related records in these tables are also deleted.
 
 #### Internal Logic
-- Adds a foreign key constraint named `fk_user_id`
-- Links the `user_id` column in `user_organizations` to the `id` column in the `users` table
-- Specifies ON DELETE CASCADE behavior
+- `ALTER TABLE [table_name]`: This part specifies the table being modified.
+- `ADD CONSTRAINT [constraint_name]`: This adds a new constraint with the specified name.
+- `FOREIGN KEY (user_id)`: This defines the column `user_id` as the foreign key.
+- `REFERENCES users(id)`: This specifies that the foreign key references the `id` column of the `users` table.
+- `ON DELETE CASCADE`: This ensures that deleting a user will cascade and delete related records in the modified table.
 
-### ALTER TABLE user_api_key
-#### Description
-This statement adds a foreign key constraint to the `user_api_key` table.
-
-#### Internal Logic
-- Adds a foreign key constraint named `user_api_key_user_id_fkey`
-- Links the `user_id` column in `user_api_key` to the `id` column in the `users` table
-- Specifies ON DELETE CASCADE behavior
-
-### ALTER TABLE files
-#### Description
-This statement adds a foreign key constraint to the `files` table.
-
-#### Internal Logic
-- Adds a foreign key constraint named `files_user_id_fkey`
-- Links the `user_id` column in `files` to the `id` column in the `users` table
-- Specifies ON DELETE CASCADE behavior
-
-### ALTER TABLE topics
-#### Description
-This statement adds a foreign key constraint to the `topics` table.
-
-#### Internal Logic
-- Adds a foreign key constraint named `topics_user_id_fkey`
-- Links the `user_id` column in `topics` to the `id` column in the `users` table
-- Specifies ON DELETE CASCADE behavior
-
-## Side Effects
-- The `chunk_metadata` table will have an additional column `author_id`
-- Foreign key constraints will be reestablished, potentially affecting data integrity and deletion behavior in the referenced tables
-
-## Dependencies
-This migration script assumes the existence of the following tables:
-- `chunk_metadata`
-- `users`
-- `user_organizations`
-- `user_api_key`
-- `files`
-- `topics`
+The tables affected and their respective constraint names are:
+- `user_organizations`: `fk_user_id`
+- `user_api_key`: `user_api_key_user_id_fkey`
+- `files`: `files_user_id_fkey`
+- `topics`: `topics_user_id_fkey` 

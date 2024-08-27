@@ -3,62 +3,41 @@ title: "pv.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes PersistentVolume (PV) template for a local development environment. It dynamically sets the PV name and storage size based on the provided `environment` and `NAME` values.
-
-## Code Structure
-This code uses Go templating to dynamically generate a Kubernetes YAML file. It uses conditional statements and variables to customize the output based on provided values.
+This YAML template defines a Kubernetes PersistentVolume (PV) resource. It is conditionally rendered only for the local environment and sets up a host path-based storage volume with configurable name and capacity.
 
 ## Symbols
-### `$.Values.environment`
+
+### Template
 #### Description
-This variable checks the value of the `environment` field in the provided values. It is used to determine if the PV should be configured for a local environment.
+This YAML template creates a PersistentVolume resource for Kubernetes, specifically for local environment usage.
 
 #### Inputs
-N/A - This is a variable reference.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| $.Values.environment | string | The environment in which the template is being rendered |
+| .Values.environment | string | The environment value, used to determine storage capacity |
+| $NAME | string | A variable that should be defined externally, used in the PV name |
 
-#### Outputs
-- `true` if the `environment` is "local".
-- `false` otherwise.
-
-### `$NAME`
-#### Description
-This variable represents the base name for the PV. It is expected to be provided externally.
-
-### `ternary`
-#### Description
-This is a Go template function that implements a ternary operator. It takes three arguments: a condition, a value if the condition is true, and a value if the condition is false.
-
-#### Inputs
-- **condition:** The condition to evaluate.
-- **trueValue:** The value to return if the condition is true.
-- **falseValue:** The value to return if the condition is false.
-
-#### Outputs
-- The `trueValue` if the condition is true.
-- The `falseValue` if the condition is false.
-
-### `eq`
-#### Description
-This is a Go template function that checks if two values are equal.
-
-#### Inputs
-- **value1:** The first value to compare.
-- **value2:** The second value to compare.
-
-#### Outputs
-- `true` if the values are equal.
-- `false` otherwise.
+#### Internal Logic
+1. Checks if the environment is "local" using a conditional statement.
+2. Defines two variables:
+   - `$${p}name`: Sets the PV name by appending "-pv" to the `$NAME` variable.
+   - `$${p}storage`: Determines the storage capacity based on the environment.
+3. Defines the PersistentVolume resource with the following specifications:
+   - `metadata.name`: Uses the `$${p}name` variable.
+   - `spec.capacity.storage`: Uses the `$${p}storage` variable.
+   - `spec.accessModes`: Set to ReadWriteOnce.
+   - `spec.persistentVolumeReclaimPolicy`: Set to Retain.
+   - `spec.storageClassName`: Set to an empty string.
+   - `spec.hostPath.path`: Set to "/{{ $${p}name }}".
 
 ## Configuration
-This code relies on external values to be provided, likely through a Helm chart or similar templating engine. The following values are used:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| storage | string | "10Gi" for local, "500Gi" for non-local | Defines the storage capacity of the PersistentVolume |
 
-| Option | Type | Description |
-|:-------|:-----|:------------|
-| `environment` | string | The environment for which the PV is being configured. |
-| `NAME` | string | The base name for the PV. |
-
-## Side Effects
-This code itself does not have any side effects as it is a template. When rendered with specific values, it generates a Kubernetes YAML file that, when applied, creates a PersistentVolume resource.
-
-## Dependencies
-This code relies on the Go templating engine for its functionality.
+## Notes
+1. The template uses the `$${p}` syntax, which is likely a placeholder for a specific template engine's variable notation.
+2. The PersistentVolume is only created for the local environment, as indicated by the conditional statement at the beginning of the template.
+3. The storage capacity is set to 10Gi for local environment and 500Gi for other environments.
+4. The PersistentVolume uses a hostPath configuration, which is suitable for local development but not recommended for production environments.

@@ -3,57 +3,62 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for deleting the `events` table from a database schema. It consists of two files: `up.sql` for removing the table, and `down.sql` for recreating it if needed. These scripts are part of a database versioning system, likely using a tool like Flyway or Liquibase, as indicated by the timestamp in the directory name (2024-08-02-174246).
+This directory contains SQL migration scripts for deleting the `events` table from a PostgreSQL database. It includes both "up" and "down" migration scripts, allowing for the removal of the table and its potential recreation if needed.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
-1. The `up.sql` script removes the `events` table from the database if it exists. This is typically done when the table is no longer needed or as part of a schema restructuring process.
+1. The "up" migration (`up.sql`) removes the `events` table from the database. This action is irreversible and results in the loss of all data stored in the `events` table.
 
-2. The `down.sql` script recreates the `events` table with its original structure. This script is used to revert the changes made by the `up.sql` script, providing a way to undo the migration if necessary.
+2. The "down" migration (`down.sql`) provides a way to recreate the `events` table if the migration needs to be rolled back. It recreates the table with its original structure, including all columns and constraints.
 
-These scripts allow database administrators or developers to manage changes to the database schema in a controlled and reversible manner. The `events` table appears to have been used for storing event-related information associated with datasets, possibly for tracking various activities or changes within the system.
+These migrations are typically part of a database schema management process, allowing developers to version control and manage changes to the database structure over time.
 
 ## Key Files
 
-1. `up.sql`:
-   This file contains a single SQL command to drop the `events` table:
-   ```sql
-   DROP TABLE IF EXISTS events;
-   ```
-   The `IF EXISTS` clause ensures that the command doesn't throw an error if the table is already absent.
+### up.sql
+This file contains the SQL command to drop the `events` table:
 
-2. `down.sql`:
-   This file recreates the `events` table with its original structure:
-   ```sql
-   CREATE TABLE public.events (
-       id uuid NOT NULL,
-       created_at timestamp with time zone DEFAULT now() NOT NULL,
-       updated_at timestamp with time zone DEFAULT now() NOT NULL,
-       dataset_id uuid NOT NULL,
-       event_type character varying(255) NOT NULL,
-       event_data jsonb NOT NULL,
-       CONSTRAINT file_upload_completed_notifications_pkey PRIMARY KEY (id),
-       CONSTRAINT events_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES public.datasets(id) ON DELETE CASCADE ON UPDATE CASCADE
-   );
-   ```
-   This script defines the table structure, including columns for id, timestamps, dataset reference, event type, and event data. It also sets up primary key and foreign key constraints.
+```sql
+DROP TABLE IF EXISTS events;
+```
 
-## Dependencies
-The `events` table has a dependency on the `public.datasets` table, as indicated by the foreign key constraint in the `down.sql` script. This suggests that each event is associated with a specific dataset in the system.
+This command removes the `events` table if it exists. The `IF EXISTS` clause ensures that the operation doesn't fail if the table is already absent.
+
+### down.sql
+This file contains the SQL commands to recreate the `events` table:
+
+```sql
+CREATE TABLE public.events (
+    id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    dataset_id uuid NOT NULL,
+    event_type character varying(255) NOT NULL,
+    event_data jsonb NOT NULL,
+    CONSTRAINT file_upload_completed_notifications_pkey PRIMARY KEY (id),
+    CONSTRAINT events_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES public.datasets(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+```
+
+This command recreates the `events` table with the following structure:
+- `id`: A UUID primary key
+- `created_at` and `updated_at`: Timestamp fields with default values
+- `dataset_id`: A UUID foreign key referencing the `datasets` table
+- `event_type`: A varchar field for categorizing events
+- `event_data`: A JSONB field for storing event-specific data
+
+The table includes a foreign key constraint (`events_dataset_id_fkey`) that links each event to a dataset, with cascading delete and update actions.
 
 ## Configuration
-There are no explicit configuration files or environment variables used in these migration scripts. However, the database connection details and migration tool configuration would typically be managed externally, possibly in the project's main configuration files or environment settings.
+This migration doesn't require any specific configuration. However, it's important to note that the execution of these migration scripts typically depends on the configuration of the database migration tool being used (e.g., Flyway, Liquibase, or a custom migration system).
 
-## Notes
-1. The primary key constraint name (`file_upload_completed_notifications_pkey`) suggests that this table might have originally been designed for file upload notifications and later repurposed or renamed to a more general `events` table.
+## Dependencies
+The migration scripts have an implicit dependency on the PostgreSQL database system, as they use PostgreSQL-specific features such as:
+- The `uuid` data type
+- The `jsonb` data type for storing JSON data
+- The `timestamp with time zone` data type
 
-2. The use of UUID for the `id` and `dataset_id` columns indicates a distributed or high-volume system where unique identifiers across multiple instances or large datasets are necessary.
+Additionally, the `down.sql` script assumes the existence of a `public.datasets` table, as it references it in the foreign key constraint.
 
-3. The `event_data` column uses the `jsonb` data type, allowing for flexible storage of event-specific information without needing to alter the table structure for different event types.
-
-4. The foreign key constraint on `dataset_id` includes `ON DELETE CASCADE` and `ON UPDATE CASCADE` clauses, ensuring referential integrity by automatically deleting or updating related events when a dataset is removed or its ID is changed.
-
-5. When executing these migrations, especially in a production environment, it's crucial to consider the potential impact on system performance and data integrity. The `up.sql` script, in particular, will permanently delete all data in the `events` table if it exists.
-
-6. The timestamp in the directory name (2024-08-02-174246) serves as a unique identifier for this migration, allowing the migration tool to track which migrations have been applied and in what order.
+It's crucial to ensure that the PostgreSQL version used is compatible with these features and that the `datasets` table exists when running the down migration.

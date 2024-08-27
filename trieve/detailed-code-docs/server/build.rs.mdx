@@ -3,28 +3,37 @@ title: "build.rs"
 ---
 
 ## High-level description
-This code is a build script for a Rust project that sets environment variables for the compiler using values from a `.env` file. It conditionally executes different logic based on the presence of a feature flag `runtime-env`.
+This code is a build script for a Rust project, responsible for setting environment variables during the build process. It reads environment variables from a `.env` file (if the `runtime-env` feature is not enabled) and makes them available to the Rust compiler.
 
 ## Code Structure
-The code consists of two `main` functions, each conditionally compiled based on the `runtime-env` feature flag. The non-runtime-env version reads environment variables from a `.env` file and sets them for the Rust compiler. The runtime-env version does nothing.
+The code uses a conditional compilation attribute `#[cfg(not(feature = "runtime-env"))]` to determine which part of the code to compile based on the presence of the `runtime-env` feature flag. 
+
+- If the `runtime-env` feature is **not** enabled, the code reads environment variables from a `.env` file and sets them as `cargo:rustc-env` variables.
+- If the `runtime-env` feature **is** enabled, the code does nothing.
 
 ## Symbols
 
 ### `main`
 #### Description
-This function is the entry point for the build script. It reads environment variables from a `.env` file and sets them as `cargo:rustc-env` variables, which makes them accessible to the Rust compiler during build time.
+This function is the entry point of the build script. It reads environment variables from a `.env` file (if the `runtime-env` feature is not enabled) and sets them as environment variables for the Rust compiler.
 
 #### Inputs
 None
 
 #### Outputs
-- Prints `cargo:rustc-env={key}={value}` for each environment variable read from the `.env` file.
-- Prints `cargo:rerun-if-changed=.env` to trigger a rebuild if the `.env` file changes.
+- `Result&lt;(), Box&lt;dyn Error&gt;&gt;`: Returns `Ok(())` on success, or an error if the `.env` file cannot be read.
 
 #### Internal Logic
-1. **Read environment variables:** Uses the `dotenvy` crate to read environment variables from a `.env` file located in the project root.
-2. **Set environment variables for the compiler:** Iterates through the read environment variables and prints them in the format `cargo:rustc-env={key}={value}`. This makes these variables accessible to the Rust compiler during the build process.
-3. **Trigger rebuild on `.env` file change:** Prints `cargo:rerun-if-changed=.env` to instruct Cargo to rebuild the project if the `.env` file is modified.
+1. **Check for `runtime-env` feature:**
+   - If the `runtime-env` feature is enabled, the function returns `Ok(())` without performing any actions.
+2. **Read environment variables from `.env` file (if `runtime-env` is not enabled):**
+   - Uses the `dotenvy` crate to load environment variables from a `.env` file located in the project root.
+   - Expects the `.env` file to exist and throws an error if it's not found, suggesting to copy the `.env.dist` file to `.env`.
+3. **Set environment variables for Rust compiler:**
+   - Iterates through the loaded environment variables.
+   - For each key-value pair, prints a string in the format `cargo:rustc-env={key}={value}`, which instructs Cargo to set the corresponding environment variable during compilation.
+4. **Trigger rebuild on `.env` file change:**
+   - Prints `cargo:rerun-if-changed=.env`, instructing Cargo to re-run the build script if the `.env` file is modified.
 
 ## Dependencies
 | Dependency | Purpose |
@@ -32,7 +41,8 @@ None
 | `dotenv` | Used to read environment variables from a `.env` file. |
 
 ## Configuration
-This build script relies on a `.env` file in the project root for configuration. The format of the `.env` file follows the standard key-value pair format, e.g., `KEY=value`.
+This code uses the `runtime-env` feature flag to control its behavior. 
 
-## Error Handling
-The code uses `expect` for error handling, which will terminate the build process and print an error message if the `.env` file is not found or cannot be read.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| `runtime-env` | Feature flag | Not set | If enabled, the build script does not read environment variables from the `.env` file. This suggests an alternative mechanism for managing environment variables at runtime is in place. |

@@ -3,46 +3,46 @@ title: "extended-configmap.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ConfigMap named "&lt;release-name&gt;-extended-configuration" in the Helm template for a PostgreSQL primary instance. This ConfigMap is conditionally created based on the value of `postgresql.v1.primary.createExtendedConfigmap` and contains PostgreSQL configuration settings from `values.yaml`.
+This Kubernetes ConfigMap template is designed to create an extended configuration for the primary PostgreSQL instance in a Helm chart. It generates a ConfigMap with additional configuration options that can be used to customize the PostgreSQL server's behavior.
 
 ## Code Structure
-This code uses Helm templating to define a Kubernetes ConfigMap. It includes other template files to determine the ConfigMap's name, namespace, labels, and content.
-
-## References
-* `postgresql.v1.primary.createExtendedConfigmap`: This template function likely determines whether to create the ConfigMap.
-* `postgresql.v1.primary.fullname`: This template function likely provides the full name of the PostgreSQL primary instance.
-* `common.labels.standard`: This template function likely provides standard labels for the ConfigMap.
-* `common.tplvalues.render`: This template function likely renders values from `values.yaml`.
+The template uses conditional logic to determine whether to create the ConfigMap and includes several helper functions to generate names, labels, and render values.
 
 ## Symbols
-### `extended-configmap.yaml`
+
+### ConfigMap Definition
 #### Description
-This file defines a Kubernetes ConfigMap containing extended configuration for a PostgreSQL primary instance.
+Defines a Kubernetes ConfigMap resource for extended PostgreSQL configuration.
 
 #### Inputs
-Uses values from `values.yaml`:
-* `.Release.Namespace`: The Kubernetes namespace for the release.
-* `.Values.commonLabels`: Custom labels to apply to the ConfigMap.
-* `.Values.commonAnnotations`: Custom annotations to apply to the ConfigMap.
-* `.Values.primary.extendedConfiguration`: PostgreSQL configuration settings to include in the ConfigMap.
-
-#### Outputs
-A Kubernetes ConfigMap named "&lt;release-name&gt;-extended-configuration" containing PostgreSQL configuration settings.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Release.Namespace | String | The Kubernetes namespace for the release |
+| .Values.commonLabels | Object | Common labels to be applied to the resource |
+| .Values.commonAnnotations | Object | Common annotations to be applied to the resource |
+| .Values.primary.extendedConfiguration | String | The extended configuration content for PostgreSQL |
 
 #### Internal Logic
-1. **Conditional Creation:** The ConfigMap is created only if `postgresql.v1.primary.createExtendedConfigmap` evaluates to true.
-2. **Name and Namespace:** The ConfigMap's name is derived from the release name and the namespace is determined from `.Release.Namespace`.
-3. **Labels and Annotations:** Standard labels are applied using `common.labels.standard` and custom labels from `.Values.commonLabels` are added. Similarly, annotations are applied from `.Values.commonAnnotations`.
-4. **Configuration Data:** The `override.conf` key in the ConfigMap data contains PostgreSQL configuration settings rendered from `.Values.primary.extendedConfiguration`.
+1. Checks if the extended ConfigMap should be created using a helper function.
+2. Sets the ConfigMap name using a helper function for the primary PostgreSQL fullname.
+3. Applies standard labels and a custom "app.kubernetes.io/component: primary" label.
+4. Conditionally adds common annotations if provided.
+5. Defines the ConfigMap data with an "override.conf" key containing the extended configuration.
 
 ## Dependencies
-* Helm
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper functions for rendering labels, annotations, and template values |
 
 ## Configuration
-This template uses values from `values.yaml` to configure the ConfigMap. The following keys are particularly relevant:
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| `postgresql.v1.primary.createExtendedConfigmap` | boolean |  | Determines whether to create the ConfigMap. |
-| `commonLabels` | object |  | Custom labels to apply to the ConfigMap. |
-| `commonAnnotations` | object |  | Custom annotations to apply to the ConfigMap. |
-| `primary.extendedConfiguration` | string |  | PostgreSQL configuration settings to include in the ConfigMap. | 
+| .Values.primary.extendedConfiguration | String | N/A | Content of the extended PostgreSQL configuration |
+
+## Notes
+1. The template is wrapped in a conditional check `{{- if (include "postgresql.v1.primary.createExtendedConfigmap" .) }}`, suggesting that the creation of this ConfigMap is optional and controlled by a helper function.
+2. The template uses several helper functions from the `common` library, such as `common.labels.standard` and `common.tplvalues.render`, to generate consistent labels and render template values.
+3. The actual extended configuration content is provided through `.Values.primary.extendedConfiguration` and is rendered into the "override.conf" key of the ConfigMap's data section.
+4. The file includes a copyright notice for VMware, Inc., indicating the origin of the template.
+
+This ConfigMap can be used to provide additional configuration options to the primary PostgreSQL instance, allowing for customization beyond the default settings provided by the Helm chart.

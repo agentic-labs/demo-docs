@@ -3,63 +3,80 @@ title: "ingest-deployment.yaml"
 ---
 
 ## High-level description
-This Kubernetes YAML file defines a Deployment named "ingest" for the Trieve application. It specifies the container image, environment variables, and service account for the ingest service, which is responsible for processing and ingesting data into the Trieve system. The configuration is tailored for different environments (local, gcloud) using conditional logic.
+This Kubernetes Deployment YAML file defines the configuration for deploying the "ingest" component of a system. It sets up a pod with containers for the ingest service and, in some cases, a Cloud SQL proxy. The deployment includes extensive environment variable configurations for various services and integrations.
 
 ## Code Structure
-The code defines a single Kubernetes Deployment resource. It includes specifications for the deployment's metadata, selector, template, and container. The container section defines the environment variables and conditional logic for different environments.
-
-## References
-This code references values from a `values.yaml` file, which is likely used to configure the deployment. It uses these values to set environment variables, container image tags, and service account names.
+The YAML file defines a Kubernetes Deployment resource with metadata, spec, and template sections. The template section specifies the pod configuration, including containers and their environment variables.
 
 ## Symbols
-### `ingest`
+
+### Deployment
 #### Description
-This symbol defines a Kubernetes Deployment named "ingest". It specifies the configuration for deploying the ingest service of the Trieve application.
-
-#### Inputs
-This symbol does not have explicit inputs. It relies on values from a `values.yaml` file for configuration.
-
-#### Outputs
-This symbol does not have explicit outputs. It defines a Kubernetes Deployment resource that will be deployed to the cluster.
+This Kubernetes Deployment resource named "ingest" is responsible for creating and managing pods that run the ingest service.
 
 #### Internal Logic
-The deployment uses a template to define the pod specifications. The template includes labels for identifying the pod and a container named "ingest". The container image is dynamically constructed based on the environment.
+1. Sets up metadata with name and labels
+2. Defines a selector to match pods
+3. Specifies a template for pod creation, including:
+   - Labels for the pod
+   - Container specifications
+   - Environment variable configurations
+   - Conditional inclusion of a Cloud SQL proxy container for Google Cloud deployments
 
-The code uses conditional logic (`{{- if ... }}`) to tailor the configuration for different environments:
+### Container: ingest
+#### Description
+The main container running the ingest service.
 
-* **gcloud:** Sets the service account to "cloud-postgres-service-account" and includes a sidecar container named "cloud-sql-proxy" for connecting to Cloud SQL.
-* **local:** Uses a different container image path and does not include the "cloud-sql-proxy" container.
+#### Internal Logic
+1. Uses an image based on the environment (local vs. non-local)
+2. Configures a large set of environment variables for various services and integrations, including:
+   - Trieve configuration
+   - Redis
+   - Qdrant
+   - PostgreSQL
+   - SMTP
+   - OpenAI
+   - S3
+   - Stripe
+   - OIDC
+   - Various server origins
+   - Analytics (ClickHouse)
 
-The container defines a large number of environment variables that are used to configure the ingest service. These variables are populated from the `values.yaml` file and include settings for:
+### Container: cloud-sql-proxy (Conditional)
+#### Description
+A container running the Cloud SQL Auth Proxy, included only when the environment is set to "gcloud".
 
-* API keys (admin, OpenAI, LLM)
-* Server URLs (base, Redis, Qdrant, Tika, OpenAI, GPU, Sparse, Embedding, Reranker)
-* Database connection string (PostgreSQL)
-* SMTP settings
-* Secret key and salt
-* S3 storage settings
-* Cookie security
-* Stripe settings
-* OIDC settings
-* Feature flags (unlimited, bulkPgQueue, useAnalytics)
-* Analytics settings (ClickHouse)
-
-## Side Effects
-This code, when applied to a Kubernetes cluster, will create a deployment named "ingest". This will result in the creation of pods running the ingest service with the specified configuration.
+#### Internal Logic
+1. Uses the Cloud SQL Auth Proxy image
+2. Configures arguments for structured logs, auto IAM authentication, and port
+3. Sets security context to run as non-root
+4. Defines resource requests and limits
 
 ## Dependencies
-This code depends on Kubernetes and the `values.yaml` file for configuration. It also uses the following container images:
-
-| Dependency | Purpose |
-|:-----------|:--------|
-| `trieve/ingest` or `localhost:5001/ingest` | Ingest service container image |
-| `gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0` | Cloud SQL Proxy container image (for gcloud environment) |
+The deployment relies on several external services and configurations, including:
+- Redis
+- Qdrant
+- PostgreSQL
+- SMTP server
+- OpenAI API
+- S3-compatible storage
+- Stripe
+- OIDC provider
+- Various internal services (GPU, sparse, embedding, reranker)
+- ClickHouse (for analytics)
 
 ## Configuration
-The configuration of the deployment is driven by the `values.yaml` file. This file likely contains values for all the environment variables defined in the container specification.
+The deployment uses numerous configuration options defined in the `.Values` object, which is likely provided by a Helm chart. These include settings for the environment, container images, API keys, URLs, and feature flags.
 
 ## Error Handling
-This code does not implement specific error handling mechanisms. It relies on Kubernetes for managing deployment and pod failures.
+This YAML file does not explicitly define error handling mechanisms. Error handling would be implemented within the ingest service itself.
 
 ## Logging
-This code does not implement specific logging mechanisms. It relies on the logging mechanisms of the ingest service container image.
+Logging configuration is not explicitly defined in this YAML. However, the cloud-sql-proxy container is configured to use structured logs when present.
+
+## Performance Considerations
+1. The cloud-sql-proxy container, when included, has specific resource requests and limits defined to manage its performance impact.
+2. The use of services like Redis and Qdrant suggests that the ingest service is designed for high-performance data processing and storage.
+3. The configuration includes options for vector quantization and replication factor, which can affect performance and reliability of the vector database (Qdrant).
+
+This deployment YAML provides a comprehensive setup for the ingest service, with flexibility to adapt to different environments and integrate with various external services. The extensive use of environment variables allows for easy configuration management, likely through a Helm chart or similar templating system.

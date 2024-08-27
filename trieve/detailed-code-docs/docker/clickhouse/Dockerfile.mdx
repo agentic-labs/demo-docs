@@ -1,0 +1,90 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile sets up a custom ClickHouse server image with additional configurations and a Python script for embedding functionality. It extends the official ClickHouse server image, adds custom configuration files, installs Python and necessary dependencies, and sets up the environment for running the embedding script.
+
+## Code Structure
+The Dockerfile consists of several steps to build the custom ClickHouse server image:
+1. Base image selection
+2. Configuration file copying
+3. Python script setup
+4. Dependency installation
+5. Working directory setup
+6. Python requirements installation
+7. Command specification
+
+## Symbols
+
+### FROM clickhouse/clickhouse-server:latest
+#### Description
+Specifies the base image for the Docker build, using the latest version of the official ClickHouse server image.
+
+### COPY (Configuration Files)
+#### Description
+Copies custom configuration files into the ClickHouse server directory.
+
+#### Internal Logic
+- Copies `config.xml` to `/etc/clickhouse-server/config.xml`
+- Copies `embedding_function.xml` to `/etc/clickhouse-server/embedding_function.xml`
+- Sets ownership of the files to the `clickhouse` user and group
+
+### COPY (Python Script)
+#### Description
+Copies the `embed.py` Python script to the ClickHouse user scripts directory.
+
+#### Internal Logic
+- Copies `embed.py` to `/var/lib/clickhouse/user_scripts/embed.py`
+- Sets ownership of the file to the `clickhouse` user and group
+
+### RUN (Make Script Executable)
+#### Description
+Makes the `embed.py` script executable.
+
+#### Internal Logic
+Uses the `chmod` command to add execute permissions to the script.
+
+### RUN (Install Dependencies)
+#### Description
+Updates the package list and installs Python 3 and pip.
+
+#### Internal Logic
+Uses `apt-get` to update package lists and install `python3` and `python3-pip`.
+
+### WORKDIR /usr/src/app
+#### Description
+Sets the working directory for subsequent instructions to `/usr/src/app`.
+
+### COPY requirements.txt ./requirements.txt
+#### Description
+Copies the `requirements.txt` file from the build context to the working directory in the image.
+
+### RUN pip install -r requirements.txt
+#### Description
+Installs Python dependencies listed in the `requirements.txt` file.
+
+### CMD ["/entrypoint.sh"]
+#### Description
+Specifies the command to run when the container starts, which is the ClickHouse server entrypoint script.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| clickhouse/clickhouse-server:latest | Base image for ClickHouse server |
+| python3 | Runtime for the embedding script |
+| python3-pip | Package installer for Python dependencies |
+
+## References
+The Dockerfile references the `embed.py` script, which is included in the related code snippets. This script is responsible for generating embeddings for text input using an external embedding server.
+
+## Side Effects
+- Modifies the base ClickHouse server image with custom configurations and additional functionality.
+- Installs Python and related dependencies, increasing the image size.
+- Sets up the environment for running the embedding script alongside the ClickHouse server.
+
+## Performance Considerations
+- The use of a custom Python script for embeddings may impact the overall performance of the ClickHouse server, depending on the frequency and scale of embedding operations.
+- The installation of additional dependencies increases the image size, which may affect deployment time and resource usage.
+
+This Dockerfile creates a custom ClickHouse server image with embedded Python functionality for text embeddings, combining database capabilities with machine learning features in a single container.

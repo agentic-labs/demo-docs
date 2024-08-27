@@ -5,16 +5,19 @@ title: "file_handler.rs"
 Here's a detailed documentation of the `file_handler.rs` file:
 
 ## High-level description
-This file contains handlers for file-related operations in the Trieve API. It includes functionality for uploading files, retrieving file information, getting files for a dataset, and deleting files.
+This file contains handlers for file-related operations in the Trieve API. It includes functionality for uploading files, retrieving file information, getting files for a dataset, and deleting files. The handlers interact with AWS S3 for file storage and use Redis for caching and queueing tasks.
 
 ## Code Structure
-The file defines several handler functions that interact with the database, S3 storage, and Redis. These handlers are used to process various file-related API requests.
+The file defines several structs and functions that work together to handle file operations:
+- Structs like `UploadFileReqPayload` and `UploadFileResult` define the request and response formats for file uploads.
+- Functions like `upload_file_handler`, `get_file_handler`, `get_dataset_files_handler`, and `delete_file_handler` implement the main API endpoints.
+- Helper functions like `validate_file_name` and `get_aws_bucket` provide utility functionality.
 
 ## Symbols
 
 ### `validate_file_name`
 #### Description
-Validates a file name by checking if it contains ".." and extracting the last part of the path.
+Validates a file name to ensure it doesn't contain potentially malicious patterns like "..".
 
 #### Inputs
 | Name | Type | Description |
@@ -32,19 +35,19 @@ Defines the structure for the file upload request payload.
 
 ### `UploadFileResult`
 #### Description
-Defines the structure for the file upload result.
+Defines the structure for the file upload response.
 
 ### `upload_file_handler`
 #### Description
-Handles the file upload process, including storing the file in S3 and creating associated metadata.
+Handles the file upload process, including S3 storage and queueing for processing.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Json&lt;UploadFileReqPayload&gt; | The upload file request payload |
+| data | web::Json&lt;UploadFileReqPayload&gt; | The upload request payload |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| user | AdminOnly | The authenticated admin user |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| user | AdminOnly | Authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 | redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
 
 #### Outputs
@@ -52,75 +55,74 @@ Handles the file upload process, including storing the file in S3 and creating a
 |:-----|:-----|:------------|
 | Result&lt;HttpResponse, actix_web::Error&gt; | Result | The upload result or an error |
 
+#### Internal Logic
+1. Validates file size against the organization's plan limit.
+2. Decodes the base64 file data.
+3. Uploads the file to S3.
+4. Creates a message for file ingestion and pushes it to Redis.
+5. Returns the file metadata.
+
 ### `get_file_handler`
 #### Description
-Retrieves file information based on the file ID.
+Retrieves information about a specific file.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | file_id | web::Path&lt;uuid::Uuid&gt; | The ID of the file to retrieve |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| _user | LoggedUser | The authenticated user |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| _user | LoggedUser | Authenticated user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | Result&lt;HttpResponse, actix_web::Error&gt; | Result | The file information or an error |
 
-### `DatasetFileQuery`
-#### Description
-Defines the structure for querying files in a dataset.
-
 ### `get_dataset_files_handler`
 #### Description
-Retrieves files for a specific dataset.
+Retrieves files associated with a specific dataset.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | web::Path&lt;DatasetFileQuery&gt; | The dataset file query parameters |
+| data | web::Path&lt;DatasetFileQuery&gt; | Query parameters for dataset and page |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
-| required_user | LoggedUser | The authenticated user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
+| required_user | LoggedUser | Authenticated user |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| Result&lt;HttpResponse, actix_web::Error&gt; | Result | The list of files in the dataset or an error |
+| Result&lt;HttpResponse, actix_web::Error&gt; | Result | The list of files or an error |
 
 ### `delete_file_handler`
 #### Description
-Deletes a file based on its ID.
+Deletes a specific file from S3 and the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | file_id | web::Path&lt;uuid::Uuid&gt; | The ID of the file to delete |
 | pool | web::Data&lt;Pool&gt; | Database connection pool |
-| _user | AdminOnly | The authenticated admin user |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| _user | AdminOnly | Authenticated admin user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | Result&lt;HttpResponse, actix_web::Error&gt; | Result | Confirmation of deletion or an error |
 
-### `GetImageResponse`
-#### Description
-Defines the structure for the get image response.
-
 ### `get_signed_url`
 #### Description
-Generates a signed URL for accessing a file.
+Generates a signed URL for accessing a file in S3.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | file_name | web::Path&lt;String&gt; | The name of the file |
-| _user | LoggedUser | The authenticated user |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset, organization, and subscription information |
+| _user | LoggedUser | Authenticated user |
+| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization information |
 
 #### Outputs
 | Name | Type | Description |
@@ -128,11 +130,27 @@ Generates a signed URL for accessing a file.
 | Result&lt;HttpResponse, ServiceError&gt; | Result | The signed URL or an error |
 
 ## Dependencies
-The file relies on various external crates and internal modules, including `actix_web`, `base64`, `serde`, `utoipa`, and custom modules for database operations and error handling.
+The file relies on several external crates and internal modules:
+- `actix_web` for web server functionality
+- `base64` for encoding/decoding file data
+- `serde` for serialization/deserialization
+- `utoipa` for API documentation
+- Custom error types and database models from the application's codebase
 
 ## Error Handling
-The handlers use the `ServiceError` enum for error handling, which is then converted to HTTP responses.
+The file uses the `ServiceError` type for error handling, which is then converted to HTTP responses. Common errors include file size limits, S3 upload failures, and database errors.
 
-## Performance Considerations
-- The file upload process involves base64 decoding and S3 upload, which could be performance-intensive for large files.
-- Redis is used for queueing file ingestion tasks, which helps in managing concurrent uploads.
+## Logging
+The file uses the `tracing` crate for instrumentation and logging of function calls and important operations.
+
+## API/Interface Reference
+The file defines several API endpoints:
+- POST `/file`: Upload a file
+- GET `/file/{file_id}`: Retrieve a file
+- GET `/dataset/files/{dataset_id}/{page}`: Get files for a dataset
+- DELETE `/file/{file_id}`: Delete a file
+
+Each endpoint is documented with Utoipa annotations for API documentation generation.
+
+## TODOs
+There are no explicit TODOs in the code.

@@ -1,0 +1,113 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains scripts for building and generating a TypeScript SDK. It includes two main scripts: one for building the SDK using esbuild, and another for generating a TypeScript client based on an OpenAPI specification.
+
+## What does it do?
+The scripts in this directory perform two primary functions:
+
+1. Building the SDK: The build script compiles the TypeScript source code into a bundled JavaScript output optimized for Node.js environments. It uses esbuild to perform this compilation, applying various optimizations like tree shaking and bundling.
+
+2. Generating API Client: The client generation script creates a TypeScript client for an API using the @hey-api/openapi-ts library. It generates the client based on an OpenAPI specification, moves the generated types file to a specific location, and cleans up temporary files.
+
+These scripts automate the process of preparing the SDK for distribution and use, ensuring that the latest API specifications are incorporated and that the output is optimized for Node.js environments.
+
+## Key Files
+
+### build.js
+This script is responsible for building the TypeScript SDK using esbuild. Its main features include:
+
+- Configuring esbuild with specific options tailored for Node.js environments
+- Compiling TypeScript source code into bundled JavaScript
+- Enabling optimizations like tree shaking and source map generation
+
+The `build` function in this file is the core of the build process:
+
+```javascript
+async function build() {
+  return esbuild.build({
+    platform: "node",
+    target: "node21",
+    format: "esm",
+    nodePaths: [srcPath],
+    sourcemap: true,
+    treeShaking: true,
+    bundle: true,
+    entryPoints: [path.join(srcPath, "index.ts")],
+    outdir: buildPath,
+  });
+}
+```
+
+This function configures esbuild to target Node.js version 21, use ES modules format, enable source maps and tree shaking, and bundle all dependencies.
+
+### genClient.js
+This script generates a TypeScript client for an API using the @hey-api/openapi-ts library. Its main features include:
+
+- Generating the client based on an OpenAPI specification
+- Moving the generated types file to a specific location
+- Cleaning up temporary files after generation
+
+The `main` function orchestrates the client generation process:
+
+```javascript
+async function main() {
+  await createClient({
+    client: "fetch",
+    generateTypes: true,
+    generateSchemas: false,
+    generateServices: false,
+    input: "./openapi.json",
+    output: "./client/generated",
+  });
+
+  await fs.promises.rename(
+    "./client/generated/types.ts",
+    "./src/types/generated.ts"
+  );
+
+  await fs.promises.rm("./client", { recursive: true });
+
+  console.log("Client generated successfully!");
+}
+```
+
+This function generates the client, moves the types file, and cleans up temporary directories.
+
+## Dependencies
+The scripts in this directory rely on the following external libraries:
+
+1. esbuild (version not specified)
+   - Purpose: Used for compiling and bundling the TypeScript code
+   - Chosen for its speed and efficiency in building JavaScript and TypeScript projects
+
+2. @hey-api/openapi-ts (version not specified)
+   - Purpose: Provides the `createClient` function for generating the API client
+   - Chosen for its ability to generate TypeScript clients from OpenAPI specifications
+
+## Configuration
+The build configuration is hardcoded within the `build` function in `build.js`. Key settings include:
+
+| Option | Value | Description |
+|:-------|:------|:------------|
+| platform | "node" | Specifies the target platform as Node.js |
+| target | "node21" | Sets the target Node.js version to 21 |
+| format | "esm" | Configures the output format as ES modules |
+| sourcemap | true | Enables generation of source maps |
+| treeShaking | true | Enables dead code elimination |
+| bundle | true | Enables bundling of all dependencies |
+
+The client generation configuration is set within the `main` function in `genClient.js`:
+
+| Option | Value | Description |
+|:-------|:------|:------------|
+| client | "fetch" | Specifies the use of the 'fetch' client |
+| generateTypes | true | Enables generation of TypeScript types |
+| generateSchemas | false | Disables generation of schemas |
+| generateServices | false | Disables generation of services |
+| input | "./openapi.json" | Specifies the input OpenAPI specification file |
+| output | "./client/generated" | Sets the output directory for generated files |
+
+These scripts provide a streamlined process for building and updating the TypeScript SDK, ensuring that it remains up-to-date with the latest API specifications and is optimized for use in Node.js environments.

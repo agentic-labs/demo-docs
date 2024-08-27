@@ -3,71 +3,86 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for dropping the `verification_notifications` and `card_verification` tables from the database. The migration is reversible, with separate scripts for applying (up) and reverting (down) the changes.
+This directory contains SQL migration scripts for dropping the `verification_notifications` and `card_verification` tables from the database schema. The migration is dated 2023-10-01 and is identified by the timestamp 160057. The directory includes both 'up' and 'down' migration scripts, allowing for the changes to be applied or reverted as needed.
 
 ## What does it do?
-The migration removes two tables related to card verification from the database:
+This migration removes two tables related to card verification from the database:
 
 1. `verification_notifications`: This table likely stored notifications sent to users about card verifications.
 2. `card_verification`: This table probably contained records of card verification events.
 
-By dropping these tables, the database schema is simplified, potentially indicating that the card verification feature is being removed or significantly changed in the application.
-
-The migration is designed to be reversible, allowing developers to undo these changes if needed. This is particularly useful in development environments or if there's a need to roll back the changes in production.
+The 'up' migration script removes these tables, while the 'down' migration script recreates them, allowing the database schema to be rolled back to its previous state if necessary.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL commands to apply the migration:
+This file contains the SQL commands to drop the `verification_notifications` and `card_verification` tables. It uses `DROP TABLE IF EXISTS` statements to ensure the operation is idempotent (can be run multiple times without error).
 
 ```sql
 DROP TABLE IF EXISTS verification_notifications;
 DROP TABLE IF EXISTS card_verification;
 ```
 
-These commands remove the specified tables from the database if they exist. The `IF EXISTS` clause ensures that the operation doesn't fail if the tables are already absent.
-
 ### down.sql
-This file contains the SQL commands to revert the migration:
+This file contains the SQL commands to recreate the dropped tables and their associated constraints. It includes:
+
+1. Recreation of the `verification_notifications` table with its original structure:
 
 ```sql
 CREATE TABLE verification_notifications (
-    -- Table structure
-);
-
-ALTER TABLE card_verification ADD CONSTRAINT uq_card_id UNIQUE (card_id);
-
-CREATE TABLE public.card_verification (
-    -- Table structure
+    id UUID PRIMARY KEY,
+    user_uuid UUID NOT NULL REFERENCES users(id),
+    card_uuid UUID NOT NULL REFERENCES card_metadata(id),
+    verification_uuid UUID NOT NULL REFERENCES card_verification(id),
+    similarity_score BIGINT NOT NULL,
+    user_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
 );
 ```
 
-These commands recreate the dropped tables with their original structure and constraints. This allows for a complete reversal of the migration if needed.
+2. Addition of a unique constraint on the `card_verification` table:
+
+```sql
+ALTER TABLE card_verification ADD CONSTRAINT uq_card_id UNIQUE (card_id);
+```
+
+3. Recreation of the `card_verification` table:
+
+```sql
+CREATE TABLE public.card_verification (
+    id UUID NOT NULL,
+    card_id UUID NOT NULL,
+    similarity_score BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    CONSTRAINT card_verification_pkey PRIMARY KEY (id)
+);
+```
 
 ## Configuration
-The migration is identified by its timestamp: `2023-10-01-160057`. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
+This migration does not require any specific configuration. It is designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the application's backend.
+
+The migration is identified by its timestamp (2023-10-01-160057), which should be used by the migration tool to determine the order of execution relative to other migrations.
 
 ## Dependencies
-This migration doesn't explicitly depend on external libraries, but it does assume the existence of certain database features:
+This migration has implicit dependencies on the existence of the following database objects:
 
-1. UUID data type support
-2. TIMESTAMP data type with time zone support
-3. Support for foreign key constraints
+1. `users` table (referenced by `verification_notifications.user_uuid`)
+2. `card_metadata` table (referenced by `verification_notifications.card_uuid`)
 
-These features are standard in modern relational database systems like PostgreSQL.
+These dependencies are not created or modified by this migration but are assumed to exist in the database schema.
 
-## Additional Notes
+## Entry points
+There are two main entry points for this migration:
 
-1. **Data Loss**: It's important to note that dropping tables results in permanent data loss. Any application relying on these tables will need to be updated to handle their absence.
+1. `up.sql`: This is the script that will be run when applying the migration, dropping the specified tables.
+2. `down.sql`: This is the script that will be run when reverting the migration, recreating the dropped tables.
 
-2. **Foreign Key Relationships**: The `verification_notifications` table had foreign key relationships with `users`, `card_metadata`, and `card_verification` tables. Dropping this table will remove these relationships, which might affect data integrity in related tables.
+The choice of which script to run depends on whether the migration is being applied (moving forward) or reverted (rolling back).
 
-3. **Unique Constraint**: The `card_verification` table had a unique constraint on the `card_id` column. This constraint is recreated in the `down.sql` script, ensuring that if the migration is reverted, the data integrity rules are restored.
+In a typical database migration workflow:
+1. When updating the database schema, the migration tool would execute `up.sql`.
+2. If there's a need to revert this change, the migration tool would execute `down.sql`.
 
-4. **Timestamps**: Both tables used `created_at` and `updated_at` columns with default values set to the current timestamp. This pattern is common for tracking record creation and modification times.
-
-5. **Schema Naming**: The `card_verification` table is explicitly created in the `public` schema in the `down.sql` script. This might be to ensure consistency with the original table location if the database uses multiple schemas.
-
-6. **Similarity Score**: Both tables contained a `similarity_score` column of type `BigInt`. This suggests that the verification process involved some form of comparison or matching, possibly between card details or images.
-
-By removing these tables, the application is likely shifting away from a particular approach to card verification or notification. Developers working with this codebase should be aware of these changes and update any related application logic accordingly.
+This bidirectional approach allows for flexible management of database schema changes, enabling easy updates and rollbacks as needed during development or deployment processes.

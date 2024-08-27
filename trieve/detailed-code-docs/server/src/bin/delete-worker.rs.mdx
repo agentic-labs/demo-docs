@@ -2,105 +2,80 @@
 title: "delete-worker.rs"
 ---
 
+Here's a detailed documentation for the `delete-worker.rs` file:
+
 ## High-level description
-The code defines a worker process that listens to a Redis queue for messages indicating datasets to be deleted. It processes these messages, deleting the corresponding datasets from the database and associated resources like chunks and files. It also handles errors during deletion and retries failed operations.
+This file implements a worker service that handles the asynchronous deletion of datasets and their associated data. It processes deletion requests from a Redis queue, performs the deletion operations, and handles error cases.
 
 ## Code Structure
-The `main` function initializes the worker process, setting up logging, database and Redis connections, and a signal handler for graceful shutdown. It then starts the `delete_worker` function in a Tokio runtime. The `delete_worker` function continuously polls the Redis queue for messages, deserializes them, and performs the deletion process. The `readd_error_to_queue` function handles errors during deletion, retrying failed operations and moving messages to a dead letter queue after multiple failures.
-
-## References
-- `trieve_server::data::models`: Defines data models for various entities like datasets, chunks, and organizations.
-- `trieve_server::errors::ServiceError`: Defines custom error types for the application.
-- `trieve_server::operators`: Contains modules for interacting with different services like ClickHouse, Qdrant, and Redis.
+The main function sets up the environment, initializes connections to various services (PostgreSQL, Redis, Clickhouse), and starts the delete worker service. The `delete_worker` function is the core of the service, continuously processing deletion requests from the Redis queue.
 
 ## Symbols
 
 ### `main`
 #### Description
-Initializes the delete worker process, setting up logging, database and Redis connections, and a signal handler for graceful shutdown. It then starts the `delete_worker` function in a Tokio runtime.
-
-#### Inputs
-None
-
-#### Outputs
-None
+The entry point of the program. It sets up the environment, initializes connections, and starts the delete worker service.
 
 #### Internal Logic
-1. Initializes environment variables from a `.env` file.
-2. Initializes Sentry monitoring if the `SENTRY_URL` environment variable is set.
-3. Sets up logging using the `tracing_subscriber` crate.
-4. Establishes a connection pool to the PostgreSQL database using `diesel_async`.
-5. Creates a connection pool to Redis using `bb8_redis`.
-6. Registers a signal handler for the `SIGTERM` signal to enable graceful shutdown.
-7. Initializes a ClickHouse client and event queue if analytics are enabled.
-8. Starts the `delete_worker` function in a Tokio runtime, passing in the necessary dependencies.
+1. Initializes Sentry for error tracking if configured.
+2. Sets up database and Redis connections.
+3. Initializes Clickhouse client and event queue if analytics are enabled.
+4. Starts the delete worker service.
 
 ### `delete_worker`
 #### Description
-Continuously polls the Redis queue for messages indicating datasets to be deleted. It deserializes these messages and performs the deletion process, handling errors and retries.
+The main worker function that continuously processes dataset deletion requests from a Redis queue.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| should_terminate | `Arc&lt;AtomicBool&gt;` | A shared atomic boolean flag indicating whether the worker should terminate. |
-| redis_pool | `actix_web::web::Data&lt;models::RedisPool&gt;` | A shared Redis connection pool. |
-| web_pool | `actix_web::web::Data&lt;models::Pool&gt;` | A shared database connection pool. |
-| clickhouse_client | `actix_web::web::Data&lt;clickhouse::Client&gt;` | A shared ClickHouse client. |
-| event_queue | `actix_web::web::Data&lt;EventQueue&gt;` | A shared ClickHouse event queue. |
-
-#### Outputs
-None
+| should_terminate | Arc&lt;AtomicBool&gt; | Flag to signal termination of the worker |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+| web_pool | web::Data&lt;Pool&gt; | Database connection pool |
+| clickhouse_client | web::Data&lt;clickhouse::Client&gt; | Clickhouse client for analytics |
+| event_queue | web::Data&lt;EventQueue&gt; | Queue for processing events |
 
 #### Internal Logic
 1. Establishes a connection to Redis.
-2. Enters a loop that continues until the `should_terminate` flag is set.
-3. Polls the `delete_dataset_queue` in Redis for messages using `brpoplpush`, moving messages to the `delete_dataset_processing` queue.
-4. If a message is received, deserializes it into a `DeleteMessage` struct.
-5. Retrieves the dataset to be deleted from the database using `get_deleted_dataset_by_unifiedid_query`.
-6. If the `empty_dataset` flag is set in the message, clears all chunks associated with the dataset using `clear_dataset_query`.
-7. Otherwise, deletes the dataset and associated resources using `delete_dataset_by_id_query`.
-8. Removes the processed message from the `delete_dataset_processing` queue.
-9. If an error occurs during any of these steps, calls `readd_error_to_queue` to handle the error.
+2. Continuously polls the Redis queue for deletion requests.
+3. Processes each request by:
+   - Fetching the dataset information
+   - Clearing or deleting the dataset based on the request type
+   - Handling any errors and potentially re-queueing failed requests
+4. Deletes the organization if it was the last dataset for that organization.
 
 ### `readd_error_to_queue`
 #### Description
-Handles errors during dataset deletion, retrying failed operations and moving messages to a dead letter queue after multiple failures.
+Handles errors during the deletion process by re-adding the failed request to the queue or moving it to a dead letter queue after multiple attempts.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| payload | `DeleteMessage` | The message indicating the dataset to be deleted. |
-| error | `ServiceError` | The error that occurred during deletion. |
-| event_queue | `actix_web::web::Data&lt;EventQueue&gt;` | A shared ClickHouse event queue. |
-| redis_pool | `actix_web::web::Data&lt;models::RedisPool&gt;` | A shared Redis connection pool. |
+| payload | DeleteMessage | The original deletion request |
+| error | ServiceError | The error that occurred |
+| event_queue | web::Data&lt;EventQueue&gt; | Queue for processing events |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| Result&lt;(), ServiceError&gt; | Indicates whether the error handling was successful. |
-
-#### Internal Logic
-1. Increments the `attempt_number` in the `DeleteMessage` payload.
-2. Removes the original message from the `delete_dataset_processing` queue.
-3. If the `attempt_number` reaches 3, logs the error, moves the message to the `dead_letters_delete` queue, sends a `DatasetDeleteFailed` event to ClickHouse, and returns an error.
-4. Otherwise, logs the error and re-adds the message to the `delete_dataset_queue` for retry.
-
-## Side Effects
-- Modifies the database by deleting datasets, chunks, files, and related data.
-- Modifies the Redis queues by adding, removing, and moving messages.
-- Sends events to ClickHouse for analytics tracking.
+| Result | Result&lt;(), ServiceError&gt; | Success or failure of the re-queue operation |
 
 ## Dependencies
-- `diesel_async`: Asynchronous database connection pool for PostgreSQL.
-- `redis`: Asynchronous Redis client.
-- `bb8_redis`: Redis connection pool.
-- `sentry`: Error monitoring and reporting.
-- `signal_hook`: Signal handling for graceful shutdown.
-- `tracing_subscriber`: Logging framework.
-- `clickhouse`: ClickHouse client.
+- diesel_async: For asynchronous database operations
+- redis: For Redis operations
+- sentry: For error tracking and monitoring
+- signal_hook: For handling termination signals
+- tracing_subscriber: For logging and tracing
+- trieve_server: Custom server module containing various data models and operators
 
 ## Error Handling
-The `readd_error_to_queue` function handles errors during dataset deletion. It retries failed operations up to 3 times before moving the message to a dead letter queue.
+The code implements extensive error handling, logging errors, and using Sentry to capture and report errors. Failed deletion attempts are re-queued with an increasing attempt count, and after three failures, they are moved to a dead letter queue.
 
 ## Logging
-The code uses the `tracing_subscriber` crate for logging. It logs information about the worker process startup, shutdown, message processing, and errors encountered.
+The code uses the `log` crate for logging information and errors throughout the execution of the worker.
+
+## TODOs
+There are no explicit TODOs in the code.
+
+This delete worker is a critical component for managing the lifecycle of datasets in the Trieve system, ensuring that deletions are processed reliably and asynchronously.

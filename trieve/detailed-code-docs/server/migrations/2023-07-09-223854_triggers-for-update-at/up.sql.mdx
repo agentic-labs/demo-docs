@@ -3,12 +3,10 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script adds `created_at` and `updated_at` timestamps to the `card_verification` table and creates database triggers to automatically update the `updated_at` column on various tables when rows are updated. 
-
-It defines two trigger functions: `update_updated_at` updates the `updated_at` column of the table being modified, while `update_main_table_updated_at` updates the `updated_at` column of the `main_table` based on the `collection_id` of the updated row.
+This SQL script adds `created_at` and `updated_at` timestamps to the `card_verification` table and creates database triggers to automatically update the `updated_at` column on various tables when a row is updated. 
 
 ## Code Structure
-The code first adds columns to the `card_verification` table. Then, it defines two trigger functions: `update_updated_at` and `update_main_table_updated_at`. Finally, it creates triggers for various tables that call these functions before update operations.
+The code first adds new columns to the `card_verification` table. Then, it defines two trigger functions: `update_updated_at` and `update_main_table_updated_at`. Finally, it creates triggers on multiple tables that call these functions before an update operation.
 
 ## Symbols
 
@@ -22,41 +20,35 @@ N/A - This is a SQL statement, not a function.
 #### Outputs
 N/A - This is a SQL statement, not a function.
 
-#### Internal Logic
-- `ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT NOW()`: Adds a new column named `created_at` of type `TIMESTAMP`. It sets the column as non-nullable (`NOT NULL`) and sets the default value to the current timestamp (`DEFAULT NOW()`).
-- `ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT NOW()`: Adds a new column named `updated_at` with the same properties as `created_at`.
-
 ### `CREATE OR REPLACE FUNCTION update_updated_at()`
 #### Description
-This function defines a trigger function named `update_updated_at` that updates the `updated_at` column of a row to the current timestamp before an update operation.
+This function defines a trigger function named `update_updated_at` that updates the `updated_at` column of the current row to the current timestamp.
 
 #### Inputs
-N/A - The function implicitly receives the `NEW` row data from the trigger.
+N/A - This function operates on the row being updated.
 
 #### Outputs
-- `RETURNS TRIGGER`: Indicates that the function is a trigger function.
+- `NEW`: The updated row with the `updated_at` column set to the current timestamp.
 
 #### Internal Logic
-- `NEW.updated_at = current_timestamp;`: Sets the `updated_at` column of the `NEW` row (the row being updated) to the current timestamp.
-- `RETURN NEW;`: Returns the modified `NEW` row.
+The function sets the `updated_at` column of the `NEW` row (which represents the row being updated) to the current timestamp using `current_timestamp`.
 
 ### `CREATE OR REPLACE FUNCTION update_main_table_updated_at()`
 #### Description
-This function defines a trigger function named `update_main_table_updated_at` that updates the `updated_at` column of a row in the `main_table` based on the `collection_id` of the updated row.
+This function defines a trigger function named `update_main_table_updated_at` that updates the `updated_at` column of a related row in the `main_table` based on the `collection_id` of the updated row.
 
 #### Inputs
-N/A - The function implicitly receives the `NEW` row data from the trigger.
+N/A - This function operates on the row being updated.
 
 #### Outputs
-- `RETURNS TRIGGER`: Indicates that the function is a trigger function.
+- `NEW`: The updated row.
 
 #### Internal Logic
-- `UPDATE main_table SET updated_at = current_timestamp WHERE id = NEW.collection_id;`: Updates the `updated_at` column of the row in the `main_table` where the `id` matches the `collection_id` of the `NEW` row (the row being updated).
-- `RETURN NEW;`: Returns the modified `NEW` row.
+The function performs an `UPDATE` statement on the `main_table`, setting the `updated_at` column to the current timestamp for the row where the `id` matches the `collection_id` of the `NEW` row (the row being updated).
 
 ### `CREATE TRIGGER update_updated_at ...`
 #### Description
-This set of statements creates triggers named `update_updated_at` on various tables. Each trigger is set to execute either the `update_updated_at` or `update_main_table_updated_at` function before an `UPDATE` operation on each respective table.
+These statements create triggers named `update_updated_at` on various tables. Each trigger is set to fire `BEFORE` an `UPDATE` operation on each row. 
 
 #### Inputs
 N/A - Triggers are activated by database events.
@@ -65,8 +57,5 @@ N/A - Triggers are activated by database events.
 N/A - Triggers execute functions and don't have explicit outputs.
 
 #### Internal Logic
-- `CREATE TRIGGER update_updated_at`: Creates a new trigger named `update_updated_at`.
-- `BEFORE UPDATE ON [table_name]`: Specifies that the trigger should be executed before an `UPDATE` operation on the specified table.
-- `FOR EACH ROW`: Indicates that the trigger should be executed for each row affected by the `UPDATE` operation.
-- `EXECUTE FUNCTION update_updated_at();`: Specifies that the `update_updated_at` function should be executed when the trigger is activated.
-- `EXECUTE FUNCTION update_main_table_updated_at();`: Specifies that the `update_main_table_updated_at` function should be executed when the trigger is activated. This is used specifically for tables related to `card_collection`. 
+- For most tables, the trigger executes the `update_updated_at` function, which updates the `updated_at` column of the updated row.
+- For the `card_collection_bookmarks` table, the trigger executes the `update_main_table_updated_at` function, which updates the `updated_at` column of a related row in the `main_table`.

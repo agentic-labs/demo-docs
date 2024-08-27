@@ -3,83 +3,46 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for implementing a system to track usage counts for organizations and datasets in a database. It includes two files: `up.sql` for applying the changes and `down.sql` for reverting them. The migration introduces new tables, functions, and triggers to automatically maintain counts of various entities such as chunks, files, messages, datasets, and users.
+This directory contains SQL migration scripts for implementing a usage counting system in a database. It includes two files: `up.sql` for creating the new structure and `down.sql` for reverting the changes. The migration introduces tables and triggers to track usage statistics for organizations and datasets, including counts for datasets, users, file storage, messages, and chunks.
 
 ## What does it do?
-The migration scripts in this directory implement a robust counting system for resource usage within an application. Here's a breakdown of what it accomplishes:
+The migration scripts in this directory implement a system to automatically track and update usage statistics for organizations and datasets within the application. Here's a breakdown of what it accomplishes:
 
-1. Creates tables to store usage counts for organizations and datasets.
-2. Implements automatic counting mechanisms using triggers and functions.
-3. Tracks counts for:
-   - Chunks per dataset
-   - Datasets per organization
-   - Users per organization
-   - File storage usage per organization
-   - Messages per organization
-4. Ensures that these counts are automatically updated whenever relevant data is added or removed from the system.
-5. Provides a way to revert these changes if needed.
+1. Creates two new tables:
+   - `organization_usage_counts`: Stores aggregated usage data for each organization, including the number of datasets, users, total file storage, and message count.
+   - `dataset_usage_counts`: Tracks the number of chunks for each dataset.
 
-This system allows the application to maintain real-time statistics on resource usage, which can be useful for monitoring, billing, or enforcing usage limits without the need for separate update processes.
+2. Implements several trigger functions that automatically update these counts when related actions occur:
+   - When chunks are added or removed from a dataset
+   - When files are uploaded or deleted, affecting storage usage
+   - When messages are created or deleted
+   - When datasets are created or removed
+   - When users join or leave an organization
+
+3. Sets up triggers on various tables (`chunk_metadata`, `files`, `messages`, `datasets`, `user_organizations`) to execute these functions automatically on insert or delete operations.
+
+4. Provides a rollback mechanism (`down.sql`) that removes the new tables and triggers, reverting to a previous state where chunk metadata counts were tracked differently.
+
+This system allows for real-time tracking of usage metrics without requiring manual updates, enabling efficient monitoring and potential usage-based billing or resource allocation.
 
 ## Key Files
 
-### up.sql
-This file contains the SQL commands to implement the new counting system. It:
-1. Creates `organization_usage_counts` and `dataset_usage_counts` tables.
-2. Defines functions to update counts for various entities (chunks, files, messages, datasets, users).
-3. Creates triggers to automatically call these functions when data changes.
-4. Removes obsolete triggers and tables from a previous implementation.
+1. `up.sql`:
+   This file contains the SQL commands to set up the new usage counting system. It creates the `organization_usage_counts` and `dataset_usage_counts` tables, defines trigger functions for updating counts, and sets up triggers on relevant tables. This script is responsible for implementing the new feature.
 
-Here's an example of one of the functions created:
+   Key components:
+   - Table creation for `organization_usage_counts` and `dataset_usage_counts`
+   - Functions like `update_chunk_metadata_counts`, `update_files_storage_counts`, `update_messages_counts`, `update_datasets_counts`, and `update_users_counts`
+   - Triggers that call these functions on insert or delete operations on related tables
 
-```sql
-CREATE OR REPLACE FUNCTION update_chunk_metadata_counts()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF (TG_OP = 'INSERT') THEN
-        INSERT INTO dataset_usage_counts (dataset_id, chunk_count)
-        VALUES (NEW.dataset_id, 1)
-        ON CONFLICT (dataset_id) DO UPDATE
-        SET chunk_count = dataset_usage_counts.chunk_count + 1;
-    ELSIF (TG_OP = 'DELETE') THEN
-        UPDATE dataset_usage_counts
-        SET chunk_count = dataset_usage_counts.chunk_count - 1
-        WHERE dataset_id = OLD.dataset_id;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-```
+2. `down.sql`:
+   This file contains the SQL commands to revert the changes made by `up.sql`. It drops the newly created tables, triggers, and functions, and recreates a `chunk_metadata_counts` table with its associated trigger function. This script is used to roll back the migration if needed.
 
-### down.sql
-This file contains SQL commands to revert the changes made by `up.sql`. It:
-1. Drops the newly created triggers and functions.
-2. Removes the new usage count tables.
-3. Recreates a `chunk_metadata_counts` table and associated function, likely reverting to a previous implementation.
+   Key components:
+   - Dropping of triggers, functions, and tables created in `up.sql`
+   - Recreation of `chunk_metadata_counts` table and its update function
 
-An example of the reversion process:
-
-```sql
-DROP TRIGGER IF EXISTS update_dataset_counts_trigger ON datasets;
-DROP TRIGGER IF EXISTS update_organization_counts_trigger ON user_organizations;
-DROP FUNCTION IF EXISTS update_dataset_counts();
-DROP FUNCTION IF EXISTS update_organization_counts();
-DROP TABLE IF EXISTS dataset_usage_counts;
-DROP TABLE IF EXISTS organization_usage_counts;
-```
+These files work together to provide a complete migration path for implementing and potentially reverting the usage counting feature.
 
 ## Configuration
-This migration doesn't rely on external configuration files or environment variables. However, it does assume the existence of certain tables in the database schema, such as `organizations`, `datasets`, `chunk_metadata`, `files`, `messages`, and `user_organizations`.
-
-## TODOs and Considerations
-1. There's a discrepancy in table names in the `down.sql` file. The function refers to `card_metadata_counts`, but the table created is named `chunk_metadata_counts`. This inconsistency should be addressed to ensure proper functionality.
-
-2. The use of triggers for real-time count updates may impact the performance of insert and delete operations on the affected tables. While this approach ensures up-to-date count data, it's worth monitoring the performance impact in a production environment.
-
-3. The migration scripts suggest that this is an update to an existing schema, replacing a previous implementation of chunk metadata counting. It's important to ensure that any application code relying on the old implementation is updated accordingly.
-
-4. Error handling in the functions uses `ON CONFLICT` clauses to handle cases where a record already exists, ensuring that counts are properly updated even if the initial insert fails. This is a robust approach but should be tested thoroughly to ensure it covers all edge cases.
-
-5. The `down.sql` script recreates a previous version of the chunk counting system. It's crucial to verify that this reversion process is complete and doesn't leave the database in an inconsistent state if the migration needs to be rolled back.
-
-By implementing these migration scripts, the application gains a powerful tool for tracking resource usage across organizations and datasets, enabling better monitoring, potential billing features, and resource management capabilities.
+This migration does not rely on external configuration files or environment variables. All necessary settings and structures are defined within the SQL scripts themselves. However, it's important to note that the migration assumes the existence of certain tables in the database schema, such as `datasets`, `organizations`, `chunk_metadata`, `files`, `messages`, and `user_organizations`. The database administrator should ensure that these tables exist and have the expected structure before applying this migration.

@@ -3,53 +3,58 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script creates a new table `user_notification_counts` to track notification counts for users. It also implements a trigger function to automatically update these counts when notifications are added or removed, and initializes the table with existing notification data.
+This SQL script creates a table `user_notification_counts` to store the count of unread notifications for each user and sets up triggers to automatically update this count when notifications are added or removed from the `verification_notifications` and `file_upload_completed_notifications` tables. It also initializes the `user_notification_counts` table with existing notification data.
 
 ## Code Structure
-The script is structured into four main parts: table creation, trigger function definition, trigger creation, and data initialization.
+The code first creates the `user_notification_counts` table. Then, it defines a function `update_notification_count()` which is called by triggers defined for `verification_notifications` and `file_upload_completed_notifications` tables. Finally, it initializes the `user_notification_counts` table.
+
+## References
+This script references the following tables:
+- `users`: Assumed to be a table containing user information, including a unique identifier `id`.
+- `verification_notifications`: Assumed to be a table storing verification notifications, likely with a `user_uuid` column referencing the `users` table.
+- `file_upload_completed_notifications`: Assumed to be a table storing file upload completion notifications, likely with a `user_uuid` column referencing the `users` table.
 
 ## Symbols
-
 ### `user_notification_counts` table
 #### Description
-Creates a new table to store notification counts for each user.
+This table stores the count of unread notifications for each user.
 
-#### Internal Logic
-- Uses UUID as the primary key
-- References the `users` table for `user_uuid`
-- Includes a `notification_count` column with a default value of 0
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | UUID | Unique identifier for each row, automatically generated. |
+| user_uuid | UUID | Foreign key referencing the `users` table, ensuring each user has only one entry. |
+| notification_count | INTEGER | The count of unread notifications for the user, defaults to 0. |
 
 ### `update_notification_count()` function
 #### Description
-A trigger function that updates the notification count when notifications are inserted or deleted.
+This function is a trigger function that updates the `notification_count` in the `user_notification_counts` table whenever a new notification is inserted or deleted from the tables it is attached to.
+
+#### Inputs
+This function implicitly receives information about the triggering event (INSERT or DELETE) and the data being modified through the `TG_OP`, `NEW`, and `OLD` variables within the trigger context.
+
+#### Outputs
+Returns `NEW` for INSERT operations, effectively returning the newly inserted row. This behavior is likely irrelevant in this context as the returned value is not used.
 
 #### Internal Logic
-- Increments the count on INSERT operations
-- Decrements the count on DELETE operations
-- Updates the `user_notification_counts` table accordingly
+1. **Identifies the triggering event:** Checks if the trigger was activated by an INSERT or DELETE operation using `TG_OP`.
+2. **Increments or decrements the count:**
+    - If it's an INSERT, it increments the `notification_count` in `user_notification_counts` for the corresponding `user_uuid` using the `NEW.user_uuid` value from the inserted row.
+    - If it's a DELETE, it decrements the `notification_count` in `user_notification_counts` for the corresponding `user_uuid` using the `OLD.user_uuid` value from the deleted row.
 
-### Triggers: `update_verification_notification_count` and `update_file_upload_notification_count`
+### `update_verification_notification_count` trigger
 #### Description
-Creates triggers that call the `update_notification_count()` function for INSERT and DELETE operations on `verification_notifications` and `file_upload_completed_notifications` tables.
+This trigger calls the `update_notification_count()` function after each INSERT or DELETE operation on the `verification_notifications` table.
 
-### Data Initialization
+### `update_file_upload_notification_count` trigger
 #### Description
-Initializes the `user_notification_counts` table with existing notification data.
+This trigger calls the `update_notification_count()` function after each INSERT or DELETE operation on the `file_upload_completed_notifications` table.
+
+### Initialization of `user_notification_counts`
+#### Description
+This part of the script initializes the `user_notification_counts` table with existing data from `verification_notifications` and `file_upload_completed_notifications`.
 
 #### Internal Logic
-- Selects distinct users from `file_upload_completed_notifications`
-- Counts existing notifications from both `verification_notifications` and `file_upload_completed_notifications` tables
-- Inserts the calculated counts into the new table
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| `users` table | Referenced by `user_notification_counts` for user IDs |
-| `verification_notifications` table | Used for counting existing notifications and triggering count updates |
-| `file_upload_completed_notifications` table | Used for counting existing notifications and triggering count updates |
-
-## Performance Considerations
-- The use of triggers ensures real-time updates of notification counts, which may impact performance on high-volume insert/delete operations.
-- The initial data population query uses subqueries, which might be slow for large datasets.
-
-This migration script sets up a robust system for tracking user notification counts, ensuring that the counts are always up-to-date through the use of triggers, and initializes the system with existing data.
+1. **Selects distinct user_uuid:** It selects distinct `user_uuid` values from `file_upload_completed_notifications` to avoid duplicate entries for users.
+2. **Calculates existing notification count:** For each distinct `user_uuid`, it calculates the total count of existing notifications by summing the counts from `verification_notifications` and `file_upload_completed_notifications`.
+3. **Inserts data into user_notification_counts:** It inserts a new row into `user_notification_counts` for each distinct `user_uuid` with a generated UUID, the `user_uuid`, and the calculated `notification_count`.

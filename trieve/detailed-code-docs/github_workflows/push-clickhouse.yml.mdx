@@ -3,72 +3,104 @@ title: "push-clickhouse.yml"
 ---
 
 ## High-level description
-This GitHub Actions workflow automates the process of building and pushing a Docker image for ClickHouse to Docker Hub when changes are pushed to the `main` branch or specifically to the `analytics/clickhouse/` directory. 
-
-The workflow leverages various GitHub Actions to streamline the process, including checking out the repository, setting up buildx for building multi-platform images, logging into Docker Hub, and finally building and pushing the image with appropriate tags and labels.
+This GitHub Actions workflow is designed to create and push a Clickhouse Docker image to Docker Hub. It is triggered on pushes to the main branch that affect files in the 'analytics/clickhouse/' directory, or manually via workflow dispatch.
 
 ## Code Structure
-The code defines a single workflow named `clickhouse_image` triggered on push events to the `main` branch or the `analytics/clickhouse/` path. This workflow consists of a single job, also named `clickhouse_image`, which runs on a specific runner type (`blacksmith-2vcpu-ubuntu-2204`). The job comprises several steps executed sequentially, each utilizing a specific GitHub Action for tasks like checking out the code, setting up build tools, logging into Docker Hub, and building/pushing the Docker image.
+The workflow consists of a single job named "clickhouse_image" with several steps that checkout the repository, set up Docker buildx, log in to Docker Hub, prepare metadata for the image, and finally build and push the Docker image.
 
 ## Symbols
-### `name: Create Clickhouse image`
+
+### Workflow
 #### Description
-Defines the name of the workflow displayed in the GitHub Actions interface.
+This GitHub Actions workflow is named "Create Clickhouse image" and is responsible for building and pushing a Clickhouse Docker image.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| github.workflow | string | The name of the current workflow |
+| github.head_ref | string | The head ref or source branch of the pull request in a workflow run |
 
 #### Internal Logic
-This line sets the name of the workflow to "Create Clickhouse image".
+1. Sets up concurrency to prevent multiple workflow runs for the same branch.
+2. Defines triggers: manual dispatch and pushes to 'main' branch affecting 'analytics/clickhouse/**' files.
+3. Runs a single job "clickhouse_image" on a custom runner.
+4. Executes a series of steps to build and push the Docker image.
 
-### `concurrency`
+### Job: clickhouse_image
 #### Description
-This section configures concurrency for the workflow, ensuring that only one workflow run is active for a given branch at a time.
+This job builds and pushes the Clickhouse Docker image to Docker Hub.
 
 #### Internal Logic
-- `group`: Defines the concurrency group using the workflow name and branch name. Runs from the same workflow and branch will be grouped.
-- `cancel-in-progress`: If set to `true`, it cancels any in-progress workflow runs within the same concurrency group.
+1. Checks out the repository.
+2. Sets up Docker buildx.
+3. Logs in to Docker Hub using provided secrets.
+4. Prepares metadata for the Docker image.
+5. Builds and pushes the Docker image using the prepared metadata.
 
-### `on`
+### Step: Checkout the repo
 #### Description
-Specifies the events that trigger the workflow.
+This step checks out the repository code.
 
-#### Internal Logic
-- `workflow_dispatch`: Allows the workflow to be triggered manually from the GitHub Actions interface.
-- `push`: Triggers the workflow on push events to the repository.
-    - `branches`: Filters push events to only include those on the `main` branch.
-    - `paths`: Further filters push events to only include those affecting files within the `analytics/clickhouse/` directory.
-
-### `jobs`
+### Step: Setup buildx
 #### Description
-Defines the jobs that run within the workflow.
+This step sets up Docker buildx for building multi-platform images.
 
-#### Internal Logic
-This section contains a single job named `clickhouse_image`.
-
-### `clickhouse_image`
+### Step: Login to Docker Hub
 #### Description
-This is the main job of the workflow responsible for building and pushing the ClickHouse Docker image.
+This step logs in to Docker Hub using provided secrets.
 
-#### Internal Logic
-- `name`: Sets the display name of the job as "Push Clickhosue Image".
-- `runs-on`: Specifies the type of runner to use for this job, which is `blacksmith-2vcpu-ubuntu-2204`.
-- `steps`: Defines the individual steps that are executed sequentially within the job.
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| username | string | Docker Hub username (from secrets) |
+| password | string | Docker Hub password (from secrets) |
 
-### `steps`
+### Step: Docker meta
 #### Description
-A sequence of steps that are executed as part of the `clickhouse_image` job.
+This step prepares metadata for the Docker image, including tags and labels.
 
-#### Internal Logic
-This section outlines the steps involved in building and pushing the Docker image:
-1. **Checkout the repo**: Uses the `actions/checkout@v4` action to checkout the repository's code.
-2. **Setup buildx**: Utilizes the `docker/setup-buildx-action@v3` action to set up the `buildx` tool for building multi-platform Docker images.
-3. **Login to Docker Hub**: Uses the `docker/login-action@v3` action to log in to Docker Hub using credentials stored in GitHub secrets.
-4. **Docker meta**: Employs the `docker/metadata-action@v5` action to generate Docker image tags and labels based on the repository and workflow context.
-5. **Build and push Docker image**: Utilizes the `docker/build-push-action@v5` action to build and push the Docker image to Docker Hub. It uses the `Dockerfile` located in the `analytics/clickhouse/` directory and tags the image based on the output of the `docker/metadata-action@v5` step.
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tags | string | Generated tags for the Docker image |
+| labels | string | Generated labels for the Docker image |
+
+### Step: Build and push Docker image
+#### Description
+This step builds the Docker image and pushes it to Docker Hub.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| context | string | The build context directory |
+| file | string | The path to the Dockerfile |
+| push | boolean | Whether to push the image to Docker Hub |
+| tags | string | Tags for the Docker image |
+| labels | string | Labels for the Docker image |
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| actions/checkout@v4 | Checks out the repository's code. |
-| docker/setup-buildx-action@v3 | Sets up the `buildx` tool for building multi-platform Docker images. |
-| docker/login-action@v3 | Logs into Docker Hub using provided credentials. |
-| docker/metadata-action@v5 | Generates Docker image tags and labels. |
-| docker/build-push-action@v5 | Builds and pushes the Docker image to Docker Hub. | 
+| actions/checkout@v4 | To check out the repository code |
+| docker/setup-buildx-action@v3 | To set up Docker buildx |
+| docker/login-action@v3 | To log in to Docker Hub |
+| docker/metadata-action@v5 | To prepare metadata for the Docker image |
+| docker/build-push-action@v5 | To build and push the Docker image |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| concurrency.group | string | ${{ github.workflow }}-${{ github.head_ref }} | Defines the concurrency group for the workflow |
+| concurrency.cancel-in-progress | boolean | true | Cancels in-progress runs of the same workflow |
+
+## TODOs
+There is a commented-out step for setting up QEMU, which might be needed for multi-platform builds in the future:
+```yaml
+# - name: Set up QEMU
+#   uses: docker/setup-qemu-action@v3
+```
+
+Additionally, the build-push-action step has a commented-out `platforms` option, which suggests multi-platform builds might be considered in the future:
+```yaml
+# platforms: linux/amd64,linux/arm64
+```

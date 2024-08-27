@@ -3,23 +3,32 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script reverts the database migration defined in the corresponding `up.sql` file, specifically targeting the `dataset_tags` table. It removes a unique constraint on the combination of `dataset_id` and `tag_key` and adds unique constraints on the `id`, `dataset_id` combination and the `tag` column.
+This SQL script reverts database schema changes that were likely applied in an "up" migration. It specifically removes a unique constraint on a combination of `dataset_id` and `tag_key` columns in the `dataset_tags` table and adds back unique constraints on `id`, `dataset_id` and `tag`.
+
+## Code Structure
+This script contains three SQL statements that modify the `dataset_tags` table. Each statement builds upon the previous one by altering constraints.
 
 ## Symbols
-
-### `down.sql`
+### `ALTER TABLE dataset_tags DROP CONSTRAINT IF EXISTS dataset_tags_dataset_id_tag_key;`
 #### Description
-This SQL script undoes the changes made by the `up.sql` migration script, reverting the `dataset_tags` table to its previous state.
+This statement attempts to drop a constraint named `dataset_tags_dataset_id_tag_key` from the `dataset_tags` table. The `IF EXISTS` clause ensures that the statement doesn't fail if the constraint doesn't exist. This suggests that the "up" migration likely added this constraint, enforcing uniqueness on the combination of `dataset_id` and `tag_key` columns.
 
 #### Internal Logic
-1. **Drop Existing Constraint (if exists):**
-   - `ALTER TABLE dataset_tags DROP CONSTRAINT IF EXISTS dataset_tags_dataset_id_tag_key;` 
-   - This statement attempts to drop the `dataset_tags_dataset_id_tag_key` constraint from the `dataset_tags` table. The `IF EXISTS` clause ensures that the operation doesn't fail if the constraint is already absent.
+1.  **Check for existence:** The database checks if the constraint `dataset_tags_dataset_id_tag_key` exists on the `dataset_tags` table.
+2.  **Drop constraint:** If the constraint exists, it is removed from the table. If it doesn't exist, the statement completes without taking any action.
 
-2. **Add Unique Constraint on `id` and `dataset_id`:**
-   - `ALTER TABLE dataset_tags ADD CONSTRAINT dataset_tags_id_dataset_id UNIQUE(id, dataset_id);`
-   - This statement adds a new unique constraint named `dataset_tags_id_dataset_id` to the `dataset_tags` table. This constraint ensures that the combination of `id` and `dataset_id` is unique across all rows in the table.
+### `ALTER TABLE dataset_tags ADD CONSTRAINT dataset_tags_id_dataset_id UNIQUE(id, dataset_id);`
+#### Description
+This statement adds a new unique constraint named `dataset_tags_id_dataset_id` to the `dataset_tags` table. This constraint enforces that the combination of `id` and `dataset_id` columns must be unique for each row in the table.
 
-3. **Add Unique Constraint on `tag`:**
-   - `ALTER TABLE dataset_tags ADD CONSTRAINT dataset_tags_tag UNIQUE(tag);`
-   - This statement adds another unique constraint named `dataset_tags_tag` to the `dataset_tags` table. This constraint ensures that the `tag` column has unique values across all rows.
+#### Internal Logic
+1.  **Create constraint:** The database creates a new unique constraint named `dataset_tags_id_dataset_id` on the `dataset_tags` table.
+2.  **Define constraint columns:** The constraint is defined to include the `id` and `dataset_id` columns. This means that no two rows in the table can have the same combination of values for these two columns.
+
+### `ALTER TABLE dataset_tags ADD CONSTRAINT dataset_tags_tag UNIQUE(tag);`
+#### Description
+This statement adds a new unique constraint named `dataset_tags_tag` to the `dataset_tags` table. This constraint enforces that the `tag` column must be unique for each row in the table.
+
+#### Internal Logic
+1.  **Create constraint:** The database creates a new unique constraint named `dataset_tags_tag` on the `dataset_tags` table.
+2.  **Define constraint column:** The constraint is defined to include the `tag` column. This means that no two rows in the table can have the same value for the `tag` column.

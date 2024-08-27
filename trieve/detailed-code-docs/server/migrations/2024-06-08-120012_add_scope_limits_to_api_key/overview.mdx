@@ -3,60 +3,46 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding scope limits to API keys in the database. It includes two files: `up.sql` for applying the changes and `down.sql` for reverting them. The migration adds two new columns to the `user_api_key` table: `dataset_ids` and `organization_ids`, both of which are arrays of text (TEXT[]) that can store multiple IDs.
+This directory contains SQL migration scripts for adding scope limits to API keys in the database. The migration adds two new columns, `dataset_ids` and `organization_ids`, to the `user_api_key` table, allowing for more granular control over API key permissions.
 
 ## What does it do?
-This migration enhances the functionality of API keys by allowing them to be scoped to specific datasets and organizations. Here's a breakdown of what it does:
+These migration scripts modify the database structure to enhance the functionality of API keys. They add the ability to associate specific datasets and organizations with each API key. This change allows for more fine-grained access control, where an API key can be limited to operate only on certain datasets or within specific organizations.
 
-1. When applied (using `up.sql`):
-   - It adds a `dataset_ids` column to the `user_api_key` table. This column can store multiple dataset IDs, allowing an API key to be restricted to accessing only specific datasets.
-   - It adds an `organization_ids` column to the `user_api_key` table. This column can store multiple organization IDs, potentially limiting an API key's access to specific organizations.
-   - Both new columns are set to allow NULL values by default, meaning an API key can exist without any specific dataset or organization restrictions.
+The migration consists of two parts:
+1. An "up" script that adds the new columns to the table.
+2. A "down" script that removes these columns, allowing for the changes to be reverted if necessary.
 
-2. When reverted (using `down.sql`):
-   - It removes the `dataset_ids` column from the `user_api_key` table.
-   - It removes the `organization_ids` column from the `user_api_key` table.
-   - The removal is done safely using `DROP COLUMN IF EXISTS`, ensuring the script doesn't fail if the columns don't exist.
-
-This migration allows for more granular control over API key permissions, enabling administrators to limit an API key's access to specific datasets or organizations. This can be useful for enhancing security, implementing multi-tenancy, or creating more fine-grained access control in the application.
+This approach enables developers to implement more sophisticated permission systems, where API keys can be scoped to particular resources, enhancing security and flexibility in API usage.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to apply the migration. It adds the new columns to the `user_api_key` table.
+### up.sql
+This file contains the SQL commands to add the new columns to the `user_api_key` table:
 
-   ```sql
-   ALTER TABLE user_api_key ADD COLUMN dataset_ids TEXT[] DEFAULT NULL;
-   ALTER TABLE user_api_key ADD COLUMN organization_ids TEXT[] DEFAULT NULL;
-   ```
+```sql
+ALTER TABLE user_api_key ADD COLUMN dataset_ids TEXT[] DEFAULT NULL;
+ALTER TABLE user_api_key ADD COLUMN organization_ids TEXT[] DEFAULT NULL;
+```
 
-2. `down.sql`: This file contains the SQL commands to revert the migration. It removes the columns added by `up.sql`.
+These commands add two new columns, both of type `TEXT[]` (an array of text strings), with a default value of `NULL`. This allows each API key to be associated with multiple dataset IDs and organization IDs.
 
-   ```sql
-   ALTER TABLE user_api_key DROP COLUMN IF EXISTS dataset_ids;
-   ALTER TABLE user_api_key DROP COLUMN IF EXISTS organization_ids;
-   ```
+### down.sql
+This file contains the SQL commands to remove the columns added by the up.sql script:
 
-Both files are crucial for maintaining the database schema and allowing for easy application and rollback of changes. The `up.sql` file is used when upgrading the database to include the new columns, while the `down.sql` file is used if there's a need to remove these columns and revert to the previous schema.
+```sql
+ALTER TABLE user_api_key DROP COLUMN IF EXISTS dataset_ids;
+ALTER TABLE user_api_key DROP COLUMN IF EXISTS organization_ids;
+```
+
+These commands remove the `dataset_ids` and `organization_ids` columns from the `user_api_key` table if they exist. The `IF EXISTS` clause ensures that the script doesn't fail if the columns have already been removed.
 
 ## Configuration
-The migration is configured through the directory name: `2024-06-08-120012_add_scope_limits_to_api_key`. This naming convention is likely used by a migration tool to determine the order and purpose of migrations. The components of the name are:
+The migration is identified by its timestamp: `2024-06-08-120012`. This timestamp is used to order migrations and ensure they are applied in the correct sequence.
 
-- Date: 2024-06-08
-- Time: 120012 (12:00:12 PM)
-- Description: add_scope_limits_to_api_key
+No additional configuration is required for these SQL scripts. However, the application code that interacts with the `user_api_key` table will need to be updated to handle these new columns appropriately.
 
-This configuration ensures that the migration is applied in the correct order relative to other migrations and provides a clear description of its purpose.
+When using these new columns:
+- `dataset_ids`: Should contain an array of dataset identifiers that the API key has access to.
+- `organization_ids`: Should contain an array of organization identifiers that the API key has access to.
 
-In terms of database configuration, this migration assumes:
-
-1. The existence of a `user_api_key` table in the database.
-2. Permissions to alter the `user_api_key` table.
-3. Support for the `TEXT[]` data type, which is an array of text strings. This is a PostgreSQL-specific feature, indicating that the application is likely using PostgreSQL as its database system.
-
-When applying this migration, database administrators should ensure that:
-
-1. There's enough space in the database to accommodate the new columns.
-2. Any existing application code that interacts with the `user_api_key` table is updated to handle the new columns.
-3. Any data migration or population of these new columns is handled separately, as this migration only adds empty columns.
-
-The use of `DEFAULT NULL` for both new columns means that existing rows in the table will have NULL values for these new columns, and new rows will also have NULL values unless specified otherwise. This allows for a smooth transition and backwards compatibility with existing API keys that don't have specific dataset or organization restrictions.
+If either of these columns is `NULL`, it could be interpreted as the API key having unrestricted access to all datasets or organizations, respectively. The exact interpretation and implementation of these scope limits would be defined in the application logic.

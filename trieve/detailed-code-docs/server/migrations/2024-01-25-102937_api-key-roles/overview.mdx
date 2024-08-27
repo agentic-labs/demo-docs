@@ -6,59 +6,52 @@ title: "Overview"
 This directory contains SQL migration files for adding and removing a 'role' column to the 'user_api_key' table in the database schema. The migration is dated 2024-01-25 and is specifically for implementing API key roles.
 
 ## What does it do?
-These migration files allow for the addition and removal of a 'role' column in the 'user_api_key' table. This new column is designed to store integer values representing different roles associated with API keys. The 'up' migration adds the column with a default value of 0, while the 'down' migration removes it. This allows for more granular control over API key permissions or capabilities within the system.
+These migration files modify the database structure to support role-based API keys. The 'up' migration adds a new 'role' column to the 'user_api_key' table, allowing each API key to be associated with a specific role. The 'down' migration removes this column, reverting the database to its previous state without role information for API keys.
+
+The 'role' is represented as an integer, with a default value of 0. This suggests a system where different numeric values correspond to different levels of access or permissions for API keys.
 
 ## Key Files
 1. up.sql
    - This file contains the SQL command to add the 'role' column to the 'user_api_key' table.
-   - It sets the column as an integer, non-nullable, with a default value of 0.
+   - It defines the column as an integer, not allowing null values, and sets a default value of 0.
 
 2. down.sql
    - This file contains the SQL command to remove the 'role' column from the 'user_api_key' table.
-   - It's used to revert the changes made by the 'up' migration.
+   - It's designed to revert the changes made by the 'up' migration.
 
 ## Configuration
-The migration files don't require any external configuration. However, they assume the existence of a 'user_api_key' table in the database schema.
+The migration uses SQL commands and doesn't require additional configuration. However, the choice of integer type for the 'role' column and the default value of 0 are important configuration decisions:
 
-Here's a breakdown of the SQL commands in each file:
+- Integer type: Allows for numerous distinct roles to be defined.
+- Default value 0: Suggests that 0 might represent a default or basic role, with other integers potentially representing higher privilege levels.
 
-1. up.sql:
+## Dependencies
+This migration depends on:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| user_api_key table | The existing table that is being modified to include the new 'role' column |
+
+## Performance Considerations
+- Adding or removing a column can be a relatively fast operation, but the impact depends on the size of the 'user_api_key' table and the specific database system in use.
+- For large tables, these operations might require a table rewrite, potentially causing a temporary lock and impacting database performance during migration.
+- It's recommended to run these migrations during low-traffic periods or maintenance windows to minimize disruption.
+
+## Error Handling
+- The 'up' migration might fail if the 'role' column already exists in the 'user_api_key' table.
+- The 'down' migration might fail if the 'role' column doesn't exist when trying to remove it.
+- Specific error messages and behaviors may vary depending on the database management system being used.
+
+## Code Snippets
+
+### up.sql
 ```sql
 ALTER TABLE user_api_key ADD COLUMN role integer NOT NULL DEFAULT 0;
 ```
-This command adds a new 'role' column to the 'user_api_key' table. The column is defined as an integer, cannot be null, and has a default value of 0.
 
-2. down.sql:
+### down.sql
 ```sql
 ALTER TABLE user_api_key DROP COLUMN role;
 ```
-This command removes the 'role' column from the 'user_api_key' table, effectively undoing the changes made by the 'up' migration.
 
-## Dependencies
-These migration files depend on:
-1. The existence of a 'user_api_key' table in the database schema.
-2. A database system that supports ALTER TABLE commands for adding and dropping columns.
-
-## Performance Considerations
-- Adding or removing a column can be a relatively fast operation, but the exact performance impact depends on the database system and the size of the 'user_api_key' table.
-- For large tables, these operations might require a table rewrite, which could temporarily lock the table and impact database performance during the migration.
-- It's recommended to run these migrations during a maintenance window or low-traffic period, especially if the 'user_api_key' table is large or frequently accessed.
-
-## Side Effects
-- The 'up' migration will add a 'role' column to all existing rows in the 'user_api_key' table, setting it to the default value of 0.
-- After the 'up' migration, any new insertions into the 'user_api_key' table will require a value for the 'role' column (or will use the default value of 0 if not specified).
-- The 'down' migration will permanently remove the 'role' column and all its data from the 'user_api_key' table.
-- Any application code or queries that rely on the 'role' column will need to be updated accordingly after these migrations are applied.
-
-## Error Handling
-- If the 'user_api_key' table doesn't exist when running the 'up' migration, it will likely result in an error.
-- If the 'role' column already exists when running the 'up' migration, it may cause an error depending on the database system.
-- If the 'role' column doesn't exist when running the 'down' migration, it will likely result in an error.
-- The specific error handling depends on the database system and the migration tool being used.
-
-## Notes
-- These migration files are part of a pair that allows for bidirectional schema changes.
-- It's important to run these migrations in the correct order: 'up' for applying the change, 'down' for reverting it.
-- The comment `-- Your SQL goes here` in the 'up.sql' file suggests that this might be a template or placeholder. In a production environment, it's recommended to remove or replace such comments with more specific documentation about the purpose of this particular migration.
-- Care should be taken to ensure that adding or removing the 'role' column doesn't break any application functionality that depends on it.
-- The choice of an integer type for the 'role' column suggests that roles are represented numerically in the system. This could allow for efficient storage and comparison of roles, but it also means that there needs to be a mapping between these integer values and their corresponding role names or permissions elsewhere in the application.
+These SQL commands demonstrate the straightforward nature of the migration, focusing solely on the addition and removal of the 'role' column.

@@ -3,53 +3,50 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script creates a new table `card_metadata_counts` to store metadata count information for datasets. It also defines a trigger function and a trigger to automatically update the count when card metadata is inserted or deleted.
+This SQL script creates a table `card_metadata_counts` to store the count of card metadata entries associated with each dataset. It also defines a trigger function `update_card_metadata_count` that automatically updates the count in `card_metadata_counts` whenever a row is inserted or deleted in the `card_metadata` table.
+
+## Code Structure
+The code defines a table `card_metadata_counts` and a function `update_card_metadata_count`. The function is used as a trigger on the `card_metadata` table to keep the counts in `card_metadata_counts` table up-to-date.
+
+## References
+- `card_metadata`: This SQL script references a table named `card_metadata`, implying that it exists and likely stores card metadata information.
+- `datasets`: The script also references a table named `datasets` through a foreign key constraint, suggesting a relationship between datasets and card metadata.
 
 ## Symbols
 
-### Table: `card_metadata_counts`
+### `card_metadata_counts` table
 #### Description
-This table stores the total count of card metadata rows for each dataset.
+This table stores the count of card metadata entries for each dataset.
 
 #### Columns
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| id | UUID | Primary key, automatically generated |
-| dataset_id | UUID | Foreign key referencing the datasets table |
-| total_rows | BIGINT | The total number of card metadata rows for the dataset |
+| id | UUID | Unique identifier for each row, automatically generated. |
+| dataset_id | UUID | Foreign key referencing the `datasets` table, indicating the dataset to which the count belongs. |
+| total_rows | BIGINT | The total number of card metadata entries associated with the dataset. |
 
-### Function: `update_card_metadata_count()`
+### `update_card_metadata_count` function
 #### Description
-This is a trigger function that updates the `card_metadata_counts` table when card metadata is inserted or deleted.
+This function is a trigger function that automatically updates the `card_metadata_counts` table whenever a row is inserted or deleted in the `card_metadata` table.
 
 #### Inputs
-This function doesn't take explicit inputs but operates on the `NEW` and `OLD` row data provided by the trigger context.
+This function implicitly takes the `NEW` and `OLD` records as input based on the trigger action (INSERT or DELETE).
 
 #### Outputs
-This function doesn't return a value (returns NULL).
+This function returns `NULL` as it is a trigger function primarily focused on side effects.
 
 #### Internal Logic
-1. For INSERT operations:
-   - Inserts a new row into `card_metadata_counts` with the dataset_id and a count of 1
-   - If a row already exists for the dataset_id, it increments the existing count
-2. For DELETE operations:
-   - Decrements the count for the corresponding dataset_id
+1. **Determine Trigger Action:** Checks if the trigger was activated by an INSERT or DELETE operation on the `card_metadata` table.
+2. **Handle INSERT:** If it's an INSERT, it attempts to insert a new row into `card_metadata_counts` with a count of 1. If a row with the same `dataset_id` already exists, it increments the existing `total_rows` count by 1.
+3. **Handle DELETE:** If it's a DELETE, it decrements the `total_rows` count in `card_metadata_counts` for the corresponding `dataset_id`.
 
-### Trigger: `card_metadata_count_trigger`
+## Side Effects
+- **Modifies `card_metadata_counts`:** This function directly modifies the `card_metadata_counts` table by inserting, updating, or deleting rows based on the actions performed on the `card_metadata` table.
+
+### `card_metadata_count_trigger` trigger
 #### Description
-This trigger is attached to the `card_metadata` table and fires after INSERT or DELETE operations.
+This trigger is set up on the `card_metadata` table to execute the `update_card_metadata_count` function after each INSERT or DELETE operation on the table.
 
 #### Internal Logic
-- Executes the `update_card_metadata_count()` function for each affected row
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| datasets table | Referenced by the foreign key in `card_metadata_counts` |
-| card_metadata table | The table on which the trigger is created |
-
-## Notes
-1. The script uses PostgreSQL-specific functions like `gen_random_uuid()` for generating UUIDs.
-2. The trigger function uses the `plpgsql` language.
-3. The script assumes the existence of a `datasets` table and a `card_metadata` table.
-4. The `ON CONFLICT` clause in the INSERT operation of the trigger function suggests that `dataset_id` should be unique in the `card_metadata_counts` table, but this constraint is not explicitly defined in the table creation.
+- **Trigger Activation:** The trigger is activated after every INSERT or DELETE operation on the `card_metadata` table, for each row affected.
+- **Function Execution:** Upon activation, the trigger executes the `update_card_metadata_count` function, ensuring the `card_metadata_counts` table stays synchronized. 

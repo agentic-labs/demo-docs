@@ -3,57 +3,69 @@ title: "Overview"
 ---
 
 ## High-level description
-This code defines a Kubernetes Pod and ConfigMap for running integration tests that verify the interaction between a Qdrant service and its database. The tests create a collection, insert data points, and execute a search query, validating the responses.
+This Kubernetes manifest file defines a test pod and a ConfigMap for testing database interactions with Qdrant, a vector database. The test creates a collection, inserts points with vector data, and performs a search query to verify the functionality of the Qdrant instance deployed in the cluster.
 
 ## Code Structure
-The code defines two Kubernetes resources: a Pod and a ConfigMap. The Pod runs a test script defined in the ConfigMap. The script interacts with the Qdrant service using curl commands.
+The file contains two main Kubernetes resources:
+1. A Pod that runs the test script
+2. A ConfigMap that contains the test script
+
+These resources are interconnected, with the Pod mounting the ConfigMap as a volume to access the test script.
 
 ## Symbols
 
-### `helm/charts/qdrant/templates/tests/test-db-interaction.yaml`
+### Pod Resource
 #### Description
-This file defines a Kubernetes Pod and ConfigMap for running integration tests that verify the interaction between a Qdrant service and its database.
-
-#### Inputs
-This template uses values from `Values` object, including:
-- `.Values.service.ports`: List of service ports. Used to determine the HTTP/HTTPS port for Qdrant.
-- `.Values.apiKey`: API key for Qdrant. Used for authentication.
-- `.Values.readOnlyApiKey`: Read-only API key for Qdrant. Used for authentication if `apiKey` is not set.
-- `.Values.additionalVolumeMounts`: Additional volume mounts for the test pod.
-- `.Values.additionalVolumes`: Additional volumes for the test pod.
+Defines a Kubernetes Pod that runs the test script against the Qdrant database.
 
 #### Internal Logic
-The code defines two Kubernetes resources:
+- Uses the `registry.suse.com/bci/bci-base:latest` image to run the test script
+- Mounts the test script from a ConfigMap
+- Allows for additional volume mounts and volumes through `.Values.additionalVolumeMounts` and `.Values.additionalVolumes`
+- Sets the restart policy to "Never" to ensure the test runs only once
+- Uses a service account named after the Qdrant release
 
-1. **Pod:**
-    - The Pod runs a test script defined in a ConfigMap.
-    - It mounts the ConfigMap as a volume.
-    - It uses the `registry.suse.com/bci/bci-base:latest` image.
-    - It sets the service account to the Qdrant service account.
-2. **ConfigMap:**
-    - The ConfigMap contains the test script (`entrypoint.sh`).
-    - The script performs the following actions:
-        - Sets up curl for retries.
-        - Configures CA certificates if necessary.
-        - Determines the Qdrant URL based on service ports and TLS configuration.
-        - Sets the API key header for authentication.
-        - Deletes the test collection if it exists.
-        - Creates a new test collection.
-        - Inserts data points into the collection.
-        - Executes a search query against the collection.
+### ConfigMap Resource
+#### Description
+Defines a ConfigMap containing the test script (`entrypoint.sh`) that interacts with the Qdrant database.
 
-#### Side Effects
-- Creates, populates, and deletes a collection in the Qdrant database.
-- Sends HTTP requests to the Qdrant service.
+#### Internal Logic
+The test script performs the following steps:
+1. Sets up curl configuration for retries and timeouts
+2. Copies CA certificates if present
+3. Determines the Qdrant URL based on the service configuration
+4. Sets up API key headers if provided
+5. Deletes the test collection if it exists
+6. Creates a new collection with specified vector parameters
+7. Inserts sample points with vector data and payload
+8. Runs a search query on the inserted points
 
 ## Dependencies
-- Kubernetes
-- curl
+| Dependency | Purpose |
+|:-----------|:--------|
+| curl | Used for making HTTP requests to the Qdrant API |
+| bash | Scripting language used for the test script |
 
 ## Configuration
-This template uses values from `Values` object, including:
-- `.Values.service.ports`: List of service ports. Used to determine the HTTP/HTTPS port for Qdrant.
-- `.Values.apiKey`: API key for Qdrant. Used for authentication.
-- `.Values.readOnlyApiKey`: Read-only API key for Qdrant. Used for authentication if `apiKey` is not set.
-- `.Values.additionalVolumeMounts`: Additional volume mounts for the test pod.
-- `.Values.additionalVolumes`: Additional volumes for the test pod.
+The test pod and script use several configuration options from the Helm values:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| .Values.additionalVolumeMounts | list | Additional volume mounts for the test pod |
+| .Values.additionalVolumes | list | Additional volumes for the test pod |
+| .Values.apiKey | string | API key for authenticating with Qdrant |
+| .Values.readOnlyApiKey | string | Read-only API key for Qdrant |
+| .Values.config.service.enable_tls | boolean | Enables TLS for the Qdrant service |
+
+## Error Handling
+The test script uses `set -xe` to exit immediately if any command fails and to print each command before execution. The curl commands use the `--fail-with-body` option to fail on HTTP errors while still displaying the response body.
+
+## API/Interface Reference
+The test script interacts with the following Qdrant API endpoints:
+
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| /collections/{collection_name} | DELETE | Deletes the test collection |
+| /collections/{collection_name} | PUT | Creates a new collection |
+| /collections/{collection_name}/points | PUT | Inserts points into the collection |
+| /collections/{collection_name}/points/search | POST | Performs a search query on the collection |

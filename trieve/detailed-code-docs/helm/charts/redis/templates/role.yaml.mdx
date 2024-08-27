@@ -3,45 +3,54 @@ title: "role.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Role resource for managing permissions related to a Redis deployment using Helm. It allows customization of the Role's rules, labels, and annotations based on provided values.
+This YAML file defines a Kubernetes Role resource for a Redis deployment using Helm. It creates RBAC (Role-Based Access Control) rules for the Redis pods, including optional Pod Security Policy (PSP) permissions and custom rules defined in the Helm values.
 
 ## Code Structure
-The code uses conditional logic to determine whether to create the Role and include specific rules based on the provided values. It leverages Helm templating to dynamically generate the Role definition.
-
-## References
-* `common.capabilities.rbac.apiVersion`: Retrieves the appropriate API version for RBAC resources.
-* `common.names.fullname`: Generates the full name for the Role resource.
-* `common.names.namespace`: Determines the namespace for the Role resource.
-* `common.labels.standard`: Generates standard labels for the Role resource.
-* `common.tplvalues.render`: Renders template values for annotations and rules.
-* `common.capabilities.psp.supported`: Checks if Pod Security Policies are supported.
-* `podSecurityPolicy.apiGroup`: Retrieves the API group for Pod Security Policies.
+The file uses Helm templating to dynamically generate the Role resource based on the provided values and capabilities of the Kubernetes cluster.
 
 ## Symbols
-### `role.yaml`
+
+### Role Resource
 #### Description
-This code defines a Kubernetes Role resource for managing permissions related to a Redis deployment. It uses Helm templating to dynamically generate the Role definition based on provided values.
+Defines a Kubernetes Role resource with specific permissions for Redis pods.
 
 #### Inputs
-This code uses values from the `Values` object passed to the Helm template. Relevant values include:
-* `Values.rbac.create`: Boolean value indicating whether to create the Role resource.
-* `Values.commonLabels`: A dictionary of custom labels to apply to the Role.
-* `Values.commonAnnotations`: A dictionary of annotations to apply to the Role.
-* `Values.podSecurityPolicy.enabled`: Boolean value indicating whether Pod Security Policies are enabled.
-* `Values.rbac.rules`: A list of custom rules to apply to the Role.
-
-#### Outputs
-This code generates a Kubernetes Role resource definition in YAML format.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.rbac.create | boolean | Determines if the Role should be created |
+| .Values.commonLabels | map | Custom labels to be added to the Role |
+| .Values.commonAnnotations | map | Custom annotations to be added to the Role |
+| .Values.podSecurityPolicy.enabled | boolean | Enables Pod Security Policy rules |
+| .Values.rbac.rules | list | Additional custom RBAC rules |
 
 #### Internal Logic
-1. **Conditional Role Creation:** The code first checks if `Values.rbac.create` is true. If not, the Role resource is not created.
-2. **Metadata Generation:** If the Role is created, the code generates its metadata, including name, namespace, labels, and annotations.
-3. **Rule Generation:** The code includes rules based on the provided values:
-    * **Pod Security Policy Rule:** If Pod Security Policies are enabled (`Values.podSecurityPolicy.enabled`), a rule is added to allow using the `podsecuritypolicies` resource with the generated resource name.
-    * **Custom Rules:** If `Values.rbac.rules` is provided, it is rendered and included in the Role's rules.
+1. Checks if RBAC creation is enabled
+2. Sets the API version using a common capability function
+3. Defines metadata including name, namespace, labels, and annotations
+4. Adds Pod Security Policy rules if enabled and supported
+5. Includes additional custom RBAC rules if provided
 
 ## Dependencies
-* This code depends on the Helm templating engine for rendering the YAML definition.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.capabilities.rbac.apiVersion | Determines the appropriate RBAC API version |
+| common.names.fullname | Generates the full name for the Role |
+| common.names.namespace | Retrieves the namespace |
+| common.labels.standard | Generates standard labels |
+| common.tplvalues.render | Renders template values |
+| common.capabilities.psp.supported | Checks if Pod Security Policies are supported |
+| podSecurityPolicy.apiGroup | Retrieves the PSP API group |
 
 ## Configuration
-This code relies on values passed to the Helm template for configuration. See the "Inputs" section for details on the configurable values.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| rbac.create | boolean | - | Enables creation of RBAC resources |
+| podSecurityPolicy.enabled | boolean | - | Enables Pod Security Policy rules |
+| rbac.rules | list | - | Additional custom RBAC rules |
+
+## Notes
+1. The file is part of a Helm chart for Redis deployment.
+2. It uses conditional logic to include or exclude certain rules based on the provided values and cluster capabilities.
+3. The Role is only created if `.Values.rbac.create` is set to true.
+4. Pod Security Policy rules are included if PSP is supported and enabled in the values.
+5. Additional custom RBAC rules can be added through `.Values.rbac.rules`.

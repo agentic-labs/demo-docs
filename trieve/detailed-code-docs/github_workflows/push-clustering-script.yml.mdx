@@ -3,99 +3,58 @@ title: "push-clustering-script.yml"
 ---
 
 ## High-level description
-This GitHub Actions workflow automates the process of building and pushing a Docker image containing a ClickHouse clustering script to Docker Hub. It is triggered on push events to the 'main' branch and specifically when there are changes in the 'docker/clustering-script/**' path.
+This GitHub Actions workflow is designed to build and push a Docker image containing a ClickHouse clustering script. It is triggered on pushes to the main branch that affect files in the 'docker/clustering-script/' directory, or manually via workflow dispatch.
 
 ## Code Structure
-The workflow consists of a single job (`build_clustering_script`) that runs on a specific runner (`blacksmith-2vcpu-ubuntu-2204`). The job includes steps for checking out the repository, setting up buildx, logging into Docker Hub, extracting image metadata, and finally building and pushing the Docker image.
-
-## References
-This workflow references a Dockerfile located at `docker/clustering-script/Dockerfile` and a script located at `docker/clustering-script/get_clusters.py`. The Dockerfile is used to build the Docker image, while the `get_clusters.py` script is likely included in the image and contains the logic for clustering data in ClickHouse.
+The workflow consists of a single job named "build_clustering_script" with several steps that checkout the repository, set up Docker buildx, log in to Docker Hub, prepare metadata for the Docker image, and finally build and push the image.
 
 ## Symbols
 
 ### `name`
 #### Description
-Defines the name of the workflow, displayed in the GitHub Actions UI as "Create Clickhouse Clustering Script".
-
-#### Inputs
-None
-
-#### Outputs
-None
+Defines the name of the GitHub Actions workflow.
 
 ### `concurrency`
 #### Description
-Configures concurrency for this workflow, ensuring that only one workflow run is active at a time for the same workflow and branch. This prevents duplicate builds and potential conflicts.
-
-#### Inputs
-* `group`: `${{ github.workflow }}-${{ github.head_ref }}` - Defines the concurrency group using the workflow name and branch name.
-* `cancel-in-progress`: `true` - Cancels any in-progress workflow runs within the same concurrency group.
-
-#### Outputs
-None
+Configures concurrency settings for the workflow to prevent multiple instances from running simultaneously.
 
 ### `on`
 #### Description
-Specifies the events that trigger this workflow.
-
-#### Inputs
-* `workflow_dispatch`: Allows manual triggering of the workflow through the GitHub Actions UI.
-* `push`: Triggers the workflow on push events to the repository.
-    * `branches`: `- 'main'` - Only triggers on pushes to the 'main' branch.
-    * `paths`: `- 'docker/clustering-script/**'` - Only triggers if the push includes changes to files within the 'docker/clustering-script/' directory.
-
-#### Outputs
-None
+Specifies the events that trigger the workflow, including manual dispatch and pushes to the main branch affecting specific paths.
 
 ### `jobs`
 #### Description
-Defines the jobs that run within the workflow. This workflow has a single job named `build_clustering_script`.
-
-#### Inputs
-None
-
-#### Outputs
-None
+Defines the jobs to be executed in the workflow.
 
 ### `build_clustering_script`
 #### Description
-This job builds and pushes the Docker image containing the ClickHouse clustering script.
-
-#### Inputs
-None
-
-#### Outputs
-None
+The main job of the workflow, responsible for building and pushing the Docker image.
 
 #### Internal Logic
-1. **Checkout the repo:** Checks out the repository using the `actions/checkout@v4` action.
-2. **Setup buildx:** Sets up the Docker Buildx tool using the `docker/setup-buildx-action@v3` action.
-3. **Login to Docker Hub:** Logs into Docker Hub using the provided credentials from the `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets.
-4. **Docker meta:** Extracts Docker image metadata using the `docker/metadata-action@v5` action. This includes the base image name (`trieve/clickhouse-clustering`) and tags (`type=raw,latest` and `type=sha`).
-5. **Build and push Docker image:** Builds and pushes the Docker image using the `docker/build-push-action@v5` action.
-    * `context`: `docker/clustering-script/` - Specifies the build context directory.
-    * `file`: `./docker/clustering-script/Dockerfile` - Specifies the path to the Dockerfile.
-    * `push`: `true` - Enables pushing the built image to Docker Hub.
-    * `tags`: `${{ steps.meta.outputs.tags }}` - Uses the extracted tags from the `docker/metadata-action@v5` step.
-    * `labels`: `${{ steps.meta.outputs.labels }}` - Uses the extracted labels from the `docker/metadata-action@v5` step.
+1. Checks out the repository
+2. Sets up Docker buildx
+3. Logs in to Docker Hub
+4. Prepares metadata for the Docker image
+5. Builds and pushes the Docker image
 
 ## Dependencies
-* `actions/checkout@v4`: GitHub Action for checking out repositories.
-* `docker/setup-buildx-action@v3`: GitHub Action for setting up Docker Buildx.
-* `docker/login-action@v3`: GitHub Action for logging into Docker Hub.
-* `docker/metadata-action@v5`: GitHub Action for extracting Docker image metadata.
-* `docker/build-push-action@v5`: GitHub Action for building and pushing Docker images.
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checks out the repository |
+| docker/setup-buildx-action@v3 | Sets up Docker buildx |
+| docker/login-action@v3 | Logs in to Docker Hub |
+| docker/metadata-action@v5 | Prepares metadata for the Docker image |
+| docker/build-push-action@v5 | Builds and pushes the Docker image |
 
 ## Configuration
-This workflow uses the following secrets:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DOCKER_USERNAME | secret | N/A | Docker Hub username for authentication |
+| DOCKER_PASSWORD | secret | N/A | Docker Hub password for authentication |
 
-| Option | Type | Description |
-|:-------|:-----|:------------|
-| DOCKER_USERNAME | string | Docker Hub username. |
-| DOCKER_PASSWORD | string | Docker Hub password. |
-
-## Error Handling
-This workflow does not implement specific error handling beyond the default behavior of the used GitHub Actions. Any errors during the workflow execution will cause the workflow to fail.
-
-## Logging
-This workflow does not implement specific logging mechanisms. The output of each step is available in the GitHub Actions UI.
+## Notes
+1. The QEMU setup step is commented out, suggesting that multi-architecture builds might have been considered but are not currently implemented.
+2. The workflow is configured to run on a custom runner: "blacksmith-2vcpu-ubuntu-2204".
+3. The Docker image is tagged with "latest" and the commit SHA.
+4. The Dockerfile is located at './docker/clustering-script/Dockerfile'.
+5. The build context is set to 'docker/clustering-script/'.

@@ -3,15 +3,16 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL script defines two new tables, `card_metadata` and `card_votes`, in the database as part of a migration. It also creates indexes on these tables to improve query performance.
+This SQL script creates two tables, `card_metadata` and `card_votes`, in a database to store information about cards and user votes on those cards. It also creates indexes to optimize query performance.
 
 ## Code Structure
-The code consists of two SQL `CREATE TABLE` statements, one for `card_metadata` and one for `card_votes`. Each table definition includes column definitions, primary key constraints, and foreign key constraints referencing the `users` table. Additionally, the code includes `CREATE INDEX` statements to create indexes on specific columns for both tables.
+The code defines two tables: `card_metadata` and `card_votes`. The `card_metadata` table stores the main information about a card, including its content, link, author, and a reference to a Qdrant point. The `card_votes` table stores information about user votes on cards, linking back to the `card_metadata` table. Both tables have indexes created for their foreign key relationships to improve query performance.
 
 ## Symbols
-### `card_metadata` table
+
+### `card_metadata`
 #### Description
-This table stores metadata information about cards, such as content, link, author, and association with a Qdrant point.
+This table stores metadata information about cards.
 
 #### Inputs
 N/A - This is a table definition, not a function.
@@ -22,24 +23,24 @@ N/A - This is a table definition, not a function.
 #### Internal Logic
 The table has the following columns:
 - `id`: UUID primary key for the card metadata.
-- `content`: Text content of the card, cannot be NULL.
+- `content`: Text content of the card, marked as NOT NULL.
 - `link`: Optional text field for storing a link related to the card.
-- `author_id`: UUID referencing the `users` table, representing the author of the card.
-- `qdrant_point_id`: UUID referencing a point in a Qdrant index, likely related to the card's content.
-- `created_at`: Timestamp indicating the creation time of the record, defaults to the current time.
-- `updated_at`: Timestamp indicating the last update time of the record, defaults to the current time.
+- `author_id`: UUID foreign key referencing the `users` table, representing the author of the card. This field is NOT NULL.
+- `qdrant_point_id`: UUID referencing a point in a Qdrant index, likely related to the card's content for similarity search. This field is NOT NULL.
+- `created_at`: Timestamp indicating the creation time of the record, defaults to the current timestamp.
+- `updated_at`: Timestamp indicating the last update time of the record, defaults to the current timestamp.
 
-### `idx_card_metadata_author_id` index
+### `idx_card_metadata_author_id`
 #### Description
-This index is created on the `author_id` column of the `card_metadata` table to speed up queries filtering or ordering by author.
+This index speeds up queries that filter or join on the `author_id` column of the `card_metadata` table.
 
-### `idx_card_metadata_qdrant_point_id` index
+### `idx_card_metadata_qdrant_point_id`
 #### Description
-This index is created on the `qdrant_point_id` column of the `card_metadata` table to speed up queries searching for cards associated with specific Qdrant points.
+This index speeds up queries that filter or join on the `qdrant_point_id` column of the `card_metadata` table.
 
-### `card_votes` table
+### `card_votes`
 #### Description
-This table stores information about votes cast on cards by users.
+This table stores information about user votes on cards.
 
 #### Inputs
 N/A - This is a table definition, not a function.
@@ -50,19 +51,22 @@ N/A - This is a table definition, not a function.
 #### Internal Logic
 The table has the following columns:
 - `id`: UUID primary key for the vote record.
-- `voted_user_id`: UUID referencing the `users` table, representing the user who cast the vote.
-- `card_metadata_id`: UUID referencing the `card_metadata` table, indicating the card being voted on.
-- `vote`: Boolean value representing the vote (true for upvote, false for downvote).
-- `created_at`: Timestamp indicating the creation time of the vote record, defaults to the current time.
-- `updated_at`: Timestamp indicating the last update time of the vote record, defaults to the current time.
+- `voted_user_id`: UUID foreign key referencing the `users` table, representing the user who cast the vote. This field is NOT NULL.
+- `card_metadata_id`: UUID foreign key referencing the `card_metadata` table, indicating which card the vote is for. This field is NOT NULL.
+- `vote`: Boolean value representing the vote (true for upvote, false for downvote). This field is NOT NULL.
+- `created_at`: Timestamp indicating the creation time of the vote record, defaults to the current timestamp.
+- `updated_at`: Timestamp indicating the last update time of the vote record, defaults to the current timestamp.
 
-### `idx_card_votes_voted_user_id` index
+### `idx_card_votes_voted_user_id`
 #### Description
-This index is created on the `voted_user_id` column of the `card_votes` table to speed up queries filtering or ordering by voting user.
+This index speeds up queries that filter or join on the `voted_user_id` column of the `card_votes` table.
 
-### `idx_card_votes_card_metadata_id` index
+### `idx_card_votes_card_metadata_id`
 #### Description
-This index is created on the `card_metadata_id` column of the `card_votes` table to speed up queries retrieving votes for a specific card.
+This index speeds up queries that filter or join on the `card_metadata_id` column of the `card_votes` table.
 
 ## References
-- `users` table: The `card_metadata` and `card_votes` tables have foreign key constraints referencing the `id` column of the `users` table. This indicates a relationship where cards and votes are associated with specific users.
+- `users` table (referenced by `author_id` in `card_metadata` and `voted_user_id` in `card_votes`)
+
+## Dependencies
+This code likely depends on a PostgreSQL database as it uses UUIDs as primary keys.

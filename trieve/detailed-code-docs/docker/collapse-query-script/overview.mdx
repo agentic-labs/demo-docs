@@ -3,63 +3,61 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains a Python script and a README file that together implement a system for optimizing search query analytics by collapsing similar queries in a ClickHouse database. The main purpose is to identify and remove partial queries that are prefixes of longer, more complete queries, but only if they occur within a 10-second window of each other. This process helps to reduce redundant data storage and improve the accuracy of analytics results.
+This directory contains the necessary files to build and run a Docker container for a Python script that optimizes search query analytics by collapsing similar queries in a ClickHouse database. The main components are a Dockerfile, a Python script (`collapse_queries.py`), and a README file explaining the purpose and functionality of the script.
 
 ## What does it do?
-The script connects to a ClickHouse database and processes search queries across multiple datasets. For each dataset, it:
+The script in this directory addresses the issue of redundant partial queries in search analytics data. It processes queries across multiple datasets stored in a ClickHouse database, identifying and removing partial queries that are prefixes of longer, more complete queries, but only if they occur within a 10-second window of each other. This optimization helps to reduce data redundancy and improve the accuracy of search analytics results.
 
-1. Retrieves the timestamp of the last collapse operation.
-2. Fetches search queries in batches of 5000, starting from the last collapsed timestamp.
-3. Analyzes these queries to identify partial queries that are prefixes of longer queries and occur within 10 seconds of each other.
-4. Marks the identified partial queries as duplicates in the database.
-5. Updates the last processed timestamp for the dataset.
-
-This process helps to clean up the search query data by removing redundant partial queries that could skew analytics results. For example, if a user types "apple" and the system records "a", "ap", "app", and "apple", the script will identify "a", "ap", and "app" as duplicates if they occurred within 10 seconds of "apple".
+The workflow is as follows:
+1. Connect to the ClickHouse database
+2. Retrieve a list of all datasets from the `search_queries` table
+3. For each dataset:
+   - Fetch the timestamp of the last collapse operation
+   - Retrieve search queries in batches
+   - Identify partial queries that are prefixes of longer queries within a 10-second window
+   - Mark identified partial queries as duplicates in the database
+   - Update the last processed timestamp for the dataset
+4. Optimize the affected tables in the database
 
 ## Key Files
 
-1. `collapse_queries.py`: This is the main Python script that implements the query collapse logic. It contains several functions for interacting with the ClickHouse database, processing queries, and managing the collapse operation.
+### Dockerfile
+This file defines the environment for running the `collapse_queries.py` script. It sets up a lightweight Python 3.9 container, installs the required dependencies from a `requirements.txt` file, and configures the container to execute the script when launched.
 
-   Key functions include:
-   - `get_search_queries`: Retrieves search queries for a specific dataset.
-   - `get_datasets`: Gets a list of all dataset IDs.
-   - `collapse_queries`: Identifies partial queries that should be marked as duplicates.
-   - `insert_duplicate_rows`: Marks identified duplicate queries in the database.
-   - `main`: Orchestrates the overall process of collapsing queries for all datasets.
+Key aspects of the Dockerfile:
+- Uses `python:3.9-slim` as the base image
+- Sets `/app` as the working directory
+- Copies `requirements.txt` and installs dependencies
+- Copies `collapse_queries.py` into the container
+- Sets the command to run the script on container start
 
-2. `README.md`: This file provides an overview of the script's purpose, functionality, and how it works. It explains the main functions and the query collapse logic.
+### collapse_queries.py
+This is the main Python script that performs the query collapse operation. It contains several functions to interact with the ClickHouse database, retrieve and process search queries, and update the database with the results.
+
+Key functions in the script:
+- `get_search_queries`: Retrieves search queries for a specific dataset
+- `get_datasets`: Gets a list of all dataset IDs
+- `get_dataset_last_collapsed` and `set_dataset_last_collapsed`: Manage the timestamp of the last collapse operation for each dataset
+- `collapse_queries`: Identifies partial queries that should be marked as duplicates
+- `insert_duplicate_rows`: Updates the database with duplicate information
+- `main`: Orchestrates the entire process across all datasets
+
+### README.md
+This file provides an overview of the script's purpose, functionality, and main components. It explains the query collapse logic and lists the main functions used in the script.
 
 ## Dependencies
 The script relies on the following external libraries:
+- clickhouse_connect: For interacting with the ClickHouse database
+- python-dotenv: For loading environment variables from a .env file
 
-- `clickhouse_connect`: Used to interact with the ClickHouse database.
-- `dotenv`: Used to load environment variables from a .env file.
-- `uuid`: Used to handle UUID data types.
-- `datetime`: Used to work with date and time data.
+These dependencies are installed in the Docker container based on the `requirements.txt` file (not provided in the directory summary).
 
 ## Configuration
-The script uses environment variables for configuration, which are likely loaded from a .env file. The main configuration parameter is the ClickHouse database DSN (Data Source Name), which should be set in the environment.
+The script uses environment variables for configuration, which are likely loaded from a `.env` file (not present in the directory). The main configuration is the database connection string (DSN) for the ClickHouse database.
 
-## Code Snippet
-Here's a key part of the script that demonstrates the query collapse logic:
+Key configurable aspects:
+- ClickHouse database connection details
+- Batch size for processing queries (default: 5000)
+- Time window for considering partial queries (10 seconds)
 
-```python
-def collapse_queries(rows, look_range=10, time_window=10):
-    rows_to_be_deleted = []
-    for i, row in enumerate(rows):
-        for j in range(max(0, i - look_range), min(len(rows), i + look_range + 1)):
-            if i != j:
-                row_i = row
-                row_j = rows[j]
-                if abs((row_i[1] - row_j[1]).total_seconds()) &lt;= time_window:
-                    if row_i[2].startswith(row_j[2]) and len(row_i[2]) &gt; len(row_j[2]):
-                        rows_to_be_deleted.append(row_j)
-                    elif row_j[2].startswith(row_i[2]) and len(row_j[2]) &gt; len(row_i[2]):
-                        rows_to_be_deleted.append(row_i)
-                        break
-    return rows_to_be_deleted
-```
-
-This function identifies partial queries by comparing each query with nearby queries within a specified time window. It marks shorter queries as duplicates if they are substrings of longer queries that occur within the time window.
-
-In summary, this directory contains a specialized script for optimizing search query data in a ClickHouse database, which can significantly improve the quality of search analytics by removing redundant partial queries.
+In conclusion, this directory contains a containerized solution for optimizing search query data in a ClickHouse database by collapsing similar queries within a specific time window. The solution is designed to be run as a Docker container, making it easy to deploy and execute in various environments.

@@ -3,58 +3,71 @@ title: "clickhouse-deplolyment.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes YAML configuration file for deploying a ClickHouse database installation using the ClickHouse Operator from Altinity. It specifies a single-shard, single-replica ClickHouse cluster with custom configuration for users, networking, storage, and environment variables.
+This YAML file defines a ClickHouseInstallation custom resource for deploying a ClickHouse database instance in a Kubernetes environment. It specifies the configuration for users, networking, cluster layout, pod template, and persistent volume claims for data and log storage.
 
 ## Code Structure
-This code defines a Kubernetes `ClickHouseInstallation` resource with nested specifications for configuration, templates, and volume claims. The `configuration` section sets up users, networking, and cluster layout. The `templates` section defines a pod template with container specifications for the ClickHouse server, including image details, volume mounts, and environment variables. The `volumeClaimTemplates` section defines persistent volume claims for data and log storage.
+The YAML file is structured into several main sections: metadata, spec, configuration, templates, and volumeClaimTemplates. These sections define various aspects of the ClickHouse deployment, including its name, namespace, user settings, cluster configuration, pod specifications, and storage requirements.
 
 ## Symbols
-### `ClickHouseInstallation`
+
+### ClickHouseInstallation
 #### Description
-This resource defines the desired state of a ClickHouse installation within a Kubernetes cluster.
+This is the main custom resource definition for deploying a ClickHouse instance in Kubernetes.
 
 #### Inputs
-This resource is configured through the provided YAML structure, including:
-- `metadata.name`: Name of the ClickHouse installation.
-- `metadata.namespace`: Kubernetes namespace for the installation.
-- `spec.configuration`: ClickHouse server configuration.
-- `spec.templates`: Templates for pods and volume claims.
-
-#### Outputs
-This resource, when applied to a Kubernetes cluster, creates and manages the ClickHouse deployment based on the provided specifications.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metadata | object | Defines the name and namespace of the ClickHouse installation |
+| spec | object | Specifies the configuration and templates for the ClickHouse deployment |
 
 #### Internal Logic
-The ClickHouse Operator uses this resource definition to:
-- Create and manage StatefulSets for ClickHouse pods.
-- Create and manage Services for accessing ClickHouse.
-- Configure ClickHouse server instances based on the provided configuration.
-- Mount persistent volumes for data and log storage.
+1. Sets up user configuration, including password and network access
+2. Defines a single cluster with one shard and one replica
+3. Specifies a pod template with container settings and environment variables
+4. Configures volume claim templates for data and log storage
+
+### configuration
+#### Description
+Defines the configuration for the ClickHouse instance, including user settings and cluster layout.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| users | object | Specifies user-related settings, including password and network access |
+| clusters | array | Defines the cluster configuration |
+
+### templates
+#### Description
+Specifies the pod template used for deploying ClickHouse containers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| podTemplates | array | Contains the pod template specification |
+
+### volumeClaimTemplates
+#### Description
+Defines the persistent volume claims for data and log storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data-storage-vc | object | Specifies the volume claim for data storage |
+| log-storage-vc | object | Specifies the volume claim for log storage |
 
 ## Dependencies
-- `clickhouse.altinity.com/v1`: This API version indicates the use of the ClickHouse Operator from Altinity.
+| Dependency | Purpose |
+|:-----------|:--------|
+| clickhouse.altinity.com/v1 | Provides the ClickHouseInstallation custom resource definition |
 
 ## Configuration
-This configuration file defines settings for the ClickHouse installation, including:
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| `spec.configuration.users.default/password` | string |  | Password for the default ClickHouse user, retrieved from a Helm value `{{ .Values.config.analytics.clickhousePassword }}`. |
-| `spec.configuration.users.default/networks/ip` | list |  | List of allowed IP addresses for the default user, set to allow all IPs (`0.0.0.0/0`). |
-| `spec.configuration.clusters.name` | string |  | Name of the ClickHouse cluster, set to `cluster1`. |
-| `spec.configuration.clusters.templates.podTemplate` | string |  | Name of the pod template to use for this cluster, set to `clickhouse-pod-template`. |
-| `spec.configuration.clusters.layout.shardsCount` | integer |  | Number of shards in the cluster, set to `1`. |
-| `spec.configuration.clusters.layout.replicasCount` | integer |  | Number of replicas per shard, set to `1`. |
-| `spec.templates.podTemplates.name` | string |  | Name of the pod template, set to `clickhouse-pod-template`. |
-| `spec.templates.podTemplates.spec.containers.name` | string |  | Name of the ClickHouse container, set to `clickhouse`. |
-| `spec.templates.podTemplates.spec.containers.image` | string |  | Docker image for the ClickHouse container, set to `trieve/clickhouse:latest`. |
-| `spec.templates.podTemplates.spec.containers.digest` | string |  | Specific image digest to use, ensuring a consistent build. |
-| `spec.templates.podTemplates.spec.containers.volumeMounts` | list |  | List of volumes to mount into the container. |
-| `spec.templates.podTemplates.spec.containers.env` | list |  | List of environment variables for the container. |
-| `spec.templates.volumeClaimTemplates.name` | string |  | Name of the volume claim template. |
-| `spec.templates.volumeClaimTemplates.spec.accessModes` | list |  | Access modes for the volume, set to `ReadWriteOnce`. |
-| `spec.templates.volumeClaimTemplates.spec.resources.requests.storage` | string |  | Requested storage size for the volume. |
+| config.analytics.clickhousePassword | string | N/A | Password for the default ClickHouse user |
+| config.trieve.embeddingServerOriginBGEM3 | string | N/A | URL for the embedding server |
 
-## Error Handling
-This configuration file does not implement specific error handling mechanisms. Errors during deployment or operation are handled by Kubernetes and the ClickHouse Operator.
-
-## Logging
-This configuration mounts a persistent volume for ClickHouse logs at `/var/log/clickhouse-server` within the container. The ClickHouse Operator and Kubernetes handle log collection and management.
+## Notes
+1. The ClickHouse image used is `trieve/clickhouse:latest` with a specific digest.
+2. The deployment allows network access from any IP (0.0.0.0/0), which may need to be restricted in production environments.
+3. The data storage volume claim requests 200Gi of storage, while the log storage requests 2Gi.
+4. Helm templating is used to inject values for the ClickHouse password and embedding server URL.

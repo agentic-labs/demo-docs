@@ -3,75 +3,43 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding a new `configuration` column to the `datasets` table in the database. The migration is dated 2023-12-19 and is specifically for the dataset configuration feature.
+This directory contains SQL migration files for adding a new `configuration` column to the `datasets` table in a database. The migration is dated 2023-12-19 and is specifically for dataset configuration.
 
 ## What does it do?
-This migration adds a new capability to the datasets in the database. It introduces a `configuration` column that can store JSON data for each dataset. This allows for flexible, structured configuration settings to be associated with each dataset without needing to create multiple new columns for different configuration options.
+This migration adds a new capability to the database by introducing a `configuration` column to the `datasets` table. This column is designed to store JSON data, allowing for flexible and structured configuration settings for each dataset. The migration ensures that every dataset will have a configuration, even if it's just an empty JSON object.
 
-The new column:
-1. Is named `configuration`
-2. Uses the JSONB data type, which is optimized for storing and querying JSON data in PostgreSQL
-3. Cannot be null, ensuring that every dataset has at least some configuration
-4. Defaults to an empty JSON object (`{}`) if no configuration is explicitly provided
+The migration is set up in two parts:
+1. An "up" migration that adds the new column
+2. A "down" migration that, in this case, doesn't perform any action (it's empty)
 
-This change enables the application to store dataset-specific settings, metadata, or any other structured information that might vary between datasets, all within a single column.
+This structure allows for applying the change (adding the column) and potentially reverting it if needed, although the reversion logic is not implemented in this case.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL command to add the new `configuration` column to the `datasets` table. The command is:
+This file contains the SQL command to alter the `datasets` table by adding the new `configuration` column. Here's what it does:
 
 ```sql
-ALTER TABLE datasets ADD COLUMN configuration JSONB NOT NULL DEFAULT '{}'::JSONB;
+ALTER TABLE datasets
+ADD COLUMN configuration JSONB NOT NULL DEFAULT '{}'::JSONB;
 ```
 
-This single line performs the following actions:
-- Alters the `datasets` table
-- Adds a new column named `configuration`
-- Sets the data type to JSONB (binary JSON)
-- Makes the column NOT NULL
-- Sets a default value of an empty JSON object
+- It adds a new column named `configuration` to the `datasets` table.
+- The column type is `JSONB`, which is a binary JSON format in PostgreSQL, optimized for efficiency.
+- It's set as `NOT NULL`, meaning every row must have a value for this column.
+- It has a default value of an empty JSON object (`{}`), ensuring that existing rows and new rows without a specified configuration will still have a valid JSON value.
 
 ### down.sql
-This file is currently empty, containing only a comment. It's intended to contain the SQL commands that would revert the changes made by `up.sql`. However, its empty state suggests that either:
-
-1. The migration is intended to be irreversible
-2. The down migration hasn't been implemented yet
-
-If option 2 is the case, a TODO for the development team would be to add the appropriate SQL command to remove the `configuration` column from the `datasets` table, which would typically be:
-
-```sql
-ALTER TABLE datasets DROP COLUMN configuration;
-```
-
-## Configuration
-This migration itself doesn't require any configuration. However, it's worth noting that the new `configuration` column it adds to the `datasets` table is essentially a configuration mechanism for individual datasets. 
-
-The JSONB type allows for storing complex, nested JSON structures. This means that each dataset can now have its own set of configuration options, which could include things like:
-
-- Data source information
-- Processing parameters
-- Visualization settings
-- Access control rules
-- Metadata
-
-The exact structure and content of this JSON configuration would be determined by the application logic that interacts with this column.
+This file is empty, which means the migration doesn't provide a way to automatically revert the changes made by `up.sql`. This is likely because removing a column could potentially lead to data loss, so it's left to be handled manually if needed.
 
 ## Dependencies
-This migration doesn't introduce any new dependencies. However, it does rely on PostgreSQL's JSONB data type, which has been available since PostgreSQL 9.4. Therefore, the database server must be running PostgreSQL 9.4 or later for this migration to work correctly.
+This migration relies on PostgreSQL's JSONB data type, which suggests that the database system in use is PostgreSQL. The version of PostgreSQL should support JSONB (introduced in PostgreSQL 9.4).
 
-In terms of application code, any part of the system that interacts with the `datasets` table will need to be updated to handle this new `configuration` column. This could include:
+## Configuration
+The migration itself doesn't require any additional configuration. However, it introduces a new configurable aspect to the application:
 
-1. Data access layers or ORM configurations
-2. API endpoints that create or update datasets
-3. Any business logic that relies on dataset configuration
-4. User interfaces for viewing or editing dataset configurations
+- Each dataset can now have a JSON configuration stored in the `configuration` column.
+- The default configuration is an empty JSON object (`{}`).
+- Applications using this database will need to be updated to work with this new column, potentially providing interfaces for setting and retrieving configuration data for datasets.
 
-## TODOs
-1. Implement the `down.sql` migration if reversibility is required.
-2. Update application code to utilize the new `configuration` column.
-3. Consider creating indexes on the `configuration` column if specific JSON fields will be frequently queried.
-4. Develop a schema or validation mechanism for the JSON structure stored in the `configuration` column to ensure data integrity.
-5. Update documentation to reflect the new dataset configuration capabilities.
-
-This migration represents a significant enhancement to the dataset model, providing a flexible way to store configuration data. It's a forward-thinking change that allows for future expansion of dataset properties without requiring additional schema changes.
+In conclusion, this migration enhances the `datasets` table by adding a flexible configuration storage option. This allows for more dynamic and customizable dataset management within the application, as each dataset can now have its own set of configuration parameters stored in a structured JSON format.

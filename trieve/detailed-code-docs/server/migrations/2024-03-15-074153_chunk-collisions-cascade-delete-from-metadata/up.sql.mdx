@@ -3,56 +3,26 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script modifies the `chunk_collisions` table by updating its foreign key constraints. It changes the behavior of the foreign keys to implement cascading deletes and updates, ensuring referential integrity with the `chunk_metadata` table.
+This SQL script modifies the `chunk_collisions` table in a database. It specifically updates the foreign key constraints to establish a cascading delete and update behavior with the `chunk_metadata` table.
 
 ## Symbols
-
-### ALTER TABLE chunk_collisions
+### `ALTER TABLE chunk_collisions ...`
 #### Description
-This SQL command is used multiple times in the script to modify the `chunk_collisions` table structure, specifically its foreign key constraints.
+This set of SQL statements modifies the existing `chunk_collisions` table. It first drops existing foreign key constraints and then adds new ones with the desired cascading behavior.
 
 #### Internal Logic
-1. Drops existing foreign key constraints.
-2. Adds new foreign key constraints with CASCADE options for both DELETE and UPDATE operations.
+1. **`DROP CONSTRAINT card_collisions_card_id_fkey;`**: This statement removes the existing foreign key constraint named `card_collisions_card_id_fkey` from the `chunk_collisions` table. This constraint likely enforced a relationship between the `chunk_collisions` table and another table (possibly `card_collisions` or a table referencing card IDs) based on a `card_id` column.
 
-### DROP CONSTRAINT
-#### Description
-This clause removes existing foreign key constraints from the `chunk_collisions` table.
+2. **`ALTER TABLE chunk_collisions ADD CONSTRAINT chunk_collisions_card_id_fkey FOREIGN KEY (chunk_id) REFERENCES chunk_metadata(id) ON DELETE CASCADE ON UPDATE CASCADE;`**: This statement adds a new foreign key constraint named `chunk_collisions_card_id_fkey` to the `chunk_collisions` table. 
+    - This constraint establishes a relationship between the `chunk_id` column in the `chunk_collisions` table and the `id` column in the `chunk_metadata` table. 
+    - The `ON DELETE CASCADE` and `ON UPDATE CASCADE` clauses ensure that if a record in the `chunk_metadata` table is deleted or updated (and its `id` changes), any corresponding records in the `chunk_collisions` table referencing that `id` will also be automatically deleted or updated accordingly.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| constraint_name | string | Name of the constraint to be dropped |
+3. **`DROP CONSTRAINT card_collisions_collision_qdrant_id_fkey;`**: This statement removes the existing foreign key constraint named `card_collisions_collision_qdrant_id_fkey` from the `chunk_collisions` table. This constraint likely enforced a relationship between the `chunk_collisions` table and another table (possibly `card_collisions` or a table referencing card IDs) based on a `collision_qdrant_id` column.
 
-### ADD CONSTRAINT
-#### Description
-This clause adds new foreign key constraints to the `chunk_collisions` table with CASCADE options.
+4. **`ALTER TABLE chunk_collisions ADD CONSTRAINT chunk_collisions_collision_qdrant_id_fkey FOREIGN KEY (collision_qdrant_id) REFERENCES chunk_metadata(qdrant_point_id) ON DELETE CASCADE ON UPDATE CASCADE;`**: This statement adds a new foreign key constraint named `chunk_collisions_collision_qdrant_id_fkey` to the `chunk_collisions` table.
+    - This constraint establishes a relationship between the `collision_qdrant_id` column in the `chunk_collisions` table and the `qdrant_point_id` column in the `chunk_metadata` table.
+    - The `ON DELETE CASCADE` and `ON UPDATE CASCADE` clauses ensure that if a record in the `chunk_metadata` table is deleted or updated (and its `qdrant_point_id` changes), any corresponding records in the `chunk_collisions` table referencing that `qdrant_point_id` will also be automatically deleted or updated accordingly.
 
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| constraint_name | string | Name of the new constraint |
-| column_name | string | Column in the `chunk_collisions` table |
-| referenced_table | string | Table being referenced (chunk_metadata) |
-| referenced_column | string | Column in the referenced table |
-
-## Side Effects
-- Existing foreign key constraints on the `chunk_collisions` table are removed.
-- New foreign key constraints are added with CASCADE options for DELETE and UPDATE.
-- This change affects the behavior of delete and update operations on the `chunk_metadata` table, which will now propagate to the `chunk_collisions` table.
-
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| chunk_collisions table | The table being modified |
-| chunk_metadata table | The referenced table in the foreign key constraints |
-
-## Error Handling
-This script does not include explicit error handling. If an error occurs during execution, it will be handled by the database management system running the migration.
-
-## Notes
-1. The script renames constraints from "card_collisions" to "chunk_collisions", suggesting a possible renaming of the table or a correction of a previous naming inconsistency.
-2. The script ensures that when a record is deleted or updated in the `chunk_metadata` table, corresponding records in the `chunk_collisions` table will be automatically deleted or updated, maintaining referential integrity.
-3. Two foreign key relationships are established:
-   - Between `chunk_collisions.chunk_id` and `chunk_metadata.id`
-   - Between `chunk_collisions.collision_qdrant_id` and `chunk_metadata.qdrant_point_id`
+#### Side Effects
+- Modifies the database schema by altering the `chunk_collisions` table and its foreign key constraints.
+- Impacts data integrity by enforcing cascading delete and update behavior between the `chunk_collisions` and `chunk_metadata` tables. 

@@ -3,60 +3,29 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains the initial setup migration for the Diesel ORM in a PostgreSQL database. It consists of two SQL scripts: `up.sql` for creating the necessary functions and `down.sql` for removing them. These scripts are responsible for managing an `updated_at` timestamp column in database tables, automating the process of updating this column whenever a row is modified.
+This directory contains SQL migration scripts for setting up and tearing down the initial Diesel ORM configuration in a PostgreSQL database. The scripts define and remove helper functions used by Diesel to manage automatic updating of `updated_at` timestamps in database tables.
 
 ## What does it do?
-The migration scripts in this directory set up and tear down a system for automatically managing `updated_at` timestamps in database tables. Here's a breakdown of what happens:
+The migration scripts in this directory set up and remove a system for automatically updating `updated_at` timestamps in database tables. This is a common requirement in many applications to track when records were last modified.
 
-1. When applied (using `up.sql`):
-   - It creates two functions:
-     a. `diesel_manage_updated_at`: This function sets up a trigger on a specified table to automatically update the `updated_at` column when a row is modified.
-     b. `diesel_set_updated_at`: This function is called by the trigger and actually performs the update of the `updated_at` column.
-   - These functions work together to ensure that whenever a row in a table is updated, its `updated_at` column is automatically set to the current timestamp.
+When applied, the "up" migration creates two functions:
+1. `diesel_manage_updated_at`: This function sets up a trigger on a specified table to automatically update the `updated_at` column whenever a row is modified.
+2. `diesel_set_updated_at`: This function is called by the trigger and does the actual work of updating the `updated_at` column.
 
-2. When reverted (using `down.sql`):
-   - It removes both functions created by the `up.sql` script.
-   - This effectively disables the automatic updating of `updated_at` columns.
+The "down" migration removes these functions, effectively undoing the setup.
 
-This setup allows developers to easily add "last modified" tracking to their database tables without having to manually manage the `updated_at` column in their application code.
+This automatic timestamp management is particularly useful in applications where you want to track the last modification time of records without having to manually update this information in your application code every time you make a change.
 
 ## Key Files
 
-1. `up.sql`:
-   - Creates the `diesel_manage_updated_at` function, which sets up a trigger on a specified table.
-   - Creates the `diesel_set_updated_at` function, which is called by the trigger to update the `updated_at` column.
-   - Uses PostgreSQL-specific features like PL/pgSQL, trigger functions, and dynamic SQL execution.
+### up.sql
+This file contains the SQL commands to create the `diesel_manage_updated_at` and `diesel_set_updated_at` functions.
 
-2. `down.sql`:
-   - Removes the `diesel_manage_updated_at` and `diesel_set_updated_at` functions.
-   - Uses `DROP FUNCTION IF EXISTS` to safely remove the functions even if they don't exist.
+The `diesel_manage_updated_at` function takes a table name as an argument and creates a trigger on that table. This trigger will call `diesel_set_updated_at` before any UPDATE operation on the table.
 
-## Dependencies
-The migration scripts are designed to work with:
-- PostgreSQL database
-- Diesel ORM (Object-Relational Mapping) for Rust
+The `diesel_set_updated_at` function is the one actually called by the trigger. It checks if the `updated_at` column was explicitly modified in the update operation. If not, it sets the `updated_at` column to the current timestamp.
 
-The scripts utilize PostgreSQL-specific features, indicating a strong dependency on PostgreSQL as the database system.
-
-## Configuration
-These migration scripts don't require any specific configuration. However, they are part of the Diesel ORM setup, so the overall project should be configured to use Diesel with PostgreSQL.
-
-It's worth noting that both scripts include a comment indicating that they are safe to edit and that future changes will be added as new migrations. This suggests that while developers can modify these scripts if needed, it's generally recommended to create new migrations for changes rather than modifying these initial setup scripts.
-
-Here's an example of how the `diesel_manage_updated_at` function is created in `up.sql`:
-
-```sql
-CREATE OR REPLACE FUNCTION diesel_manage_updated_at(_tbl regclass) RETURNS VOID AS $$
-BEGIN
-    EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s
-                    FOR EACH ROW EXECUTE PROCEDURE diesel_set_updated_at()', _tbl);
-END;
-$$ LANGUAGE plpgsql;
-```
-
-This function dynamically creates a trigger on the specified table to call `diesel_set_updated_at` before each update operation.
-
-The `diesel_set_updated_at` function, which is called by the trigger, looks like this:
+Here's a simplified version of the `diesel_set_updated_at` function:
 
 ```sql
 CREATE OR REPLACE FUNCTION diesel_set_updated_at() RETURNS trigger AS $$
@@ -72,6 +41,32 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-This function checks if the row has been modified and if the `updated_at` column hasn't been explicitly changed, and if so, it updates the `updated_at` column to the current timestamp.
+### down.sql
+This file contains the SQL commands to remove the functions created by up.sql. It's very straightforward:
 
-These functions provide a robust and efficient way to manage `updated_at` timestamps in PostgreSQL databases when using the Diesel ORM with Rust applications.
+```sql
+DROP FUNCTION IF EXISTS diesel_manage_updated_at(_tbl regclass);
+DROP FUNCTION IF EXISTS diesel_set_updated_at();
+```
+
+These commands will remove the functions if they exist, allowing for a clean rollback of the migration.
+
+## Configuration
+This migration doesn't require any specific configuration. However, it's important to note that these functions are designed to work with tables that have an `updated_at` column. Any table that you want to use this automatic timestamp updating with should have this column.
+
+Also, after applying this migration, you would need to call `diesel_manage_updated_at` for each table where you want to enable automatic `updated_at` updates. This would typically be done in subsequent migrations or as part of your table creation scripts.
+
+For example:
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
+    updated_at TIMESTAMP NOT NULL DEFAULT current_timestamp
+);
+
+SELECT diesel_manage_updated_at('users');
+```
+
+This setup allows for a flexible and reusable way to manage `updated_at` timestamps across multiple tables in your database, which is a common requirement in many applications.

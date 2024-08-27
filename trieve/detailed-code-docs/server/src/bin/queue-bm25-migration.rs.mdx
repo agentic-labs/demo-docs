@@ -2,75 +2,52 @@
 title: "queue-bm25-migration.rs"
 ---
 
+Here's a documentation for the target file `server/src/bin/queue-bm25-migration.rs`:
+
 ## High-level description
-The `queue-bm25-migration.rs` file contains a command-line application that queues migration tasks for chunks in Qdrant collections. It iterates through specified Qdrant collections, retrieves chunks in batches, and sends messages to a Redis queue for asynchronous processing by a worker. The migration tasks involve converting existing vector representations to BM25 vectors and storing them in new Qdrant collections.
+This script is responsible for migrating vector collections in Qdrant to include BM25 scoring. It iterates through predefined vector sizes, creates corresponding collection names, and queues migration tasks for each collection to Redis.
 
 ## Code Structure
-The code consists of a single `main` function that performs the following steps:
-1. **Initialization:** Sets up logging, connects to Redis, and retrieves environment variables.
-2. **Collection Iteration:** Iterates through a list of Qdrant collections based on specified vector sizes.
-3. **Chunk Retrieval:** For each collection, retrieves chunks in batches using the `scroll_qdrant_collection_ids` function.
-4. **Message Creation:** Creates a `MigratePointMessage` for each batch of chunks, specifying the source and destination collections, and the BM25 parameters.
-5. **Queueing:** Sends the message to a Redis queue named "collection_migration".
-6. **Logging:** Logs the number of chunks queued for migration.
-
-## References
-- `scroll_qdrant_collection_ids`: A function from the `qdrant_operator` module that retrieves chunk IDs from a Qdrant collection in batches.
-- `MigratePointMessage`: A data structure defined in the `models` module that represents a migration task.
-- `MigrationMode`: An enum defined in the `models` module that specifies the type of migration to perform.
+The main function sets up the environment, establishes connections to Redis, and then iterates through vector collections to queue migration tasks.
 
 ## Symbols
+
 ### `main`
 #### Description
-The `main` function is the entry point of the command-line application. It orchestrates the process of queuing migration tasks for chunks in Qdrant collections.
-
-#### Inputs
-None
-
-#### Outputs
-- `Result&lt;(), ServiceError&gt;`: Indicates whether the migration tasks were successfully queued.
+The entry point of the script. It sets up the environment, initializes connections, and orchestrates the migration process.
 
 #### Internal Logic
-1. **Initialization:**
-    - Sets up logging using the `tracing_subscriber` crate.
-    - Retrieves the Redis URL and connection pool size from environment variables.
-    - Creates a Redis connection pool using the `bb8_redis` crate.
-    - Retrieves the list of vector sizes and constructs the corresponding Qdrant collection names.
-2. **Collection Iteration:**
-    - Iterates through the list of Qdrant collection names.
-3. **Chunk Retrieval:**
-    - For each collection, initializes an offset variable to track the current position in the collection.
-    - Enters a loop that continues until all chunks in the collection have been retrieved.
-    - Calls the `scroll_qdrant_collection_ids` function to retrieve a batch of chunk IDs and the new offset.
-4. **Message Creation:**
-    - Creates a `MigratePointMessage` for the batch of chunks, specifying:
-        - `qdrant_point_ids`: The list of chunk IDs.
-        - `from_collection`: The source Qdrant collection name.
-        - `to_collection`: The destination Qdrant collection name (with "_bm25" suffix).
-        - `mode`: The migration mode, set to `MigrationMode::BM25` with specified parameters.
-5. **Queueing:**
-    - Serializes the `MigratePointMessage` to JSON.
-    - Pushes the JSON message to the "collection_migration" Redis queue using the `redis` crate.
-6. **Logging:**
-    - Logs the number of chunks queued for migration, the current offset, and the new offset.
-    - Updates the offset variable for the next iteration.
-
-## Side Effects
-- Pushes messages to the "collection_migration" Redis queue.
+1. Sets up environment variables and logging.
+2. Establishes connections to Redis.
+3. Defines vector sizes and corresponding collection names.
+4. Iterates through collections:
+   - Scrolls through Qdrant collection IDs.
+   - Queues migration messages to Redis for each batch of point IDs.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| `tracing_subscriber` | Logging |
-| `dotenv` | Environment variable loading |
-| `bb8_redis` | Redis connection pooling |
-| `uuid` | UUID generation |
-| `serde_json` | JSON serialization |
-| `redis` | Redis client |
-| `trieve_server` | Internal crate containing data models, error handling, and Qdrant operator |
+| tracing_subscriber | For logging and tracing |
+| trieve_server | Core server functionality |
+| tokio | Asynchronous runtime |
+| dotenvy | Environment variable management |
+| bb8_redis | Redis connection pooling |
+| serde_json | JSON serialization/deserialization |
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| REDIS_URL | String | N/A | URL for Redis connection |
+| REDIS_CONNECTIONS | u32 | 2 | Number of Redis connections |
+| VECTOR_SIZES | Vec&lt;u64&gt; | [384,512,768,1024,1536,3072] | Vector sizes for collections |
 
 ## Error Handling
-The `main` function returns a `Result&lt;(), ServiceError&gt;` to indicate success or failure. Errors are handled by returning a `ServiceError` with an appropriate message.
+The script uses the `ServiceError` type for error handling. Errors are logged and propagated up the call stack.
 
 ## Logging
-The code uses the `tracing_subscriber` crate for logging. Log messages are written to standard output at the INFO level.
+Logging is set up using `tracing_subscriber` with INFO level directives.
+
+## TODOs
+- None explicitly mentioned in the code.
+
+This script is crucial for updating the vector collections in Qdrant to include BM25 scoring, which can improve search relevance. It's designed to work asynchronously, queueing tasks to Redis for processing, which allows for efficient handling of large-scale migrations.

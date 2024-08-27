@@ -3,49 +3,115 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for implementing built-in `updated_at` and `created_at` timestamps in a database. The migration is dated 2024-07-11-222705 and is titled "use-builtin-updated-created-at". It consists of two files: `up.sql` for applying the changes and `down.sql` for reverting them.
+This directory contains SQL migration scripts for implementing and reverting changes related to the use of built-in `updated_at` and `created_at` timestamps in a PostgreSQL database. The migration is identified by the timestamp 2024-07-11-222705 and is titled "use-builtin-updated-created-at".
 
 ## What does it do?
-The migration modifies the database to use a more efficient and standardized method for managing `updated_at` timestamps on various tables. 
+The migration scripts in this directory perform the following tasks:
 
-In the `up.sql` script:
-1. It removes existing custom triggers and functions related to updating `updated_at` timestamps.
-2. It introduces new, more efficient functions (`diesel_manage_updated_at` and `diesel_set_updated_at`) to handle the automatic updating of `updated_at` columns.
-3. It applies these new functions to multiple tables in the database.
+1. Up migration (up.sql):
+   - Removes existing custom triggers and functions for managing `updated_at` timestamps.
+   - Implements a new, more efficient mechanism using PostgreSQL's built-in functions to automatically update `updated_at` timestamps.
+   - Creates a generic function `diesel_manage_updated_at` to set up triggers on specified tables.
+   - Applies the new timestamp management system to multiple tables in the database.
 
-The `down.sql` script reverses these changes:
-1. It drops the newly created triggers and functions.
-2. It reintroduces custom functions (`update_updated_at` and `update_main_table_updated_at`) to manage `updated_at` timestamps.
-3. It creates triggers on various tables to use these custom functions.
-
-This migration aims to improve the efficiency and consistency of timestamp management in the database, likely as part of an optimization or standardization effort.
+2. Down migration (down.sql):
+   - Reverts the changes made by the up migration.
+   - Removes the built-in timestamp management system.
+   - Reintroduces custom triggers and functions for managing `updated_at` timestamps.
+   - Implements a separate function for updating the main table's `updated_at` column based on changes in related tables.
 
 ## Key Files
 
-1. `up.sql`:
-   - Implements the new timestamp management system.
-   - Drops existing triggers and functions.
-   - Creates new functions `diesel_manage_updated_at` and `diesel_set_updated_at`.
-   - Applies these functions to multiple tables.
+### up.sql
+This file contains the SQL commands for implementing the new timestamp management system. Key components include:
 
-2. `down.sql`:
-   - Reverts the changes made by `up.sql`.
-   - Drops the new triggers and functions.
-   - Recreates custom functions for timestamp management.
-   - Sets up triggers on various tables to use these custom functions.
+1. `diesel_manage_updated_at` function:
+   ```sql
+   CREATE OR REPLACE FUNCTION diesel_manage_updated_at(_tbl regclass) RETURNS VOID AS $$
+   BEGIN
+       EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s
+           FOR EACH ROW EXECUTE PROCEDURE diesel_set_updated_at()', _tbl);
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+   This function creates a trigger on the specified table to automatically update the `updated_at` column.
 
-Both files are crucial for the migration process, allowing for both the application and potential rollback of the changes.
+2. `diesel_set_updated_at` function:
+   ```sql
+   CREATE OR REPLACE FUNCTION diesel_set_updated_at() RETURNS trigger AS $$
+   BEGIN
+       IF (
+           NEW IS DISTINCT FROM OLD AND
+           NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at
+       ) THEN
+           NEW.updated_at := current_timestamp;
+       END IF;
+       RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+   This function is the actual trigger function that updates the `updated_at` column when a row is modified.
+
+3. Application of the new system to multiple tables:
+   ```sql
+   SELECT diesel_manage_updated_at('chunk_group');
+   SELECT diesel_manage_updated_at('chunk_metadata');
+   -- ... (more tables)
+   ```
+
+### down.sql
+This file contains the SQL commands for reverting the changes made by up.sql. Key components include:
+
+1. Removal of triggers and functions created by the up migration:
+   ```sql
+   DROP TRIGGER IF EXISTS set_updated_at ON chunk_group;
+   DROP TRIGGER IF EXISTS set_updated_at ON chunk_metadata;
+   -- ... (more tables)
+   DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass);
+   DROP FUNCTION IF EXISTS diesel_set_updated_at();
+   ```
+
+2. Creation of custom functions for managing `updated_at`:
+   ```sql
+   CREATE OR REPLACE FUNCTION update_updated_at() RETURNS trigger AS $$
+   BEGIN
+       NEW.updated_at = current_timestamp;
+       RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
+3. Creation of triggers using the custom functions:
+   ```sql
+   CREATE TRIGGER update_updated_at BEFORE UPDATE ON chunk_group
+       FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
+   CREATE TRIGGER update_updated_at BEFORE UPDATE ON chunk_metadata
+       FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
+   -- ... (more tables)
+   ```
 
 ## Configuration
-The migration scripts use SQL statements and do not rely on external configuration files. However, they do reference specific table names, which implies a certain database schema:
+This migration does not rely on any external configuration files or environment variables. The changes are applied directly to the database schema through SQL commands.
 
-- main
-- collection_items
-- collection_item_versions
-- collection_item_comments
-- collection_item_reactions
-- collection_item_tags
-- collection_item_links
-- collection_item_attachments
+The migration affects the following tables:
+- chunk_group
+- chunk_metadata
+- files
+- groups_from_files
+- messages
+- topics
+- users
+- chunk_group_bookmarks
 
-These table names are hardcoded in the migration scripts, indicating that the migration is designed for a specific database structure.
+Developers should ensure that these tables exist in the database before applying the migration.
+
+## Dependencies
+This migration relies on PostgreSQL-specific features and functions. It is designed to work with PostgreSQL databases and may not be compatible with other database management systems. The exact version of PostgreSQL is not specified in the provided code, but it should be compatible with recent versions of PostgreSQL that support the used features (e.g., `CREATE OR REPLACE FUNCTION`, `EXECUTE format(...)`, etc.).
+
+The migration scripts use the following PostgreSQL-specific elements:
+- PL/pgSQL language for stored procedures
+- `regclass` type for table names
+- `EXECUTE format(...)` for dynamic SQL execution
+- PostgreSQL's trigger system
+
+Developers should ensure that the target PostgreSQL database supports these features before applying the migration.

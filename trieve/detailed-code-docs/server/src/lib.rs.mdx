@@ -2,101 +2,116 @@
 title: "lib.rs"
 ---
 
-## High-level description
-This code represents the server-side implementation of the Trieve API, a system for managing and searching datasets, chunks of information, and providing RAG (Retrieval-Augmented Generation) capabilities. It includes functionality for authentication, data management, search operations, analytics, and integration with external services like Stripe for payments and OpenAI for language model interactions.
+Here's a high-level description of the server/src/lib.rs file:
+
+This file serves as the main library module for the Trieve server application. It sets up the server configuration, defines API routes, initializes database connections, and configures various middleware and services. The file also includes OpenAPI documentation for the API endpoints and implements error handling and logging functionality.
 
 ## Code Structure
-The codebase is organized into several modules and files, each handling specific aspects of the system:
 
-1. `lib.rs`: The main entry point that sets up the server, defines routes, and initializes various services.
-2. Handler files (e.g., `auth_handler.rs`, `message_handler.rs`): Handle specific API endpoints and their logic.
-3. Operator files (e.g., `qdrant_operator.rs`, `stripe_operator.rs`): Contain business logic and interactions with external services.
-4. Model files (e.g., `models.rs`): Define data structures used throughout the application.
-5. Utility files (e.g., `errors.rs`): Provide common functionality and error handling.
-6. Worker files (e.g., `delete-worker.rs`, `reindex-worker.rs`): Handle background tasks and data processing.
+The code is organized into several main sections:
+
+1. External crate imports and module declarations
+2. Constants and configuration settings
+3. Database connection and migration functions
+4. OpenAPI documentation setup
+5. Server setup and configuration
+6. Route definitions and handlers
+7. Error handling and middleware
+
+The main symbols in the code are interconnected as follows:
+
+- The `main()` function sets up the server configuration and starts the HTTP server.
+- The `MIGRATIONS` constant is used in the `run_migrations()` function to apply database migrations.
+- The `ApiDoc` struct defines the OpenAPI documentation, which is used in the server setup to provide API documentation endpoints.
+- Various handler functions are defined in separate modules and imported here to be used in route definitions.
 
 ## Symbols
 
-### `main` function in lib.rs
+### `main()`
+
 #### Description
-The main entry point for the Trieve server. It sets up the server configuration, initializes databases and services, and defines the API routes.
+The main entry point for the server application. It sets up logging, database connections, Redis, and starts the HTTP server with all the configured routes and middleware.
 
 #### Internal Logic
-1. Sets up environment variables and logging
-2. Initializes database connections (PostgreSQL and Redis)
-3. Sets up Qdrant collections for vector search
-4. Configures API routes and middleware
-5. Starts the HTTP server
+1. Initialize logging and Sentry monitoring if configured
+2. Set up database connection pool
+3. Configure Redis connection pool
+4. Initialize OpenAPI documentation
+5. Set up HTTP server with routes, middleware, and services
+6. Start the server on the specified port
 
-### `create_message` function in message_handler.rs
+### `run_migrations()`
+
 #### Description
-Handles the creation of a new message in a chat topic, potentially using RAG for generating responses.
+Runs pending database migrations using Diesel.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| data | CreateMessageReqPayload | Request payload containing message details |
-| user | AdminOnly | Authenticated admin user |
-| dataset_org_plan_sub | DatasetAndOrgWithSubAndPlan | Dataset and organization details |
-| event_queue | web::Data&lt;EventQueue&gt; | Queue for analytics events |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| url | &str | Database connection URL |
 
 #### Internal Logic
-1. Validates the request and checks usage limits
-2. Retrieves previous messages in the topic
-3. Performs a search to retrieve relevant chunks
-4. Generates a response using a language model (e.g., OpenAI)
-5. Stores the new message and sends analytics events
+1. Establish a database connection
+2. Run pending migrations using the `MIGRATIONS` constant
 
-### `search_hybrid_chunks` function in search_operator.rs
+### `establish_connection()`
+
 #### Description
-Performs a hybrid search (combining semantic and full-text search) over chunks in a dataset.
+Creates an asynchronous database connection using the provided configuration.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| search_chunks_req_payload | SearchChunksReqPayload | Search parameters |
-| parsed_query | ParsedQuery | Parsed search query |
-| pool | web::Data&lt;Pool&gt; | Database connection pool |
-| dataset | Dataset | Dataset to search in |
-| dataset_config | &DatasetConfiguration | Dataset configuration |
-| timer | &mut Timer | Timer for performance tracking |
+| config | &str | Database connection configuration string |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| - | BoxFuture&lt;diesel::ConnectionResult&lt;diesel_async::AsyncPgConnection&gt;&gt; | Future resolving to a database connection |
 
 #### Internal Logic
-1. Performs semantic search using vector embeddings
-2. Performs full-text search using BM25 or other algorithms
-3. Combines and ranks results
-4. Applies filters and highlighting
-5. Returns ranked and formatted search results
+1. Set up SSL configuration
+2. Establish a connection to the database
+3. Spawn a background task to handle the connection
+4. Convert the connection to an async Diesel connection
+
+### `ApiDoc`
+
+#### Description
+Struct defining the OpenAPI documentation for the API. It includes information about all the endpoints, request/response schemas, and security requirements.
 
 ## Dependencies
-The project relies on several external libraries and services:
-- Actix-web for the web framework
-- Diesel for database ORM
-- Qdrant for vector search
-- OpenAI for language model interactions
-- Stripe for payment processing
-- Redis for caching and queue management
-- ClickHouse for analytics data storage
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| actix-web | Web framework for building the HTTP server |
+| diesel | ORM for database operations |
+| utoipa | OpenAPI documentation generation |
+| sentry | Error monitoring and reporting |
+| redis | Caching and session management |
+| openssl | SSL/TLS support for database connections |
+
+## Configuration
+
+The application uses environment variables for configuration. Some key options include:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| DATABASE_URL | String | - | Database connection URL |
+| REDIS_URL | String | - | Redis connection URL |
+| SENTRY_URL | String | - | Sentry monitoring URL |
+| OPENAI_API_KEY | String | - | OpenAI API key for embeddings |
+| QDRANT_URL | String | - | Qdrant vector database URL |
+| QDRANT_API_KEY | String | - | Qdrant API key |
 
 ## Error Handling
-The application uses a custom `ServiceError` enum to handle and propagate errors throughout the system. This allows for consistent error handling and appropriate HTTP responses.
+
+The application uses a custom `ServiceError` enum for error handling. It implements the `ResponseError` trait from actix-web to convert errors into HTTP responses.
 
 ## Logging
-The application uses the `log` crate for logging, with different log levels (INFO, ERROR, etc.) used throughout the code for debugging and monitoring purposes.
+
+The application uses the `tracing` crate for logging. It sets up a subscriber with console output and Sentry integration if configured.
 
 ## API/Interface Reference
-The API is documented using OpenAPI (Swagger) specifications. Key endpoints include:
-- Authentication (/api/auth)
-- Chunk management (/api/chunk)
-- Message handling (/api/message)
-- Search operations (/api/chunk/search)
-- Analytics (/api/analytics)
 
-## Performance Considerations
-- The system uses asynchronous programming (async/await) for improved concurrency.
-- Vector search operations are optimized using Qdrant.
-- Redis is used for caching and as a message queue for background tasks.
-- The application supports streaming responses for long-running operations like chat completions.
-
-This codebase represents a complex system with many interacting parts. It's designed to be scalable and extensible, with clear separation of concerns between different modules and services.
+The API is documented using OpenAPI 3.0 specification. The `ApiDoc` struct defines all the endpoints, their parameters, request/response bodies, and security requirements. The documentation is served at the `/redoc` and `/swagger-ui` endpoints.

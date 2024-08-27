@@ -3,39 +3,36 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration file adds a trigram index to the `card_metadata` table using the GIN (Generalized Inverted Index) method. It enables efficient text search operations on the `oc_file_path` column.
+This SQL script adds a new GIN index to the `card_metadata` table using the `pg_trgm` extension for fuzzy string matching on the `oc_file_path` column. 
 
 ## Symbols
 
-### CREATE EXTENSION pg_trgm
+### `CREATE EXTENSION pg_trgm`
 #### Description
-This command creates the PostgreSQL trigram extension, which provides functions and operators for determining the similarity of alphanumeric text based on trigram matching.
+This statement ensures that the `pg_trgm` extension is installed in the database. This extension provides functions and operators for performing approximate string matching using trigram similarity.
 
 #### Internal Logic
-The `pg_trgm` extension is added to the database, enabling trigram-based text search functionality.
+- Checks if the extension is already installed. If not, it installs the extension.
 
-### CREATE INDEX idx_gist
+### `CREATE INDEX idx_gist ON card_metadata USING gin (oc_file_path gin_trgm_ops)`
 #### Description
-This command creates a GIN index named `idx_gist` on the `card_metadata` table, specifically for the `oc_file_path` column using trigram operations.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| card_metadata | table | The table on which the index is created |
-| oc_file_path | column | The column being indexed |
+This statement creates a new GIN index named `idx_gist` on the `card_metadata` table. The index utilizes the `gin_trgm_ops` operator class for indexing the `oc_file_path` column using trigrams.
 
 #### Internal Logic
-1. Creates an index named `idx_gist` on the `card_metadata` table.
-2. Uses the GIN indexing method, which is efficient for full-text search.
-3. Applies the index to the `oc_file_path` column.
-4. Utilizes the `gin_trgm_ops` operator class, which is specific to trigram operations.
-
-## Performance Considerations
-The addition of this trigram index can significantly improve the performance of text search queries on the `oc_file_path` column, especially for pattern matching and similarity searches. However, it may slightly increase the time required for insert and update operations on the `card_metadata` table.
+- Creates a new index named `idx_gist`.
+- Specifies the `card_metadata` table for the index.
+- Uses the `GIN` index type, which is suitable for indexing data structures like arrays and full-text search data.
+- Applies the `gin_trgm_ops` operator class to the `oc_file_path` column. This enables the index to utilize trigram matching for approximate string comparisons.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| pg_trgm | Provides trigram functionality for text similarity searches |
+| pg_trgm | Provides functions and operators for trigram matching. |
 
-Note: This migration assumes that the `card_metadata` table already exists in the database.
+## Side Effects
+- Installs the `pg_trgm` extension if it's not already installed.
+- Creates a new GIN index named `idx_gist` on the `card_metadata` table.
+
+## Performance Considerations
+- The GIN index with `gin_trgm_ops` is designed to speed up queries involving fuzzy string matching on the `oc_file_path` column.
+- Creating an index might impact write performance slightly, but it significantly improves read performance for relevant queries. 

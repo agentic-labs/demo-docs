@@ -3,33 +3,27 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL migration script is designed to revert the changes made in the corresponding `up.sql` file. It modifies the foreign key constraint on the `user_organizations` table, removing the cascade delete behavior for the `organization_id` column.
+This SQL script reverts a database migration related to the foreign key constraint between `user_organizations` and `organizations` tables. It specifically undoes the changes made in the corresponding `up.sql` script.
 
 ## Symbols
 
-### SQL Commands
-
+### `down.sql`
 #### Description
-The script contains two main SQL commands that alter the `user_organizations` table:
-
-1. Drops the existing foreign key constraint.
-2. Adds a new foreign key constraint without cascade delete.
+This script removes the existing foreign key constraint `user_organizations_organization_id_fkey` from the `user_organizations` table and adds a new constraint `fk_organization_id` referencing the `organizations` table. This likely reverts a change where the `ON DELETE CASCADE` behavior was added to the foreign key in the `up.sql` migration.
 
 #### Internal Logic
-1. The first `ALTER TABLE` statement removes the existing foreign key constraint named `user_organizations_organization_id_fkey`.
-2. The second `ALTER TABLE` statement adds a new foreign key constraint named `fk_organization_id`, which references the `id` column in the `organizations` table.
+1. **Drop Existing Constraint:** `ALTER TABLE user_organizations DROP CONSTRAINT user_organizations_organization_id_fkey;` - This line removes the existing foreign key constraint named `user_organizations_organization_id_fkey` from the `user_organizations` table.
 
-## Side Effects
-- Modifies the database schema by changing the foreign key relationship between `user_organizations` and `organizations` tables.
-- Removes the cascade delete behavior, which means that deleting an organization will no longer automatically delete related entries in the `user_organizations` table.
+2. **Add New Constraint:**
+   ```sql
+   ALTER TABLE user_organizations
+   ADD CONSTRAINT fk_organization_id
+   FOREIGN KEY (organization_id) REFERENCES organizations(id);
+   ```
+   - These lines add a new foreign key constraint named `fk_organization_id` to the `user_organizations` table. 
+   - The constraint sets the `organization_id` column as a foreign key referencing the `id` column of the `organizations` table. 
+   - Notably, this new constraint does not specify any `ON DELETE` behavior, meaning it defaults to the standard SQL behavior, which is `NO ACTION` (or `RESTRICT` depending on the database system). This means deleting a row in `organizations` would be restricted if a related row exists in `user_organizations`.
 
-## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| PostgreSQL | This SQL script is written for PostgreSQL database systems. |
-
-## Error Handling
-This script does not include explicit error handling. If an error occurs during execution, it will be handled by the database management system or the migration tool running the script.
-
-## TODOs
-The script includes a comment indicating that it should undo anything in the corresponding `up.sql` file. This serves as a reminder for developers to ensure that this down migration correctly reverts all changes made in the up migration.
+#### Side Effects
+- Modifies the database schema by changing the foreign key constraint on the `user_organizations` table.
+- Impacts data integrity rules related to deleting records from the `organizations` table.

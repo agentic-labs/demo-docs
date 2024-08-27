@@ -3,37 +3,35 @@ title: "down.sql"
 ---
 
 ## High-level description
-This SQL script is a migration file designed to revert the changes made in the corresponding `up.sql` file. It recreates the `card_votes` table and associated indexes, which were presumably dropped in the `up.sql` migration.
+This SQL script defines the "down" migration for reverting changes introduced by a corresponding "up" migration related to a table named `card_votes`. It aims to recreate the `card_votes` table and its associated indexes that were likely dropped in the "up" migration.
 
 ## Symbols
 
-### `card_votes` table
+### `CREATE TABLE card_votes`
 #### Description
-This table is created to store information about votes cast by users on card metadata.
+This statement recreates the `card_votes` table, which stores information about votes cast on cards by users.
 
-#### Columns
-| Name | Type | Constraints | Description |
-|:-----|:-----|:------------|:------------|
-| id | UUID | PRIMARY KEY | Unique identifier for each vote |
-| voted_user_id | UUID | NOT NULL, REFERENCES users(id) | ID of the user who cast the vote |
-| card_metadata_id | UUID | NOT NULL, REFERENCES card_metadata(id) | ID of the card metadata being voted on |
-| vote | BOOLEAN | NOT NULL | The vote value (true/false) |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Timestamp of when the vote was created |
-| updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Timestamp of when the vote was last updated |
+#### Internal Logic
+- The table has the following columns:
+    - `id`: A UUID serving as the primary key for uniquely identifying each vote.
+    - `voted_user_id`: A UUID referencing the `users` table, indicating the user who cast the vote.
+    - `card_metadata_id`: A UUID referencing the `card_metadata` table, indicating the card that received the vote.
+    - `vote`: A boolean value representing the vote itself (likely true for upvote, false for downvote).
+    - `created_at`: A timestamp recording the vote's creation time, defaulting to the current timestamp.
+    - `updated_at`: A timestamp recording the vote's last update time, also defaulting to the current timestamp.
 
-### Indexes
-Two indexes are created to improve query performance:
+- Foreign key constraints ensure referential integrity with the `users` and `card_metadata` tables.
 
-1. `idx_card_votes_voted_user_id` on the `voted_user_id` column
-2. `idx_card_votes_card_metadata_id` on the `card_metadata_id` column
+### `CREATE INDEX idx_card_votes_voted_user_id`
+#### Description
+This statement creates an index on the `voted_user_id` column of the `card_votes` table.
 
-## Dependencies
-This migration script depends on the existence of two other tables in the database:
-1. `users` table (referenced by `voted_user_id`)
-2. `card_metadata` table (referenced by `card_metadata_id`)
+#### Internal Logic
+- This index optimizes queries that filter or search based on the user who cast the vote.
 
-## Error Handling
-The script does not include explicit error handling. If there are any issues during execution (e.g., referenced tables don't exist), the database system will raise an error and roll back the transaction.
+### `CREATE INDEX idx_card_votes_card_metadata_id`
+#### Description
+This statement creates an index on the `card_metadata_id` column of the `card_votes` table.
 
-## Performance Considerations
-The creation of indexes on `voted_user_id` and `card_metadata_id` columns is intended to improve query performance, especially for lookups based on these columns. However, these indexes will slightly increase the overhead for insert and update operations on the `card_votes` table.
+#### Internal Logic
+- This index optimizes queries that filter or search based on the card that received the vote.

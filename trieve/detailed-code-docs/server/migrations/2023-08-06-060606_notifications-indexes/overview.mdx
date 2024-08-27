@@ -3,53 +3,58 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for creating and dropping indexes on the `file_upload_completed_notifications` and `verification_notifications` tables. The migration is dated 2023-08-06 and is specifically focused on improving query performance for these notification-related tables.
+This directory contains SQL migration scripts for creating and dropping indexes on two notification-related tables: `file_upload_completed_notifications` and `verification_notifications`. The purpose of these migrations is to improve query performance for these tables by adding indexes on specific columns that are likely to be frequently used in WHERE clauses or JOIN operations.
 
 ## What does it do?
-The migration scripts in this directory add and remove database indexes to optimize query performance for specific columns in two notification-related tables. Here's a breakdown of what these scripts do:
+The migration scripts in this directory perform the following actions:
 
-1. For the `file_upload_completed_notifications` table:
-   - Add indexes on the `user_uuid` and `collection_uuid` columns.
-   - These indexes will speed up queries that filter or join on these columns, likely improving performance when retrieving notifications for specific users or collections.
+1. In the "up" migration (`up.sql`):
+   - Creates indexes on the `user_uuid` and `collection_uuid` columns of the `file_upload_completed_notifications` table.
+   - Creates indexes on the `user_uuid`, `card_uuid`, and `verification_uuid` columns of the `verification_notifications` table.
 
-2. For the `verification_notifications` table:
-   - Add indexes on the `user_uuid`, `card_uuid`, and `verification_uuid` columns.
-   - These indexes will enhance query performance when filtering or joining on these columns, potentially optimizing operations related to user verifications, card verifications, or specific verification processes.
+2. In the "down" migration (`down.sql`):
+   - Drops all the indexes created in the "up" migration, effectively reverting the database schema to its previous state.
 
-The migration can be applied (using the `up.sql` script) to add these indexes, improving query performance. It can also be reverted (using the `down.sql` script) to remove these indexes if needed, perhaps for troubleshooting or if the indexes are no longer beneficial.
+These actions are designed to optimize database performance for queries that frequently filter or join on these columns. By adding indexes, the database can more quickly locate the relevant rows without having to scan the entire table. This is particularly useful for large tables where full table scans would be time-consuming.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL commands to create the new indexes on both tables. It's the script that will be executed when applying the migration.
+### up.sql
+This file contains the SQL commands to create the new indexes. Here's a breakdown of what it does:
 
-   ```sql
-   CREATE INDEX idx_file_upload_completed_notifications_user_uuid ON file_upload_completed_notifications (user_uuid);
-   CREATE INDEX idx_file_upload_completed_notifications_collection_uuid ON file_upload_completed_notifications (collection_uuid);
-   CREATE INDEX idx_verification_notifications_user_uuid ON verification_notifications (user_uuid);
-   CREATE INDEX idx_verification_notifications_card_uuid ON verification_notifications (card_uuid);
-   CREATE INDEX idx_verification_notifications_verification_uuid ON verification_notifications (verification_uuid);
-   ```
+```sql
+CREATE INDEX idx_file_upload_completed_notifications_user_uuid ON file_upload_completed_notifications (user_uuid);
+CREATE INDEX idx_file_upload_completed_notifications_collection_uuid ON file_upload_completed_notifications (collection_uuid);
+CREATE INDEX idx_verification_notifications_user_uuid ON verification_notifications (user_uuid);
+CREATE INDEX idx_verification_notifications_card_uuid ON verification_notifications (card_uuid);
+CREATE INDEX idx_verification_notifications_verification_uuid ON verification_notifications (verification_uuid);
+```
 
-2. `down.sql`: This file contains the SQL commands to drop the indexes created by the `up.sql` script. It's used when rolling back the migration.
+Each `CREATE INDEX` statement creates a new index on a specific column of a table. The index names are descriptive, indicating the table and column they're indexing.
 
-   ```sql
-   DROP INDEX idx_file_upload_completed_notifications_user_uuid;
-   DROP INDEX idx_file_upload_completed_notifications_collection_uuid;
-   DROP INDEX idx_verification_notifications_user_uuid;
-   DROP INDEX idx_verification_notifications_card_uuid;
-   DROP INDEX idx_verification_notifications_verification_uuid;
-   ```
+### down.sql
+This file contains the SQL commands to drop the indexes created by `up.sql`. It's used when rolling back the migration:
 
-These files work together to provide a reversible database schema change, allowing for easy application and rollback of the index modifications.
+```sql
+DROP INDEX idx_file_upload_completed_notifications_user_uuid;
+DROP INDEX idx_file_upload_completed_notifications_collection_uuid;
+DROP INDEX idx_verification_notifications_user_uuid;
+DROP INDEX idx_verification_notifications_card_uuid;
+DROP INDEX idx_verification_notifications_verification_uuid;
+```
+
+Each `DROP INDEX` statement removes the corresponding index created in the `up.sql` file.
+
+## Dependencies
+This migration doesn't directly depend on any external libraries or frameworks. However, it assumes the existence of a database migration system that can execute these SQL scripts in the appropriate order and track which migrations have been applied.
 
 ## Configuration
-While there are no explicit configuration files in this directory, the naming convention of the migration (`2023-08-06-060606_notifications-indexes`) suggests that this project likely uses a migration tool or framework that relies on timestamp-based naming for ordering migrations. The timestamp `2023-08-06-060606` indicates when this migration was created, ensuring it's applied in the correct order relative to other migrations.
+There are no specific configuration files or environment variables used in these migration scripts. However, the database connection details (host, port, database name, etc.) would typically be configured in the application that runs these migrations.
 
-Developers working with this codebase should be aware of the following:
+It's important to note that while adding indexes can significantly improve query performance, they also have some trade-offs:
 
-1. The exact syntax and behavior of these SQL commands may depend on the specific database system being used (e.g., PostgreSQL, MySQL).
-2. The migration tool or framework used in the project will determine how these scripts are executed and how rollbacks are handled.
-3. Adding or removing indexes can have significant performance implications, so careful testing should be done in a staging environment before applying these changes to a production database.
-4. The columns being indexed (`user_uuid`, `collection_uuid`, `card_uuid`, `verification_uuid`) are likely foreign keys or frequently queried fields, indicating their importance in the application's data model and query patterns.
+1. Indexes take up additional disk space.
+2. Write operations (INSERT, UPDATE, DELETE) may become slightly slower as indexes need to be updated.
+3. If the indexed columns are frequently updated, the performance gain might be less significant.
 
-By adding these indexes, the database will create and maintain additional data structures to speed up queries on these columns, at the cost of some additional storage space and slightly slower write operations. The trade-off is generally worthwhile for columns that are frequently used in WHERE clauses or JOIN conditions.
+Therefore, the decision to add these indexes should be based on the specific query patterns and performance requirements of the application. Regular monitoring and performance testing should be conducted to ensure these indexes are providing the expected benefits.

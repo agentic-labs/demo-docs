@@ -3,21 +3,21 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for modifying the `users` table in a database. The migration adds new columns for username, website, and email visibility, and provides a way to revert these changes if needed.
+This directory contains SQL migration scripts for modifying the `users` table in a database. The migration, identified as `2023-05-27-192000_user_info`, adds new columns to store additional user information and provides a mechanism to revert these changes if needed.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
 1. Add new columns to the `users` table:
-   - `username`: A unique, optional text field for storing user's chosen username.
-   - `website`: An optional text field for storing the user's website URL.
-   - `visible_email`: A boolean field to control whether a user's email is visible to others.
+   - `username`: A unique text field to store the user's username.
+   - `website`: A text field to store the user's website URL.
+   - `visible_email`: A boolean field to indicate whether the user's email should be visible.
 
-2. Set a default value for the email visibility for existing users.
+2. Set the `visible_email` field to `true` for all existing users.
 
-3. Provide a way to undo these changes by removing the newly added columns if needed.
+3. Provide a way to undo these changes by removing the newly added columns if necessary.
 
-These changes allow the application to store additional user information and provide more control over email visibility settings.
+These changes allow the application to store and manage additional user information, such as usernames and website URLs, and provide control over email visibility.
 
 ## Key Files
 
@@ -26,14 +26,15 @@ This file contains the SQL commands to apply the migration:
 
 ```sql
 ALTER TABLE users
-ADD COLUMN username TEXT UNIQUE,
-ADD COLUMN website TEXT,
-ADD COLUMN visible_email BOOLEAN NOT NULL DEFAULT false;
+ADD COLUMN username TEXT NULL UNIQUE,
+ADD COLUMN website TEXT NULL,
+ADD COLUMN visible_email BOOLEAN DEFAULT false NOT NULL;
 
-UPDATE users SET visible_email = true;
+UPDATE users
+SET visible_email = true;
 ```
 
-It adds the new columns to the `users` table and sets the `visible_email` to true for all existing users.
+The script adds three new columns to the `users` table and sets the `visible_email` column to `true` for all existing users.
 
 ### down.sql
 This file contains the SQL commands to revert the migration:
@@ -45,21 +46,25 @@ DROP COLUMN website,
 DROP COLUMN visible_email;
 ```
 
-It removes the columns added by the `up.sql` script, effectively undoing the changes made to the `users` table.
-
-## Dependencies
-This migration likely depends on a database migration system, possibly using tools like Diesel for Rust or other similar ORM (Object-Relational Mapping) libraries that support database migrations.
+The script removes the three columns added by the `up.sql` migration.
 
 ## Configuration
 The migration is identified by its timestamp: `2023-05-27-192000`. This timestamp is used to order migrations and ensure they are applied in the correct sequence.
 
-## Performance Considerations
-1. The `ALTER TABLE` operations in both `up.sql` and `down.sql` may temporarily lock the `users` table during execution. This could impact database performance, especially if the table is large.
-2. The `UPDATE` statement in `up.sql` affects all existing rows in the `users` table, which could be resource-intensive for tables with a large number of records.
+## Dependencies
+This migration depends on:
+1. The existence of a `users` table in the database.
+2. A database system that supports ALTER TABLE operations for adding and dropping columns.
+3. A migration framework or tool that can execute these SQL scripts in the appropriate order.
 
-## TODOs
-There is a potential inconsistency in the `up.sql` script:
-1. The `visible_email` column is added with a DEFAULT value of false.
-2. However, the subsequent UPDATE statement sets `visible_email` to true for all existing rows.
+## Side Effects
+When applying this migration:
+1. The `users` table schema will be modified, which may require table locks during the operation.
+2. All existing users will have their `visible_email` set to `true`, potentially changing the visibility of their email addresses in the application.
+3. The `username` column is set as UNIQUE, which may impact user registration or profile update processes in the application.
 
-This discrepancy should be reviewed to ensure it aligns with the intended behavior for email visibility settings.
+When reverting this migration:
+1. Any data stored in the `username`, `website`, and `visible_email` columns will be permanently lost.
+2. Applications or queries relying on these columns will need to be updated to prevent errors.
+
+It's important to note that these migrations should be tested in a non-production environment before being applied to a live database to ensure data integrity and application compatibility.

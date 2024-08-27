@@ -3,82 +3,88 @@ title: "statefulset.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes StatefulSet for deploying the Qdrant vector search engine. It specifies the container image, storage, networking, and other configuration options for the Qdrant pods. The StatefulSet ensures that each Qdrant pod has a stable, unique network identity and persistent storage.
+This YAML file defines a Kubernetes StatefulSet for deploying and managing Qdrant, a vector database. It configures the deployment, including container specifications, volume mounts, security contexts, probes, and persistent storage for Qdrant instances.
 
 ## Code Structure
-The code defines a single Kubernetes StatefulSet resource. It uses various nested fields to specify the desired state of the Qdrant deployment, including:
-
-- **metadata**: Defines metadata about the StatefulSet, such as its name and labels.
-- **spec**: Defines the desired state of the StatefulSet, including the number of replicas, pod template, and volume claim templates.
-- **template**: Defines the pod template used to create the Qdrant pods. This includes container specifications, volume mounts, and other pod-level configurations.
-- **volumeClaimTemplates**: Defines the PersistentVolumeClaim templates used to provision persistent storage for the Qdrant pods.
-
-## References
-This code references other files in the chart through the `include` function, such as:
-
-- `qdrant.fullname`: Returns the full name of the Qdrant release, which is used for naming resources.
-- `qdrant.labels`: Returns a set of labels to apply to the StatefulSet and its pods.
-- `qdrant.selectorLabels`: Returns a set of labels used to select the Qdrant pods.
-- `configmap.yaml`: Defines a ConfigMap containing configuration files for Qdrant.
-- `secret.yaml`: Defines a Secret containing API keys for Qdrant.
+The YAML file is structured as a Kubernetes StatefulSet resource, with various nested fields defining the deployment configuration. It uses Helm templating to allow for customization of the deployment based on values provided in the Helm chart.
 
 ## Symbols
 
-### `StatefulSet`
+### StatefulSet
 #### Description
-This symbol defines a Kubernetes StatefulSet resource named "qdrant" that manages the deployment and scaling of Qdrant pods.
-
-#### Inputs
-This symbol does not have explicit inputs. It relies on values passed from the Helm chart and Kubernetes environment.
-
-#### Outputs
-This symbol does not have explicit outputs. It creates and manages Qdrant pods within the Kubernetes cluster.
+Defines a StatefulSet resource for deploying Qdrant instances with stable network identities and persistent storage.
 
 #### Internal Logic
-The StatefulSet definition specifies various configuration options for the Qdrant deployment, including:
+1. Sets up metadata, including name and labels
+2. Configures the number of replicas and pod management policy
+3. Defines the pod template, including:
+   - Annotations for configuration checksums
+   - Labels for pod identification
+   - Container specifications (main Qdrant container and optional sidecars)
+   - Volume mounts for storage, configuration, and snapshots
+   - Security contexts
+   - Probes for liveness, readiness, and startup checks
+   - Resource requests and limits
+4. Configures persistent volume claims for Qdrant storage
 
-- **replicas**: Defines the number of Qdrant pods to maintain.
-- **podManagementPolicy**: Specifies how the StatefulSet should manage pod termination and creation.
-- **serviceName**: Specifies the headless service associated with the StatefulSet.
-- **template**: Defines the pod template used to create the Qdrant pods.
-- **volumeClaimTemplates**: Defines the PersistentVolumeClaim templates used to provision persistent storage for the Qdrant pods.
+### Container Specification
+#### Description
+Defines the main Qdrant container, including its image, environment variables, ports, probes, and volume mounts.
 
-The pod template specifies the Qdrant container image, environment variables, command, ports, resource limits, security context, volume mounts, and lifecycle hooks. It also defines liveness, readiness, and startup probes to monitor the health of the Qdrant pods.
+#### Internal Logic
+1. Sets the container image and pull policy
+2. Configures environment variables
+3. Defines container ports for HTTP and gRPC
+4. Sets up liveness, readiness, and startup probes
+5. Configures resource requests and limits
+6. Mounts volumes for storage, configuration, and snapshots
 
-The volume claim templates define the storage requirements for the Qdrant pods, including the storage class, access modes, and storage capacity.
+### Volume Mounts
+#### Description
+Defines the volumes and volume mounts used by the Qdrant container.
 
-## Side Effects
-This code, when applied to a Kubernetes cluster, will:
+#### Internal Logic
+1. Mounts persistent storage for Qdrant data
+2. Mounts ConfigMap for Qdrant configuration
+3. Optionally mounts a Secret for API keys
+4. Mounts a volume for snapshots (either persistent or emptyDir)
+5. Mounts an emptyDir volume for initialization
 
-- Create a StatefulSet resource named "qdrant".
-- Create and manage the specified number of Qdrant pods.
-- Create PersistentVolumeClaims for each pod to provide persistent storage.
-- Expose the Qdrant service on the specified ports.
+### Probes
+#### Description
+Configures liveness, readiness, and startup probes for the Qdrant container.
+
+#### Internal Logic
+1. Sets up HTTP or gRPC probes based on the service configuration
+2. Configures probe parameters (delays, timeouts, thresholds)
+3. Adapts probe configuration based on Qdrant version and TLS settings
 
 ## Dependencies
-This code depends on the following Kubernetes resources:
-
 | Dependency | Purpose |
 |:-----------|:--------|
-| ConfigMap | Provides configuration files for Qdrant. |
-| Secret | Stores API keys for Qdrant. |
-| PersistentVolumeClaim | Provides persistent storage for Qdrant data. |
-| Service | Exposes the Qdrant service to other applications. |
+| Kubernetes | The target platform for deploying the StatefulSet |
+| Helm | Used for templating and customization of the deployment |
 
-### Configuration
-This code relies on various configuration options passed from the Helm chart, including:
+## Configuration
+The StatefulSet configuration can be customized using Helm values. Key configuration options include:
 
-| Option | Type | Default | Description |
-|:-------|:-----|:--------|:------------|
-| `replicaCount` | int | 1 | Number of Qdrant pods to deploy. |
-| `image.repository` | string | "qdrant/qdrant" | Docker image repository for Qdrant. |
-| `image.tag` | string | Chart app version | Docker image tag for Qdrant. |
-| `persistence.storageClassName` | string | "" | Name of the storage class to use for persistent volumes. |
-| `persistence.size` | string | "1Gi" | Size of the persistent volume claim. |
-| `service.ports` | list | [ { name: "http", port: 6333, targetPort: 6333, protocol: "TCP" } ] | List of ports to expose for the Qdrant service. |
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| replicaCount | Integer | Number of Qdrant replicas to deploy |
+| image.repository | String | Docker image repository for Qdrant |
+| image.tag | String | Docker image tag for Qdrant |
+| persistence.size | String | Size of the persistent volume for Qdrant storage |
+| resources | Object | CPU and memory requests/limits for the Qdrant container |
 
 ## Error Handling
-This code does not implement specific error handling mechanisms. It relies on Kubernetes to manage pod and container failures.
+Error handling is primarily managed through Kubernetes probes (liveness, readiness, and startup) which can detect and respond to various failure scenarios.
 
-## Logging
-This code does not implement specific logging mechanisms. It relies on the Qdrant application to handle logging.
+## API/Interface Reference
+The StatefulSet exposes Qdrant's HTTP and gRPC interfaces:
+
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| HTTP | Various | Qdrant HTTP API for vector search operations |
+| gRPC | Various | Qdrant gRPC API for vector search operations |
+
+Note: Specific API endpoints and methods are defined by the Qdrant application itself, not in this StatefulSet configuration.

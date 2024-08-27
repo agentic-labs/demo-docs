@@ -3,59 +3,66 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Docker-related files and scripts for various components of a search and analytics system. It includes configurations for ClickHouse database operations, clustering algorithms for search queries, query optimization scripts, and Keycloak authentication customization.
+This directory contains Docker configurations and related files for setting up various components of a larger system. It includes custom setups for ClickHouse (a database server with embedding capabilities), a clustering script for analyzing search queries, a query collapse script for optimizing search analytics, and a customized Keycloak instance for authentication and identity management.
 
 ## What does it do?
-The contents of this directory serve several purposes:
+The Docker configurations in this directory enable the deployment of several interconnected services:
 
-1. Text Embedding: Generates embeddings for input text using an external embedding server, likely for use in search or analytics operations.
+1. A ClickHouse database server with added functionality for generating text embeddings, allowing for efficient storage and analysis of text data along with their semantic representations.
 
-2. Search Query Clustering: Implements a system to cluster search queries using HDBSCAN algorithm and generate topic names using the Claude API.
+2. A clustering service that analyzes search query data stored in ClickHouse, applying the HDBSCAN algorithm to cluster queries and generate topic names using AI.
 
-3. Query Optimization: Collapses similar search queries in a ClickHouse database to reduce redundancy and improve analytics accuracy.
+3. A query collapse service that optimizes search analytics by identifying and marking redundant partial queries within a specific time window.
 
-4. Authentication: Customizes Keycloak for user authentication and authorization in the "trieve" application.
+4. A customized Keycloak authentication server with pre-configured realms, client applications, and external identity providers, featuring a branded login theme.
 
-These components work together to provide a comprehensive solution for processing, analyzing, and optimizing search queries while ensuring secure user access.
+These services work together to provide a robust backend for a search-centric application with advanced analytics capabilities and secure authentication.
 
 ## Key Files
 
-1. `clickhouse/`: Contains a Python script for generating text embeddings using an external server.
+1. ClickHouse setup (`docker/clickhouse`):
+   - `Dockerfile`: Builds a custom ClickHouse image with embedding capabilities.
+   - `embed.py`: Python script for generating text embeddings.
 
-2. `clustering-script/`: Implements HDBSCAN clustering for search queries and topic generation using the Claude API.
+2. Clustering script (`docker/clustering-script`):
+   - `Dockerfile`: Sets up a Python environment for the clustering script.
+   - `get_clusters.py`: Performs HDBSCAN clustering on search queries and generates topics.
 
-3. `collapse-query-script/`: Contains a Python script and README for optimizing search queries by collapsing similar ones in a ClickHouse database.
+3. Query collapse script (`docker/collapse-query-script`):
+   - `Dockerfile`: Configures a Python environment for the collapse script.
+   - `collapse_queries.py`: Identifies and marks redundant partial queries.
 
-4. `keycloak/`: Includes configuration files for customizing Keycloak authentication for the "trieve" application.
+4. Keycloak setup (`docker/keycloak`):
+   - `Dockerfile`: Builds a custom Keycloak image with realm configuration and custom theme.
+   - `realm-export.json`: Defines the "trieve" realm configuration.
+   - `themes/trieve/login/resources/css/login.css`: Custom login theme stylesheet.
 
 ## Dependencies
-The scripts in this directory rely on several external libraries and services:
+The services rely on various external dependencies:
 
-- ClickHouse: Used as the primary database for storing and querying search data.
-- HDBSCAN: Employed for clustering search queries.
-- Claude API: Used for generating topic names for query clusters.
-- Keycloak: Provides authentication and authorization services.
-- Python libraries: requests, numpy, sklearn, anthropic, dotenv, and others for various data processing and API interactions.
+1. ClickHouse Server (latest version)
+2. Python 3.9 (for clustering and query collapse scripts)
+3. Keycloak 23.0.7
+4. Various Python libraries including clickhouse_connect, numpy, sklearn, anthropic, and dotenv
+5. External embedding server (for ClickHouse text embedding)
+6. Claude AI (for generating cluster topic names)
 
 ## Configuration
-Configuration is primarily managed through environment variables, likely loaded from .env files. Key configuration points include:
+Each service uses specific configuration methods:
 
-- ClickHouse database connection details
-- Embedding server URL
-- Claude API credentials
-- Keycloak realm and client settings
+1. ClickHouse:
+   - Custom XML configurations (`config.xml`, `embedding_function.xml`)
+   - `EMBEDDING_SERVER_URL` environment variable
 
-## Code Snippet
-Here's an example of the clustering logic used in the search query analysis:
+2. Clustering script:
+   - Environment variables for database connection and Anthropic API key
 
-```python
-def hdbscan_clustering(data):
-    vectors = [row[3] for row in data]
-    hdb = HDBSCAN(min_cluster_size=5, min_samples=3, cluster_selection_epsilon=0.5)
-    hdb.fit(vectors)
-    return hdb
-```
+3. Query collapse script:
+   - Environment variables for database connection
+   - Configurable batch size and time window for query analysis
 
-This function performs HDBSCAN clustering on the input data, which are likely vector representations of search queries. The clustering helps identify groups of similar queries for further analysis and optimization.
+4. Keycloak:
+   - Realm configuration in `realm-export.json`
+   - Custom theme CSS for branding and light/dark mode support
 
-In summary, this Docker directory contains a set of interconnected components that work together to process, analyze, and optimize search queries while providing secure authentication. It combines database operations, machine learning techniques, and custom authentication to create a robust search and analytics system.
+These Docker configurations allow for flexible deployment of a complex system with data storage, analytics, and authentication components, suitable for a search-centric application with advanced features.

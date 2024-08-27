@@ -3,145 +3,148 @@ title: "topic_operator.rs"
 ---
 
 ## High-level description
-The `topic_operator.rs` file defines several asynchronous functions that handle database operations related to chat topics. These functions interact with a PostgreSQL database using the Diesel ORM to perform CRUD operations on topics.
+This file, `topic_operator.rs`, contains functions for performing CRUD (Create, Read, Update, Delete) operations on topics in a database. It uses Diesel ORM for database interactions and includes error handling for database operations.
 
-## References
-- `crate::data::models::{Pool, Topic}`: References the `Pool` (database connection pool) and `Topic` (struct representing a chat topic) types.
-- `crate::{diesel::prelude::*, errors::ServiceError}`: Imports necessary modules for Diesel ORM and custom error handling.
-- `actix_web::web`: Imports the `web` module from Actix Web framework.
+## Code Structure
+The file defines several asynchronous functions that interact with the database to manage topics. Each function is annotated with `#[tracing::instrument]` for logging and takes a database pool as an argument.
 
 ## Symbols
 
 ### `create_topic_query`
 #### Description
-This function inserts a new topic into the `topics` table in the database.
+Creates a new topic in the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `topic` | `Topic` | The `Topic` struct containing the details of the new topic to be created. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| topic | Topic | The topic to be created |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;(), ServiceError&gt;`: Returns `Ok(())` on successful insertion, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Ok if successful, ServiceError if failed |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's `insert_into` function to build an insert query for the `topics` table.
-3. Sets the values of the new topic using the provided `topic` struct.
-4. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Inserts the new topic into the database
+3. Returns an error if the insertion fails
 
 ### `delete_topic_query`
 #### Description
-This function logically deletes a topic by setting the `deleted` flag to `true` in the `topics` table.
+Marks a topic as deleted in the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `topic_id` | `uuid::Uuid` | The UUID of the topic to be deleted. |
-| `given_dataset_id` | `uuid::Uuid` | The UUID of the dataset the topic belongs to. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| topic_id | uuid::Uuid | ID of the topic to delete |
+| given_dataset_id | uuid::Uuid | Dataset ID for the topic |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;(), ServiceError&gt;`: Returns `Ok(())` on successful deletion, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Ok if successful, ServiceError if failed |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's `update` function to build an update query for the `topics` table.
-3. Filters the `topics` table by `topic_id` and `given_dataset_id`.
-4. Sets the `deleted` column to `true`.
-5. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Updates the topic's 'deleted' field to true
+3. Returns an error if the update fails
 
 ### `update_topic_query`
 #### Description
-This function updates the name and `updated_at` timestamp of a topic in the `topics` table.
+Updates a topic's name in the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `topic_id` | `uuid::Uuid` | The UUID of the topic to be updated. |
-| `topic_name` | `String` | The new name for the topic. |
-| `given_dataset_id` | `uuid::Uuid` | The UUID of the dataset the topic belongs to. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| topic_id | uuid::Uuid | ID of the topic to update |
+| topic_name | String | New name for the topic |
+| given_dataset_id | uuid::Uuid | Dataset ID for the topic |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;(), ServiceError&gt;`: Returns `Ok(())` on successful update, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;(), ServiceError&gt; | Result | Ok if successful, ServiceError if failed |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's `update` function to build an update query for the `topics` table.
-3. Filters the `topics` table by `topic_id` and `given_dataset_id`.
-4. Sets the `name` column to the new `topic_name` and updates the `updated_at` column to the current timestamp.
-5. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Updates the topic's name and updated_at timestamp
+3. Returns an error if the update fails
 
 ### `get_topic_query`
 #### Description
-This function retrieves a specific topic from the `topics` table based on its UUID and dataset ID.
+Retrieves a specific topic from the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `topic_id` | `uuid::Uuid` | The UUID of the topic to retrieve. |
-| `given_dataset_id` | `uuid::Uuid` | The UUID of the dataset the topic belongs to. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| topic_id | uuid::Uuid | ID of the topic to retrieve |
+| given_dataset_id | uuid::Uuid | Dataset ID for the topic |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;Topic, ServiceError&gt;`: Returns the retrieved `Topic` on success, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Topic, ServiceError&gt; | Result | Topic if found, ServiceError if not found or on failure |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's query builder to select a topic from the `topics` table.
-3. Filters the table by `topic_id`, `given_dataset_id`, and ensures the topic is not marked as deleted (`deleted` column is `false`).
-4. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Queries the database for the topic with matching ID and dataset_id
+3. Returns the topic if found, or an error if not found
 
 ### `get_topic_for_owner_id_query`
 #### Description
-This function retrieves a specific topic from the `topics` table based on its UUID, owner ID, and dataset ID.
+Retrieves a specific topic for a given owner from the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `owner_id` | `String` | The owner ID of the topic to retrieve. |
-| `topic_id` | `uuid::Uuid` | The UUID of the topic to retrieve. |
-| `given_dataset_id` | `uuid::Uuid` | The UUID of the dataset the topic belongs to. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| owner_id | String | ID of the topic owner |
+| topic_id | uuid::Uuid | ID of the topic to retrieve |
+| given_dataset_id | uuid::Uuid | Dataset ID for the topic |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;Topic, ServiceError&gt;`: Returns the retrieved `Topic` on success, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Topic, ServiceError&gt; | Result | Topic if found, ServiceError if not found or on failure |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's query builder to select a topic from the `topics` table.
-3. Filters the table by `topic_id`, `owner_id`, `given_dataset_id`, and ensures the topic is not marked as deleted (`deleted` column is `false`).
-4. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Queries the database for the topic with matching ID, owner_id, and dataset_id
+3. Returns the topic if found, or an error if not found
 
 ### `get_all_topics_for_owner_id_query`
 #### Description
-This function retrieves all topics belonging to a specific owner ID and dataset ID from the `topics` table.
+Retrieves all topics for a given owner from the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| `topic_owner_id` | `String` | The owner ID to filter topics by. |
-| `given_dataset_id` | `uuid::Uuid` | The UUID of the dataset to filter topics by. |
-| `pool` | `&web::Data&lt;Pool&gt;` | A reference to the database connection pool. |
+| topic_owner_id | String | ID of the topic owner |
+| given_dataset_id | uuid::Uuid | Dataset ID for the topics |
+| pool | &web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
-- `Result&lt;Vec&lt;Topic&gt;, ServiceError&gt;`: Returns a vector of `Topic` structs representing all retrieved topics on success, otherwise returns a `ServiceError` indicating the reason for failure.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Result&lt;Vec&lt;Topic&gt;, ServiceError&gt; | Result | Vector of Topics if found, ServiceError on failure |
 
 #### Internal Logic
-1. Retrieves a database connection from the connection pool.
-2. Uses Diesel's query builder to select all topics from the `topics` table.
-3. Filters the table by `topic_owner_id`, `given_dataset_id`, and ensures the topics are not marked as deleted (`deleted` column is `false`).
-4. Orders the results by `updated_at` in descending order.
-5. Executes the query and maps any potential database errors to a `ServiceError::BadRequest`.
+1. Establishes a database connection
+2. Queries the database for all topics with matching owner_id and dataset_id
+3. Returns a vector of topics if found, or an error if the query fails
 
 ## Dependencies
-- `diesel`: An ORM (Object-Relational Mapper) for Rust.
-- `diesel_async`: Asynchronous Diesel connection pool.
-- `actix-web`: A web framework for Rust.
-- `tracing`: A framework for instrumenting Rust programs with runtime collected, structured scoped, event-based diagnostic information.
-- `uuid`: A crate for generating and parsing UUIDs.
+| Dependency | Purpose |
+|:-----------|:--------|
+| crate::data::models::{Pool, Topic} | Importing database models |
+| crate::diesel::prelude::* | Diesel ORM functionality |
+| crate::errors::ServiceError | Custom error handling |
+| actix_web::web | Web framework functionality |
+| diesel_async::RunQueryDsl | Asynchronous query execution |
 
 ## Error Handling
-The functions in this file use the `ServiceError` enum for error handling. Database errors are mapped to specific `ServiceError` variants, providing more context about the failure.
+The code uses a custom `ServiceError` type for error handling. Each database operation is wrapped in a `map_err` call to convert database errors into appropriate `ServiceError` variants with descriptive messages.

@@ -2,26 +2,26 @@
 title: "clickhouse_operator.rs"
 ---
 
-Here's a high-level description and documentation of the `clickhouse_operator.rs` file:
+Here's a high-level description of the `clickhouse_operator.rs` file:
 
-## High-level description
-
-The `clickhouse_operator.rs` file implements functionality for handling events and interactions with ClickHouse, a column-oriented database management system. It defines structures and methods for managing various types of events (such as search queries, recommendations, and worker events) and provides an asynchronous queue system for processing these events.
+The `clickhouse_operator.rs` file contains functionality for interacting with ClickHouse, a column-oriented database management system. It defines structures and functions for handling various types of events (such as search queries, recommendations, and RAG queries) and sending them to ClickHouse for analytics purposes. The file also includes an `EventQueue` struct that manages the asynchronous sending of events to ClickHouse.
 
 ## Code Structure
 
-The main components of this file are:
+The main symbols in this file are:
 
 1. `ClickHouseEvent` enum: Represents different types of events that can be sent to ClickHouse.
-2. `EventQueue` struct: Manages an asynchronous queue for processing ClickHouse events.
-3. Helper functions: Such as `get_latency_from_header` for parsing latency information.
-4. `send_to_clickhouse` function: Handles the bulk insertion of events into ClickHouse.
+2. `EventQueue` struct: Manages the queue of events to be sent to ClickHouse.
+3. `get_latency_from_header` function: Extracts latency information from HTTP headers.
+4. `send_to_clickhouse` function: Sends batches of events to ClickHouse.
+
+The `EventQueue` is the central component, which uses the other symbols to process and send events to ClickHouse.
 
 ## Symbols
 
 ### `ClickHouseEvent`
 #### Description
-An enum representing different types of events that can be sent to ClickHouse for analytics purposes.
+An enum representing different types of events that can be sent to ClickHouse for analytics.
 
 #### Variants
 - `SearchQueryEvent(SearchQueryEventClickhouse)`
@@ -31,21 +31,27 @@ An enum representing different types of events that can be sent to ClickHouse fo
 
 ### `get_latency_from_header`
 #### Description
-Parses a header string to extract latency information.
+Extracts the latency value from an HTTP header string.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| header | String | A header string containing latency information |
+| header | String | The HTTP header string containing latency information |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
 | latency | f32 | The extracted latency value |
 
+#### Internal Logic
+1. Splits the header string by commas
+2. Filters for substrings containing "dur="
+3. Parses the duration value as a float
+4. Sums all parsed duration values
+
 ### `send_to_clickhouse`
 #### Description
-Sends a batch of events to ClickHouse for insertion.
+Sends a batch of events to ClickHouse, handling different event types and table insertions.
 
 #### Inputs
 | Name | Type | Description |
@@ -56,26 +62,38 @@ Sends a batch of events to ClickHouse for insertion.
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| result | Result&lt;(), ServiceError&gt; | Ok if successful, Err with ServiceError if an error occurs |
+| result | Result&lt;(), ServiceError&gt; | Ok if successful, Err with ServiceError if there's an error |
+
+#### Internal Logic
+1. Checks if analytics is enabled
+2. Prepares inserters for different event types (search queries, RAG queries, recommendations, worker events)
+3. Iterates through events, formatting and inserting them into the appropriate ClickHouse tables
+4. Handles any errors during insertion and logs them
 
 ### `EventQueue`
 #### Description
-Manages an asynchronous queue for processing ClickHouse events.
+Manages a queue of events to be sent to ClickHouse asynchronously.
 
 #### Methods
-- `new`: Creates a new EventQueue instance.
-- `start_service`: Starts the event processing service.
-- `send`: Sends an event to the queue for processing.
+- `new`: Creates a new EventQueue instance
+- `start_service`: Starts the background service for processing events
+- `send`: Sends an event to the queue
+
+#### Internal Logic
+The `start_service` method spawns a background task that:
+1. Collects events in a buffer
+2. Periodically sends batches of events to ClickHouse
+3. Handles errors and retries if necessary
 
 ## Dependencies
-- `clickhouse`: For interacting with the ClickHouse database.
-- `tokio`: For asynchronous programming.
-- `sentry`: For error logging and monitoring.
+- `clickhouse`: For interacting with the ClickHouse database
+- `tokio`: For asynchronous programming
+- `sentry`: For error logging and monitoring
 
 ## Error Handling
-The code uses the `ServiceError` enum for error handling, which is likely defined in a separate errors module. Errors are logged and, in some cases, sent to Sentry for monitoring.
+The code uses the `ServiceError` enum for error handling, which is likely defined in a separate module. Errors are logged and, in some cases, sent to Sentry for monitoring.
 
 ## Logging
-The code uses the `log` crate for logging errors and important information throughout the event processing pipeline.
+The code uses the `log` crate for logging errors and important information throughout the event processing and sending operations.
 
-This file plays a crucial role in the analytics and event tracking system of the application, managing the flow of various events into the ClickHouse database for later analysis and reporting.
+This file plays a crucial role in the analytics functionality of the application, managing the flow of various events to the ClickHouse database for later analysis and reporting.

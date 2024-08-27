@@ -3,49 +3,71 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains Kubernetes YAML templates for deploying Redis replica instances in a replication architecture. It includes configurations for the main application deployment, horizontal pod autoscaling, service exposure, and service account creation.
+This directory contains Kubernetes manifest templates for deploying Redis replicas in a Helm chart. It includes configurations for the main application deployment, horizontal pod autoscaling, service exposure, and service account creation. These templates are designed to work together to create a fully functional Redis replica setup in a Kubernetes environment.
 
 ## What does it do?
-The templates in this directory work together to set up a scalable and configurable Redis replica deployment:
+This set of templates collectively deploys and manages Redis replicas in a Kubernetes cluster. Here's a breakdown of the main functionalities:
 
-1. The main application template (`application.yaml`) defines a StatefulSet for Redis replicas, configuring aspects such as container images, ports, environment variables, resource limits, persistence, probes, and security contexts.
+1. Deploys Redis replica pods using either a StatefulSet or DaemonSet, depending on the configuration.
+2. Sets up automatic scaling of replica pods based on CPU and memory utilization.
+3. Creates a Kubernetes Service to expose the Redis replicas, allowing other components to connect to them.
+4. Optionally creates a ServiceAccount for the Redis replicas, which can be used for authentication and authorization within the cluster.
 
-2. The horizontal pod autoscaler template (`hpa.yaml`) enables automatic scaling of Redis replica pods based on CPU and/or memory usage.
+The templates are highly configurable, allowing users to customize various aspects of the deployment, such as replication settings, security contexts, persistence options, metrics collection, and resource allocation.
 
-3. The service template (`service.yaml`) exposes the Redis replicas on a configurable port, allowing for customization of service type, load balancing, and session affinity.
+## Key Files
 
-4. The service account template (`serviceaccount.yaml`) creates a dedicated service account for the Redis replicas when using a replication architecture and Sentinel is disabled.
+1. `application.yaml`: This is the main template for deploying Redis replicas. It defines a StatefulSet or DaemonSet that manages the Redis replica pods, including their configuration, security settings, persistence, and optional metrics exporter.
 
-These templates are designed to be flexible and configurable, allowing users to adjust various aspects of the Redis replica deployment through Helm values.
+2. `hpa.yaml`: This template creates a Horizontal Pod Autoscaler (HPA) for the Redis replicas. It automatically adjusts the number of replica pods based on CPU and memory utilization, ensuring optimal performance and resource usage.
 
-## Entry points
-The main entry point for this directory is the `application.yaml` file, which defines the core StatefulSet for Redis replicas. The other files (`hpa.yaml`, `service.yaml`, and `serviceaccount.yaml`) complement this main deployment by providing additional resources and configurations.
+3. `service.yaml`: This template defines a Kubernetes Service resource that exposes the Redis replica pods, allowing other components to connect to the Redis replicas.
 
-The templates use a hierarchical structure of configuration values passed through the `Values` object, allowing for extensive customization of the deployment. The data flow typically starts from the Helm values file, which is then used to render these templates and create the necessary Kubernetes resources.
+4. `serviceaccount.yaml`: This template conditionally creates a Kubernetes ServiceAccount for the Redis replicas, which can be used for authentication and authorization purposes within the cluster.
 
 ## Dependencies
-These templates rely on the Helm template engine and various Helm template functions. They also include references to other templates within the same chart for defining specific parts of the deployment. The main external dependencies are:
+The templates in this directory rely on the following main dependencies:
 
-1. Kubernetes API: The templates create Kubernetes resources such as StatefulSets, Services, HPAs, and ServiceAccounts.
-2. Redis: The application template is specifically designed to deploy Redis replica instances.
-3. Metrics exporter (optional): If metrics are enabled, an additional container for exporting Redis metrics is included.
+1. Redis image: The main application container used for running Redis replicas.
+2. Metrics exporter image: An optional container for exposing Prometheus metrics from Redis.
+3. Kubernetes: These templates are designed to work with Kubernetes and utilize its features for deployment, scaling, and service management.
+4. Helm: The templates use Helm's templating language and functions for dynamic configuration and rendering.
 
 ## Configuration
-The templates use a comprehensive set of configuration options passed through the `Values` object. Key configuration areas include:
+The Redis replica deployment can be extensively configured through Helm values. Some key configuration options include:
 
-1. Redis architecture (standalone or replication)
-2. Authentication settings
-3. Master and replica configurations
-4. Persistence settings
-5. Resource limits
-6. Probes
-7. Security contexts
-8. TLS settings
-9. Metrics settings
-10. Volume permissions
-11. Sysctl settings
-12. Autoscaling configuration
-13. Service exposure settings
-14. Service account settings
+1. Redis replication settings
+2. Security contexts and authentication
+3. Persistence options for data storage
+4. Metrics and monitoring configuration
+5. Affinity and tolerations for pod scheduling
+6. Resource requests and limits
+7. Autoscaling settings (min/max replicas, target CPU/memory utilization)
+8. Service type and port configurations
+9. ServiceAccount creation and settings
 
-These configuration options allow for fine-tuning of the Redis replica deployment to suit various use cases and environments.
+For example, to enable autoscaling for replicas, you would set:
+
+```yaml
+replica:
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPU: 50
+    targetMemory: 50
+```
+
+To configure the replica service, you might use:
+
+```yaml
+replica:
+  service:
+    type: ClusterIP
+    ports:
+      redis: 6379
+    annotations:
+      custom.annotation: "value"
+```
+
+These templates provide a flexible and powerful way to deploy and manage Redis replicas in a Kubernetes environment, with options for high availability, scalability, persistence, and monitoring.

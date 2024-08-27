@@ -3,36 +3,55 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding and removing a 'scopes' column to the 'user_api_key' table in a database. The migration is dated 2024-07-15 and is specifically for implementing scoped API keys functionality.
+This directory contains SQL migration scripts for adding and removing a `scopes` column to the `user_api_key` table in a database. The migration is dated 2024-07-15 and is related to implementing scoped API keys functionality.
 
 ## What does it do?
-These migration scripts modify the structure of the 'user_api_key' table in the database. The 'up' migration adds a new column called 'scopes' to store an array of text values, which likely represent the permissions or access levels associated with each API key. The 'down' migration removes this column, allowing for the change to be reverted if necessary.
+These migration scripts modify the database structure to support scoped API keys. The "up" migration adds a new column called `scopes` to the `user_api_key` table, which allows storing multiple text values (likely representing different permissions or access levels) for each API key. The "down" migration removes this column, effectively reverting the changes made by the "up" migration.
 
-This functionality allows for more granular control over API key permissions. Instead of having a single, all-or-nothing access level, each API key can now have specific scopes or permissions associated with it. This is a common practice in API design to enhance security and allow for more fine-grained access control.
+This functionality enables more granular control over API key permissions, allowing users or administrators to define specific scopes or access levels for each API key. For example, one API key might have read-only access to certain resources, while another might have full read-write access.
 
 ## Key Files
 
 1. `up.sql`:
-   This file contains the SQL command to add the 'scopes' column to the 'user_api_key' table. The command is:
+   - Adds the `scopes` column to the `user_api_key` table.
+   - The column is of type `text[]`, which is an array of text values in PostgreSQL.
+   - Uses `IF NOT EXISTS` to ensure idempotency, preventing errors if the migration is run multiple times.
 
    ```sql
    ALTER TABLE user_api_key ADD COLUMN IF NOT EXISTS scopes text[];
    ```
 
-   This adds a new column named 'scopes' of type 'text[]', which is an array of text values. The 'IF NOT EXISTS' clause makes this operation idempotent, meaning it can be run multiple times without causing errors.
-
 2. `down.sql`:
-   This file contains the SQL command to remove the 'scopes' column from the 'user_api_key' table. The command is:
+   - Removes the `scopes` column from the `user_api_key` table.
+   - Uses `IF EXISTS` to ensure the operation is safe even if the column has already been removed.
 
    ```sql
    ALTER TABLE user_api_key DROP COLUMN IF EXISTS scopes;
    ```
 
-   This removes the 'scopes' column if it exists. Again, the 'IF EXISTS' clause ensures idempotency.
-
 ## Configuration
-These migration scripts don't require any additional configuration. They are designed to be run by a database migration tool (likely Diesel, given the project context) which will execute these scripts in the appropriate order based on their timestamp.
+These migration scripts don't require any additional configuration. They are designed to be run by a database migration tool (likely Diesel, given the project context) which will execute them in the appropriate order based on the timestamp in the directory name.
 
-The naming convention of the directory (2024-07-15-221313_scoped_api_keys) suggests that this migration was created on July 15, 2024, at 22:13:13. This timestamp is typically used by migration tools to determine the order in which to apply migrations.
+The timestamp `2024-07-15-221313` in the directory name indicates when this migration was created and helps maintain the correct order of migrations.
 
-It's important to note that running these migrations will modify the database schema, and the 'down' migration will result in data loss if there's any data in the 'scopes' column when it's run. Therefore, it should be used with caution in production environments.
+## Dependencies
+These scripts are written in SQL and are specifically tailored for PostgreSQL, as evidenced by the use of the `text[]` data type. They don't rely on any external libraries or frameworks beyond the PostgreSQL database system itself.
+
+In the broader context of the application:
+- The migration tool (likely Diesel) would be responsible for executing these scripts.
+- The application code (probably written in Rust, given the use of Diesel) would interact with this new database structure to manage scoped API keys.
+
+## Side Effects
+Executing these migrations will have the following effects:
+
+1. When running `up.sql`:
+   - The `user_api_key` table will gain a new `scopes` column.
+   - Existing rows in the table will have `NULL` values in the new column unless a default is specified (which it isn't in this case).
+   - The application code will need to be updated to handle this new column when creating, reading, or updating API keys.
+
+2. When running `down.sql`:
+   - The `scopes` column will be removed from the `user_api_key` table.
+   - Any data stored in the `scopes` column will be permanently lost.
+   - The application code will need to be reverted to a state where it doesn't expect or use the `scopes` column.
+
+It's important to note that these migrations only change the structure of the database. They don't provide any mechanisms for populating the `scopes` column with data or migrating existing API keys to use scopes. Such logic would need to be implemented in the application code or through additional data migration scripts.

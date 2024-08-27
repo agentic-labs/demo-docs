@@ -3,58 +3,47 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL file is part of the initial setup for the Diesel ORM in a PostgreSQL database. It creates two functions that automate the management of an `updated_at` timestamp column for tables, ensuring it's updated whenever a row is modified.
+This SQL script defines two PostgreSQL functions, `diesel_manage_updated_at` and `diesel_set_updated_at`, that work together to automatically update a timestamp column named `updated_at` whenever a row in a specified table is modified. 
+
+## Code Structure
+`diesel_manage_updated_at` is a helper function that creates a trigger on a given table. This trigger calls `diesel_set_updated_at` before any update operation on the table. `diesel_set_updated_at` then checks if the `updated_at` column was explicitly modified in the update. If not, it updates the `updated_at` column to the current timestamp.
 
 ## Symbols
-
 ### `diesel_manage_updated_at`
 #### Description
-This function creates a trigger on a specified table to automatically update the `updated_at` column whenever a row is modified.
+This function creates a trigger named `set_updated_at` on the provided table. The trigger is set to execute the `diesel_set_updated_at` function before any `UPDATE` operation on the table.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| _tbl | regclass | The table on which to create the trigger |
+| _tbl | regclass | The name of the table (as a `regclass` object) to create the trigger on. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| - | VOID | This function doesn't return a value |
+| (none) | VOID | This function does not return any value. |
 
 #### Internal Logic
-1. Uses `EXECUTE format()` to dynamically create a trigger named `set_updated_at` on the specified table.
-2. The trigger is set to fire BEFORE UPDATE on each row.
-3. The trigger calls the `diesel_set_updated_at()` function.
+1. Constructs a SQL statement using the `format` function to create a trigger named `set_updated_at`.
+2. The trigger is set to execute the `diesel_set_updated_at` function `BEFORE` any `UPDATE` operation on the table specified by `_tbl`.
+3. Executes the constructed SQL statement using the `EXECUTE` command.
 
 ### `diesel_set_updated_at`
 #### Description
-This function is called by the trigger created by `diesel_manage_updated_at`. It updates the `updated_at` column of a row if it has been modified.
+This function acts as a trigger function, updating the `updated_at` column of a row to the current timestamp whenever the row is modified, unless the `updated_at` column was explicitly included in the update.
 
 #### Inputs
-Implicitly receives the OLD and NEW row data as trigger variables.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (none) | (trigger context) | This function implicitly receives the `NEW` and `OLD` records from the trigger context. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| - | trigger | Returns the NEW row data, potentially modified |
+| `NEW` | record | Returns the modified `NEW` record after potentially updating the `updated_at` column. |
 
 #### Internal Logic
-1. Checks if the NEW row is different from the OLD row.
-2. Checks if the `updated_at` column hasn't been explicitly modified.
-3. If both conditions are true, sets `NEW.updated_at` to the current timestamp.
-4. Returns the NEW row data.
-
-## Performance Considerations
-The `diesel_set_updated_at` function uses `IS DISTINCT FROM` comparisons, which can handle NULL values correctly without additional checks. This approach is generally more efficient than using separate NULL checks.
-
-## Dependencies
-This script is designed to work with PostgreSQL and is part of the Diesel ORM setup. It relies on PostgreSQL-specific features such as:
-- PL/pgSQL language
-- Trigger functions
-- Dynamic SQL execution with `EXECUTE format()`
-
-## Error Handling
-The script doesn't implement explicit error handling. Any errors during execution (e.g., if the specified table doesn't exist) will be handled by the PostgreSQL engine.
-
-## TODOs
-The file includes a comment suggesting that it's safe to edit and that future changes will be added as new migrations. This implies that developers should be cautious when modifying this file and consider creating new migrations for changes instead of directly editing this initial setup.
+1. Compares the `NEW` and `OLD` records. If they are identical, it means no actual update occurred, so it skips the update logic and directly returns the `NEW` record.
+2. If the `NEW.updated_at` value is different from `OLD.updated_at`, it means the `updated_at` column was explicitly modified in the update, so it also skips updating the timestamp and returns the `NEW` record.
+3. If none of the above conditions are met, it updates the `NEW.updated_at` column to the current timestamp using `current_timestamp`.
+4. Finally, it returns the modified `NEW` record.

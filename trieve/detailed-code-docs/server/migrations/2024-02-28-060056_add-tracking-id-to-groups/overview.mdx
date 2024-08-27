@@ -3,49 +3,41 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for adding a new `tracking_id` column to the `chunk_group` table in a database. The migration is designed to enhance the tracking and identification capabilities of chunk groups within datasets. The directory includes two SQL files: `up.sql` for applying the changes and `down.sql` for reverting them.
+This directory contains SQL migration scripts for adding a `tracking_id` column to the `chunk_group` table in a database. The migration is designed to be reversible, with separate scripts for applying (up) and reverting (down) the changes.
 
 ## What does it do?
-The migration scripts in this directory perform the following actions:
+The migration accomplishes the following:
 
-1. Add a new column called `tracking_id` to the `chunk_group` table. This column is of type TEXT and has a UNIQUE constraint, meaning each value in this column must be unique across the entire table.
+1. Adds a new column called `tracking_id` to the `chunk_group` table.
+2. Ensures that the `tracking_id` values are unique across all rows in the table.
+3. Creates a unique constraint that combines `tracking_id` and `dataset_id`, ensuring that no two rows have the same combination of these values.
+4. Provides a way to undo these changes if needed.
 
-2. Create a new unique constraint that combines the `tracking_id` and `dataset_id` columns. This ensures that within each dataset, the combination of these two values is unique, allowing for better organization and querying of chunk groups.
-
-3. Provide a way to revert these changes by removing the newly added column and constraint if needed.
-
-These changes allow the system to assign unique identifiers to chunk groups and ensure that these identifiers are unique within the context of each dataset. This can be useful for tracking, referencing, or organizing chunk groups more effectively.
+This migration enhances the `chunk_group` table by introducing a tracking mechanism, likely used for identifying and managing groups of chunks within datasets more effectively.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL statements to apply the migration. It adds the `tracking_id` column to the `chunk_group` table and creates the unique constraint.
+### up.sql
+This file contains the SQL commands to apply the migration:
 
-   ```sql
-   ALTER TABLE chunk_group ADD COLUMN tracking_id TEXT UNIQUE;
-   ALTER TABLE chunk_group ADD CONSTRAINT chunk_group_tracking_id_dataset_id_key UNIQUE (tracking_id, dataset_id);
-   ```
+```sql
+ALTER TABLE chunk_group ADD COLUMN tracking_id TEXT UNIQUE;
+ALTER TABLE chunk_group ADD CONSTRAINT chunk_group_tracking_id_dataset_id_key UNIQUE (tracking_id, dataset_id);
+```
 
-2. `down.sql`: This file contains the SQL statements to revert the migration. It removes the `tracking_id` column and drops the unique constraint.
+The first command adds the `tracking_id` column with a `UNIQUE` constraint, while the second command creates a composite unique constraint on `tracking_id` and `dataset_id`.
 
-   ```sql
-   ALTER TABLE chunk_group DROP COLUMN tracking_id;
-   ALTER TABLE chunk_group DROP CONSTRAINT chunk_group_tracking_id_dataset_id_key;
-   ```
+### down.sql
+This file contains the SQL commands to revert the migration:
 
-## Dependencies
-This migration is dependent on the database management system supporting standard SQL ALTER TABLE statements for adding and dropping columns and constraints. It's likely using a relational database system such as PostgreSQL, MySQL, or SQLite.
+```sql
+ALTER TABLE chunk_group DROP CONSTRAINT chunk_group_tracking_id_dataset_id_key;
+ALTER TABLE chunk_group DROP COLUMN tracking_id;
+```
+
+These commands remove the unique constraint and the `tracking_id` column, effectively undoing the changes made by the up migration.
 
 ## Configuration
-The migration doesn't require any specific configuration. However, it's important to note the following:
+The migration is identified by its timestamp: `2024-02-28-060056`. This timestamp is likely used by a migration management system to track which migrations have been applied and in what order.
 
-1. The migration assumes the existence of a `chunk_group` table in the database.
-2. The `tracking_id` column is added without a default value, which means existing rows will have NULL values in this column after the migration.
-3. The unique constraint on `tracking_id` and `dataset_id` assumes that these combinations will be unique in the data. If there are existing duplicate combinations, the migration may fail.
-
-When applying this migration, database administrators should consider:
-
-1. The potential impact on existing data and queries.
-2. The need to populate the `tracking_id` column for existing rows.
-3. The performance implications of adding a new column and constraints to potentially large tables.
-
-It's recommended to test this migration on a copy of the production data before applying it to the live system to ensure compatibility with existing data and to assess any performance impacts.
+No additional configuration files or environment variables are required for this migration.

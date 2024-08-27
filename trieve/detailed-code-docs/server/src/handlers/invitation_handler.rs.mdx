@@ -3,170 +3,110 @@ title: "invitation_handler.rs"
 ---
 
 ## High-level description
-The code defines handlers for managing invitations in a web application. It provides functionality for sending invitations, retrieving invitations for an organization, and deleting invitations. The handlers use database queries and email services to perform these operations.
+This code defines handlers for managing invitations in a server application. It includes functionality for creating, sending, and managing invitations for users to join organizations. The handlers interact with a database and use email services to send invitation emails.
 
 ## Code Structure
-The code defines several functions related to invitation management. `post_invitation` handles sending invitations, `get_invitations` retrieves invitations for an organization, and `delete_invitation` deletes an invitation. The `create_invitation` function is used internally to create an invitation record in the database and generate a registration URL.
-
-## References
-The code references several other modules and functions, including:
-- `auth_handler::AdminOnly`: A middleware to ensure only admin users can access certain routes.
-- `data::models`: Data models for invitations, users, and organizations.
-- `errors::ServiceError`: Custom error type for the application.
-- `middleware::auth_middleware::verify_admin`: A function to verify if a user has admin privileges.
-- `operators::invitation_operator`: Functions for interacting with the invitation database table.
-- `operators::organization_operator`: Functions for interacting with the organization database table.
-- `operators::user_operator`: Functions for interacting with the user database table.
+The main symbols in this code are handler functions that process different invitation-related operations. These functions use various operator functions from other modules to interact with the database and perform specific tasks. The handlers are designed to be used as endpoints in a web server, likely using the Actix web framework.
 
 ## Symbols
 
-### `email_regex`
+### `email_regex()`
 #### Description
-This function defines a regular expression for validating email addresses.
+A function that returns a compiled regular expression for validating email addresses.
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| regex | `regex::Regex` | A compiled regular expression for validating email addresses. |
-
-#### Internal Logic
-The function creates a new `regex::Regex` object with a pattern that matches common email address formats.
+| regex | regex::Regex | A compiled regular expression for email validation |
 
 ### `InvitationResponse`
 #### Description
-This struct defines the response structure for sending an invitation.
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| registration_url | `String` | The URL where the invited user can register. |
+A struct representing the response for an invitation, containing a registration URL.
 
 ### `InvitationData`
 #### Description
-This struct defines the data required to send an invitation.
-
-#### Inputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| organization_id | `uuid::Uuid` | The ID of the organization to invite the user to. |
-| user_role | `i32` | The role the user will have in the organization (0 = User, 1 = Admin, 2 = Owner). |
-| email | `String` | The email address of the user to invite. |
-| app_url | `String` | The URL of the application where the user will register. |
-| redirect_uri | `String` | The URL to redirect the user to after registration. |
+A struct representing the data required to create an invitation, including organization details and user information.
 
 ### `post_invitation`
 #### Description
-This function handles the POST request for sending an invitation. It validates the input data, checks if the user has permission to invite, and then either adds an existing user to the organization or creates a new invitation record and sends an email.
+Handles the creation and sending of an invitation to a user.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| invitation_data | `web::Json&lt;InvitationData&gt;` | The invitation data in JSON format. |
-| pool | `web::Data&lt;Pool&gt;` | A database connection pool. |
-| redis_pool | `web::Data&lt;RedisPool&gt;` | A Redis connection pool. |
-| user | `AdminOnly` | The authenticated user, verified to be an admin. |
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| response | `Result&lt;HttpResponse, ServiceError&gt;` | A `204 No Content` response on success, or a `ServiceError` on failure. |
+| invitation_data | web::Json&lt;InvitationData&gt; | The invitation data from the request |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+| user | AdminOnly | The authenticated admin user |
 
 #### Internal Logic
-1. Validate the email address using the `email_regex` function.
-2. Check if the user is trying to invite themselves.
-3. Verify that the user has permission to invite a user with the specified role.
-4. Attempt to add the user to the organization if they already exist.
-5. If the user doesn't exist, create a new invitation record using the `create_invitation` function.
-6. Send an invitation email using the `send_invitation` or `send_invitation_for_existing_user` function.
-
-### `InvitationWithUrl`
-#### Description
-This struct represents an invitation with its associated registration URL.
-
-#### Outputs
-| Name | Type | Description |
-|:-----|:-----|:------------|
-| invitation | `Invitation` | The invitation record. |
-| registration_url | `String` | The registration URL for the invitation. |
+1. Validates the email address
+2. Checks if the user is not inviting themselves
+3. Verifies the user's role in the organization
+4. Attempts to add an existing user to the organization
+5. If the user doesn't exist, creates a new invitation
+6. Sends the invitation email
 
 ### `create_invitation`
 #### Description
-This function creates a new invitation record in the database and generates a registration URL.
+Creates an invitation record in the database.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| app_url | `String` | The URL of the application where the user will register. |
-| email | `String` | The email address of the user to invite. |
-| organization_id | `uuid::Uuid` | The ID of the organization to invite the user to. |
-| redirect_uri | `String` | The URL to redirect the user to after registration. |
-| user_role | `i32` | The role the user will have in the organization. |
-| pool | `web::Data&lt;Pool&gt;` | A database connection pool. |
+| app_url | String | The application URL |
+| email | String | The invitee's email |
+| organization_id | uuid::Uuid | The organization ID |
+| redirect_uri | String | The redirect URI after registration |
+| user_role | i32 | The role of the invited user |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| invitation_with_url | `Result&lt;InvitationWithUrl, ServiceError&gt;` | The created invitation with its registration URL, or a `ServiceError` on failure. |
-
-#### Internal Logic
-1. Create a new invitation record in the database using the `create_invitation_query` function.
-2. Generate a registration URL using the provided `app_url`, `invitation.id`, `organization_id`, and `redirect_uri`.
-3. Return the created invitation and registration URL.
+| invitation | Result&lt;InvitationWithUrl, ServiceError&gt; | The created invitation with a registration URL |
 
 ### `get_invitations`
 #### Description
-This function handles the GET request for retrieving invitations for an organization. It verifies that the user has permission to access the invitations and then retrieves them from the database.
+Retrieves all invitations for a specific organization.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| user | `AdminOnly` | The authenticated user, verified to be an admin. |
-| org_id | `web::Path&lt;uuid::Uuid&gt;` | The ID of the organization to retrieve invitations for. |
-| pool | `web::Data&lt;Pool&gt;` | A database connection pool. |
+| user | AdminOnly | The authenticated admin user |
+| org_id | web::Path&lt;uuid::Uuid&gt; | The organization ID |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| response | `Result&lt;HttpResponse, ServiceError&gt;` | A `200 OK` response with the invitations in JSON format, or a `ServiceError` on failure. |
-
-#### Internal Logic
-1. Verify that the user has admin privileges for the specified organization using the `verify_admin` function.
-2. Retrieve the invitations from the database using the `get_invitations_for_organization_query` function.
-3. Return the invitations in JSON format.
+| invitations | Result&lt;HttpResponse, ServiceError&gt; | A list of invitations or an error |
 
 ### `delete_invitation`
 #### Description
-This function handles the DELETE request for deleting an invitation. It verifies that the user has permission to delete the invitation and then deletes it from the database.
+Deletes an invitation by its ID.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| user | `AdminOnly` | The authenticated user, verified to be an admin. |
-| invitation_id | `web::Path&lt;uuid::Uuid&gt;` | The ID of the invitation to delete. |
-| pool | `web::Data&lt;Pool&gt;` | A database connection pool. |
+| user | AdminOnly | The authenticated admin user |
+| invitation_id | web::Path&lt;uuid::Uuid&gt; | The invitation ID to delete |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| response | `Result&lt;HttpResponse, ServiceError&gt;` | A `204 No Content` response on success, or a `ServiceError` on failure. |
-
-#### Internal Logic
-1. Retrieve the invitation from the database using the `get_invitation_by_id_query` function.
-2. Verify that the user has admin privileges for the organization associated with the invitation using the `verify_admin` function.
-3. Delete the invitation from the database using the `delete_invitation_by_id_query` function.
-
-## Dependencies
-The code depends on several external libraries, including:
-- `actix-web`: A web framework for Rust.
-- `serde`: A framework for serializing and deserializing Rust data structures.
-- `utoipa`: A library for generating OpenAPI documentation.
-- `diesel`: An ORM for Rust.
-- `diesel-async`: An asynchronous version of Diesel.
-- `uuid`: A library for generating UUIDs.
-- `regex`: A library for working with regular expressions.
+| result | Result&lt;HttpResponse, ServiceError&gt; | Confirmation of deletion or an error |
 
 ## Error Handling
-The code uses the `ServiceError` enum to represent different types of errors that can occur during invitation management. The `ResponseError` implementation for `ServiceError` converts these errors into HTTP responses with appropriate status codes and error messages.
+The code uses a `ServiceError` enum for error handling, which is likely defined in a separate module. This allows for consistent error responses across the application.
 
-## Logging
-The code uses the `tracing` crate for logging. The `instrument` attribute on functions automatically logs function entry and exit, along with any errors that occur.
+## Dependencies
+The code relies on several external crates and internal modules:
+- actix_web for web server functionality
+- serde for serialization/deserialization
+- uuid for handling UUIDs
+- utoipa for API documentation
+- Various internal modules for database operations and authentication
+
+This code is part of a larger application that manages users, organizations, and invitations. It provides a RESTful API for handling invitation-related operations with proper authentication and authorization checks.

@@ -3,46 +3,160 @@ title: "json_middleware.rs"
 ---
 
 ## High-level description
-This code defines a middleware for Actix Web that ensures JSON content type is set for incoming requests. It also provides a factory for creating this middleware.
+This code implements authentication and authorization functionality for a web application using OpenID Connect (OIDC) for authentication. It includes handlers for login, logout, callback, and user information retrieval, as well as middleware for role-based access control.
 
 ## Code Structure
-The code consists of two main structures: `JsonMiddleware` and `JsonMiddlewareFactory`. The `JsonMiddleware` implements the `Service` trait, while `JsonMiddlewareFactory` implements the `Transform` trait. These structures work together to provide the middleware functionality.
+The code is organized into several main components:
+1. User and role structures (LoggedUser, OrganizationRole, AdminOnly, OwnerOnly)
+2. OIDC client setup (build_oidc_client)
+3. Account creation (create_account)
+4. Authentication handlers (login, logout, callback)
+5. User information retrieval (get_me)
+6. Health check endpoint
 
 ## Symbols
 
-### `JsonMiddleware&lt;S&gt;`
+### `build_oidc_client`
 #### Description
-A middleware struct that wraps an inner service and ensures that the Content-Type header is set to "application/json" if it's not already present.
+Builds and configures an OpenID Connect client using environment variables.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | CoreClient | Configured OIDC client |
+
+#### Internal Logic
+1. Retrieves OIDC configuration from environment variables
+2. Discovers OIDC provider metadata
+3. Creates and configures a CoreClient with the obtained information
+
+### `create_account`
+#### Description
+Creates a new user account and associates it with an organization.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| service | Rc&lt;S&gt; | The inner service wrapped by this middleware |
+| email | String | User's email address |
+| name | String | User's name |
+| user_id | uuid::Uuid | Unique identifier for the user |
+| organization_id | Option&lt;uuid::Uuid&gt; | Optional organization ID |
+| inv_code | Option&lt;uuid::Uuid&gt; | Optional invitation code |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;(User, Vec&lt;UserOrganization&gt;, Vec&lt;Organization&gt;), ServiceError&gt; | Tuple containing user, user organizations, and organizations |
 
 #### Internal Logic
-The `call` method of this middleware checks if the Content-Type header is present in the request. If not, it adds the header with the value "application/json". Then it forwards the request to the inner service.
+1. Determines user role and organization based on input
+2. Checks organization user limit
+3. Creates user and associates with organization
+4. Handles invitation if provided
 
-### `JsonMiddlewareFactory`
+### `logout`
 #### Description
-A factory struct for creating instances of `JsonMiddleware`.
+Logs out the user by invalidating their session and redirecting to the OIDC provider's logout endpoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | Identity | User's identity |
+| data | web::Query&lt;LogoutRequest&gt; | Query parameters for logout |
+| req | HttpRequest | HTTP request object |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| response | HttpResponse | JSON response with logout URL |
+
+### `login`
+#### Description
+Initiates the OIDC authentication flow by redirecting the user to the OIDC provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | HttpRequest | HTTP request object |
+| session | Session | User's session |
+| data | web::Query&lt;AuthQuery&gt; | Query parameters for authentication |
+| oidc_client | web::Data&lt;CoreClient&gt; | OIDC client |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;HttpResponse, Error&gt; | Redirect response to OIDC provider |
 
 #### Internal Logic
-The `new_transform` method creates a new `JsonMiddleware` instance, wrapping the provided service in an `Rc`.
+1. Generates PKCE challenge and verifier
+2. Creates authorization URL with CSRF token and nonce
+3. Stores OIDC state and login state in session
+4. Redirects user to OIDC provider
 
-## Performance Considerations
-The use of `Rc` (Reference Counting) for the inner service allows for efficient cloning of the service reference without deep copying. This is important for performance in a concurrent environment.
+### `callback`
+#### Description
+Handles the OIDC callback after successful authentication, creating or retrieving the user account.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | HttpRequest | HTTP request object |
+| session | Session | User's session |
+| oidc_client | web::Data&lt;CoreClient&gt; | OIDC client |
+| redis_pool | web::Data&lt;RedisPool&gt; | Redis connection pool |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+| query | web::Query&lt;OpCallback&gt; | Callback query parameters |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;HttpResponse, Error&gt; | Redirect response with set-cookie header |
+
+#### Internal Logic
+1. Validates OIDC state and token
+2. Extracts user information from claims
+3. Creates or retrieves user account
+4. Handles organization invitation if present
+5. Sets user session and stores user data in Redis
+6. Redirects user to the original destination
+
+### `get_me`
+#### Description
+Retrieves the current user's information based on their authentication credentials.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logged_user | LoggedUser | Current logged-in user |
+| pool | web::Data&lt;Pool&gt; | Database connection pool |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;HttpResponse, actix_web::Error&gt; | JSON response with user information |
+
+### `health_check`
+#### Description
+Provides a simple health check endpoint to verify the service is running.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| result | Result&lt;HttpResponse, actix_web::Error&gt; | OK response if the service is healthy |
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| actix_http | For HTTP-related types and constants |
-| actix_web | For web service and middleware traits |
-| futures_util | For future-related utilities |
-| std::rc::Rc | For reference-counted smart pointers |
+| actix_web | Web framework for handling HTTP requests and responses |
+| actix_identity | Managing user identity and sessions |
+| oauth2 | Implementation of the OAuth2 protocol |
+| openidconnect | OpenID Connect client implementation |
+| serde | Serialization and deserialization of data structures |
+| redis | Interaction with Redis for caching user data |
 
 ## Error Handling
-The middleware propagates any errors from the inner service. It doesn't introduce any additional error handling of its own.
+The code uses a custom `ServiceError` enum for handling various error cases, such as unauthorized access, bad requests, and internal server errors. These errors are propagated through the `Result` type and converted to appropriate HTTP responses.
 
-___
-
-This middleware is designed to work within the Actix Web framework, ensuring that JSON is the default content type for requests that don't specify one. This can be particularly useful in API services where most or all endpoints expect JSON data.
+## Logging
+The code uses the `tracing` crate for instrumentation and logging, with the `#[tracing::instrument]` attribute on async functions for automatic span creation.

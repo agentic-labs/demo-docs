@@ -3,60 +3,50 @@ title: "servicemonitor.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes ServiceMonitor resource for monitoring Redis using Prometheus. It configures scraping of Redis metrics endpoint and allows customization of various parameters like interval, labels, and relabeling rules. The ServiceMonitor is only created if metrics and serviceMonitor are enabled in the values.
+This Helm chart template defines a ServiceMonitor resource for Redis metrics in Kubernetes. It's designed to work with Prometheus Operator, enabling automatic discovery and scraping of Redis metrics when metrics and ServiceMonitor are enabled in the chart values.
 
 ## Code Structure
-The code is a single YAML template that defines a ServiceMonitor resource. It uses conditional logic to include or exclude certain sections based on the values provided in the `Values` object. 
-
-## References
-This template references several other templates and functions:
-* `template "common.names.fullname" .`: Generates the full name of the ServiceMonitor.
-* `include "common.names.namespace" .`: Includes the namespace for the ServiceMonitor.
-* `include "common.labels.standard" ...`: Includes standard labels for the ServiceMonitor.
-* `include "common.tplvalues.render" ...`: Renders template values.
-* `include "common.labels.matchLabels" ...`: Includes match labels for the ServiceMonitor.
+The template uses conditional logic to create the ServiceMonitor only when metrics and ServiceMonitor are enabled. It leverages several helper templates and values to populate the ServiceMonitor specification.
 
 ## Symbols
-### `helm/charts/redis/templates/servicemonitor.yaml`
+
+### ServiceMonitor Resource
 #### Description
-This YAML template defines a Kubernetes ServiceMonitor resource for monitoring Redis using Prometheus. It allows customization of various parameters like namespace, labels, endpoints, and selectors.
+Defines a Kubernetes ServiceMonitor custom resource for monitoring Redis metrics.
 
 #### Inputs
-This template uses values from the `Values` object, which is passed to it during rendering. Some of the key values used include:
-* `Values.metrics.enabled`: Enables or disables metrics collection.
-* `Values.metrics.serviceMonitor.enabled`: Enables or disables the ServiceMonitor.
-* `Values.metrics.serviceMonitor.namespace`: Namespace for the ServiceMonitor.
-* `Values.metrics.serviceMonitor.additionalLabels`: Additional labels for the ServiceMonitor.
-* `Values.commonLabels`: Common labels to be applied to the ServiceMonitor.
-* `Values.commonAnnotations`: Common annotations to be applied to the ServiceMonitor.
-* `Values.metrics.serviceMonitor.interval`: Interval for scraping metrics.
-* `Values.metrics.serviceMonitor.scrapeTimeout`: Timeout for scraping metrics.
-* `Values.metrics.serviceMonitor.honorLabels`: Whether to honor existing labels on the target.
-* `Values.metrics.serviceMonitor.relabellings`: Relabeling rules for the ServiceMonitor.
-* `Values.metrics.serviceMonitor.metricRelabelings`: Metric relabeling rules for the ServiceMonitor.
-* `Values.metrics.serviceMonitor.additionalEndpoints`: Additional endpoints to scrape.
-* `Values.metrics.serviceMonitor.podTargetLabels`: Labels to select target pods.
-* `Values.metrics.serviceMonitor.sampleLimit`: Sample limit for the ServiceMonitor.
-* `Values.metrics.serviceMonitor.targetLimit`: Target limit for the ServiceMonitor.
-
-#### Outputs
-This template renders a Kubernetes ServiceMonitor resource in YAML format.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.metrics.enabled | boolean | Enables metrics collection |
+| .Values.metrics.serviceMonitor.enabled | boolean | Enables ServiceMonitor creation |
+| .Values.metrics.serviceMonitor.* | various | Configuration options for ServiceMonitor |
 
 #### Internal Logic
-The template uses conditional logic (`{{- if ... }}`) to include or exclude certain sections based on the values provided in the `Values` object. For example, the `additionalLabels` section is only included if `Values.metrics.serviceMonitor.additionalLabels` is defined.
-
-## Side Effects
-This template, when applied, creates a ServiceMonitor resource in the Kubernetes cluster. This allows Prometheus to discover and scrape metrics from the Redis deployment.
+1. Checks if metrics and ServiceMonitor are enabled.
+2. Defines metadata (name, namespace, labels, annotations).
+3. Specifies endpoints for metrics scraping, including the main metrics endpoint and any additional endpoints.
+4. Configures namespace and label selectors for targeting the Redis service.
 
 ## Dependencies
-This template depends on the following Kubernetes APIs:
-* `monitoring.coreos.com/v1`: For the ServiceMonitor resource.
+| Dependency | Purpose |
+|:-----------|:--------|
+| monitoring.coreos.com/v1 | API version for ServiceMonitor resource |
 
-## Configuration
-This template is configured using values provided in the `Values` object. See the "Inputs" section for a list of configurable values.
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.metrics.serviceMonitor.namespace | string | Chart namespace | Namespace for the ServiceMonitor |
+| .Values.metrics.serviceMonitor.interval | string | - | Scrape interval |
+| .Values.metrics.serviceMonitor.scrapeTimeout | string | - | Scrape timeout |
+| .Values.metrics.serviceMonitor.honorLabels | boolean | - | Honor labels configuration |
+| .Values.metrics.serviceMonitor.relabellings | array | - | Relabeling configurations |
+| .Values.metrics.serviceMonitor.metricRelabelings | array | - | Metric relabeling configurations |
+| .Values.metrics.serviceMonitor.additionalEndpoints | array | - | Additional endpoints to scrape |
+| .Values.metrics.serviceMonitor.podTargetLabels | array | - | Pod labels to transfer to metrics |
+| .Values.metrics.serviceMonitor.sampleLimit | integer | - | Sample limit for scraping |
+| .Values.metrics.serviceMonitor.targetLimit | integer | - | Target limit for scraping |
 
-## Error Handling
-This template does not implement specific error handling. Errors during rendering will be reported by the Helm engine.
-
-## Logging
-This template does not implement logging.
+## Notes
+- The template uses several helper functions (e.g., `template "common.names.fullname"`) to generate consistent naming and labeling across the chart.
+- Additional endpoints can be configured using `.Values.metrics.serviceMonitor.additionalEndpoints`, allowing for flexible metric collection from multiple sources.
+- The ServiceMonitor is set up to select the Redis service in the same namespace as the chart, targeting components labeled with `app.kubernetes.io/component: metrics`.

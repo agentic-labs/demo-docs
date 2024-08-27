@@ -19,7 +19,7 @@ This SQL statement adds a new column named `dataset_id` to the `files` table. Th
 
 ### ALTER TABLE files ADD CONSTRAINT files_dataset_id_fkey FOREIGN KEY (dataset_id) REFERENCES datasets(id)
 #### Description
-This SQL statement creates a foreign key constraint on the `dataset_id` column in the `files` table, establishing a relationship with the `id` column in the `datasets` table.
+This SQL statement creates a foreign key constraint on the `dataset_id` column in the `files` table, referencing the `id` column in the `datasets` table.
 
 #### Internal Logic
 1. Identifies the `files` table for modification.
@@ -33,13 +33,16 @@ This SQL statement creates a foreign key constraint on the `dataset_id` column i
 - Existing rows in the `files` table (if any) will need to have a valid `dataset_id` assigned, as the new column is set to NOT NULL.
 
 ## Dependencies
-This migration script assumes the existence of:
 | Dependency | Purpose |
 |:-----------|:--------|
-| `files` table | The table being modified |
-| `datasets` table | The table referenced by the new foreign key |
+| datasets table | The `datasets` table must exist and have an `id` column of type UUID for the foreign key constraint to be valid. |
 
 ## Error Handling
-This script does not include explicit error handling. If there are any issues (e.g., the `files` or `datasets` tables don't exist, or there are existing rows in `files` that can't satisfy the NOT NULL constraint), the database system will raise an error and roll back the transaction.
+This migration script does not include explicit error handling. However, the database system will enforce the following:
+- It will prevent the addition of the `dataset_id` column if a column with the same name already exists in the `files` table.
+- It will enforce the NOT NULL constraint on the `dataset_id` column.
+- It will enforce referential integrity through the foreign key constraint, ensuring that every `dataset_id` in the `files` table corresponds to a valid `id` in the `datasets` table.
 
-___
+## Performance Considerations
+- Adding a new column to an existing table with a NOT NULL constraint might be a time-consuming operation, especially if the table contains a large number of rows, as it requires updating all existing rows.
+- The addition of a foreign key constraint may impact the performance of insert and update operations on the `files` table, as the database will need to check the `datasets` table for each operation to ensure referential integrity.

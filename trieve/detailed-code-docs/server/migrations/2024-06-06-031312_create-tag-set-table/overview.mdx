@@ -3,67 +3,63 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for creating and managing tag-related tables in a database. It includes two files: `up.sql` for creating the tables and `down.sql` for reverting the changes. The migration is focused on implementing a tagging system for datasets and chunk metadata.
+This directory contains SQL migration scripts for creating and dropping tables related to tag sets in a database. The migration is dated 2024-06-06-031312 and specifically focuses on creating tables for dataset tags and chunk metadata tags.
 
 ## What does it do?
-The migration scripts in this directory set up a database structure for tagging datasets and chunk metadata. Here's a simplified explanation of what these scripts do:
+The migration scripts in this directory perform the following actions:
 
-1. The `up.sql` script creates two new tables:
-   - `dataset_tags`: This table stores unique tags for datasets. Each tag is associated with a specific dataset.
-   - `chunk_metadata_tags`: This table links tags from the `dataset_tags` table to specific chunk metadata entries.
+1. Create two new tables:
+   - `dataset_tags`: Stores unique tags associated with datasets.
+   - `chunk_metadata_tags`: Links chunk metadata to tags defined in the `dataset_tags` table.
 
-2. The `down.sql` script provides a way to undo these changes by dropping both tables if they exist.
+2. Establish relationships between these new tables and existing tables (`datasets` and `chunk_metadata`).
 
-This tagging system allows users to organize and categorize datasets and their associated chunk metadata using custom tags. It enables easier searching, filtering, and management of data within the application.
+3. Provide a way to revert these changes by dropping the newly created tables.
+
+These scripts allow the database to support tagging functionality for datasets and chunk metadata, enabling better organization and searchability of data within the system.
 
 ## Key Files
 
 ### up.sql
-This file contains the SQL commands to create the new tables and set up their relationships. Here's a breakdown of its main components:
+This file contains the SQL commands to create the new tables and establish their relationships. Key features include:
 
-1. Creation of the `dataset_tags` table:
-   ```sql
-   CREATE TABLE dataset_tags (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     dataset_id UUID NOT NULL,
-     tag TEXT NOT NULL,
-     UNIQUE(id, dataset_id),
-     FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON UPDATE CASCADE ON DELETE CASCADE
-   );
-   ```
-   This table stores unique tags for each dataset. The `UNIQUE` constraint ensures that each tag is unique within a dataset.
+- Creation of the `dataset_tags` table with columns:
+  - `id`: UUID primary key
+  - `dataset_id`: UUID foreign key referencing the `datasets` table
+  - `tag`: TEXT field for the tag value
+- Creation of the `chunk_metadata_tags` table with columns:
+  - `id`: UUID primary key
+  - `chunk_metadata_id`: UUID foreign key referencing the `chunk_metadata` table
+  - `tag_id`: UUID foreign key referencing the `dataset_tags` table
+- Establishment of unique constraints to ensure data integrity
 
-2. Creation of the `chunk_metadata_tags` table:
-   ```sql
-   CREATE TABLE chunk_metadata_tags (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     chunk_metadata_id UUID NOT NULL,
-     tag_id UUID NOT NULL,
-     UNIQUE(chunk_metadata_id, tag_id),
-     FOREIGN KEY (chunk_metadata_id) REFERENCES chunk_metadata(id) ON UPDATE CASCADE ON DELETE CASCADE,
-     FOREIGN KEY (tag_id) REFERENCES dataset_tags(id) ON UPDATE CASCADE ON DELETE CASCADE
-   );
-   ```
-   This table links tags from the `dataset_tags` table to specific chunk metadata entries. The `UNIQUE` constraint prevents duplicate tag assignments to the same chunk metadata.
+Example of table creation:
+
+```sql
+CREATE TABLE dataset_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    dataset_id UUID NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+    tag TEXT NOT NULL,
+    CONSTRAINT dataset_tags_dataset_id_tag UNIQUE(dataset_id, tag)
+);
+```
 
 ### down.sql
-This file contains the SQL commands to revert the changes made by `up.sql`:
+This file contains the SQL commands to revert the changes made by the up.sql script. It simply drops the newly created tables:
 
 ```sql
 DROP TABLE IF EXISTS chunk_metadata_tags;
 DROP TABLE IF EXISTS dataset_tags;
 ```
 
-These commands drop the tables created by the `up.sql` script, effectively undoing the migration.
-
-## Dependencies
-This migration relies on existing tables in the database:
-- `datasets`: Referenced by the `dataset_tags` table
-- `chunk_metadata`: Referenced by the `chunk_metadata_tags` table
-
-The migration also uses the `gen_random_uuid()` function for generating UUIDs, which suggests that the PostgreSQL extension `pgcrypto` might be in use.
+The `IF EXISTS` clause is used to prevent errors if the tables don't exist when the down migration is run.
 
 ## Configuration
-While there are no explicit configuration files or environment variables used in these migration scripts, it's important to note that the database connection details and migration execution are likely managed by an external tool or framework (such as Diesel for Rust applications).
+This migration doesn't require any specific configuration. It assumes the existence of the following tables in the database:
 
-The naming convention of the directory (2024-06-06-031312_create-tag-set-table) suggests that this migration is part of a versioned migration system, where the timestamp in the directory name indicates when the migration was created and helps maintain the order of migrations.
+- `datasets`
+- `chunk_metadata`
+
+The migration also assumes that the UUID extension is available in the database for generating UUID values.
+
+By implementing these tables, the system gains the ability to associate tags with datasets and chunk metadata, enabling more sophisticated data organization and retrieval capabilities. The use of foreign keys and unique constraints ensures data integrity and prevents duplicate entries.

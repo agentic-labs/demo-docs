@@ -3,39 +3,46 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration files for adding and removing indexes on the `events` table in a database. The migration is dated 2024-04-02 and is specifically focused on creating indexes for the `dataset_id` and `event_type` columns.
+This directory contains SQL migration files for adding and removing indexes on the `events` table in a database. The migration is dated 2024-04-02 and is specifically designed to improve query performance by adding indexes to frequently used columns.
 
 ## What does it do?
 The migration files in this directory perform the following actions:
 
-1. In the "up" migration:
-   - Create an index named `idx_events_dataset_id` on the `dataset_id` column of the `events` table.
-   - Create an index named `idx_events_event_type` on the `event_type` column of the `events` table.
+1. Add two new indexes to the `events` table:
+   - An index on the `dataset_id` column
+   - An index on the `event_type` column
 
-2. In the "down" migration:
-   - Remove the `idx_events_dataset_id` index from the `events` table.
-   - Remove the `idx_events_event_type` index from the `events` table.
+2. Provide a way to revert these changes by dropping the newly created indexes
 
-These actions are designed to improve query performance for operations involving the `dataset_id` and `event_type` columns, while also providing a way to revert these changes if needed.
+These changes are aimed at improving the performance of database queries that frequently filter, sort, or join on the `dataset_id` or `event_type` columns of the `events` table. By adding these indexes, the database can more quickly locate and retrieve relevant data, resulting in faster query execution times.
 
 ## Key Files
-1. `up.sql`: This file contains the SQL commands to create the new indexes on the `events` table.
 
-2. `down.sql`: This file contains the SQL commands to remove the indexes created by the `up.sql` file, effectively reverting the changes.
+### up.sql
+This file contains the SQL commands to create the new indexes:
 
-Both files are crucial for managing the database schema changes and ensuring that the migration can be applied or rolled back as needed.
+```sql
+CREATE INDEX idx_events_dataset_id ON events (dataset_id);
+CREATE INDEX idx_events_event_type ON events (event_type);
+```
+
+These commands create two separate indexes:
+1. `idx_events_dataset_id`: An index on the `dataset_id` column of the `events` table
+2. `idx_events_event_type`: An index on the `event_type` column of the `events` table
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`:
+
+```sql
+DROP INDEX IF EXISTS idx_events_dataset_id;
+DROP INDEX IF EXISTS idx_events_event_type;
+```
+
+These commands drop the two indexes created by the `up.sql` script, effectively undoing the migration. The `IF EXISTS` clause ensures that the script can be run multiple times without causing errors if the indexes have already been dropped.
 
 ## Performance Considerations
-The addition of these indexes is likely to significantly improve the performance of queries that filter, sort, or join on the `dataset_id` or `event_type` columns. However, it's important to note that while indexes speed up read operations, they can slightly slow down write operations (inserts, updates, and deletes) as the indexes need to be updated along with the table data.
+Adding these indexes will likely improve the performance of read operations (SELECT queries) that filter, sort, or join on the `dataset_id` or `event_type` columns. However, it's important to note that while indexes speed up read operations, they can slightly slow down write operations (INSERT, UPDATE, and DELETE) as the indexes need to be updated along with the table data.
 
-The choice of columns for indexing (`dataset_id` and `event_type`) suggests that these are frequently used in query conditions or join clauses, making them good candidates for indexing to optimize query performance.
+The decision to add these specific indexes suggests that the application frequently queries the `events` table based on `dataset_id` and `event_type`, and the performance gain from faster reads outweighs any potential slowdown in write operations.
 
-When applying the "down" migration, removing these indexes may impact query performance on the `events` table, particularly for queries that filter or sort by `dataset_id` or `event_type`. The database will need to reclaim the space used by these indexes, which could temporarily impact performance during the migration.
-
-## Error Handling
-The `down.sql` file uses the `IF EXISTS` clause in both `DROP INDEX` statements. This ensures that the migration will not fail if the indexes have already been removed or never existed, making the migration more robust and rerunnable.
-
-## TODOs
-1. Consider adding comments in both `up.sql` and `down.sql` files explaining why these indexes are being added or removed, especially if it's part of a larger schema change or optimization effort.
-2. Verify that adding and removing these indexes aligns with the application's performance requirements and query patterns.
-3. Monitor the impact of these indexes on both read and write performance after applying the migration to ensure they provide the expected benefits without introducing significant overhead.
+When implementing these changes, it's recommended to monitor the database performance before and after the migration to ensure that the expected performance improvements are realized and that there are no unexpected negative impacts on other database operations.

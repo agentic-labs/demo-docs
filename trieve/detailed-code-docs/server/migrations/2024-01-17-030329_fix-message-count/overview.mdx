@@ -3,69 +3,90 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for fixing message counts in a database system. The migration is designed to maintain accurate message counts for organizations by updating the `organization_usage_counts` table whenever messages are inserted or deleted from the `messages` table.
+This directory contains SQL migration scripts for fixing the message count in a database. It includes two files: `up.sql` and `down.sql`, which are used to apply and revert changes to the database schema and functionality, respectively. The main purpose of these scripts is to implement and manage a trigger-based system for maintaining accurate message counts for organizations.
 
 ## What does it do?
-The migration scripts implement a mechanism to automatically keep track of the number of messages associated with each organization. When a new message is added to the system, it increases the message count for the corresponding organization. Similarly, when a message is deleted, it decreases the count. This ensures that the organization's usage statistics are always up-to-date without requiring manual intervention.
+These migration scripts introduce a mechanism to automatically update the message count for organizations whenever messages are added or deleted. Here's a simplified explanation of the process:
+
+1. When a new message is added to the `messages` table, the system automatically increases the message count for the associated organization by 1.
+2. When a message is deleted from the `messages` table, the system automatically decreases the message count for the associated organization by 1.
+3. These updates are done automatically using a trigger, so developers don't need to manually update the counts every time a message is added or removed.
+4. The system also ensures that the message count never goes below zero, even if there are unexpected deletions.
+
+This automation helps maintain accurate statistics about message usage for each organization without requiring manual intervention or complex application logic.
 
 ## Key Files
-The directory contains two main SQL files:
 
-1. `up.sql`: This file creates the necessary function and trigger to implement the message count tracking mechanism.
+### up.sql
+This file contains the SQL commands to implement the new message counting system. It defines two main components:
 
-2. `down.sql`: This file contains the reverse operations to undo the changes made by `up.sql`, effectively removing the message count tracking mechanism.
+1. `update_messages_counts` function:
+   - This function is responsible for updating the `message_count` in the `organization_usage_counts` table.
+   - For INSERT operations, it either creates a new entry with a count of 1 or increments an existing count.
+   - For DELETE operations, it decrements the count, ensuring it never goes below 0.
 
-Both files define a function called `update_messages_counts` and a trigger named `update_messages_counts_trigger`. The function is responsible for updating the message counts, while the trigger ensures that the function is called automatically when messages are inserted or deleted.
+   Here's a simplified version of the function:
+
+   ```sql
+   CREATE OR REPLACE FUNCTION update_messages_counts() RETURNS TRIGGER AS $$
+   BEGIN
+     IF (TG_OP = 'INSERT') THEN
+       -- Insert or update message count
+       INSERT INTO organization_usage_counts (org_id, message_count)
+       VALUES ((SELECT org_id FROM datasets WHERE id = NEW.dataset_id), 1)
+       ON CONFLICT (org_id) DO UPDATE
+       SET message_count = organization_usage_counts.message_count + 1;
+     ELSIF (TG_OP = 'DELETE') THEN
+       -- Decrement message count, ensuring it doesn't go below 0
+       UPDATE organization_usage_counts
+       SET message_count = CASE
+         WHEN message_count &gt; 0 THEN message_count - 1
+         ELSE 0
+       END
+       WHERE org_id = (SELECT org_id FROM datasets WHERE id = OLD.dataset_id);
+     END IF;
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
+2. `update_messages_counts_trigger`:
+   - This trigger is attached to the `messages` table and calls the `update_messages_counts` function after each INSERT or DELETE operation.
+
+   ```sql
+   CREATE TRIGGER update_messages_counts_trigger
+   AFTER INSERT OR DELETE ON messages
+   FOR EACH ROW
+   EXECUTE FUNCTION update_messages_counts();
+   ```
+
+### down.sql
+This file contains the SQL commands to revert the changes made by `up.sql`. It drops the trigger and the function created in the `up.sql` file:
+
+```sql
+DROP TRIGGER IF EXISTS update_messages_counts_trigger ON messages;
+DROP FUNCTION IF EXISTS update_messages_counts();
+```
+
+## Dependencies
+This migration relies on the existing PostgreSQL database system. It doesn't introduce any new external dependencies but assumes the presence of the following database objects:
+
+1. `messages` table: The main table where messages are stored.
+2. `datasets` table: A table that links messages to organizations through the `org_id` field.
+3. `organization_usage_counts` table: A table that stores message counts for each organization.
 
 ## Configuration
-The migration relies on the existing database structure, particularly the following tables:
+These migration scripts don't require any specific configuration. They are designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the application's backend.
 
-- `messages`: The table where individual messages are stored.
-- `datasets`: A table that links messages to organizations.
-- `organization_usage_counts`: A table that stores usage statistics for organizations, including the message count.
+The scripts assume the following database structure:
 
-The migration scripts assume these tables already exist in the database schema.
+- `messages` table with a `dataset_id` column
+- `datasets` table with `id` and `org_id` columns
+- `organization_usage_counts` table with `org_id` and `message_count` columns
 
-Here's a more detailed explanation of the `update_messages_counts` function:
+Developers should ensure that these tables exist and have the correct structure before applying this migration.
 
-```sql
-CREATE OR REPLACE FUNCTION update_messages_counts() RETURNS TRIGGER AS $$
-BEGIN
-    IF (TG_OP = 'INSERT') THEN
-        INSERT INTO organization_usage_counts (org_id, message_count)
-        VALUES (
-            (SELECT organization_id FROM datasets WHERE id = NEW.dataset_id),
-            1
-        )
-        ON CONFLICT (org_id) DO UPDATE SET message_count = organization_usage_counts.message_count + 1;
-        RETURN NEW;
-    ELSIF (TG_OP = 'DELETE') THEN
-        UPDATE organization_usage_counts
-        SET message_count = GREATEST(message_count - 1, 0)
-        WHERE org_id = (SELECT organization_id FROM datasets WHERE id = OLD.dataset_id);
-        RETURN OLD;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-```
+## Performance Considerations
+While this trigger-based approach provides real-time accuracy for message counts, it does introduce a small performance overhead for each INSERT and DELETE operation on the `messages` table. For most applications, this overhead should be negligible. However, for systems with extremely high write volumes, developers might want to consider alternative approaches, such as batch updates or eventual consistency models.
 
-This function:
-1. Checks if the operation is an INSERT or DELETE.
-2. For INSERT:
-   - It finds the organization ID associated with the new message's dataset.
-   - It then either inserts a new row with a count of 1 or increments an existing count.
-3. For DELETE:
-   - It finds the organization ID associated with the deleted message's dataset.
-   - It then decrements the message count, ensuring it doesn't go below zero.
-
-The trigger is set up to call this function after each INSERT or DELETE operation on the `messages` table:
-
-```sql
-CREATE TRIGGER update_messages_counts_trigger
-AFTER INSERT OR DELETE ON messages
-FOR EACH ROW
-EXECUTE FUNCTION update_messages_counts();
-```
-
-This migration ensures that the `organization_usage_counts` table always reflects the accurate number of messages for each organization, providing reliable usage statistics for the system.
+The use of `ON CONFLICT DO UPDATE` in the INSERT case helps optimize performance by avoiding separate INSERT and UPDATE queries when incrementing the count for existing organizations.

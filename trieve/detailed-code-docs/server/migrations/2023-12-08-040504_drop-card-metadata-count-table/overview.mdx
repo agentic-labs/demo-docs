@@ -3,72 +3,74 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for dropping the `card_metadata_count` table and its associated trigger and function. The migration is dated 2023-12-08 and is identified by the timestamp 040504. The purpose of these scripts is to remove a previously implemented counting mechanism for card metadata from the database schema.
+This directory contains SQL migration scripts for dropping the `card_metadata_count` table and its associated trigger and function. The migration is dated 2023-12-08 and is identified by the timestamp 040504. The directory includes two SQL files: `up.sql` for applying the migration and `down.sql` for reverting it.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
-1. The "up" migration:
-   - Removes the `card_metadata_count` table, which was previously used to store the total number of rows in the `card_metadata` table.
-   - Drops the `card_metadata_count_trigger` that was set up on the `card_metadata` table.
-   - Deletes the `update_card_metadata_count()` function that was used to update the count.
+1. The `up.sql` script removes a table called `card_metadata_count`, a trigger named `card_metadata_count_trigger` on the `card_metadata` table, and a function called `update_card_metadata_count`. This suggests that the system is no longer using a separate table to maintain a count of rows in the `card_metadata` table.
 
-2. The "down" migration (rollback):
-   - Recreates the `card_metadata_count` table with columns for `id` (UUID) and `total_rows` (BIGINT).
-   - Initializes the `card_metadata_count` table with the current count of rows in the `card_metadata` table.
-   - Creates a new `update_card_metadata_count()` function to handle count updates.
-   - Sets up a new `card_metadata_count_trigger` on the `card_metadata` table to automatically update the count on inserts and deletes.
+2. The `down.sql` script provides a way to revert the changes made by `up.sql`. It recreates the `card_metadata_count` table, populates it with the current count of rows in `card_metadata`, and sets up a trigger and function to keep this count updated automatically.
 
-These migrations effectively remove an automated counting mechanism for the `card_metadata` table and provide a way to revert this change if needed.
+These scripts allow database administrators or developers to apply or roll back changes to the database structure related to tracking the number of rows in the `card_metadata` table.
 
 ## Key Files
 
-1. `up.sql`:
-   This file contains the SQL commands to remove the counting mechanism. It drops the `card_metadata_count` table, the associated trigger, and the update function. Here's a snippet of the key operations:
+### up.sql
+This file contains the SQL commands to apply the migration:
 
-   ```sql
-   DROP TABLE card_metadata_count;
-   DROP TRIGGER card_metadata_count_trigger ON card_metadata;
-   DROP FUNCTION update_card_metadata_count();
-   ```
+```sql
+DROP TABLE card_metadata_count;
+DROP TRIGGER card_metadata_count_trigger ON card_metadata;
+DROP FUNCTION update_card_metadata_count();
+```
 
-2. `down.sql`:
-   This file contains the SQL commands to recreate the counting mechanism if the migration needs to be rolled back. It recreates the table, initializes it, and sets up the trigger and function. Here's a snippet of the key operations:
+These commands remove the table, trigger, and function used for maintaining the row count of `card_metadata`.
 
-   ```sql
-   CREATE TABLE card_metadata_count (
-       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-       total_rows BIGINT NOT NULL
-   );
+### down.sql
+This file contains the SQL commands to revert the migration:
 
-   INSERT INTO card_metadata_count (total_rows)
-   SELECT COUNT(*) FROM card_metadata;
+```sql
+CREATE TABLE card_metadata_count (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    total_rows BIGINT NOT NULL
+);
 
-   CREATE OR REPLACE FUNCTION update_card_metadata_count() RETURNS TRIGGER AS $$
-   BEGIN
-       IF (TG_OP = 'INSERT') THEN
-           UPDATE card_metadata_count SET total_rows = total_rows + 1;
-       ELSIF (TG_OP = 'DELETE') THEN
-           UPDATE card_metadata_count SET total_rows = total_rows - 1;
-       END IF;
-       RETURN NULL;
-   END;
-   $$ LANGUAGE plpgsql;
+INSERT INTO card_metadata_count (total_rows)
+SELECT COUNT(*) FROM card_metadata;
 
-   CREATE TRIGGER card_metadata_count_trigger
-   AFTER INSERT OR DELETE ON card_metadata
-   FOR EACH ROW EXECUTE FUNCTION update_card_metadata_count();
-   ```
+CREATE OR REPLACE FUNCTION update_card_metadata_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE card_metadata_count SET total_rows = total_rows + 1;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE card_metadata_count SET total_rows = total_rows - 1;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
-## Dependencies
-The migration scripts have a dependency on the `card_metadata` table, which is assumed to exist in the database schema. The scripts do not rely on any external libraries or frameworks, as they are pure SQL commands intended to be executed directly on the database.
+CREATE TRIGGER card_metadata_count_trigger
+AFTER INSERT OR DELETE ON card_metadata
+FOR EACH ROW EXECUTE FUNCTION update_card_metadata_count();
+```
+
+These commands recreate the `card_metadata_count` table, populate it with the current count, and set up a trigger and function to keep the count updated.
 
 ## Configuration
-These migration scripts do not require any specific configuration files or environment variables. They are designed to be run as part of a database migration process, typically managed by an ORM or migration tool in the main application.
+This migration does not rely on any external configuration files or environment variables. The SQL scripts are self-contained and can be executed directly on the database.
 
-It's important to note that after applying the "up" migration:
-1. Any application code or queries that depended on the `card_metadata_count` table will need to be updated or removed.
-2. The removal of this counting mechanism may impact existing functionality that relied on quick access to the total count of card metadata.
-3. If tracking card metadata counts is still necessary for the application, alternative methods should be considered and implemented.
+## Side Effects
+Applying this migration (`up.sql`) will:
+1. Permanently delete the `card_metadata_count` table and all its data.
+2. Remove the `card_metadata_count_trigger` from the `card_metadata` table.
+3. Delete the `update_card_metadata_count` function from the database.
 
-When running these migrations, ensure that proper backups are in place and that the changes align with the overall application requirements and performance considerations.
+Reverting this migration (`down.sql`) will:
+1. Create a new `card_metadata_count` table with a UUID primary key and a `total_rows` column.
+2. Populate the new table with the current count of rows in `card_metadata`.
+3. Create a new `update_card_metadata_count` function to maintain the count.
+4. Set up a new trigger `card_metadata_count_trigger` on the `card_metadata` table to automatically update the count.
+
+It's important to note that if the migration is reverted after being applied, the recreated `card_metadata_count` table will only reflect the current state of the `card_metadata` table. Any historical data that might have been in the original table before it was dropped will not be recovered.

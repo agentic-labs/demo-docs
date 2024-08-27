@@ -3,65 +3,51 @@ title: "svc.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service for the primary instance of a PostgreSQL database. It configures the service type, ports, selectors, and other parameters based on the provided Helm chart values. This allows other applications within or outside the Kubernetes cluster to access the primary PostgreSQL instance.
+This YAML file defines a Kubernetes Service resource for the primary PostgreSQL instance in a Helm chart. It configures various aspects of the service, including its type, ports, and selectors, with many options customizable through Helm values.
 
 ## Code Structure
-The code is a single YAML template file that defines a Kubernetes Service resource. It uses various Helm template functions and variables to dynamically generate the service configuration based on the provided values.
-
-## References
-* `postgresql.v1.primary.fullname`: A Helm template function that likely generates the full name of the primary PostgreSQL instance.
-* `common.labels.standard`: A Helm template function that likely generates standard labels for the service.
-* `common.tplvalues.merge`: A Helm template function that merges multiple values together.
-* `common.tplvalues.render`: A Helm template function that renders a value as a string.
-* `postgresql.v1.service.port`: A Helm template function that likely retrieves the port number for the PostgreSQL service.
-* `common.labels.matchLabels`: A Helm template function that generates label selectors for the service.
+The file is structured as a single Kubernetes Service resource, with various sections controlled by conditional statements based on Helm values. It uses several Helm template functions to include common labels, merge values, and render template strings.
 
 ## Symbols
-### `helm/charts/postgresql/templates/primary/svc.yaml`
+
+### Service Resource
 #### Description
-This YAML file defines a Kubernetes Service for the primary instance of a PostgreSQL database. It uses Helm templating to dynamically configure the service based on the provided values.
+Defines a Kubernetes Service for the primary PostgreSQL instance.
 
 #### Inputs
-This template uses values passed to the Helm chart, including:
-* `.Release.Namespace`: The namespace where the service will be deployed.
-* `.Values.commonLabels`: Common labels to apply to the service.
-* `.Values.primary.service`: Configuration specific to the primary service:
-    * `.type`: The type of service (e.g., `ClusterIP`, `NodePort`, `LoadBalancer`).
-    * `.externalTrafficPolicy`: Configures how external traffic is routed to the service.
-    * `.loadBalancerSourceRanges`: Restricts traffic to the load balancer from specific IP ranges.
-    * `.loadBalancerIP`: Specifies a static IP address for the load balancer.
-    * `.clusterIP`: Specifies a static IP address for the service (only for `ClusterIP` type).
-    * `.sessionAffinity`: Configures session affinity for the service.
-    * `.sessionAffinityConfig`: Provides additional configuration for session affinity.
-    * `.nodePorts.postgresql`: Specifies the node port for the PostgreSQL service.
-    * `.extraPorts`: Allows defining additional ports for the service.
-* `.Values.primary.podLabels`: Labels specific to the primary PostgreSQL pod.
-* `.Values.commonAnnotations`: Common annotations to apply to the service.
-* `.Values.primary.service.annotations`: Annotations specific to the primary service.
-
-#### Outputs
-A Kubernetes Service resource configuration in YAML format.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values | Object | Helm values passed to the template |
+| .Release | Object | Helm release information |
 
 #### Internal Logic
-The template defines a Service resource with the following key elements:
-* **Metadata:**
-    * `name`: The name of the service, generated using `postgresql.v1.primary.fullname`.
-    * `namespace`: The namespace for the service.
-    * `labels`: Labels for the service, including standard labels and any custom labels provided.
-    * `annotations`: Annotations for the service, merged from common annotations and primary service annotations.
-* **Spec:**
-    * `type`: The type of the service.
-    * `externalTrafficPolicy`: Configured if the service type is `LoadBalancer` or `NodePort`.
-    * `loadBalancerSourceRanges`: Configured if the service type is `LoadBalancer`.
-    * `loadBalancerIP`: Configured if the service type is `LoadBalancer`.
-    * `clusterIP`: Configured if the service type is `ClusterIP`.
-    * `sessionAffinity`: Configured if specified.
-    * `sessionAffinityConfig`: Configured if specified.
-    * `ports`: Defines the ports exposed by the service, including the main PostgreSQL port and any extra ports.
-    * `selector`: Selects the pods that the service should route traffic to, based on labels.
+1. Sets the service name using a template function
+2. Defines labels and annotations
+3. Configures the service type and related settings based on the type
+4. Sets up the service ports
+5. Defines the selector for the service
 
 ## Dependencies
-* This code depends on the Kubernetes API version `v1` for defining the Service resource.
+| Dependency | Purpose |
+|:-----------|:--------|
+| common | Provides helper templates for labels, annotations, and value merging |
 
-## Configuration
-The service configuration is highly customizable through Helm chart values. See the "Inputs" section for a detailed list of configurable options.
+### Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| primary.service.type | string | N/A | Type of the Kubernetes service (e.g., ClusterIP, LoadBalancer) |
+| primary.service.externalTrafficPolicy | string | N/A | External traffic policy for LoadBalancer or NodePort types |
+| primary.service.loadBalancerSourceRanges | list | N/A | Source IP ranges for LoadBalancer type |
+| primary.service.loadBalancerIP | string | N/A | Static IP for LoadBalancer type |
+| primary.service.clusterIP | string | N/A | Static cluster IP for ClusterIP type |
+| primary.service.sessionAffinity | string | N/A | Session affinity setting |
+| primary.service.sessionAffinityConfig | object | N/A | Configuration for session affinity |
+| primary.service.nodePorts.postgresql | number | N/A | Node port for PostgreSQL when using NodePort type |
+| primary.service.extraPorts | list | N/A | Additional ports to expose on the service |
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| tcp-postgresql | TCP | N/A | N/A | Main port for PostgreSQL connections |
+
+This service definition provides a flexible way to expose a PostgreSQL primary instance in a Kubernetes cluster, with various configuration options to suit different deployment scenarios.

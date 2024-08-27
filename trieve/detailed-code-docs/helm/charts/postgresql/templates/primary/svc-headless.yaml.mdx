@@ -3,40 +3,47 @@ title: "svc-headless.yaml"
 ---
 
 ## High-level description
-This Kubernetes YAML file defines a headless service for the primary PostgreSQL instance in a deployment. It exposes the PostgreSQL port and allows other pods, even those not yet ready, to connect to the primary instance.
-
-## Code Structure
-The code defines a Kubernetes Service resource with metadata, spec, and annotations. The spec section defines the service type, port, and selector for the pods.
+This YAML file defines a headless Kubernetes Service for the primary PostgreSQL instance in a Helm chart. It's designed to allow direct communication between PostgreSQL pods, which is crucial for their initialization and operation.
 
 ## Symbols
-### `helm/charts/postgresql/templates/primary/svc-headless.yaml`
+
+### Service
 #### Description
-This code defines a Kubernetes Service of type `ClusterIP` named `postgresql-v1-primary-svc-headless` in the namespace specified by `.Release.Namespace`. It exposes the PostgreSQL database on a dynamically allocated port and uses a selector to target pods labeled as `app.kubernetes.io/component: primary`.
+This Kubernetes Service resource is of type ClusterIP with `clusterIP: None`, making it a headless service. It's specifically tailored for the primary PostgreSQL instance, enabling pod-to-pod communication within the StatefulSet.
 
 #### Inputs
-This template uses values from the `Values` object passed by Helm. Relevant values include:
-* `.Release.Namespace`: The namespace where the service will be deployed.
-* `.Values.commonLabels`: Common labels to apply to the service.
-* `.Values.primary.service.headless.annotations`: Annotations specific to the headless service.
-* `.Values.commonAnnotations`: Common annotations to apply to the service.
-* `.Values.primary.podLabels`: Labels used to select the primary PostgreSQL pods.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Release.Namespace | String | The Kubernetes namespace where the service will be deployed |
+| .Values.commonLabels | Map | Common labels to be applied to the service |
+| .Values.primary.service.headless.annotations | Map | Annotations specific to the headless service |
+| .Values.commonAnnotations | Map | Common annotations to be applied to the service |
+| .Values.primary.podLabels | Map | Labels to be applied to the primary PostgreSQL pods |
 
 #### Internal Logic
-The template uses Helm's templating language to dynamically generate the service definition. It includes other templates like `postgresql.v1.primary.svc.headless`, `common.labels.standard`, `common.tplvalues.merge`, `common.tplvalues.render`, and `common.labels.matchLabels` to construct the final YAML output.
+1. Sets the service name using a template function `postgresql.v1.primary.svc.headless`.
+2. Applies labels using the `common.labels.standard` helper, including a component label for the primary.
+3. Merges and applies annotations from `.Values.primary.service.headless.annotations` and `.Values.commonAnnotations`.
+4. Adds a specific annotation to tolerate unready endpoints due to a Kubernetes issue.
+5. Configures the service as headless (`clusterIP: None`) and enables `publishNotReadyAddresses`.
+6. Defines a single port for PostgreSQL traffic.
+7. Sets the selector to match primary PostgreSQL pods using merged labels.
 
-#### Side Effects
-This code, when deployed, will create a new Kubernetes Service resource.
-
-## Dependencies
-This code depends on the following Helm libraries:
-| Dependency | Purpose |
-|:-----------|:--------|
-| `common.labels.standard` | Provides standard labels for Kubernetes resources. |
-| `common.tplvalues.merge` | Merges multiple values into a single dictionary. |
-| `common.tplvalues.render` | Renders a template with given values. |
-| `common.labels.matchLabels` | Generates label selectors for Kubernetes resources. |
-| `postgresql.v1.primary.svc.headless` | Provides the name for the headless service. |
-| `postgresql.v1.service.port` | Provides the port number for the PostgreSQL service. |
+## Side Effects
+- Creates a headless Kubernetes Service resource in the specified namespace.
+- Enables communication between PostgreSQL pods before they're fully ready.
 
 ## Configuration
-This code relies on configuration values passed through Helm's `Values` object. See the "Inputs" section for details on the specific values used.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.primary.service.headless.annotations | Map | - | Custom annotations for the headless service |
+| .Values.commonAnnotations | Map | - | Common annotations applied to all resources |
+| .Values.primary.podLabels | Map | - | Labels applied to primary PostgreSQL pods |
+| .Values.commonLabels | Map | - | Common labels applied to all resources |
+
+## Notes
+1. The service uses `publishNotReadyAddresses: true` to allow communication between pods even when they're not ready.
+2. A specific annotation (`service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"`) is added to address a Kubernetes issue with unready endpoints.
+3. The service port is set using a template function `postgresql.v1.service.port`.
+
+This headless service is crucial for the proper functioning of a PostgreSQL cluster, as it allows the pods to discover and communicate with each other during initialization and normal operation.

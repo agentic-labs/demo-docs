@@ -3,28 +3,29 @@ title: "up.sql"
 ---
 
 ## High-level description
-This SQL migration script renames the `dataset_notification_counts` table to `dataset_event_counts` and updates the `update_notification_count` function to reflect this change. The function maintains a count of events (previously notifications) associated with each dataset in the `dataset_event_counts` table.
+This SQL script renames the `dataset_notification_counts` table to `dataset_event_counts` and updates the `update_notification_count` function to reflect this change. The function now manages a count of events related to datasets, incrementing the count on insertion and decrementing on deletion of notifications.
 
 ## Symbols
 
 ### `ALTER TABLE dataset_notification_counts RENAME TO dataset_event_counts;`
 #### Description
-This SQL statement renames the existing table `dataset_notification_counts` to `dataset_event_counts`. This suggests a shift from tracking only "notifications" to a broader concept of "events" associated with datasets.
+This statement renames the existing table `dataset_notification_counts` to `dataset_event_counts`. This suggests a shift from simply tracking notifications to a broader concept of events related to datasets.
+
+#### Internal Logic
+This is a simple SQL `ALTER TABLE` statement that renames a table. It does not involve complex logic.
 
 ### `CREATE OR REPLACE FUNCTION public.update_notification_count()`
 #### Description
-This statement defines or replaces an existing PostgreSQL function named `update_notification_count`. This function is designed as a trigger to automatically update event counts in the `dataset_event_counts` table whenever a new event is added or removed.
+This statement defines or replaces a function named `update_notification_count` in the `public` schema. This function is designed to be used as a trigger, automatically updating the `dataset_event_counts` table based on insert or delete operations on a related table (likely related to notifications).
 
 #### Inputs
-This function implicitly takes the inserted or deleted row from the triggering table as input. The exact structure of this input depends on the table where the trigger is defined.
+This function implicitly takes the inserted or deleted row as input through the `NEW` and `OLD` records within the trigger context.
 
 #### Outputs
-This function returns a trigger result using `RETURN NEW;`. This indicates that the function allows the triggering operation (insert or delete) to proceed with the new data.
+This function returns a trigger, meaning it implicitly returns the `NEW` row for insert operations or the `OLD` row for delete operations.
 
 #### Internal Logic
-1. **Trigger Condition:** The function first checks the type of triggering event using `TG_OP`. It proceeds with the update logic if the event is an `INSERT` or `DELETE` operation.
-2. **Increment on Insert:** If a new row is inserted ( `TG_OP = 'INSERT'` ), the function attempts to insert a new record into `dataset_event_counts` with an initial count of 1. If a record for the dataset already exists, it increments the `notification_count` by 1 using `ON CONFLICT (dataset_uuid) DO UPDATE`.
-3. **Decrement on Delete:** If a row is deleted (`TG_OP = 'DELETE'`), the function decrements the `notification_count` in `dataset_event_counts` for the corresponding `dataset_uuid`.
-
-#### Side Effects
-This function directly modifies the `dataset_event_counts` table by inserting, updating, or deleting rows based on the triggering event.
+1. **Trigger Condition:** The function first checks the type of operation triggering it (`TG_OP`). It proceeds if the operation is an `INSERT` or `DELETE`.
+2. **Increment on Insert:** If the operation is an `INSERT`, it inserts a new row into `dataset_event_counts` with an initial count of 1 if the `dataset_uuid` is new. If a row with the same `dataset_uuid` already exists, it increments the `notification_count` by 1.
+3. **Decrement on Delete:** If the operation is a `DELETE`, it decrements the `notification_count` in `dataset_event_counts` for the corresponding `dataset_uuid`.
+4. **Return:** Finally, it returns the `NEW` record for `INSERT` or the `OLD` record for `DELETE`, as is standard for trigger functions.

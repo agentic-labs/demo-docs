@@ -3,69 +3,82 @@ title: "SimpleTimeRangeSelector.tsx"
 ---
 
 ## High-level description
-This code defines a simple time range selector component and a custom hook for managing time range selection in an analytics context. It provides functionality to select predefined date ranges and automatically determine appropriate granularity for data analysis based on the selected range.
+The code defines a simple time range selector component and a custom hook for managing the selected time range and its corresponding granularity in the context of analytics data filtering. The component provides a dropdown menu to select predefined time ranges like "Past Hour", "Past Day", and "Past Week", and automatically determines an appropriate granularity for the selected range.
 
 ## Code Structure
-The file contains two main exports: `useSimpleTimeRange` hook and `SimpleTimeRangeSelector` component. The hook manages the state and logic for time range selection, while the component renders the UI for selecting a date range option.
+The `useSimpleTimeRange` hook manages the state of the selected time range and its granularity. It exposes this state and update functions to the `SimpleTimeRangeSelector` component, which renders a dropdown menu using the `Select` component from `shared/ui`. The `getReasonableGranularityFromDateRange` function maps a selected time range to a suitable granularity for analytics data.
+
+## References
+- `DateRangeOption`, `dateRanges` from `./FilterBar`
+- `AnalyticsParams` from `shared/types`
+- `Select` from `shared/ui`
 
 ## Symbols
 
 ### `getReasonableGranularityFromDateRange`
 #### Description
-This function determines an appropriate granularity for data analysis based on the selected date range.
+This function determines a reasonable granularity for analytics data based on the selected date range.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| dateRange | DateRangeOption | The selected date range option |
+| dateRange | DateRangeOption | An object representing the selected date range with a label and a start date. |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| granularity | AnalyticsParams["granularity"] | The determined granularity |
+| granularity | AnalyticsParams["granularity"] | A string representing the determined granularity ("minute", "hour", or "day"). |
 
 #### Internal Logic
-- Uses a switch statement to map date range labels to appropriate granularities.
-- Default granularity is "hour" if no specific case matches.
+The function uses a switch statement to map the `dateRange.label` to a corresponding granularity. For example, "Past Hour" maps to "minute", "Past Day" maps to "hour", and so on. If no specific mapping is found, it defaults to "hour".
 
 ### `useSimpleTimeRange`
 #### Description
-A custom hook that manages the state and logic for time range selection in analytics.
+This custom hook manages the state of the selected time range and its corresponding granularity.
+
+#### Inputs
+_This symbol has no inputs._
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| filter | Memo&lt;{ date_range: { gt: Date } }&gt; | The date range filter |
-| granularity | Memo&lt;AnalyticsParams["granularity"]&gt; | The calculated granularity |
-| dateOption | Accessor&lt;DateRangeOption&gt; | The current date option |
-| setDateOption | (date: DateRangeOption) =&gt; void | Function to update the date option |
+| filter | { date_range: { gt: Date } } | An object representing the filter to be applied based on the selected date range. |
+| granularity | Accessor&lt;AnalyticsParams["granularity"]&gt; | A reactive signal containing the determined granularity. |
+| dateOption | Accessor&lt;DateRangeOption&gt; | A reactive signal containing the currently selected date range option. |
+| setDateOption | (date: DateRangeOption) =&gt; void | A function to update the selected date range option. |
 
 #### Internal Logic
-- Creates signals for managing the selected date option.
-- Uses `createMemo` to derive the granularity and filter based on the selected date option.
+- Initializes the `dateOption` state with the first element of the `dateRanges` array.
+- Uses `createMemo` to derive the `granularity` based on the `dateOption` using `getReasonableGranularityFromDateRange`.
+- Uses `createMemo` to derive the `filter` object, which includes a `date_range` object with a `gt` property set to the start date of the selected `dateOption`.
 
 ### `SimpleTimeRangeSelector`
 #### Description
-A component that renders a select input for choosing a date range option.
+This component renders a simple dropdown menu to select a predefined time range for analytics data filtering.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| label | JSX.Element (optional) | Label for the select input |
-| dateOption | DateRangeOption | The currently selected date option |
-| setDateOption | (date: DateRangeOption) =&gt; void | Function to update the selected date option |
+| props | SimpleTimeRangeSelectorProps | An object containing the component's properties. |
+
+#### Outputs
+_This symbol has no defined outputs._
 
 #### Internal Logic
-- Renders a `Select` component from the shared UI library.
-- Uses the `dateRanges` array (imported from FilterBar) for options.
-- Calls the `setDateOption` function when a new option is selected.
+- Renders a `Select` component from `shared/ui`.
+- Passes the `label`, `dateOption`, `setDateOption`, and `dateRanges` props to the `Select` component.
+- The `Select` component handles rendering the dropdown menu and updating the `dateOption` state via the provided `setDateOption` function.
 
 ## Dependencies
 | Dependency | Purpose |
 |:-----------|:--------|
-| solid-js | For reactive state management and component creation |
-| shared/types | For type definitions (AnalyticsParams) |
-| shared/ui | For the Select component |
-| ./FilterBar | For DateRangeOption and dateRanges |
+| solid-js | Provides core reactivity and rendering functionalities. |
+| date-fns | Used for date manipulation (subtracting hours and days). |
+| shared/types | Provides type definitions, including `AnalyticsParams` and `DateRangeOption`. |
+| shared/ui | Provides UI components, including `Select`. |
 
-This code provides a reusable solution for time range selection in analytics contexts, offering both a UI component and a custom hook for easy integration into other parts of the application.
+## Error Handling
+This code does not implement specific error handling beyond basic exception raising.
+
+## Logging
+This code does not implement logging.

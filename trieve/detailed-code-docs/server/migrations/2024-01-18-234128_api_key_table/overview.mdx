@@ -3,59 +3,70 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for creating and managing a new `user_api_key` table in the database. The migration introduces a separate table for storing API keys associated with users, replacing the previous approach of storing API key hashes directly in the `users` table.
+This directory contains SQL migration scripts for creating and managing a new `user_api_key` table and modifying the existing `users` table in the database. The migration is dated 2024-01-18-234128, indicating when it was created. The purpose of these scripts is to implement a more scalable approach to managing API keys by separating them from user data into a dedicated table.
 
 ## What does it do?
 The migration scripts in this directory perform the following actions:
 
-1. Create a new table called `user_api_key` to store API keys for users.
+1. Create a new table called `user_api_key` to store API keys associated with users.
 2. Remove the `api_key_hash` column from the existing `users` table.
 3. Provide a way to revert these changes if needed.
 
-This change allows for a more flexible and scalable approach to managing API keys. Instead of having a single API key per user stored directly in the `users` table, the new structure allows for multiple API keys per user, each with its own metadata such as a name and timestamps.
+This change allows for a more flexible and scalable management of API keys. Instead of storing API key information directly in the `users` table, it creates a separate table that can handle multiple API keys per user, each with its own metadata such as name, creation date, and last update date.
 
 ## Key Files
+The directory contains two important SQL files:
+
+1. `up.sql`: This file contains the SQL commands to apply the migration. It creates the `user_api_key` table and removes the `api_key_hash` column from the `users` table.
+
+2. `down.sql`: This file contains the SQL commands to revert the migration. It drops the `user_api_key` table and adds back the `api_key_hash` column to the `users` table.
 
 ### up.sql
-This file contains the SQL commands to apply the migration:
+The `up.sql` file performs the following actions:
 
-1. Creates the `user_api_key` table with the following columns:
-   - `id`: A UUID primary key
-   - `user_id`: A UUID foreign key referencing the `users` table
-   - `api_key_hash`: A unique, non-null text field for storing hashed API keys
-   - `name`: A text field for naming the API key (defaults to 'default')
-   - `created_at` and `updated_at`: Timestamp fields for tracking creation and update times
-2. Removes the `api_key_hash` column from the `users` table
+1. Creates a new `user_api_key` table with the following structure:
+   - `id`: UUID, primary key
+   - `user_id`: UUID, foreign key referencing the `users` table
+   - `api_key_hash`: TEXT, unique hash of the API key
+   - `name`: TEXT, name of the API key (default: 'default')
+   - `created_at`: TIMESTAMP of creation
+   - `updated_at`: TIMESTAMP of last update
 
-Key aspects of the `user_api_key` table:
-- Uses UUIDs for both its primary key and the user reference
-- Enforces a foreign key constraint with `ON DELETE CASCADE`, ensuring that when a user is deleted, their API keys are also removed
-- Stores API keys as hashes, likely for security reasons
-- Allows multiple API keys per user
-- Includes metadata fields for better key management
+2. Removes the `api_key_hash` column from the `users` table.
+
+Here's the key part of the `up.sql` script:
+
+```sql
+CREATE TABLE user_api_key (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    api_key_hash TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT 'default',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE users DROP COLUMN api_key_hash;
+```
 
 ### down.sql
-This file contains the SQL commands to revert the migration:
+The `down.sql` file reverts the changes made by `up.sql`:
 
-1. Drops the `user_api_key` table if it exists
-2. Adds the `api_key_hash` column back to the `users` table
+1. Drops the `user_api_key` table.
+2. Adds back the `api_key_hash` column to the `users` table.
 
-The down migration ensures that the database can be reverted to its previous state if needed, maintaining the ability to roll back changes.
+Here's the content of the `down.sql` script:
 
-## Configuration
-The migration is identified by its timestamp: `2024-01-18-234128`. This timestamp is likely used by the migration system to track which migrations have been applied and in what order.
-
-No additional configuration appears to be required for these migration scripts. They are designed to be run by a database migration tool, which would handle the execution and tracking of these scripts.
+```sql
+DROP TABLE IF EXISTS user_api_key;
+ALTER TABLE users ADD COLUMN api_key_hash TEXT;
+```
 
 ## Dependencies
-The migration scripts rely on PostgreSQL-specific features:
+This migration depends on the existence of a `users` table with an `id` column of type UUID. It also uses PostgreSQL-specific functions like `gen_random_uuid()` for generating UUIDs.
 
-1. `gen_random_uuid()` function for generating UUIDs
-2. `TIMESTAMP WITH TIME ZONE` data type for timestamp fields
-3. `ON DELETE CASCADE` foreign key behavior
+## Configuration
+There are no specific configuration files or environment variables used in these migration scripts. However, the database connection details and migration execution would typically be managed by the application's database migration tool or ORM (Object-Relational Mapping) system.
 
-These features suggest that the application is using PostgreSQL as its database system. The version of PostgreSQL should be compatible with these features, likely PostgreSQL 9.4 or later for the UUID generation function.
-
-In terms of application dependencies, these migrations imply that the application code interacting with the database will need to be updated to work with the new `user_api_key` table instead of the `api_key_hash` column in the `users` table. This may involve changes to ORM configurations, API key validation logic, and user management features.
-
-The migration to a separate API key table suggests that the application may be evolving to support more advanced API key management features, such as multiple keys per user, key rotation, or granular permissions per key.
+In conclusion, this migration represents a significant change in how API keys are managed in the application. By moving API keys to a separate table, it allows for more flexible key management, including the possibility of multiple keys per user and additional metadata for each key. The migration scripts provide a clear path to apply this change and revert it if necessary.

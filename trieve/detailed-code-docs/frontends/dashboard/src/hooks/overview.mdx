@@ -3,70 +3,74 @@ title: "Overview"
 ---
 
 ## High-level description
-This code defines a custom hook `useDatasetPages` that manages pagination, searching, and fetching of datasets for an organization. It provides functionality to load datasets, handle pagination, search datasets, and remove datasets.
+The `useDatasetPages` hook manages the pagination and fetching of datasets for an organization. It provides functionality for searching, paginating, and removing datasets, as well as tracking the loading state of the data.
 
 ## Code Structure
-The main function `useDatasetPages` uses several SolidJS primitives like `createSignal`, `createEffect`, and `createMemo` to manage state and reactivity. It interacts with an API to fetch datasets and provides methods to manipulate the dataset list.
+The code consists of two main parts: the `getDatasets` function for fetching datasets from the API, and the `useDatasetPages` hook that uses this function to manage dataset state and provide various utility functions.
 
 ## Symbols
 
-### useDatasetPages
+### `getDatasets`
 #### Description
-A custom hook that manages the fetching and pagination of datasets for an organization.
+An asynchronous function that fetches datasets for a given organization ID, handling pagination on the client-side.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| props | Object | Contains org (Accessor&lt;Organization \| undefined&gt;), page (Accessor&lt;number&gt;), searchQuery (Accessor&lt;string&gt;), and setPage (function) |
+| orgId | string | The ID of the organization to fetch datasets for |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| Object | Object | Contains datasets (Accessor&lt;DatasetAndUsage[]&gt;), maxPageDiscovered (Accessor&lt;number&gt;), maxDatasets (Accessor&lt;number&gt;), removeDataset (function), and hasLoaded (Accessor&lt;boolean&gt;) |
+| results | DatasetAndUsage[] | An array of fetched datasets and their usage information |
 
 #### Internal Logic
-1. Fetches datasets from the API using the `getDatasets` function.
-2. Manages pagination and searching of datasets.
-3. Provides a method to remove a dataset from the list.
-4. Uses memoization to filter and slice the dataset list based on search query and pagination.
+1. Initializes variables for pagination and results storage.
+2. Enters a loop to fetch datasets in batches of `FETCHING_SIZE`.
+3. Constructs the API URL with query parameters for pagination.
+4. Sends a GET request to the API with appropriate headers.
+5. Processes the response, adding fetched datasets to the results array.
+6. Continues fetching until no more datasets are returned or an error occurs.
 
-### getDatasets
+### `useDatasetPages`
 #### Description
-An asynchronous function that fetches datasets from the API.
+A custom hook that manages the state and operations related to dataset pagination, searching, and removal.
 
 #### Inputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| orgId | string | The ID of the organization |
+| props | Object | An object containing accessor functions for organization, page, searchQuery, and setPage |
 
 #### Outputs
 | Name | Type | Description |
 |:-----|:-----|:------------|
-| results | DatasetAndUsage[] | An array of fetched datasets |
+| datasets | Accessor&lt;DatasetAndUsage[]&gt; | Current page of datasets |
+| maxPageDiscovered | Accessor&lt;number&gt; | Maximum page number based on total datasets |
+| maxDatasets | Accessor&lt;number&gt; | Total number of datasets |
+| removeDataset | (datasetId: string) =&gt; void | Function to remove a dataset |
+| hasLoaded | Accessor&lt;boolean&gt; | Indicates if datasets have finished loading |
 
 #### Internal Logic
-1. Fetches datasets in batches of `FETCHING_SIZE`.
-2. Continues fetching until no more datasets are available or an error occurs.
-3. Handles pagination on the API side using limit and offset parameters.
+1. Creates signals for loading state and real datasets.
+2. Uses `createEffect` to fetch datasets when the organization changes.
+3. Implements `removeDataset` function to filter out a dataset by ID.
+4. Uses `createMemo` to compute the current page of datasets, applying search filtering if necessary.
+5. Computes `maxPageDiscovered` and `maxDatasets` based on the total number of datasets.
 
 ## Dependencies
-| Dependency | Purpose |
-|:-----------|:--------|
-| solid-js | For reactive primitives like createSignal, createEffect, and createMemo |
-| @nozbe/microfuzz | For fuzzy search functionality |
-| shared/types | For type definitions like DatasetAndUsage and Organization |
+- `solid-js`: For reactive primitives and components.
+- `@nozbe/microfuzz`: For fuzzy search functionality.
+- `shared/types`: For type definitions (e.g., `DatasetAndUsage`, `Organization`).
 
 ## Configuration
 | Option | Type | Default | Description |
 |:-------|:-----|:--------|:------------|
-| FETCHING_SIZE | number | 1000 | The number of datasets to fetch in each API call |
-| PAGE_SIZE | number | 20 | The number of datasets to display per page |
+| FETCHING_SIZE | number | 1000 | Number of datasets to fetch in each API call |
+| PAGE_SIZE | number | 20 | Number of datasets to display per page |
 
 ## Error Handling
-The code includes basic error handling in the `getDatasets` function, where it catches errors during the fetch operation and stops further fetching attempts.
+The `getDatasets` function catches and suppresses errors during dataset fetching, setting `canFetchAgain` to `false` to stop further attempts.
 
 ## Performance Considerations
-1. The code uses batched fetching to retrieve datasets, which can help with performance for large dataset collections.
-2. Memoization is used to optimize the filtering and slicing of datasets based on search queries and pagination.
-
-This hook provides a comprehensive solution for managing dataset pagination and searching in a SolidJS application, with considerations for performance and error handling.
+- The hook uses memoization (`createMemo`) to optimize the computation of the current page of datasets and pagination information.
+- Datasets are fetched in batches of 1000 to reduce the number of API calls while still allowing for a large number of datasets.

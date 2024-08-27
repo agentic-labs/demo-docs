@@ -3,56 +3,57 @@ title: "node-services.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Service resource for each Redis Sentinel node in a Redis replication architecture. These services expose the Sentinel and Redis ports on each node, allowing for communication within the cluster and external access.
+This Kubernetes YAML template defines NodePort services for Redis Sentinel nodes in a replication architecture. It creates a service for each replica, exposing both Sentinel and Redis ports, with options for custom node ports or dynamically assigned ones.
 
 ## Code Structure
-The code uses a range loop to iterate over the desired number of replicas. For each replica, it creates a Service resource with specific port mappings for Sentinel and Redis. The service type is set to `NodePort` to allow external access.
-
-## References
-* `common.names.fullname`: Used to generate the full name of the service.
-* `common.names.namespace`: Used to get the namespace where the service will be created.
-* `common.labels.standard`: Used to apply standard labels to the service.
-* `common.tplvalues.merge`: Used to merge annotations.
-* `common.tplvalues.render`: Used to render the annotations.
+The template uses a loop to create services for each Redis replica. It first attempts to lookup existing port configurations from a ConfigMap, then defines the service with appropriate ports and selectors.
 
 ## Symbols
-### `node-services.yaml`
+
+### Main Template
 #### Description
-This code snippet defines a Kubernetes Service for each Redis Sentinel node in a replication setup. It exposes the Sentinel and Redis ports via NodePort, enabling communication within the cluster and external access. The service dynamically fetches port numbers from a ConfigMap if it exists, otherwise, it uses default values.
+This is the main template that generates NodePort services for Redis Sentinel nodes.
 
 #### Inputs
-This code snippet doesn't have explicit input parameters. It relies on values passed from the parent chart, including:
-
-* `.Values.architecture`: Defines the Redis architecture, should be "replication" for this code to execute.
-* `.Values.sentinel.enabled`: Determines if Sentinel is enabled.
-* `.Values.sentinel.service.type`: Defines the service type, should be "NodePort" for this code to execute.
-* `.Values.sentinel.service.nodePorts.redis`: User-specified NodePort for Redis.
-* `.Values.sentinel.service.nodePorts.sentinel`: User-specified NodePort for Sentinel.
-* `.Values.replica.replicaCount`: Number of replicas in the Redis setup.
-* `.Values.sentinel.containerPorts.sentinel`: Default Sentinel port within the container.
-* `.Values.replica.containerPorts.redis`: Default Redis port within the container.
-* `.Release.IsUpgrade`: Indicates if the chart is being upgraded.
-
-#### Outputs
-The code outputs a Kubernetes Service resource for each Redis Sentinel node.
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| .Values.architecture | string | The Redis architecture type |
+| .Values.sentinel.enabled | boolean | Whether Sentinel is enabled |
+| .Values.sentinel.service.type | string | The type of Kubernetes service for Sentinel |
+| .Values.replica.replicaCount | integer | The number of Redis replicas |
+| .Values.sentinel.service.nodePorts | object | Custom node ports for Sentinel and Redis |
+| .Values.commonLabels | object | Common labels to apply to resources |
+| .Values.commonAnnotations | object | Common annotations to apply to resources |
+| .Values.sentinel.service.annotations | object | Specific annotations for Sentinel service |
 
 #### Internal Logic
-1. **Conditional Rendering:** The code first checks if the Redis architecture is "replication", Sentinel is enabled, the service type is "NodePort", and either it's an upgrade or a user-specified NodePort for Redis exists. If any of these conditions are false, the code doesn't render any service.
-2. **Looping through Replicas:** It iterates through the desired number of replicas using a range loop.
-3. **Fetching Ports from ConfigMap:** For each replica, it attempts to fetch the Sentinel and Redis port numbers from a ConfigMap named "&lt;release-name&gt;-ports-configmap".
-4. **Defining Service:** It defines a Service resource with the name "&lt;release-name&gt;-node-&lt;replica-index&gt;".
-5. **Setting Service Type and Ports:** The service type is set to "NodePort". It defines four ports:
-    * `sentinel`: Exposes the Sentinel port. It uses the user-specified NodePort if provided, otherwise, it uses the value fetched from the ConfigMap or a default value.
-    * `redis`: Exposes the Redis port. It uses the user-specified NodePort if provided, otherwise, it uses the value fetched from the ConfigMap or a default value.
-    * `sentinel-internal`: Exposes the Sentinel port for internal communication within the cluster.
-    * `redis-internal`: Exposes the Redis port for internal communication within the cluster.
-6. **Setting Selector:** The service selector is set to target pods with the label "statefulset.kubernetes.io/pod-name=&lt;release-name&gt;-node-&lt;replica-index&gt;".
-
-## Side Effects
-This code creates Kubernetes Service resources, which expose the Sentinel and Redis ports of each node in the cluster.
+1. Checks if the conditions for creating NodePort services are met.
+2. Iterates over the number of replicas.
+3. Attempts to lookup existing port configurations from a ConfigMap.
+4. Defines a Kubernetes Service for each replica with:
+   - Metadata (name, namespace, labels, annotations)
+   - NodePort type specification
+   - Ports for Sentinel and Redis (both external and internal)
+   - Selector to match the corresponding pod
 
 ## Dependencies
-* Kubernetes API (v1)
+| Dependency | Purpose |
+|:-----------|:--------|
+| common.names.namespace | Helper template for namespace |
+| common.names.fullname | Helper template for resource naming |
+| common.labels.standard | Helper template for standard labels |
+| common.tplvalues.merge | Helper template for merging values |
+| common.tplvalues.render | Helper template for rendering values |
 
 ## Configuration
-This code snippet doesn't define any specific configuration options. It relies on values passed from the parent chart.
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| .Values.sentinel.service.nodePorts.sentinel | integer | - | Custom node port for Sentinel |
+| .Values.sentinel.service.nodePorts.redis | integer | - | Custom node port for Redis |
+| .Values.sentinel.containerPorts.sentinel | integer | - | Container port for Sentinel |
+| .Values.replica.containerPorts.redis | integer | - | Container port for Redis |
+
+## Notes
+- The template uses a ConfigMap lookup to retrieve existing port configurations, falling back to custom or dynamically assigned ports if not found.
+- Internal ports are also defined with null nodePort to ensure they're not exposed externally.
+- The service selector uses the statefulset pod name to ensure each service targets the correct pod.

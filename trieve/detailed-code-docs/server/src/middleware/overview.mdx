@@ -3,56 +3,64 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains middleware components for a server application built with Actix Web framework in Rust. The middleware modules handle API versioning, authentication, and JSON content type processing. These components are designed to intercept and process HTTP requests and responses, adding crucial functionality to the server's request-response cycle.
+This directory contains middleware components for a Rust-based web server application. It includes modules for API versioning, authentication, and JSON processing. These middleware components are designed to handle cross-cutting concerns in the application, such as request preprocessing, authentication, and version control.
 
 ## What does it do?
 The middleware in this directory performs several important functions:
 
-1. API Versioning: It determines the appropriate API version for each request based on headers, dataset creation dates, or environment variables. This allows the server to support multiple API versions simultaneously.
+1. API Versioning: It manages different versions of the API, allowing the server to maintain backward compatibility while introducing new features. The system determines the API version based on the dataset's creation date or an explicit version header.
 
-2. Authentication and Authorization: It handles user authentication using either session data or API keys. It also performs role-based access control for different endpoints and manages dataset and organization-specific authentication requirements.
+2. Authentication: It handles user authentication using both session-based and API key-based methods. The middleware integrates with OpenID Connect for user authentication and implements role-based access control for different endpoints.
 
-3. JSON Content Type Handling: It ensures that the Content-Type header is set to "application/json" for incoming requests if not already specified, which is particularly useful for API services expecting JSON data.
+3. JSON Processing: While not explicitly detailed, this middleware likely handles JSON request and response processing, potentially including validation, transformation, or error handling for JSON data.
 
-These middleware components work together to enhance the server's capabilities, ensuring proper versioning, security, and data format consistency across the application.
+These middleware components work together to ensure that incoming requests are properly versioned, authenticated, and processed before reaching the main application logic.
+
+## Entry points
+The main entry point for the middleware is the `mod.rs` file, which declares and exports the three submodules:
+
+1. `api_version`: Handles API versioning logic
+2. `auth_middleware`: Manages authentication and authorization
+3. `json_middleware`: Processes JSON-related tasks
+
+Developers working with this codebase should start by examining these modules to understand how requests are preprocessed and how to integrate new middleware functionality.
 
 ## Key Files
-
 1. `api_version.rs`: 
-   - Implements API versioning middleware.
-   - Defines `APIVersion` enum and `ApiVersionMiddleware` struct.
-   - Determines API version based on headers, dataset creation dates, or environment variables.
+   - Defines the `APIVersion` enum and implements the versioning middleware.
+   - Uses the `ApiVersionCheckFactory` and `ApiVersionMiddleware` to process requests.
 
 2. `auth_middleware.rs`:
-   - Implements authentication and authorization middleware.
-   - Defines `AuthenticationMiddleware` struct and various helper functions.
-   - Handles user authentication, API key validation, and role-based access control.
+   - Implements the `AuthenticationMiddleware` for user authentication and authorization.
+   - Handles both session-based and API key-based authentication.
+   - Integrates with OpenID Connect for user authentication.
 
 3. `json_middleware.rs`:
-   - Implements JSON content type middleware.
-   - Defines `JsonMiddleware` and `JsonMiddlewareFactory` structs.
-   - Ensures "application/json" Content-Type header for incoming requests.
-
-4. `mod.rs`:
-   - Acts as the entry point for the middleware module.
-   - Declares and exposes the three submodules: `api_version`, `auth_middleware`, and `json_middleware`.
+   - While not detailed in the provided summaries, this file likely handles JSON processing for requests and responses.
 
 ## Dependencies
-The middleware components rely on several external libraries and frameworks:
+The middleware components rely on several external libraries:
 
-1. Actix Web (actix_web): The primary web framework used for building the server application.
-2. Actix HTTP (actix_http): Provides HTTP-related types and constants.
-3. Chrono: Used for date and time handling in API versioning.
-4. Sentry: Integrated for error tracking and logging.
-5. Redis: Used for caching in the authentication middleware.
-6. UUID: Employed for unique identifier generation and handling.
+1. `actix-web`: Web framework for handling HTTP requests and responses
+2. `actix-identity`: For managing user identity and sessions
+3. `oauth2` and `openidconnect`: For implementing OpenID Connect authentication
+4. `diesel`: ORM for database operations
+5. `redis`: For caching user data
+6. `sentry`: For error tracking and monitoring
+7. `chrono`: For date and time handling
+8. `utoipa`: For OpenAPI documentation generation
 
 ## Configuration
-The API versioning middleware uses an environment variable `V2_VERSIONING_DATE` to determine the cutoff date for V2 API version. If not set, it defaults to "2024-07-14".
+The middleware components use environment variables for configuration:
 
-The authentication middleware likely relies on configuration for database connections, Redis caching, and possibly JWT secret keys (though not explicitly mentioned in the provided summaries).
+1. API Versioning:
+   - `V2_VERSIONING_DATE`: Cutoff date for V2 API version (default: "2024-07-14")
 
-## Error Handling
-The middleware components use a `ServiceError` enum for error handling, which is converted into appropriate HTTP responses. Various error cases are handled, such as unauthorized access, forbidden actions, and bad requests.
+2. Authentication:
+   - Various environment variables for OpenID Connect configuration (client ID, secret, etc.)
+   - Database connection details
+   - Redis configuration for caching
 
-In summary, this middleware directory contains essential components that enhance the server's functionality by providing API versioning, robust authentication and authorization, and consistent JSON handling. These middleware modules work together to ensure that the server can efficiently process requests, maintain security, and provide a consistent API experience across different versions.
+Developers should ensure these environment variables are properly set for the middleware to function correctly.
+
+In summary, this middleware directory provides crucial functionality for managing API versions, authenticating users, and processing JSON data in the web application. It serves as a central point for request preprocessing and cross-cutting concerns, ensuring that the main application logic receives properly validated and authenticated requests.

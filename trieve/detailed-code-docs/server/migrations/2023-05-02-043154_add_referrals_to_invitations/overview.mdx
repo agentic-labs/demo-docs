@@ -8,56 +8,49 @@ This directory contains SQL migration files for adding a new `referral_tokens` c
 ## What does it do?
 This migration modifies the database structure by adding a new capability to store referral token information within invitation records. Here's a simple explanation of what it does:
 
-1. When applied (using the `up.sql` file), it adds a new column called `referral_tokens` to the `invitations` table. This column can store text data, which is likely used to keep track of referral tokens associated with each invitation.
+1. When applied (using the `up.sql` file), it adds a new column called `referral_tokens` to the `invitations` table. This column can store text data, allowing the system to associate referral tokens with specific invitations.
 
-2. If the migration needs to be reversed (using the `down.sql` file), it removes the `referral_tokens` column from the `invitations` table, effectively undoing the changes made by the `up.sql` file.
+2. If the migration needs to be reversed (using the `down.sql` file), it removes the `referral_tokens` column from the `invitations` table, returning the table to its previous state.
 
-This change allows the system to associate referral information with invitations, which could be used for tracking or rewarding referrals in the application.
+This change enables the application to track and manage referral tokens as part of the invitation process, which could be used for features like referral programs or tracking the source of invitations.
 
 ## Key Files
 
-1. `up.sql`: This file contains the SQL command to add the `referral_tokens` column to the `invitations` table. Here's the content of the file:
+1. `up.sql`:
+   - This file contains the SQL command to add the `referral_tokens` column to the `invitations` table.
+   - The command used is:
+     ```sql
+     ALTER TABLE invitations ADD COLUMN referral_tokens TEXT;
+     ```
+   - This adds a new TEXT column named `referral_tokens` to the `invitations` table.
 
-   ```sql
-   ALTER TABLE invitations
-   ADD COLUMN referral_tokens TEXT;
-   ```
-
-   This command modifies the `invitations` table by adding a new `TEXT` column named `referral_tokens`.
-
-2. `down.sql`: This file contains the SQL command to remove the `referral_tokens` column from the `invitations` table. Here's the content of the file:
-
-   ```sql
-   ALTER TABLE invitations
-   DROP COLUMN referral_tokens;
-   ```
-
-   This command removes the `referral_tokens` column from the `invitations` table, effectively reverting the changes made by the `up.sql` file.
+2. `down.sql`:
+   - This file contains the SQL command to remove the `referral_tokens` column from the `invitations` table.
+   - The command used is:
+     ```sql
+     ALTER TABLE invitations DROP COLUMN referral_tokens;
+     ```
+   - This removes the `referral_tokens` column from the `invitations` table, effectively undoing the changes made by the `up.sql` file.
 
 ## Side Effects
 Applying this migration will have the following side effects:
 
-1. The schema of the `invitations` table will be modified.
-2. Existing rows in the `invitations` table will have a `NULL` value for the new `referral_tokens` column since no default value is specified.
-3. Applications or queries that rely on the structure of the `invitations` table may need to be updated to accommodate the new column.
-
-Reverting this migration will permanently remove the `referral_tokens` column from the `invitations` table, along with any data stored in that column.
+1. The `invitations` table structure will be modified, which may affect any queries or application code that interacts with this table.
+2. Existing rows in the `invitations` table will have a `NULL` value for the new `referral_tokens` column unless a default value is specified (which is not the case in this migration).
+3. When reverting the migration, any data stored in the `referral_tokens` column will be permanently lost.
 
 ## Performance Considerations
-1. Adding or dropping a column is generally a fast operation, especially when no default value is specified for the new column.
-2. However, for very large tables, these operations might take some time and could potentially lock the table during the migration.
-3. The impact on performance depends on the size of the table and the specific database system being used.
+While adding or removing a column is generally a fast operation, there are some performance considerations to keep in mind:
 
-## Configuration
-This migration does not require any specific configuration. However, it's important to note that:
+1. For very large tables, the migration might take some time to complete and could potentially lock the table during the process.
+2. The `TEXT` data type used for the `referral_tokens` column allows for storing strings of any length. Depending on the expected content and usage, a more specific data type might be more appropriate and could have performance implications.
 
-1. The migration uses the `TEXT` data type for the `referral_tokens` column, which allows for storing strings of any length.
-2. No default value or constraints are specified for the new column.
+## TODOs and Potential Improvements
+While there are no explicit TODOs in the migration files, there are some potential improvements to consider:
 
-Depending on the application's requirements, you might want to consider the following in future migrations:
+1. Adding a default value or constraints for the `referral_tokens` column in a future migration, if required by the application logic.
+2. Considering a more specific data type or adding constraints for the `referral_tokens` column, depending on the expected content and usage.
+3. Ensuring that all application code and queries that interact with the `invitations` table are updated to accommodate the new column.
+4. Documenting the purpose and expected format of the `referral_tokens` data for future developers.
 
-1. Adding a default value for the `referral_tokens` column.
-2. Adding constraints to the `referral_tokens` column (e.g., NOT NULL, unique constraints).
-3. Considering a more specific data type if the expected content of `referral_tokens` has a known maximum length or specific format.
-
-When applying or reverting this migration, ensure that your database migration tool is correctly configured to use these SQL files in the appropriate order.
+In conclusion, this migration adds functionality to track referral tokens within the invitation system, potentially enabling new features or improving existing ones related to user referrals and invitation tracking.

@@ -3,67 +3,68 @@ title: "server-deployment.yaml"
 ---
 
 ## High-level description
-This code defines a Kubernetes Deployment for a server application named "server". It specifies the container image, port mappings, environment variables, resource requests, and other configurations for deploying and running the server. It also includes logic for using a Cloud SQL proxy when deploying to Google Cloud and leverages Helm templating for dynamic configuration.
+This Kubernetes Deployment manifest defines the configuration for deploying the server component of the Trieve application. It specifies container settings, environment variables, and resource requirements for the server, as well as additional configurations for cloud deployments.
 
 ## Code Structure
-The code defines a Kubernetes Deployment resource using YAML syntax. It includes metadata for the deployment, specifications for selecting pods, and a template for creating pods. The template further specifies metadata for the pods, service account configuration, container specifications (including image, ports, and environment variables), and optional configurations for a Cloud SQL proxy.
-
-## References
-This code references various Helm values from `values.yaml` file, including:
-- `.Release.Name`: The name of the Helm release.
-- `.Values.environment`: The deployment environment (e.g., "gcloud", "local").
-- `.Values.containers.server.tag`: The Docker tag for the server image.
-- `.Values.config.*`: Various configuration options for the server and its dependencies.
-- `.Values.postgres.*`: Configuration options for the PostgreSQL database.
-- `.Values.qdrant.*`: Configuration options for the Qdrant vector database.
+The manifest is structured as a Kubernetes Deployment resource, containing metadata, selector, and template specifications. The template defines the pod configuration, including containers, environment variables, and optional cloud-specific settings.
 
 ## Symbols
-### `server` Deployment
+
+### Deployment
 #### Description
-This symbol defines a Kubernetes Deployment named "server" responsible for deploying the server application.
-
-#### Inputs
-This symbol uses Helm values provided during deployment.
-
-#### Outputs
-A deployed server application running in a Kubernetes cluster.
+Defines a Kubernetes Deployment for the server component of the Trieve application.
 
 #### Internal Logic
-1. **Deployment Metadata:** Defines metadata like name and labels for the deployment.
-2. **Pod Selector:** Specifies how to select pods belonging to this deployment using labels.
-3. **Pod Template:** Defines a template for creating pods.
-    - **Pod Metadata:** Sets labels for the pods.
-    - **Service Account:** Configures the service account for the pod, using "cloud-postgres-service-account" when the environment is "gcloud".
-    - **Containers:** Defines the containers to run within the pod.
-        - **`server` Container:**
-            - **Resources:** Requests 1 CPU for the container.
-            - **Image:** Builds the Docker image name based on the environment and specified tag.
-            - **Ports:** Exposes container port 8090.
-            - **Environment Variables:** Sets various environment variables using values from the Helm chart, including configuration options, API keys, and database connection details.
-        - **`cloud-sql-proxy` Container (Conditional):
-            - This container is included only when deploying to Google Cloud (`eq $.Values.environment "gcloud"`).
-            - It sets up a Cloud SQL proxy to connect to the Cloud SQL instance.
-            - It configures the proxy with arguments for structured logs, automatic IAM authentication, port, and the Cloud SQL instance connection name.
-            - It sets up a security context to run the container as a non-root user.
-            - It defines resource requests for memory and CPU.
-
-## Side Effects
-This code, when deployed, will:
-- Create a Kubernetes Deployment named "server".
-- Deploy pods running the server application containerized within Docker.
-- Create and configure a Cloud SQL proxy when deploying to Google Cloud.
-
-## Dependencies
-This code depends on:
-- Kubernetes: For deploying and managing the application.
-- Docker: For containerizing the server application.
-- Helm: For templating and packaging the deployment configuration.
+1. Sets up metadata and labels for the deployment
+2. Defines selector for pod matching
+3. Specifies pod template with container configurations
+4. Configures environment variables for the server container
+5. Adds cloud-specific configurations when deployed in Google Cloud
 
 ## Configuration
-This code relies on various configuration options provided through Helm values. Refer to the `values.yaml` file for available options and their descriptions.
+The deployment configuration includes numerous environment variables that control various aspects of the server's behavior and connections to external services. Key configurations include:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| SENTRY_URL | string | URL for Sentry error tracking |
+| ADMIN_API_KEY | string | API key for admin access |
+| BASE_SERVER_URL | string | Base URL for the server |
+| REDIS_URL | string | Connection URL for Redis |
+| QDRANT_URL | string | URL for Qdrant vector database |
+| DATABASE_URL | string | Connection URL for PostgreSQL database |
+| OPENAI_API_KEY | string | API key for OpenAI services |
+| S3_ENDPOINT | string | Endpoint for S3 storage |
+| STRIPE_SECRET | string | Secret key for Stripe integration |
+| OIDC_CLIENT_SECRET | string | Client secret for OpenID Connect |
+| GPU_SERVER_ORIGIN | string | Origin for GPU server |
+| EMBEDDING_SERVER_ORIGIN | string | Origin for embedding server |
+| CLICKHOUSE_URL | string | URL for ClickHouse analytics database |
+
+## Dependencies
+The deployment relies on several external services and components:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| Redis | Caching and temporary data storage |
+| Qdrant | Vector database for similarity search |
+| PostgreSQL | Primary relational database |
+| S3 | Object storage |
+| OpenAI | AI services |
+| Stripe | Payment processing |
+| ClickHouse | Analytics database |
 
 ## Error Handling
-This code does not implement specific error handling mechanisms beyond the standard Kubernetes error handling.
+The deployment includes Sentry integration for error tracking, configured through the `SENTRY_URL` environment variable.
 
-## Logging
-This code does not explicitly define logging mechanisms. Logging configurations would likely be managed within the server application itself.
+## Performance Considerations
+1. The server container requests 1 CPU unit.
+2. For Google Cloud deployments, a Cloud SQL Proxy is included with specific resource requests (2Gi memory, 1 CPU).
+3. The deployment uses environment variables to configure connection details for various services, allowing for flexible scaling and management of external dependencies.
+
+## API/Interface Reference
+The server exposes port 8090, which is likely the main API endpoint for the Trieve application.
+
+## Notes
+1. The deployment includes conditional logic for Google Cloud deployments, adding a Cloud SQL Proxy container and using a specific service account.
+2. The image used for the server container is determined dynamically based on the deployment environment (local vs. non-local).
+3. Many configuration options are parameterized using Helm templating, allowing for easy customization across different environments.

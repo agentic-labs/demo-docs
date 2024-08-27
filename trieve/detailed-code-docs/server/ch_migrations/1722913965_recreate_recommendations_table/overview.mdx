@@ -3,24 +3,47 @@ title: "Overview"
 ---
 
 ## High-level description
-This directory contains SQL migration scripts for creating and dropping a `recommendations` table in a ClickHouse database. The migration is identified by the timestamp 1722913965 and is specifically for recreating the recommendations table. The directory includes two SQL files: `up.sql` for creating the table and `down.sql` for dropping it.
+This directory contains SQL migration scripts for recreating the `recommendations` table in a ClickHouse database. It consists of two files: `up.sql` for creating the table and `down.sql` for dropping it. These scripts are part of a database migration system, allowing for version control and easy management of database schema changes.
 
 ## What does it do?
-These migration scripts manage the lifecycle of a `recommendations` table in a ClickHouse database:
+The migration scripts in this directory perform the following actions:
 
-1. The `up.sql` script creates a new `recommendations` table with a specific structure designed to store various attributes of recommendations, such as recommendation types, associated IDs, request parameters, results, and metadata.
+1. The `up.sql` script creates a new `recommendations` table in the ClickHouse database. This table is designed to store various attributes of recommendations, including unique identifiers, recommendation types, positive and negative IDs, request parameters, results, and associated metadata. The table uses the MergeTree engine, which is optimized for efficient data storage and retrieval.
 
-2. The `down.sql` script provides a way to revert the changes by dropping the `recommendations` table if it exists.
+2. The `down.sql` script provides a way to revert the changes made by the `up.sql` script. It drops the `recommendations` table if it exists, effectively removing it from the database schema.
 
-This setup allows for version control of database schema changes, enabling easy deployment and rollback of database structure modifications.
+These scripts allow developers to easily apply or roll back changes to the database schema, ensuring consistency across different environments and facilitating collaborative development.
 
 ## Key Files
 
-### up.sql
-This file contains the SQL commands to create the `recommendations` table. Here's a breakdown of its structure:
+1. `up.sql`:
+   - Creates the `recommendations` table with a complex structure.
+   - Uses the MergeTree engine for optimized performance.
+   - Implements partitioning, ordering, and TTL (Time To Live) features.
+
+2. `down.sql`:
+   - Drops the `recommendations` table if it exists.
+   - Provides a clean way to revert the changes made by the `up.sql` script.
+
+## Dependencies
+The migration scripts are designed specifically for ClickHouse, a column-oriented database management system. They use ClickHouse-specific syntax and features, such as:
+
+- MergeTree engine
+- Array data types
+- ClickHouse-specific functions (e.g., `toYYYYMM`)
+
+## Configuration
+The `recommendations` table created by the `up.sql` script has the following configuration:
+
+- Engine: MergeTree
+- Ordering: `(id, created_at)`
+- Partitioning: `(toYYYYMM(created_at), dataset_id)`
+- TTL: `created_at + INTERVAL 30 DAY`
+
+The table structure includes the following columns:
 
 ```sql
-CREATE TABLE IF NOT EXISTS recommendations
+CREATE TABLE recommendations
 (
     id UUID,
     recommendation_type String,
@@ -37,38 +60,15 @@ CREATE TABLE IF NOT EXISTS recommendations
 ENGINE = MergeTree()
 ORDER BY (id, created_at)
 PARTITION BY (toYYYYMM(created_at), dataset_id)
-TTL created_at + INTERVAL 30 DAY;
+TTL created_at + INTERVAL 30 DAY
 ```
 
-The table uses the MergeTree engine, which is optimized for insert and select queries on large datasets. It's ordered by `id` and `created_at`, partitioned by month and `dataset_id`, and has a TTL (Time To Live) set to automatically delete data older than 30 days.
+This configuration allows for efficient data storage, retrieval, and automatic data cleanup after 30 days.
 
-### down.sql
-This file contains a simple SQL command to drop the `recommendations` table:
+The `down.sql` script doesn't require any specific configuration as it simply drops the table:
 
 ```sql
 DROP TABLE IF EXISTS recommendations;
 ```
 
-This command ensures that the table is removed if it exists, allowing for a clean rollback of the migration.
-
-## Performance Considerations
-1. The use of the MergeTree engine in `up.sql` is optimal for handling large datasets and complex queries efficiently.
-2. Ordering by `id` and `created_at` allows for quick lookups and range queries on these columns.
-3. Partitioning by month and `dataset_id` can significantly improve query performance by allowing the database to skip irrelevant partitions during data retrieval.
-4. The TTL setting automatically manages data retention, keeping the table size under control by removing old data.
-
-## Configuration
-The `recommendations` table in `up.sql` has a built-in configuration for data retention:
-
-| Option | Value | Description |
-|:-------|:------|:------------|
-| TTL | 30 DAY | Time-to-live for data in the table, based on the `created_at` column |
-
-This configuration ensures that data older than 30 days is automatically deleted, helping to manage the growth of the table over time.
-
-## Side Effects
-- Running `up.sql` will create the `recommendations` table if it doesn't already exist. If the table already exists, the script will not modify it due to the `IF NOT EXISTS` clause.
-- Data in the `recommendations` table will be automatically deleted after 30 days due to the TTL setting.
-- Executing `down.sql` will permanently delete the `recommendations` table and all its data if it exists.
-
-These migration scripts provide a structured way to manage the `recommendations` table in a ClickHouse database, allowing for easy creation, modification, and deletion of the table as needed during the development and deployment process.
+These migration scripts provide a robust way to manage the `recommendations` table in the ClickHouse database, allowing for easy schema updates and rollbacks as needed.
