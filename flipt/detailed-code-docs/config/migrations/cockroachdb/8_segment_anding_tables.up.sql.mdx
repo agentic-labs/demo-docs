@@ -1,0 +1,63 @@
+---
+title: "8_segment_anding_tables.up.sql"
+---
+
+## High-level description
+This SQL script creates two new tables: `rule_segments` and `rollout_segment_references`. These tables establish relationships between rules and segments, and between rollout segments and segments, respectively. The script also populates these new tables with existing data from the `rules` and `rollout_segments` tables.
+
+## Symbols
+
+### Table: rule_segments
+#### Description
+This table establishes a many-to-many relationship between rules and segments. It allows multiple segments to be associated with a single rule and vice versa.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rule_id | VARCHAR(255) | The ID of the rule, references the `rules` table |
+| namespace_key | VARCHAR(255) | The namespace key of the segment |
+| segment_key | VARCHAR(255) | The key of the segment |
+
+#### Constraints
+- Primary Key: (rule_id, namespace_key, segment_key)
+- Foreign Key: rule_id references rules(id) ON DELETE CASCADE
+- Foreign Key: (namespace_key, segment_key) references segments(namespace_key, key) ON DELETE CASCADE
+
+### Table: rollout_segment_references
+#### Description
+This table establishes a many-to-many relationship between rollout segments and segments. It allows multiple segments to be associated with a single rollout segment and vice versa.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rollout_segment_id | VARCHAR(255) | The ID of the rollout segment, references the `rollout_segments` table |
+| namespace_key | VARCHAR(255) | The namespace key of the segment |
+| segment_key | VARCHAR(255) | The key of the segment |
+
+#### Constraints
+- Primary Key: (rollout_segment_id, namespace_key, segment_key)
+- Foreign Key: rollout_segment_id references rollout_segments(id) ON DELETE CASCADE
+- Foreign Key: (namespace_key, segment_key) references segments(namespace_key, key) ON DELETE CASCADE
+
+## Internal Logic
+
+1. The script first creates the `rule_segments` table if it doesn't already exist.
+2. It then inserts data into the `rule_segments` table by selecting from the `rules` table, mapping the `id` column to `rule_id`.
+3. Next, it creates the `rollout_segment_references` table if it doesn't already exist.
+4. Finally, it inserts data into the `rollout_segment_references` table by selecting from the `rollout_segments` table, mapping the `id` column to `rollout_segment_id`.
+
+## Side Effects
+- This script modifies the database schema by adding two new tables.
+- It also populates these new tables with existing data, which may take some time depending on the amount of data in the `rules` and `rollout_segments` tables.
+
+## Performance Considerations
+- The insertion operations might be slow if there are a large number of records in the `rules` and `rollout_segments` tables.
+- The `ON DELETE CASCADE` constraints ensure referential integrity but may impact performance when deleting records from the referenced tables.
+
+## Dependencies
+This script assumes the existence of the following tables:
+| Dependency | Purpose |
+|:-----------|:--------|
+| rules | Referenced by rule_segments table |
+| segments | Referenced by both new tables |
+| rollout_segments | Referenced by rollout_segment_references table |

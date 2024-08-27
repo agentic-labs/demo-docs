@@ -1,0 +1,84 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains the generated code for the MetadataService in the Flipt project. The MetadataService is a gRPC service that provides methods to retrieve configuration and information about the Flipt instance. The code includes protocol buffer definitions, gRPC service interfaces, and gRPC-Gateway reverse proxy implementations for translating gRPC into RESTful JSON APIs.
+
+## What does it do?
+
+The MetadataService provides two main functionalities:
+
+1. GetConfiguration: This method allows clients to retrieve the configuration of the Flipt instance. It can be accessed via both gRPC and a RESTful HTTP GET endpoint (/meta/config).
+
+2. GetInfo: This method enables clients to fetch information about the Flipt instance. Similar to GetConfiguration, it can be accessed through gRPC and a RESTful HTTP GET endpoint (/meta/info).
+
+These functionalities allow developers and systems to query the Flipt server for its current configuration and status, which can be useful for monitoring, debugging, and integration purposes.
+
+## Key Files
+
+1. meta.pb.go: This file contains the protocol buffer definitions and generated Go code for the MetadataService. It defines the service interface and message types used in the API.
+
+2. meta.pb.gw.go: This file implements the gRPC-Gateway reverse proxy for the MetadataService. It translates gRPC calls into RESTful JSON APIs, allowing the service to be accessed via HTTP in addition to gRPC.
+
+3. meta_grpc.pb.go: This file provides the gRPC client and server implementations for the MetadataService. It includes the necessary code for registering the service with a gRPC server and creating clients to interact with the service.
+
+## Dependencies
+
+The code in this directory relies on several external libraries and frameworks:
+
+1. gRPC (google.golang.org/grpc): Used for implementing the RPC service and client/server communication.
+
+2. Protocol Buffers (google.golang.org/protobuf): Provides serialization and deserialization of structured data.
+
+3. gRPC-Gateway (github.com/grpc-ecosystem/grpc-gateway/v2): Enables the translation of gRPC to RESTful JSON APIs.
+
+4. Google API (google.golang.org/genproto/googleapis/api): Used for the HttpBody message type, allowing flexible response formatting.
+
+These dependencies were chosen to leverage the power of gRPC for efficient communication while also providing RESTful API access for broader compatibility.
+
+## Configuration
+
+The MetadataService itself doesn't require specific configuration files or environment variables. However, the configuration it returns (via the GetConfiguration method) would typically be set up elsewhere in the Flipt application.
+
+## API/Interface Reference
+
+The MetadataService provides two main API endpoints:
+
+1. GetConfiguration
+   - gRPC: `rpc GetConfiguration(google.protobuf.Empty) returns (google.api.HttpBody)`
+   - HTTP: GET /meta/config
+   - Description: Retrieves the configuration of the Flipt instance
+
+2. GetInfo
+   - gRPC: `rpc GetInfo(google.protobuf.Empty) returns (google.api.HttpBody)`
+   - HTTP: GET /meta/info
+   - Description: Retrieves information about the Flipt instance
+
+Both methods accept an empty request and return an HttpBody, which allows for flexible response formatting. The actual content of the responses would be determined by the server implementation of the MetadataService.
+
+Here's an example of how a client might use the gRPC client to call these methods:
+
+```go
+client := NewMetadataServiceClient(conn)
+ctx := context.Background()
+
+// Get Configuration
+configResp, err := client.GetConfiguration(ctx, &emptypb.Empty{})
+if err != nil {
+    log.Fatalf("Failed to get configuration: %v", err)
+}
+fmt.Printf("Configuration: %s\n", configResp.GetData())
+
+// Get Info
+infoResp, err := client.GetInfo(ctx, &emptypb.Empty{})
+if err != nil {
+    log.Fatalf("Failed to get info: %v", err)
+}
+fmt.Printf("Info: %s\n", infoResp.GetData())
+```
+
+For HTTP clients, the endpoints can be accessed using standard GET requests to the respective URLs (/meta/config and /meta/info).
+
+This API design allows for easy integration with both gRPC and REST-based systems, providing flexibility in how clients interact with the Flipt metadata service.

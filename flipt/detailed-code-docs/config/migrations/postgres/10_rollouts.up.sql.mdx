@@ -1,0 +1,82 @@
+---
+title: "10_rollouts.up.sql"
+---
+
+## High-level description
+This SQL script creates three tables: `rollouts`, `rollout_thresholds`, and `rollout_segments`. These tables are designed to manage feature rollouts, their thresholds, and segment-based rollouts in a PostgreSQL database, likely for a feature flag management system.
+
+## Code Structure
+The script defines three interconnected tables with foreign key relationships. The `rollouts` table is the main table, while `rollout_thresholds` and `rollout_segments` are related tables that provide additional functionality for managing rollouts.
+
+## Symbols
+
+### `rollouts` table
+#### Description
+This table stores information about feature rollouts.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key for the rollout |
+| namespace_key | VARCHAR(255) | Foreign key referencing the namespaces table |
+| flag_key | VARCHAR(255) | Key of the associated feature flag |
+| type | INTEGER | Type of the rollout (default: 0) |
+| description | TEXT | Description of the rollout |
+| rank | INTEGER | Rank of the rollout (default: 1) |
+| created_at | TIMESTAMP | Timestamp of creation (default: current timestamp) |
+| updated_at | TIMESTAMP | Timestamp of last update (default: current timestamp) |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Key: `(namespace_key, flag_key)` references `flags (namespace_key, key)` with CASCADE delete
+- Foreign Key: `namespace_key` references `namespaces` with CASCADE delete
+
+### `rollout_thresholds` table
+#### Description
+This table stores threshold information for rollouts.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key for the threshold |
+| namespace_key | VARCHAR(255) | Foreign key referencing the namespaces table |
+| rollout_id | VARCHAR(255) | Foreign key referencing the rollouts table |
+| percentage | float | Percentage threshold for the rollout (default: 0) |
+| value | BOOLEAN | Value associated with the threshold (default: FALSE) |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Key: `namespace_key` references `namespaces` with CASCADE delete
+- Foreign Key: `rollout_id` references `rollouts` with CASCADE delete
+
+### `rollout_segments` table
+#### Description
+This table stores segment-based rollout information.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key for the segment rollout |
+| namespace_key | VARCHAR(255) | Foreign key referencing the namespaces table |
+| rollout_id | VARCHAR(255) | Foreign key referencing the rollouts table |
+| segment_key | VARCHAR(255) | Key of the associated segment |
+| value | BOOLEAN | Value associated with the segment rollout (default: FALSE) |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Key: `namespace_key` references `namespaces` with CASCADE delete
+- Foreign Key: `rollout_id` references `rollouts` with CASCADE delete
+- Foreign Key: `(namespace_key, segment_key)` references `segments (namespace_key, key)` with CASCADE delete
+
+## Dependencies
+This SQL script assumes the existence of the following tables:
+| Dependency | Purpose |
+|:-----------|:--------|
+| namespaces | Referenced by all three tables for namespace management |
+| flags | Referenced by the rollouts table for flag management |
+| segments | Referenced by the rollout_segments table for segment management |
+
+## Performance Considerations
+1. The use of VARCHAR(255) for ID fields might impact performance for large datasets. Consider using more compact data types if possible.
+2. Indexes are not explicitly defined in this script. Depending on the query patterns, adding indexes on frequently used columns (e.g., namespace_key, rollout_id) might improve performance.
+3. The CASCADE delete option on foreign keys ensures referential integrity but may lead to unintended data loss if not managed carefully.

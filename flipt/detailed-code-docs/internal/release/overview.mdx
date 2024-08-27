@@ -1,0 +1,72 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/release` directory contains code responsible for checking and managing software releases for the Flipt application. It provides functionality to compare the current version with the latest release available on GitHub, determine if an update is available, and retrieve information about the latest release.
+
+## What does it do?
+This directory implements a release checking system that:
+1. Connects to the GitHub API to fetch information about the latest Flipt release.
+2. Compares the current version of the application with the latest available version.
+3. Determines if an update is available.
+4. Provides information about the latest release, including its version number and download URL.
+5. Validates whether a given version string represents a proper release version (not a development or snapshot version).
+
+This functionality allows the Flipt application to inform users when a new version is available and provide them with the necessary information to update their installation.
+
+## Key Files
+
+### check.go
+This file contains the core functionality for checking releases. It defines:
+- The `Info` struct, which holds information about the current and latest versions.
+- The `githubReleaseChecker` interface and its implementation, which interacts with the GitHub API.
+- The `Check` function, which performs the version comparison and determines if an update is available.
+- The `Is` function, which validates if a given version string represents a release version.
+
+Key functions and their purposes:
+- `Check(ctx context.Context, version string) (Info, error)`: This function is the main entry point for checking if a new release is available. It takes the current version as input and returns an `Info` struct containing details about the current and latest versions.
+- `Is(version string) bool`: This function determines if a given version string represents a release version (not a dev, snapshot, or release candidate).
+
+### check_test.go
+This file contains unit tests for the functionality implemented in `check.go`. It includes:
+- Tests for the `getLatestRelease` function, verifying successful retrieval of release information and error handling.
+- Tests for the `Check` function, ensuring correct version comparison and update availability detection.
+- Tests for the `Is` function, validating proper identification of release version strings.
+
+## Dependencies
+The `internal/release` package relies on the following external libraries:
+
+1. github.com/blang/semver/v4
+   - Purpose: Parsing and comparing semantic versions.
+   - This library is crucial for accurately comparing version strings and determining if an update is available.
+
+2. github.com/google/go-github/v32/github
+   - Purpose: Interacting with the GitHub API.
+   - This library simplifies the process of fetching release information from the Flipt GitHub repository.
+
+## Configuration
+The package uses the following configuration:
+- GitHub repository owner: "flipt-io"
+- GitHub repository name: "flipt"
+
+These values are hardcoded in the `githubReleaseCheckerImpl` struct's `getLatestRelease` method.
+
+Example usage of the `Check` function:
+
+```go
+ctx := context.Background()
+currentVersion := "v1.0.0"
+info, err := release.Check(ctx, currentVersion)
+if err != nil {
+    // Handle error
+}
+if info.UpdateAvailable {
+    fmt.Printf("A new version is available: %s\n", info.LatestVersion)
+    fmt.Printf("Download URL: %s\n", info.LatestVersionURL)
+} else {
+    fmt.Println("You are running the latest version.")
+}
+```
+
+This code demonstrates how to use the `Check` function to determine if an update is available and retrieve information about the latest release.

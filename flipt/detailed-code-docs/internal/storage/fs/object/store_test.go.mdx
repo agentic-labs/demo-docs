@@ -1,0 +1,129 @@
+---
+title: "store_test.go"
+---
+
+## High-level description
+The `store_test.go` file in the `internal/storage/fs/object` package contains tests for the `SnapshotStore` type, which is responsible for managing snapshots of feature flags stored in various cloud object storage services like S3, Azure Blob Storage, and Google Cloud Storage. The tests cover scenarios with and without a prefix for organizing objects within a bucket.
+
+## Code Structure
+The `Test_Store` function serves as the main test suite, encompassing subtests for different cloud storage providers (memblob, fileblob, s3, azure, gcs). Each subtest utilizes the `testStore` function, which sets up a test environment for a specific provider and then runs two subtests: one for testing without a prefix and another for testing with a prefix.
+
+## Symbols
+
+### `Test_Store`
+#### Description
+The `Test_Store` function is a test suite that tests the `SnapshotStore` type with different cloud storage providers.
+
+#### Inputs
+This function takes a testing.T pointer as input.
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+The function defines a series of subtests, each targeting a different cloud storage provider. Each subtest sets up a temporary bucket in the respective provider and then calls the `testStore` function to perform further tests.
+
+### `testStore`
+#### Description
+The `testStore` function is a helper function that sets up a test environment for a specific cloud storage provider and then runs two subtests: one for testing without a prefix and another for testing with a prefix.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| fn | func(*testing.T) string | A function that returns the connection string for the cloud storage provider. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Retrieves the connection string for the cloud storage provider using the provided `fn` function.
+    - Opens a connection to the bucket.
+    - Writes test data to the bucket.
+2. **"WithoutPrefix" Subtest:**
+    - Creates a new `SnapshotStore` without a prefix.
+    - Verifies that both "production" and "prefix" namespaces are present but empty.
+    - Updates the `features.yml` file in the bucket.
+    - Waits for the `SnapshotStore` to poll for changes and update its snapshot.
+    - Verifies that the "production" namespace and the "foo" flag are now present in the snapshot.
+3. **"WithPrefix" Subtest:**
+    - Creates a new `SnapshotStore` with the prefix "prefix".
+    - Verifies that the "production" namespace does not exist (as it's now prefixed).
+    - Verifies that the "prefix" namespace is present.
+
+### `writeTestDataToBucket`
+#### Description
+The `writeTestDataToBucket` function is a helper function that writes test data from the embedded `testdata` filesystem to a given cloud storage bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| ctx | context.Context | The context for the operation. |
+| bucket | *gcblob.Bucket | The cloud storage bucket to write to. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. Opens the embedded `testdata` filesystem.
+2. Walks through the files in the filesystem.
+3. For each file, reads its contents and writes them to the cloud storage bucket with the same file path.
+
+### `s3Client`
+#### Description
+The `s3Client` function is a helper function that creates an S3 client for testing purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| endpoint | string | The endpoint URL for the S3 service. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | *s3.Client | An S3 client. |
+
+#### Internal Logic
+1. Loads the default AWS configuration.
+2. If an endpoint is provided, configures the S3 client to use it.
+3. Creates a new S3 client with the specified configuration.
+
+### `azureClient`
+#### Description
+The `azureClient` function is a helper function that creates an Azure Blob Storage client for testing purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| endpoint | string | The endpoint URL for the Azure Blob Storage service. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | *azblob.Client | An Azure Blob Storage client. |
+
+#### Internal Logic
+1. Retrieves the Azure Storage account name and key from environment variables.
+2. Creates shared key credentials using the retrieved account name and key.
+3. Creates a new Azure Blob Storage client with the specified credentials and endpoint.
+
+### `gcsClient`
+#### Description
+The `gcsClient` function is a helper function that creates a Google Cloud Storage client for testing purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | *gstorage.Client | A Google Cloud Storage client. |
+
+#### Internal Logic
+Creates a new Google Cloud Storage client using the default application credentials.

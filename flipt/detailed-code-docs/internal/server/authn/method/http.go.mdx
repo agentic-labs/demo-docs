@@ -1,0 +1,164 @@
+---
+title: "http.go"
+---
+
+## High-level description
+The `http.go` file defines middleware for handling authentication in a gRPC gateway, specifically for GitHub and OIDC authentication methods. It manages cookies, state parameters, and redirects for a secure authentication flow.
+
+## Code Structure
+The `Middleware` struct is central to the code, holding configuration for authentication sessions. It provides methods for forwarding cookies and request prefixes as gRPC metadata (`ForwardCookies`, `ForwardPrefix`), handling authentication responses by setting cookies and redirecting (`ForwardResponseOption`), and decorating the OIDC provider gateway handler to manage state parameters (`Handler`).
+
+## Symbols
+
+### `Middleware`
+#### Description
+The `Middleware` struct provides HTTP middleware functionality for managing authentication sessions, including cookie forwarding, response handling, and state parameter management.
+
+#### Inputs
+None.
+
+#### Outputs
+None.
+
+#### Internal Logic
+The `Middleware` struct itself doesn't have internal logic. Its methods provide the middleware functionality.
+
+### `NewHTTPMiddleware`
+#### Description
+Constructs and configures a new `Middleware` instance with the provided authentication session configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | `config.AuthenticationSession` | Configuration for authentication sessions, including token and state lifetimes, domain, and security settings. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Middleware | `Middleware` | A new instance of the `Middleware` struct initialized with the provided configuration. |
+
+#### Internal Logic
+The function simply initializes a new `Middleware` struct with the provided `config`.
+
+### `ForwardCookies`
+#### Description
+Extracts the values of "flipt_client_state" and "flipt_client_token" cookies from an HTTP request and forwards them as gRPC metadata entries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*http.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metadata.MD | `metadata.MD` | gRPC metadata containing the extracted cookie values. |
+
+#### Internal Logic
+The function iterates over the target cookie keys, retrieves the cookie value from the request, and adds it to the metadata.
+
+### `ForwardPrefix`
+#### Description
+Extracts the "X-Forwarded-Prefix" header from an HTTP request and forwards it as a gRPC metadata entry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*http.Request` | The incoming HTTP request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| metadata.MD | `metadata.MD` | gRPC metadata containing the extracted header value. |
+
+#### Internal Logic
+The function retrieves the header value, and if present, adds it to the metadata.
+
+### `ForwardResponseOption`
+#### Description
+Intercepts outgoing gRPC Callback responses, extracts the `clientToken`, sets it as a cookie in the HTTP response, and redirects the user to the root path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| w | `http.ResponseWriter` | The HTTP response writer. |
+| resp | `proto.Message` | The gRPC response message. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. Checks if the response is of type `auth.CallbackResponse`.
+2. Creates an HTTP cookie with the `clientToken`, setting its attributes based on the configuration.
+3. Sets the cookie in the HTTP response.
+4. Clears the `clientToken` from the gRPC response.
+5. Sets the "Location" header to redirect the user.
+6. Sets the HTTP status code to `http.StatusFound` (302 Redirect).
+
+### `Handler`
+#### Description
+Decorates the OIDC provider gateway handler to manage state parameters for CSRF prevention. It generates a cryptographically random security token, wraps it with the original state parameter, encodes it in base64, and adds it as a query parameter and a cookie.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| next | `http.Handler` | The next HTTP handler in the chain. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| http.Handler | `http.Handler` | An HTTP handler that wraps the next handler with state parameter management. |
+
+#### Internal Logic
+1. Checks if the request path matches the authorize path for OIDC or GitHub authentication.
+2. Generates a random security token.
+3. Creates a JSON payload containing the security token and the original state parameter.
+4. Encodes the JSON payload in base64.
+5. Sets the encoded payload as the "state" query parameter.
+6. Creates an HTTP cookie with the encoded payload, setting its attributes based on the configuration.
+7. Sets the cookie in the HTTP response.
+8. Calls the next handler in the chain.
+
+### `generateSecurityToken`
+#### Description
+Generates a cryptographically random security token, encodes it in base64, and returns the encoded string.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The base64 encoded security token. |
+
+#### Internal Logic
+1. Generates a random 64-byte token.
+2. Encodes the token in base64.
+3. Returns the encoded token.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a way to pass request-scoped values across API boundaries and between processes. |
+| crypto/rand | Provides functionality for generating cryptographically secure random numbers. |
+| encoding/base64 | Provides functionality for encoding and decoding data in base64. |
+| encoding/json | Provides functionality for encoding and decoding JSON data. |
+| net/http | Provides HTTP client and server implementations. |
+| path | Provides functionality for manipulating slash-separated paths. |
+| strings | Provides functionality for manipulating strings. |
+| time | Provides functionality for measuring and displaying time. |
+| go.flipt.io/flipt/internal/config | Provides access to Flipt's configuration. |
+| go.flipt.io/flipt/rpc/flipt/auth | Provides gRPC definitions for authentication related operations. |
+| google.golang.org/grpc/metadata | Provides functionality for working with gRPC metadata. |
+| google.golang.org/protobuf/proto | Provides functionality for working with protocol buffers. |
+
+## Error Handling
+The code uses basic error handling with `if err != nil` checks. Errors encountered during cookie retrieval, JSON marshaling, or random token generation result in HTTP 500 Internal Server Error responses. Authentication failures are handled by specific middleware in `middleware/grpc/middleware.go`.
+
+## Logging
+The code itself doesn't implement logging. Logging is expected to be handled by the calling code or other middleware.

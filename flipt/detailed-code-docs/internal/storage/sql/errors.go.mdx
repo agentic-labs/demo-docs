@@ -1,0 +1,106 @@
+---
+title: "errors.go"
+---
+
+## High-level description
+The `errors.go` file in the `internal/storage/sql` package defines a set of error variables and a function `AdaptError` that converts specific database driver errors into wrapped storage errors. This allows the storage layer to return consistent and meaningful errors regardless of the underlying database driver being used.
+
+## References
+This code references the following symbols:
+- `Driver` (from the same package)
+- `ErrNotFound`, `ErrInvalid`, `ErrCanceled` (from the `go.flipt.io/flipt/errors` package)
+
+## Symbols
+### `AdaptError`
+#### Description
+This function takes an error as input and attempts to adapt it to a more specific storage error based on the underlying database driver. If the error is not recognized or cannot be adapted, the original error is returned.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | The error to adapt. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | The adapted error, or the original error if it cannot be adapted. |
+
+#### Internal Logic
+1. Checks if the input error is nil. If so, returns nil.
+2. Checks if the input error is `sql.ErrNoRows`. If so, returns `errNotFound`.
+3. Switches on the `Driver` type:
+    - For `SQLite` and `LibSQL`, calls `adaptSQLiteError`.
+    - For `CockroachDB` and `Postgres`, calls `adaptPostgresError`.
+    - For `MySQL`, calls `adaptMySQLError`.
+4. If the error is not adapted by any of the driver-specific functions, returns the original error.
+
+### `adaptSQLiteError`
+#### Description
+This function attempts to adapt a SQLite error to a more specific storage error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | The SQLite error to adapt. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | The adapted error, or the original error if it cannot be adapted. |
+
+#### Internal Logic
+1. Attempts to convert the input error to a `sqlite3.Error`.
+2. If the conversion is successful:
+    - Checks if the error code is `sqlite3.ErrConstraint`.
+    - If so, further checks the extended error code:
+        - If it's `sqlite3.ErrConstraintForeignKey`, returns `errForeignKeyNotFound`.
+        - If it's `sqlite3.ErrConstraintUnique`, returns `errNotUnique`.
+        - Otherwise, returns `errConstraintViolated`.
+3. If the error is not adapted, returns the original error.
+
+### `adaptPostgresError`
+#### Description
+This function attempts to adapt a PostgreSQL error to a more specific storage error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | The PostgreSQL error to adapt. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | The adapted error, or the original error if it cannot be adapted. |
+
+#### Internal Logic
+1. Attempts to convert the input error to a `pgconn.PgError`.
+2. If the conversion is successful:
+    - Checks the error code:
+        - If it's `constraintUniqueErr`, returns `errNotUnique`.
+        - If it's `constraintForeignKeyErr`, returns `errForeignKeyNotFound`.
+        - If it's `queryCanceled`, returns `errCanceled`.
+3. Attempts to convert the input error to a `pgconn.ConnectError`.
+4. If the conversion is successful, returns `errConnectionFailed`.
+5. If the error is not adapted, returns the original error.
+
+### `adaptMySQLError`
+#### Description
+This function attempts to adapt a MySQL error to a more specific storage error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | The MySQL error to adapt. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | The adapted error, or the original error if it cannot be adapted. |
+
+#### Internal Logic
+1. Attempts to convert the input error to a `mysql.MySQLError`.
+2. If the conversion is successful:
+    - Checks the error number:
+        - If it's `constraintForeignKeyErrCode`, returns `errForeignKeyNotFound`.
+        - If it's `constraintUniqueErrCode`, returns `errNotUnique`.
+3. If the error is not adapted, returns the original error.

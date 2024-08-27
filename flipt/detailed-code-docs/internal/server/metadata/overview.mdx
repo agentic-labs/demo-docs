@@ -1,0 +1,184 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `metadata` package provides a gRPC server (`Server`) that exposes metadata about the Flipt instance, such as its configuration and runtime information. It implements the `MetadataServiceServer` interface defined in the `meta` package.
+
+## Code Structure
+The `Server` struct holds references to the Flipt configuration (`cfg`) and runtime information (`info`). It implements methods for retrieving this information via gRPC (`GetConfiguration` and `GetInfo`). The `response` function helps package the data into a gRPC response, while the `marshal` function handles JSON marshaling with optional pretty-printing.
+
+## References
+- `go.flipt.io/flipt/internal/config`
+- `go.flipt.io/flipt/internal/info`
+- `go.flipt.io/flipt/rpc/flipt/meta`
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct represents the gRPC server for metadata requests. It holds the Flipt configuration and runtime information.
+
+#### Inputs
+This struct does not take any inputs.
+
+#### Outputs
+This struct does not return any outputs.
+
+#### Internal Logic
+The `Server` struct doesn't have complex internal logic. It mainly acts as a container for the configuration and information data and provides methods to access them.
+
+### `New`
+#### Description
+The `New` function creates a new instance of the `Server` struct, initializing it with the provided configuration and runtime information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `*config.Config` | The Flipt configuration. |
+| info | `info.Flipt` | The Flipt runtime information. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| s | `*Server` | A new instance of the `Server` struct. |
+
+#### Internal Logic
+The function simply initializes a new `Server` struct with the provided configuration and information.
+
+### `RegisterGRPC`
+#### Description
+The `RegisterGRPC` method registers the `Server`'s gRPC services on the provided gRPC server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | `*grpc.Server` | The gRPC server instance to register the services on. |
+
+#### Outputs
+This method does not return any outputs.
+
+#### Internal Logic
+The method calls `meta.RegisterMetadataServiceServer` to register the `Server` as the implementation for the `MetadataServiceServer` interface.
+
+### `GetConfiguration`
+#### Description
+The `GetConfiguration` method handles gRPC requests for the Flipt configuration. It retrieves the configuration data, marshals it into JSON, and returns it as a `httpbody.HttpBody` in the gRPC response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The gRPC request context. |
+| _ | `*emptypb.Empty` | An empty message, as this request doesn't require any input. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| body | `*httpbody.HttpBody` | The gRPC response containing the configuration data as JSON. |
+| err | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. Calls the `response` function to package the configuration data (`s.cfg`) into a `httpbody.HttpBody`.
+2. Returns the response.
+
+### `GetInfo`
+#### Description
+The `GetInfo` method handles gRPC requests for the Flipt runtime information. It retrieves the information data, marshals it into JSON, and returns it as a `httpbody.HttpBody` in the gRPC response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The gRPC request context. |
+| _ | `*emptypb.Empty` | An empty message, as this request doesn't require any input. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| body | `*httpbody.HttpBody` | The gRPC response containing the runtime information as JSON. |
+| err | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. Calls the `response` function to package the runtime information (`s.info`) into a `httpbody.HttpBody`.
+2. Returns the response.
+
+### `SkipsAuthorization`
+#### Description
+The `SkipsAuthorization` method always returns `true`, indicating that authorization is skipped for metadata requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The gRPC request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| skips | `bool` | Always returns `true`. |
+
+#### Internal Logic
+This method simply returns `true`, as authorization is not required for accessing metadata.
+
+### `response`
+#### Description
+The `response` function packages the provided data into a `httpbody.HttpBody` for gRPC responses. It marshals the data into JSON, optionally pretty-printing it based on the request headers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The gRPC request context. |
+| v | `any` | The data to be marshaled and included in the response. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| body | `*httpbody.HttpBody` | The gRPC response containing the marshaled data. |
+| err | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. Calls the `marshal` function to marshal the data (`v`) into JSON.
+2. Creates a new `httpbody.HttpBody` with the marshaled data and "application/json" content type.
+3. Returns the response.
+
+### `marshal`
+#### Description
+The `marshal` function marshals the provided data into JSON, optionally pretty-printing it based on the "grpcgateway-accept" header in the request context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The gRPC request context. |
+| v | `any` | The data to be marshaled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | `[]byte` | The JSON-marshaled data. |
+| err | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. Checks if the "grpcgateway-accept" header in the request context is set to "application/json+pretty".
+2. If so, marshals the data (`v`) into indented JSON using `json.MarshalIndent`.
+3. Otherwise, marshals the data into compact JSON using `json.Marshal`.
+4. Returns the marshaled data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Used for managing the gRPC request context. |
+| encoding/json | Used for marshaling data into JSON format. |
+| google.golang.org/genproto/googleapis/api/httpbody | Used for constructing gRPC responses with HTTP body data. |
+| google.golang.org/grpc | Used for interacting with the gRPC framework. |
+| google.golang.org/grpc/metadata | Used for accessing metadata in the gRPC request context. |
+| google.golang.org/protobuf/types/known/emptypb | Used for representing empty messages in gRPC requests. |
+
+## Error Handling
+The code uses basic error handling with `error` values returned from functions. The `response` function propagates errors encountered during data marshaling.
+
+## API/Interface Reference
+This code implements the `MetadataServiceServer` interface defined in the `go.flipt.io/flipt/rpc/flipt/meta` package. The interface defines the following endpoints:
+
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /meta/config | `GET` | `google.protobuf.Empty` | `google.api.HttpBody` | Returns the Flipt configuration as JSON. |
+| /meta/info | `GET` | `google.protobuf.Empty` | `google.api.HttpBody` | Returns the Flipt runtime information as JSON. |
+

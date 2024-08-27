@@ -1,0 +1,70 @@
+---
+title: "auth.go"
+---
+
+## High-level description
+This code implements integration tests for authentication and authorization in the Flipt system. It defines a set of test cases to verify the behavior of different authentication methods and authorization roles across various operations and namespaces.
+
+## Code Structure
+The main function `Common` orchestrates the test suite, which includes tests for authentication methods and different authorization scenarios. It uses helper functions to test specific permissions and operations for different roles and namespaces.
+
+## Symbols
+
+### `Common`
+#### Description
+This function is the entry point for the integration tests. It sets up the test environment and runs various test cases for authentication and authorization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | Testing object for running tests and reporting results |
+| opts | integration.TestOpts | Options for configuring the test environment |
+
+#### Internal Logic
+1. Creates a client using the provided token.
+2. Runs tests for authentication methods, including listing methods and getting self information.
+3. Iterates through different namespaces and authentication methods (StaticToken, JWT, K8s) to test various authorization scenarios.
+4. Tests different roles (NoRole, Admin, Editor, Viewer, NamespacedViewer) and their permissions.
+5. Finally, tests token expiration.
+
+### Helper Functions
+Several helper functions are defined to test specific permissions and operations:
+
+- `canReadAllIn`: Tests if a client can read all resources in a namespace.
+- `canWriteNamespaces`: Tests if a client can create, update, and delete namespaces.
+- `cannotWriteNamespaces`: Tests if a client is prevented from writing to namespaces.
+- `canWriteNamespacedIn`: Tests if a client can write to resources within a namespace.
+- `cannotReadAnyIn`: Tests if a client is prevented from reading any resources in a namespace.
+- `cannotWriteNamespacedIn`: Tests if a client is prevented from writing to resources within a namespace.
+
+These functions use the `clientCallSet` type to group and execute multiple API calls, asserting their results.
+
+### `clientCallSet`
+#### Description
+A type that represents a set of client API calls to be executed and asserted.
+
+#### Internal Logic
+The `assert` method of `clientCallSet` executes each client call and checks if the result matches the expected authorization (can or cannot perform the action).
+
+## Dependencies
+The code relies on several external packages and internal modules:
+- `testing`: Go's testing framework
+- `github.com/stretchr/testify/assert` and `github.com/stretchr/testify/require`: For test assertions
+- `go.flipt.io/flipt/rpc/flipt`: Flipt's RPC package
+- `go.flipt.io/flipt/rpc/flipt/auth`: Flipt's authentication package
+- `go.flipt.io/flipt/sdk/go`: Flipt's Go SDK
+- `google.golang.org/grpc/codes` and `google.golang.org/grpc/status`: For gRPC status codes
+
+## Error Handling
+The code uses `require.NoError` to ensure that critical operations succeed, failing the test immediately if an error occurs. For permission checks, it uses `assert.Equal` to compare the returned error code with the expected code (e.g., `codes.PermissionDenied`).
+
+## API/Interface Reference
+The code tests various API endpoints of the Flipt system, including:
+- Authentication methods (ListAuthenticationMethods, GetAuthenticationSelf)
+- Namespace operations (CreateNamespace, UpdateNamespace, DeleteNamespace)
+- Flag operations (GetFlag, ListFlags, CreateFlag, UpdateFlag, DeleteFlag)
+- Segment operations (GetSegment, ListSegments, CreateSegment, UpdateSegment, DeleteSegment)
+- Rule operations (GetRule, ListRules, CreateRule, UpdateRule, DeleteRule)
+- Rollout operations (GetRollout, ListRollouts, CreateRollout, UpdateRollout, DeleteRollout)
+
+These operations are tested with different authentication methods and roles to ensure proper authorization is enforced.

@@ -1,0 +1,85 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains middleware implementations for both gRPC and HTTP servers in the Flipt project. The middleware components enhance the functionality, security, and observability of the Flipt server by handling cross-cutting concerns such as request validation, error handling, audit logging, and response modification.
+
+## What does it do?
+The middleware in this directory performs several important tasks:
+
+1. gRPC Middleware:
+   - Validates incoming gRPC requests
+   - Handles error mapping to appropriate gRPC status codes
+   - Manipulates evaluation requests and responses
+   - Captures and logs audit events
+   - Manages client-server version compatibility
+   - Records evaluation responses for analytics (when enabled)
+
+2. HTTP Middleware:
+   - Modifies HTTP responses based on gRPC metadata
+   - Sets the `Etag` header in HTTP responses
+   - Sets custom HTTP status codes
+   - Handles responses with no body content for specific HTTP status codes (204 and 304)
+
+These middleware components work together to create a robust and feature-rich server for Flipt, handling various aspects of request processing and response generation for both gRPC and HTTP protocols.
+
+## Key Files
+
+### gRPC Middleware (internal/server/middleware/grpc)
+
+1. middleware.go
+   - Contains the main implementation of gRPC middleware interceptors
+   - Key components: ValidationUnaryInterceptor, ErrorUnaryInterceptor, EvaluationUnaryInterceptor, AuditEventUnaryInterceptor, FliptAcceptServerVersionUnaryInterceptor
+
+2. middleware_test.go
+   - Contains unit tests for the gRPC middleware implementations
+
+3. support_test.go
+   - Provides test support structures, including mocks and spies for authentication and auditing components
+
+### HTTP Middleware (internal/server/middleware/http)
+
+1. middleware.go
+   - Contains HTTP middleware implementations
+   - Key functions: HttpResponseModifier, HandleNoBodyResponse
+   - Includes a custom noBodyResponseWriter
+
+2. middleware_test.go
+   - Contains unit tests for the HTTP middleware functions
+
+## Dependencies
+The middleware relies on several external libraries and internal Flipt packages:
+
+1. gRPC-related:
+   - google.golang.org/grpc
+   - go.opentelemetry.io/otel/trace
+   - go.uber.org/zap
+
+2. HTTP-related:
+   - github.com/grpc-ecosystem/grpc-gateway/v2/runtime
+   - google.golang.org/protobuf/proto
+   - google.golang.org/grpc/metadata
+
+3. Internal Flipt packages:
+   - go.flipt.io/flipt/errors
+   - go.flipt.io/flipt/internal/server/analytics
+   - go.flipt.io/flipt/internal/server/audit
+   - go.flipt.io/flipt/internal/server/authn
+   - go.flipt.io/flipt/internal/server/metrics
+   - go.flipt.io/flipt/rpc/flipt
+
+These dependencies were chosen to provide robust server functionality, observability, and integration with Flipt's internal systems for both gRPC and HTTP protocols.
+
+## Configuration
+The middleware components don't directly use configuration files or environment variables. However, they can be configured when setting up the servers:
+
+1. gRPC Middleware:
+   - EvaluationUnaryInterceptor: Takes a boolean parameter `analyticsEnabled`
+   - AuditEventUnaryInterceptor: Requires a logger instance and an `audit.EventPairChecker`
+   - FliptAcceptServerVersionUnaryInterceptor: Requires a logger instance
+
+2. HTTP Middleware:
+   - No specific configuration options, but can be customized through the use of gRPC metadata
+
+These configuration options allow for flexibility in how the middleware behaves, particularly in terms of analytics, audit logging, and response modification.

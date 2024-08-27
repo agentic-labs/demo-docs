@@ -1,0 +1,63 @@
+---
+title: "cleanup_test.go"
+---
+
+## High-level description
+The `cleanup_test.go` file contains tests for the authentication cleanup service in the Flipt application. It specifically tests the service's ability to delete expired authentication tokens from the authentication store after a configured grace period.
+
+## Symbols
+
+### `TestCleanup`
+#### Description
+This function is a test that verifies the functionality of the authentication cleanup service. It creates both expiring and non-expiring authentication tokens, simulates multiple instances of the cleanup service running concurrently, and asserts that expired tokens are deleted after the grace period while non-expiring tokens persist.
+
+#### Inputs
+This function takes a single argument:
+
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `t` | `*testing.T` | The testing object used for reporting test results and logging. |
+
+#### Outputs
+The function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Creates a context, logger, in-memory authentication store, and an in-memory operational lock.
+    - Defines an authentication configuration with all authentication methods enabled and sets a cleanup schedule with a 1-second interval and a 5-second grace period.
+    - Creates a non-expiring authentication token and stores it in the authentication store.
+2. **Simulate Service Runs:**
+    - Runs five instances of the authentication cleanup service concurrently, simulating multiple instances sharing the same operational lock.
+3. **Test Non-Expiring Token Persistence:**
+    - Asserts that the non-expiring token created during setup still exists in the authentication store.
+4. **Test Expiring Token Deletion:**
+    - Iterates through each enabled authentication method that requires a database.
+    - Creates an expiring authentication token with a 5-second expiry time.
+    - Asserts that the token exists in the store.
+    - Waits for 5 seconds (expiry time) and asserts that the token still exists due to the grace period.
+    - Waits for another 10 seconds (grace period) and asserts that the token is now deleted.
+
+## Side Effects
+This test interacts with an in-memory authentication store and an in-memory operational lock, but these are isolated to the test environment and do not affect any external state.
+
+## Dependencies
+This test file depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a mechanism for carrying request-scoped data and cancellation signals across API boundaries. |
+| `fmt` | Implements formatted I/O with functions analogous to C's `printf` and `scanf`. |
+| `testing` | Provides support for automated testing of Go packages. |
+| `time` | Provides functionality for measuring and displaying time. |
+| `github.com/stretchr/testify/assert` | Provides a set of assertion functions for use in tests. |
+| `github.com/stretchr/testify/require` | Provides a set of assertion functions that terminate the test case if an assertion fails. |
+| `go.flipt.io/flipt/internal/config` | Provides configuration structures and functions for the Flipt application. |
+| `go.flipt.io/flipt/internal/storage/authn` | Provides interfaces and implementations for authentication storage. |
+| `go.flipt.io/flipt/internal/storage/authn/memory` | Provides an in-memory implementation of the authentication store. |
+| `go.flipt.io/flipt/internal/storage/oplock/memory` | Provides an in-memory implementation of the operational lock. |
+| `go.flipt.io/flipt/rpc/flipt/auth` | Defines the gRPC API for authentication services. |
+| `go.uber.org/zap/zaptest` | Provides a test logger implementation for use with the `zap` logging library. |
+| `google.golang.org/protobuf/types/known/timestamppb` | Provides functions for working with protobuf timestamp values. |
+
+## TODOs
+There are no TODOs or other notes left in the code.

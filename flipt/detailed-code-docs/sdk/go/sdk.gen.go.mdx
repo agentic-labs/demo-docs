@@ -1,0 +1,265 @@
+---
+title: "sdk.gen.go"
+---
+
+## High-level description
+The `sdk.gen.go` file defines the Go SDK for interacting with the Flipt feature flag service. It provides a pluggable transport implementation, consistent API surface area, client-side instrumentation, and authentication lifecycle support. The SDK allows developers to easily integrate Flipt into their Go applications.
+
+## Code Structure
+The code defines a `Transport` interface for different transport implementations, a `ClientAuthenticationProvider` interface for authentication, and an `SDK` struct that encapsulates the transport and authentication provider. The `SDK` struct provides methods for accessing different Flipt services, such as `Auth`, `Evaluation`, `Flipt`, and `Meta`. Each service has its own struct with methods for interacting with the corresponding Flipt service.
+
+## References
+The code references the following Flipt RPC packages:
+- `go.flipt.io/flipt/rpc/flipt`
+- `go.flipt.io/flipt/rpc/flipt/auth`
+- `go.flipt.io/flipt/rpc/flipt/evaluation`
+- `go.flipt.io/flipt/rpc/flipt/meta`
+
+## Symbols
+
+### `Transport`
+#### Description
+The `Transport` interface defines the methods for interacting with different Flipt services. It provides methods for accessing the `AuthClient`, `EvaluationClient`, `FliptClient`, and `MetaClient`.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The interface defines the following methods:
+- `AuthClient()`: Returns the `AuthClient` for interacting with the Flipt authentication service.
+- `EvaluationClient()`: Returns the `EvaluationServiceClient` for interacting with the Flipt evaluation service.
+- `FliptClient()`: Returns the `FliptClient` for interacting with the Flipt core service.
+- `MetaClient()`: Returns the `MetadataServiceClient` for interacting with the Flipt metadata service.
+
+### `ClientTokenProvider`
+#### Description
+**Deprecated:** Use `ClientAuthenticationProvider` instead.
+The `ClientTokenProvider` interface defines a method for retrieving a client token used for authentication.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The interface defines the following method:
+- `ClientToken() (string, error)`: Returns the client token as a string.
+
+### `WithClientTokenProvider`
+#### Description
+**Deprecated:** Use `WithAuthenticationProvider` instead.
+The `WithClientTokenProvider` function returns an `Option` that configures the SDK with the provided `ClientTokenProvider`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| p | `ClientTokenProvider` | The `ClientTokenProvider` to use for authentication. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | `func(*SDK)` | An `Option` that configures the SDK with the provided `ClientTokenProvider`. |
+
+#### Internal Logic
+The function sets the `authenticationProvider` of the SDK to an `authenticationProviderFunc` that retrieves the client token from the provided `ClientTokenProvider` and formats it as a bearer token.
+
+### `authenticationProviderFunc`
+#### Description
+The `authenticationProviderFunc` type is a function that implements the `ClientAuthenticationProvider` interface. It retrieves the authentication header string from a `ClientTokenProvider`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The authentication header string. |
+| error | `error` | An error if there was a problem retrieving the authentication header string. |
+
+#### Internal Logic
+The function calls the `ClientToken` method of the underlying `ClientTokenProvider` and formats the token as a bearer token.
+
+### `StaticClientTokenProvider`
+#### Description
+**Deprecated:** Use `StaticTokenAuthenticationProvider` instead.
+The `StaticClientTokenProvider` type represents a static client token used for authentication.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The type is a string that represents the client token.
+
+### `ClientAuthenticationProvider`
+#### Description
+The `ClientAuthenticationProvider` interface defines a method for retrieving the authentication header string used for authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The authentication header string. |
+| error | `error` | An error if there was a problem retrieving the authentication header string. |
+
+#### Internal Logic
+The interface defines the following method:
+- `Authentication(context.Context) (string, error)`: Returns the authentication header string.
+
+### `SDK`
+#### Description
+The `SDK` struct represents the Flipt Go SDK. It encapsulates the transport and authentication provider.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct has the following fields:
+- `transport`: The `Transport` implementation to use for interacting with Flipt services.
+- `authenticationProvider`: The `ClientAuthenticationProvider` to use for authentication.
+
+### `Option`
+#### Description
+The `Option` type is a function that configures the Flipt SDK.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SDK | `*SDK` | A pointer to the `SDK` struct to configure. |
+
+#### Outputs
+None
+
+#### Internal Logic
+The function type is used to configure the `SDK` struct.
+
+### `WithAuthenticationProvider`
+#### Description
+The `WithAuthenticationProvider` function returns an `Option` that configures the SDK with the provided `ClientAuthenticationProvider`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| p | `ClientAuthenticationProvider` | The `ClientAuthenticationProvider` to use for authentication. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | `func(*SDK)` | An `Option` that configures the SDK with the provided `ClientAuthenticationProvider`. |
+
+#### Internal Logic
+The function sets the `authenticationProvider` of the SDK to the provided `ClientAuthenticationProvider`.
+
+### `StaticTokenAuthenticationProvider`
+#### Description
+The `StaticTokenAuthenticationProvider` type represents a static client token used for authentication.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The type is a string that represents the client token.
+
+### `JWTAuthenticationProvider`
+#### Description
+The `JWTAuthenticationProvider` type represents a JWT token used for authentication.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The type is a string that represents the JWT token.
+
+### `KubernetesAuthenticationProvider`
+#### Description
+The `KubernetesAuthenticationProvider` struct implements the `ClientAuthenticationProvider` interface. It automatically uses the service account token from the environment and exchanges it with Flipt for a client token.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The struct has the following fields:
+- `transport`: The `Transport` implementation to use for interacting with Flipt services.
+- `serviceAccountTokenPath`: The path to the service account token file.
+- `leeway`: The duration leeway for deciding when to refresh the client token.
+- `mu`: A mutex for synchronizing access to the `resp` field.
+- `resp`: The response from the `VerifyServiceAccount` RPC call.
+
+### `NewKubernetesAuthenticationProvider`
+#### Description
+The `NewKubernetesAuthenticationProvider` function constructs and configures a new `KubernetesAuthenticationProvider` using the provided transport and options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| transport | `Transport` | The `Transport` implementation to use for interacting with Flipt services. |
+| opts | `...KubernetesAuthenticationProviderOption` | Optional configuration options for the `KubernetesAuthenticationProvider`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *KubernetesAuthenticationProvider | `*KubernetesAuthenticationProvider` | A pointer to the newly created `KubernetesAuthenticationProvider`. |
+
+#### Internal Logic
+The function creates a new `KubernetesAuthenticationProvider` with default values and applies the provided options.
+
+### `New`
+#### Description
+The `New` function constructs and configures a Flipt SDK instance from the provided `Transport` implementation and options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | `Transport` | The `Transport` implementation to use for interacting with Flipt services. |
+| opts | `...Option` | Optional configuration options for the SDK. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| SDK | `SDK` | The newly created Flipt SDK instance. |
+
+#### Internal Logic
+The function creates a new `SDK` struct with the provided transport and applies the provided options.
+
+### `authenticate`
+#### Description
+The `authenticate` function appends an authentication header to the outgoing context if a `ClientAuthenticationProvider` is provided.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| p | `ClientAuthenticationProvider` | The `ClientAuthenticationProvider` to use for authentication. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| context.Context | `context.Context` | The context with the authentication header appended. |
+| error | `error` | An error if there was a problem retrieving the authentication header string. |
+
+#### Internal Logic
+The function retrieves the authentication header string from the provided `ClientAuthenticationProvider` and appends it to the outgoing context using `metadata.AppendToOutgoingContext`.

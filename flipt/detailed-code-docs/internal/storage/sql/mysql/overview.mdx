@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `mysql.go` file implements the `storage.Store` interface for MySQL, providing methods for interacting with a MySQL database to manage Flipt resources like namespaces, flags, variants, segments, and rules. It handles MySQL-specific error codes and translates them into Flipt errors for better error handling.
+
+## Code Structure
+The `mysql.go` file defines a `Store` struct that embeds the `common.Store` struct, inheriting its functionality. It overrides several methods from the `common.Store` to handle MySQL-specific error codes and provide more informative error messages.
+
+## References
+- `github.com/go-sql-driver/mysql`: This package provides the MySQL driver for Go.
+- `go.flipt.io/flipt/errors`: This package defines custom errors used in Flipt.
+- `go.flipt.io/flipt/internal/storage`: This package defines the interface for interacting with the Flipt storage layer.
+- `go.flipt.io/flipt/internal/storage/sql/common`: This package provides common functionality for interacting with SQL databases.
+
+## Symbols
+
+### `NewStore`
+#### Description
+This function creates a new instance of the `Store` struct, initializing it with a MySQL database connection, a statement builder, and a logger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | A pointer to a MySQL database connection. |
+| builder | `sq.StatementBuilderType` | A statement builder for constructing SQL queries. |
+| logger | `*zap.Logger` | A logger for recording events. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | `*Store` | A pointer to a new instance of the `Store` struct. |
+
+### `Store`
+#### Description
+The `Store` struct represents a MySQL storage backend for Flipt. It embeds the `common.Store` struct, inheriting its functionality.
+
+#### Internal Logic
+The `Store` struct overrides several methods from the `common.Store` to handle MySQL-specific error codes, such as `constraintForeignKeyErr` and `constraintUniqueErr`. It translates these errors into more informative Flipt errors using the `errs` package.
+
+### `CreateNamespace`
+#### Description
+This method creates a new namespace in the MySQL database. It overrides the `CreateNamespace` method from the `common.Store` to handle the `constraintUniqueErr` error code, which indicates that a namespace with the given key already exists.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateNamespaceRequest` | A pointer to a request object containing the namespace key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| namespace | `*flipt.Namespace` | A pointer to the created namespace object. |
+| err | `error` | An error object if the operation fails. |
+
+#### Internal Logic
+The method first calls the `CreateNamespace` method of the embedded `common.Store`. If the operation fails and the error is a `constraintUniqueErr`, it returns an `errs.ErrInvalidf` error indicating that the namespace key is not unique. Otherwise, it returns the error returned by the `common.Store` method.
+
+### `CreateFlag`, `UpdateFlag`, `CreateVariant`, `UpdateVariant`, `CreateSegment`, `CreateConstraint`, `CreateRollout`, `CreateRule`, `UpdateRule`, `CreateDistribution`
+#### Description
+These methods override their counterparts in the `common.Store` to handle MySQL-specific error codes and provide more informative error messages. They follow a similar pattern to `CreateNamespace`, checking for specific error codes and returning appropriate Flipt errors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.&lt;Resource&gt;Request` | A pointer to a request object containing the resource data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resource | `*flipt.&lt;Resource&gt;` | A pointer to the created or updated resource object. |
+| err | `error` | An error object if the operation fails. |
+
+#### Internal Logic
+Each method calls the corresponding method of the embedded `common.Store`. If the operation fails, it checks for specific MySQL error codes and returns an appropriate Flipt error. For example, the `CreateFlag` method checks for `constraintForeignKeyErr` (indicating that the specified namespace doesn't exist) and `constraintUniqueErr` (indicating that a flag with the given key already exists in the namespace). If no specific error code is found, it returns the original error returned by the `common.Store` method.

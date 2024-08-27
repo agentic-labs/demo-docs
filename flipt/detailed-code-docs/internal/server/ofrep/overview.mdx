@@ -1,0 +1,50 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the OpenFeature Remote Evaluation Protocol (OFREP) server for Flipt. It provides a gRPC service that allows clients to evaluate feature flags remotely using the OFREP specification. The server acts as a bridge between the OFREP interface and Flipt's internal flag evaluation logic.
+
+## What does it do?
+The OFREP server in this directory performs the following main functions:
+
+1. Evaluates individual feature flags and returns the results according to the OFREP specification.
+2. Handles bulk evaluation requests for multiple flags simultaneously.
+3. Provides information about the Flipt provider's capabilities, such as supported flag types and cache invalidation mechanisms.
+4. Implements error handling and conversion between internal errors and OFREP-compliant error responses.
+5. Offers a mock implementation for testing purposes.
+
+## Entry points
+The main entry point for this package is the `Server` struct defined in `server.go`. This struct implements the `ofrep.OFREPServiceServer` interface, which defines the gRPC methods for OFREP. The `New` function in `server.go` creates a new instance of the server, injecting dependencies like a logger, cache configuration, and an evaluation bridge.
+
+The key methods of the `Server` struct are:
+- `EvaluateFlag`: Handles evaluation of a single feature flag.
+- `EvaluateBulk`: Handles bulk evaluation of multiple feature flags.
+- `GetProviderConfiguration`: Returns information about the Flipt provider's capabilities.
+
+These methods are implemented in `evaluation.go` and `extensions.go`.
+
+## Key Files
+1. `server.go`: Defines the `Server` struct and its initialization.
+2. `evaluation.go`: Implements the `EvaluateFlag` and `EvaluateBulk` methods.
+3. `extensions.go`: Implements the `GetProviderConfiguration` method.
+4. `errors.go`: Defines custom error types and error handling functions.
+5. `middleware.go`: Implements a custom error handler for the gRPC gateway.
+6. `mock_bridge.go`: Provides a mock implementation of the `Bridge` interface for testing.
+
+## Dependencies
+The OFREP server relies on several external libraries and internal Flipt packages:
+
+1. `go.flipt.io/flipt/rpc/flipt/ofrep`: Contains the generated gRPC code for the OFREP specification.
+2. `go.flipt.io/flipt/internal/config`: Provides access to Flipt's internal configuration.
+3. `go.uber.org/zap`: Used for structured logging.
+4. `google.golang.org/grpc`: The gRPC framework for building the server.
+5. `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`: Used for the gRPC gateway implementation.
+6. `github.com/stretchr/testify/mock`: Used for creating mock objects in tests.
+
+## Configuration
+The OFREP server uses a `config.CacheConfig` struct for configuration, which is passed to the `New` function when creating a new server instance. This configuration determines whether caching is enabled and the cache TTL, which affects the polling interval reported in the provider configuration.
+
+The server also relies on a `Bridge` interface, which abstracts the interaction with Flipt's internal flag evaluation logic. This allows for flexibility in how flag evaluations are performed and makes it easier to test the OFREP server in isolation.
+
+In summary, this directory provides a complete implementation of an OFREP server for Flipt, including the main server logic, error handling, and testing utilities. It serves as the interface between OFREP clients and Flipt's internal feature flag evaluation system.

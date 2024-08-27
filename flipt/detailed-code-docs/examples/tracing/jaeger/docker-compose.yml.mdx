@@ -1,0 +1,67 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for demonstrating distributed tracing in Flipt using Jaeger. It sets up two services: `jaeger` for tracing data collection and visualization, and `flipt` which is configured to send tracing data to the Jaeger instance.
+
+## Code Structure
+The code defines two services, `jaeger` and `flipt`, within a single network `flipt_network`. The `flipt` service depends on the `jaeger` service, ensuring that Jaeger is started before Flipt.
+
+## Symbols
+### `jaeger`
+#### Description
+This service uses the `jaegertracing/all-in-one` Docker image to run a Jaeger instance, which collects, processes, and visualizes tracing data.
+
+#### Inputs
+This service does not take any specific inputs.
+
+#### Outputs
+This service exposes the following ports:
+| Port | Description |
+|:-----|:------------|
+| 6831/udp | Jaeger Agent (Compact Thrift protocol) |
+| 6832/udp | Jaeger Agent (Binary Thrift protocol) |
+| 5778 | Jaeger Agent (HTTP Health Check) |
+| 16686 | Jaeger Query (UI) |
+| 4317 | Jaeger Collector (gRPC) |
+| 4318 | Jaeger Collector (HTTP) |
+| 14250 | Jaeger Agent (OTLP HTTP/gRPC) |
+| 14268 | Jaeger UI (Assets) |
+| 14269 | Jaeger UI (API) |
+
+#### Internal Logic
+The service sets the environment variable `COLLECTOR_OTLP_ENABLED` to `true` to enable the OpenTelemetry Protocol (OTLP) for data ingestion.
+
+### `flipt`
+#### Description
+This service uses the `flipt/flipt:latest` Docker image to run a Flipt instance. It's configured to enable tracing and send tracing data to the `jaeger` service.
+
+#### Inputs
+This service does not take any specific inputs.
+
+#### Outputs
+This service exposes port 8080 for the Flipt application.
+
+#### Internal Logic
+The service uses the following environment variables for configuration:
+| Option | Value | Description |
+|:-------|:-----|:------------|
+| `FLIPT_LOG_LEVEL` | `debug` | Sets the log level to debug for verbose logging. |
+| `FLIPT_TRACING_ENABLED` | `true` | Enables distributed tracing in Flipt. |
+| `FLIPT_TRACING_EXPORTER` | `jaeger` | Configures Jaeger as the tracing data exporter. |
+| `FLIPT_TRACING_JAEGER_HOST` | `jaeger` | Specifies the hostname of the Jaeger instance. |
+| `FLIPT_META_TELEMETRY_ENABLED` | `false` | Disables OpenTelemetry metrics collection. |
+
+The command `./flipt --force-migrate` starts the Flipt application and forces database migrations.
+
+### `flipt_network`
+#### Description
+This is a Docker network that provides communication between the `jaeger` and `flipt` services. 
+
+## Dependencies
+This setup relies on the following Docker images:
+| Dependency | Purpose |
+|:-----------|:--------|
+| `jaegertracing/all-in-one:1` | Provides a complete Jaeger instance for tracing. |
+| `flipt/flipt:latest` | Provides the Flipt application. | 

@@ -1,0 +1,41 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for demonstrating a LiteFS setup. It includes three services: an Nginx proxy, a primary LiteFS instance, and a replica instance. 
+
+## Code Structure
+The `docker-compose.yml` file uses a YAML configuration to define three services: `nginx`, `primary`, and `replica`. Each service specifies its own build context, port mappings, and environment variables. The `nginx` service acts as a reverse proxy, while the `primary` and `replica` services represent the LiteFS instances.
+
+## Symbols
+### `nginx`
+#### Description
+This service builds and runs an Nginx web server that likely acts as a reverse proxy, forwarding requests to either the primary or replica LiteFS instance based on configuration not shown in this file.
+
+#### Inputs
+- **build**: `./nginx` - Specifies the build context for the Nginx service, indicating that a Dockerfile or build instructions are located in the `./nginx` directory.
+- **ports**: `- "8080:80"` - Maps port 80 on the host machine to port 8080 inside the Nginx container.
+
+### `primary`
+#### Description
+This service builds and runs the primary LiteFS instance. It has access to privileged mode and exposes port 8080. An environment variable `IS_PRIMARY` is set to "true" to distinguish it from the replica.
+
+#### Inputs
+- **build**: `.` - Specifies the current directory as the build context.
+- **privileged**: `true` - Grants the container privileged mode, likely required for LiteFS functionality.
+- **ports**: `- "8081:8080"` - Maps port 8080 inside the container to port 8081 on the host machine.
+- **environment**:
+    - `IS_PRIMARY`: `"true"` - Sets an environment variable indicating this is the primary instance.
+
+### `replica`
+#### Description
+This service builds and runs a replica LiteFS instance. It mirrors the primary instance's configuration but sets the `IS_PRIMARY` environment variable to "false". The `restart: on-failure` policy ensures the replica restarts automatically if it encounters an error.
+
+#### Inputs
+- **build**: `.` - Specifies the current directory as the build context.
+- **ports**: `- "8082:8080"` - Maps port 8080 inside the container to port 8082 on the host machine.
+- **restart**: `on-failure` - Automatically restarts the container if it exits due to an error.
+- **privileged**: `true` - Grants the container privileged mode, likely required for LiteFS functionality.
+- **environment**:
+    - `IS_PRIMARY`: `"false"` - Sets an environment variable indicating this is a replica instance.

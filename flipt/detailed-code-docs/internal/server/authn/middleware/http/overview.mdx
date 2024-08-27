@@ -1,0 +1,49 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains HTTP middleware implementations for the Flipt authentication service. The middleware handles cookie management for logout and unauthenticated responses, ensuring appropriate cookies are cleared when a user logs out or when an unauthenticated response is returned due to invalid cookie-based authentication.
+
+## What does it do?
+The middleware in this directory performs two main functions:
+
+1. Logout handling: When a user logs out (by sending a PUT request to `/auth/v1/self/expire`), the middleware intercepts the request and clears all authentication-related cookies.
+
+2. Unauthenticated response handling: When an unauthenticated error occurs due to an invalid authentication cookie, the middleware clears the relevant cookies before passing the error to the default error handler.
+
+These functions help maintain the security and integrity of the authentication process by ensuring that invalid or expired authentication tokens are properly cleared from the client's browser.
+
+## Key Files
+
+### middleware.go
+This file contains the core implementation of the HTTP middleware. It defines the `Middleware` struct and its associated methods:
+
+- `NewHTTPMiddleware`: Creates a new middleware instance with the provided authentication session configuration.
+- `Handler`: Intercepts HTTP requests and clears cookies on logout.
+- `ErrorHandler`: Intercepts error responses and clears cookies for unauthenticated errors.
+- `clearAllCookies`: Helper method to clear authentication-related cookies.
+
+### middleware_test.go
+This file contains unit tests for the middleware implementation. It includes tests for:
+
+- `TestHandler`: Verifies that the `Handler` function correctly handles logout requests and clears cookies.
+- `TestErrorHandler`: Ensures that the `ErrorHandler` function properly clears cookies when an unauthenticated error occurs.
+
+## Dependencies
+- `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`: Used for gRPC-Gateway runtime utilities.
+- `go.flipt.io/flipt/internal/config`: Provides configuration for the authentication sessions.
+- `go.flipt.io/flipt/internal/server/authn/middleware/common`: Contains common middleware utilities and constants.
+- `google.golang.org/grpc/codes`: Used for gRPC status codes.
+- `google.golang.org/grpc/status`: Provides gRPC status utilities.
+
+## Configuration
+The middleware uses the `config.AuthenticationSession` configuration, which includes settings for cookie domains and lifetimes. This configuration is passed to the `NewHTTPMiddleware` function when creating a new middleware instance.
+
+Key configurable fields include:
+- Cookie domain
+- Cookie lifetime
+
+The middleware also uses constants from the `middlewarecommon` package, such as `TokenCookieKey`, which represents the key used for storing the authentication token in a cookie.
+
+In summary, this directory provides a crucial component of the Flipt authentication system, managing HTTP cookies to ensure proper logout functionality and handling of unauthenticated responses. The implementation is well-tested and configurable, allowing for flexibility in different deployment scenarios.

@@ -1,0 +1,59 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the SQL implementation of the operation lock (oplock) service for the Flipt project. The oplock service is responsible for managing distributed locks for long-running operations, ensuring that concurrent executions of the same operation are prevented.
+
+## What does it do?
+The SQL-based oplock service provides a mechanism to acquire and manage locks for operations using a SQL database. Here's a simplified explanation of how it works:
+
+1. When an operation needs to run, it tries to acquire a lock.
+2. The service checks if a lock for that operation already exists in the database.
+3. If no lock exists, it creates a new lock entry with a specified duration.
+4. If a lock exists but has expired, it updates the lock with a new expiration time.
+5. If a lock exists and is still valid, the operation is not allowed to run.
+
+This process ensures that only one instance of an operation can run at a time, preventing potential conflicts or data inconsistencies that could arise from concurrent executions.
+
+## Key Files
+
+### sql.go
+This file contains the main implementation of the SQL-based oplock service. It defines the `Service` struct and implements the `oplock.Service` interface. Key functions include:
+
+- `New`: Creates a new instance of the SQL-based oplock service.
+- `TryAcquire`: Attempts to acquire a lock for a given operation.
+- `acquireEntry`: Updates an existing lock entry.
+- `insertEntry`: Creates a new lock entry in the database.
+- `readEntry`: Retrieves a lock entry from the database.
+
+### sql_test.go
+This file contains the integration test for the SQL-based oplock service. It uses a testing harness to verify the functionality of the implementation.
+
+## Dependencies
+The SQL-based oplock service relies on several external libraries and internal packages:
+
+1. `github.com/Masterminds/squirrel` (version not specified): Used for building SQL queries in a more structured and type-safe manner.
+2. `go.uber.org/zap` (version not specified): Provides a fast, structured logging framework.
+3. `go.flipt.io/flipt/errors`: Custom error handling package for the Flipt project.
+4. `go.flipt.io/flipt/internal/storage/oplock`: Defines the `oplock.Service` interface and related types.
+5. `go.flipt.io/flipt/internal/storage/sql`: Provides SQL-related utilities and the `storagesql.Driver` interface.
+
+These dependencies were likely chosen for their performance, flexibility, and integration with the existing Flipt codebase.
+
+## Configuration
+The SQL-based oplock service doesn't appear to use any specific configuration files or environment variables. Instead, it relies on the provided SQL driver and statement builder for database interactions. These are passed to the `New` function when creating a new instance of the service.
+
+```go
+func New(logger *zap.Logger, driver storagesql.Driver, builder sq.StatementBuilderType) *Service {
+    return &Service{
+        logger:  logger,
+        driver:  driver,
+        builder: builder,
+    }
+}
+```
+
+The actual database connection and configuration are likely managed elsewhere in the Flipt project, possibly in a central database management module.
+
+In summary, this SQL-based oplock implementation provides a robust and database-backed solution for managing distributed locks in the Flipt project. It ensures that long-running operations can be executed safely in a distributed environment, preventing potential conflicts and data inconsistencies.

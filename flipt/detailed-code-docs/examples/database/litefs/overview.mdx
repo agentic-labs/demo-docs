@@ -1,0 +1,72 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration files and instructions for running Flipt, a feature flag management tool, with LiteFS, a distributed file system for SQLite. The setup demonstrates how to create a distributed SQLite database system using LiteFS, with Flipt as the application layer.
+
+## What does it do?
+This configuration sets up a distributed system with the following components:
+
+1. A primary Flipt instance running on top of LiteFS
+2. A replica Flipt instance also running on LiteFS
+3. An Nginx reverse proxy that routes traffic between the primary and replica instances
+
+The system allows Flipt to operate with a distributed SQLite database, where write operations are directed to the primary instance and then replicated to the replica. Read operations can be served from either instance, providing improved scalability and fault tolerance.
+
+## Entry points
+The main entry points for this setup are:
+
+1. `docker-compose.yml`: This file defines the overall structure of the distributed system, including the Nginx proxy, primary, and replica services.
+
+2. `Dockerfile`: This file builds the Docker image for the Flipt instances with LiteFS integration.
+
+3. `litefs.yml`: This file configures LiteFS, specifying how it should manage the distributed SQLite database.
+
+The workflow starts with `docker-compose up`, which builds and runs the containers defined in `docker-compose.yml`. The Dockerfile is used to create the Flipt/LiteFS images, and `litefs.yml` is used to configure LiteFS within these containers.
+
+## Key Files
+1. `README.md`: Provides an overview of the example, requirements, and instructions for running the setup.
+
+2. `nginx/Dockerfile` and `nginx/nginx.conf` (implied): These files likely contain the configuration for the Nginx reverse proxy, which routes traffic between the primary and replica instances.
+
+## Dependencies
+The setup relies on several key dependencies:
+
+1. Docker and docker-compose: Used for containerization and orchestration of the services.
+
+2. LiteFS (version 0.5): A distributed file system for SQLite, used to replicate the database across instances.
+
+3. Flipt (latest version): The feature flag management tool that serves as the application layer.
+
+4. Nginx: Used as a reverse proxy to route traffic between the primary and replica instances.
+
+5. Alpine Linux: Used as the base image for both the Flipt/LiteFS containers and the Nginx container.
+
+6. FUSE3: Required by LiteFS to mount the SQLite database as a filesystem.
+
+7. SQLite: The database engine used by Flipt and managed by LiteFS.
+
+These dependencies were likely chosen for their lightweight nature (Alpine Linux), ability to create a distributed SQLite system (LiteFS), and to demonstrate a real-world application of this setup (Flipt).
+
+## Configuration
+The main configuration files are:
+
+1. `litefs.yml`: Configures LiteFS with the following key settings:
+   - Log level (debug mode enabled)
+   - FUSE mount point (`/var/opt/flipt`)
+   - Data directory (`/var/lib/litefs`)
+   - Lease management (static type with advertise URL)
+   - Execution command (runs Flipt)
+
+2. `docker-compose.yml`: Defines the services (nginx, primary, replica) with their respective configurations:
+   - Build contexts
+   - Port mappings
+   - Environment variables (e.g., `IS_PRIMARY`)
+   - Privileged mode for LiteFS containers
+
+3. Nginx configuration (implied in `nginx/nginx.conf`): Likely contains rules for routing traffic between primary and replica instances.
+
+The `IS_PRIMARY` environment variable is used to determine whether a container should act as the primary or replica instance, affecting its behavior in the LiteFS cluster.
+
+This setup demonstrates a sophisticated use of containerization and distributed systems to create a scalable and fault-tolerant feature flag management solution using Flipt and LiteFS.

@@ -1,0 +1,134 @@
+---
+title: "file.go"
+---
+
+## High-level description
+This file implements an OCI (Open Container Initiative) store for managing Flipt feature files. It provides functionality to fetch, build, list, and copy feature bundles from local or remote repositories. The store supports different repository schemes (http, https, flipt) and handles various OCI-related operations.
+
+## Code Structure
+The main symbol is the `Store` struct, which encapsulates the functionality for managing feature bundles. It uses various helper functions and types to parse references, handle different repository schemes, and perform OCI-related operations. The code also defines constants, errors, and custom types to support the store's functionality.
+
+## Symbols
+
+### `Store`
+#### Description
+The `Store` struct represents an OCI store for Flipt feature files. It can retrieve feature files from local or remote repositories.
+
+#### Internal Logic
+- Manages OCI targets (local or remote)
+- Handles fetching, building, listing, and copying of feature bundles
+- Supports different repository schemes (http, https, flipt)
+
+### `NewStore`
+#### Description
+Constructs and configures an instance of `*Store` for the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | Logger instance |
+| dir | string | Directory for the store |
+| opts | ...containers.Option[StoreOptions] | Optional configuration options |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Store | *Store | Configured Store instance |
+| error | error | Error, if any |
+
+### `ParseReference`
+#### Description
+Parses a repository reference string into a `Reference` struct.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| repository | string | Repository reference string |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Reference | Reference | Parsed reference |
+| error | error | Error, if any |
+
+### `Store.Fetch`
+#### Description
+Retrieves associated files for the tracked repository and reference.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+| ref | Reference | Reference to fetch |
+| opts | ...containers.Option[FetchOptions] | Optional fetch options |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *FetchResponse | *FetchResponse | Response containing fetched files |
+| error | error | Error, if any |
+
+### `Store.Build`
+#### Description
+Bundles the target directory Flipt feature state into the target configured on the Store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+| src | fs.FS | Source filesystem |
+| ref | Reference | Reference for the build |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Bundle | Bundle | Resulting bundle metadata |
+| error | error | Error, if any |
+
+### `Store.List`
+#### Description
+Returns a slice of bundles available on the host.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []Bundle | []Bundle | Slice of available bundles |
+| error | error | Error, if any |
+
+### `Store.Copy`
+#### Description
+Copies a bundle from one reference to another.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+| src | Reference | Source reference |
+| dst | Reference | Destination reference |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Bundle | Bundle | Resulting bundle metadata |
+| error | error | Error, if any |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/opencontainers/go-digest | For working with content digests |
+| github.com/opencontainers/image-spec/specs-go/v1 | For OCI image specifications |
+| go.flipt.io/flipt/internal/containers | For container-related utilities |
+| go.flipt.io/flipt/internal/storage | For storage-related functionality |
+| go.uber.org/zap | For logging |
+| oras.land/oras-go/v2 | For OCI Registry As Storage (ORAS) operations |
+
+## Error Handling
+The code uses custom errors defined in the package, such as `ErrMissingMediaType`, `ErrUnexpectedMediaType`, and `ErrReferenceRequired`. It also handles and propagates errors from external dependencies and internal operations.
+
+## Performance Considerations
+The code uses efficient OCI operations and supports caching mechanisms (e.g., `IfNoMatch` option in `Fetch`) to optimize performance when working with feature bundles.

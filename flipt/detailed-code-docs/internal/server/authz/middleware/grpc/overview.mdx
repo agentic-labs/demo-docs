@@ -1,0 +1,70 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a gRPC middleware for authorization in the Flipt project. The main component is the `AuthorizationRequiredInterceptor`, which enforces authorization policies on incoming gRPC requests. The directory includes the main implementation file and a corresponding test file.
+
+## What does it do?
+The gRPC middleware in this directory performs the following tasks:
+
+1. Intercepts incoming gRPC requests.
+2. Determines whether authorization should be skipped for certain requests or servers.
+3. Retrieves authentication information from the request context.
+4. Verifies if the requester is allowed to perform the requested action using a policy verifier.
+5. Allows the request to proceed if authorized or returns an unauthorized error if not.
+
+This middleware ensures that only authorized requests are processed by the gRPC server, adding a layer of security to the Flipt application.
+
+## Key Files
+
+### middleware.go
+This file contains the main implementation of the `AuthorizationRequiredInterceptor`. It defines the interceptor function, along with supporting types and functions for configuration and authorization checks.
+
+Key components include:
+- `AuthorizationRequiredInterceptor`: The main gRPC interceptor function.
+- `InterceptorOptions`: Configuration options for the interceptor.
+- `SkipsAuthorizationServer`: An interface for servers that can skip authorization.
+- `skipped`: A function to determine if authorization should be skipped.
+- `WithServerSkipsAuthorization`: A function to configure authorization skipping for specific servers.
+
+### middleware_test.go
+This file contains unit tests for the `AuthorizationRequiredInterceptor`. It uses table-driven tests to verify the behavior of the interceptor under various scenarios, including:
+- Successful authorization
+- Authorization failures
+- Skipped authorization
+- Error handling
+
+The tests use mock implementations of the policy verifier and server to control the test scenarios.
+
+## Dependencies
+The code relies on several internal and external dependencies:
+
+1. `go.uber.org/zap`: For logging (version not specified in the provided code).
+2. `google.golang.org/grpc`: For gRPC functionality (version not specified).
+3. `go.flipt.io/flipt/errors`: For defining and handling authorization errors.
+4. `go.flipt.io/flipt/internal/containers`: For options pattern in configuration.
+5. `go.flipt.io/flipt/internal/server/authn/middleware/grpc`: For retrieving authentication information.
+6. `go.flipt.io/flipt/internal/server/authz`: For the `Verifier` interface used in policy verification.
+7. `go.flipt.io/flipt/rpc/flipt`: For the `Requester` interface and request structures.
+
+These dependencies were likely chosen to integrate seamlessly with the existing Flipt architecture and to leverage well-established libraries for logging and gRPC functionality.
+
+## Configuration
+The `AuthorizationRequiredInterceptor` can be configured using the `InterceptorOptions` struct and the `WithServerSkipsAuthorization` function. This allows for fine-tuning of authorization behavior, such as specifying servers that should skip authorization checks.
+
+Configuration options include:
+- `skippedServers`: A list of server instances for which authorization should be skipped.
+
+Example usage:
+```go
+interceptor := AuthorizationRequiredInterceptor(
+    logger,
+    policyVerifier,
+    WithServerSkipsAuthorization(someServer),
+)
+```
+
+The interceptor also respects the `SkipsAuthorizationServer` interface, allowing servers to dynamically indicate whether authorization should be skipped for a given context.
+
+In summary, this directory provides a flexible and configurable gRPC middleware for enforcing authorization policies in the Flipt project, with comprehensive test coverage to ensure its reliability and correctness.

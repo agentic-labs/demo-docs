@@ -1,0 +1,100 @@
+---
+title: "authn.go"
+---
+
+Here's a high-level description and documentation of the `internal/cmd/authn.go` file:
+
+## High-level description
+
+This file contains functions for configuring and setting up authentication in Flipt. It provides implementations for both gRPC and HTTP authentication, including various authentication methods such as token-based, OIDC, GitHub, Kubernetes, and JWT. The code also handles authentication store setup, cleanup processes, and middleware configuration.
+
+## Code Structure
+
+The main functions in this file are:
+
+1. `getAuthStore`: Sets up the authentication store based on the configuration.
+2. `authenticationGRPC`: Configures gRPC authentication, including interceptors for different authentication methods.
+3. `authenticationHTTPMount`: Sets up HTTP authentication routes and middleware.
+
+These functions interact with various authentication methods and storage implementations to provide a comprehensive authentication system for Flipt.
+
+## Symbols
+
+### `getAuthStore`
+
+#### Description
+This function sets up the authentication store based on the provided configuration. It can use either an in-memory store or a database-backed store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| logger | *zap.Logger | Logger for logging operations |
+| cfg | *config.Config | Configuration for the application |
+| forceMigrate | bool | Flag to force database migration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | storageauth.Store | The configured authentication store |
+| shutdown | func(context.Context) error | Function to shut down the store |
+| error | error | Any error encountered during setup |
+
+#### Internal Logic
+1. Creates an in-memory store by default
+2. If database authentication is required, it sets up a database connection
+3. Creates a SQL-based auth store if using a database
+4. Sets up cleanup service if configured
+
+### `authenticationGRPC`
+
+#### Description
+This function configures gRPC authentication, including setting up various authentication methods and their corresponding interceptors.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| logger | *zap.Logger | Logger for logging operations |
+| cfg | *config.Config | Configuration for the application |
+| forceMigrate | bool | Flag to force database migration |
+| tokenDeletedEnabled | bool | Flag to enable token deletion auditing |
+| authOpts | ...containers.Option[authmiddlewaregrpc.InterceptorOptions] | Options for the interceptor |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| register | grpcRegisterers | gRPC registerers for authentication services |
+| interceptors | []grpc.UnaryServerInterceptor | List of gRPC interceptors |
+| shutdown | func(context.Context) error | Function to shut down the authentication services |
+| error | error | Any error encountered during setup |
+
+#### Internal Logic
+1. Sets up the authentication store
+2. Configures various authentication methods (token, OIDC, GitHub, Kubernetes, JWT) based on the configuration
+3. Sets up interceptors for each enabled authentication method
+4. Configures enforcement middleware if authentication is required
+
+### `authenticationHTTPMount`
+
+#### Description
+This function sets up HTTP routes and middleware for authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| logger | *zap.Logger | Logger for logging operations |
+| cfg | config.AuthenticationConfig | Authentication configuration |
+| r | chi.Router | HTTP router |
+| conn | *grpc.ClientConn | gRPC client connection |
+
+#### Internal Logic
+1. Sets up HTTP middleware for authentication
+2. Configures routes for various authentication methods (token, OIDC, GitHub, Kubernetes)
+3. Mounts the authentication routes to the provided router
+
+## Dependencies
+The code relies on various internal packages for storage, configuration, and server implementations. It also uses external libraries such as `chi` for HTTP routing, `grpc` for gRPC functionality, and `zap` for logging.
+
+This file is crucial for setting up and managing authentication in Flipt, providing a flexible system that can accommodate various authentication methods and storage backends.

@@ -1,0 +1,93 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the protocol buffer definitions, gRPC service implementations, and gRPC-Gateway reverse proxy for the AnalyticsService in the Flipt project. The AnalyticsService is responsible for providing analytics data, specifically flag evaluation counts, for feature flags in the Flipt system.
+
+## What does it do?
+The AnalyticsService allows clients to retrieve flag evaluation counts for specific flags within a namespace over a given time range. This functionality is crucial for monitoring and analyzing the usage of feature flags in the Flipt system. The service provides both gRPC and RESTful JSON API interfaces, making it accessible to a wide range of clients and integration scenarios.
+
+The main functionality provided by this service is:
+
+1. Retrieving flag evaluation counts: Clients can request the number of times a specific flag has been evaluated within a given time range and namespace.
+
+2. Time-series data: The response includes timestamps and corresponding count values, allowing for time-based analysis of flag usage.
+
+3. Flexible querying: Clients can specify the namespace, flag key, and time range for their queries, enabling targeted analysis of flag usage.
+
+## Key Files
+
+1. `analytics.pb.go`: This file contains the generated Go code for the protocol buffer messages and service definitions. It defines the structure of the request and response messages for the GetFlagEvaluationsCount method.
+
+2. `analytics.pb.gw.go`: This file contains the generated gRPC-Gateway code, which translates between HTTP/JSON and gRPC. It includes HTTP handlers and utility functions for routing and processing RESTful API requests to the corresponding gRPC service.
+
+3. `analytics_grpc.pb.go`: This file contains the generated gRPC client and server code for the AnalyticsService. It defines the interfaces and implementations for both client and server-side gRPC communication.
+
+## Dependencies
+The code in this directory relies on several external libraries and frameworks:
+
+1. gRPC (google.golang.org/grpc): Used for implementing the RPC service and client.
+   - Version: Not specified in the provided code.
+   - Chosen for its efficient binary serialization and HTTP/2-based transport.
+
+2. Protocol Buffers (google.golang.org/protobuf): Used for defining the service and message structures.
+   - Version: Not specified in the provided code.
+   - Chosen for its language-agnostic, extensible mechanism for serializing structured data.
+
+3. gRPC-Gateway (github.com/grpc-ecosystem/grpc-gateway/v2): Used for generating a reverse-proxy server that translates RESTful JSON API into gRPC.
+   - Version: v2 (specific version not provided)
+   - Chosen to provide both gRPC and RESTful JSON API interfaces without duplicating code.
+
+These dependencies were likely chosen to provide a robust, efficient, and flexible foundation for building and exposing the AnalyticsService.
+
+## Configuration
+The code in this directory does not directly use configuration files or environment variables. However, the service implementation may rely on configuration provided by the main Flipt application for settings such as:
+
+- gRPC server address and port
+- HTTP/REST API endpoint
+- Authentication and authorization settings
+- Database connection details for retrieving analytics data
+
+The exact configuration mechanism would be determined by the broader Flipt application structure.
+
+Here's an example of how the AnalyticsService might be used in a client application:
+
+```go
+import (
+    "context"
+    "google.golang.org/grpc"
+    pb "path/to/analytics"
+)
+
+func main() {
+    conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+    if err != nil {
+        log.Fatalf("Failed to connect: %v", err)
+    }
+    defer conn.Close()
+
+    client := pb.NewAnalyticsServiceClient(conn)
+
+    request := &pb.GetFlagEvaluationsCountRequest{
+        NamespaceKey: "my-namespace",
+        FlagKey:      "my-flag",
+        From:         "2023-01-01T00:00:00Z",
+        To:           "2023-01-31T23:59:59Z",
+    }
+
+    response, err := client.GetFlagEvaluationsCount(context.Background(), request)
+    if err != nil {
+        log.Fatalf("Error calling GetFlagEvaluationsCount: %v", err)
+    }
+
+    // Process the response
+    for i, timestamp := range response.Timestamps {
+        fmt.Printf("Timestamp: %s, Count: %f\n", timestamp, response.Values[i])
+    }
+}
+```
+
+This example demonstrates how a client would connect to the AnalyticsService using gRPC, create a request for flag evaluation counts, and process the response.
+
+The AnalyticsService plays a crucial role in the Flipt ecosystem by providing insights into feature flag usage, enabling data-driven decision-making and monitoring of feature rollouts and experiments.

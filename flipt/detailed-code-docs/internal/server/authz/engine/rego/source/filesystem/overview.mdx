@@ -1,0 +1,127 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This code defines two data source types, `LocalPolicySource` and `LocalDataSource`, both of which read data from the local filesystem. `LocalPolicySource` reads raw bytes from a file, while `LocalDataSource` reads a file and parses it as a JSON object.
+
+## Code Structure
+Both `LocalPolicySource` and `LocalDataSource` are structs that hold a file path. They implement the `source.PolicySource` and `source.DataSource` interfaces, respectively, by providing a `Get` method. The `read` function is a helper function used by both `Get` methods to read data from the filesystem.
+
+## Symbols
+
+### `PolicySourceFromPath`
+#### Description
+This function is a constructor for `LocalPolicySource`. It takes a file path as input and returns a new `LocalPolicySource` instance pointing to that path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the policy file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *LocalPolicySource | *LocalPolicySource | A pointer to the new `LocalPolicySource` instance. |
+
+### `LocalPolicySource`
+#### Description
+This struct represents a policy source that reads policy data from a local file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the policy file. |
+
+### `LocalPolicySource.Get`
+#### Description
+This method reads the policy data from the file specified by the `path` field. It checks the modification time of the file against a provided hash (`seen`) to determine if the content has changed. If the content has not changed, it returns `source.ErrNotModified`. Otherwise, it reads the file content and returns it as a byte slice along with the new modification time hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| seen | source.Hash | The previously seen modification time hash of the file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []byte | []byte | The policy data read from the file. |
+| source.Hash | source.Hash | The new modification time hash of the file. |
+| error | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Get the file information using `os.Stat`.
+2. Calculate the modification time hash of the file.
+3. Compare the calculated hash with the `seen` hash. If they are equal, return `source.ErrNotModified`.
+4. Read the file content using `os.ReadFile`.
+5. Return the file content and the new modification time hash.
+
+### `DataSourceFromPath`
+#### Description
+This function is a constructor for `LocalDataSource`. It takes a file path as input and returns a new `LocalDataSource` instance pointing to that path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the data file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *LocalDataSource | *LocalDataSource | A pointer to the new `LocalDataSource` instance. |
+
+### `LocalDataSource`
+#### Description
+This struct represents a data source that reads data from a local file and parses it as JSON.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the data file. |
+
+### `LocalDataSource.Get`
+#### Description
+This method reads the data from the file specified by the `path` field and parses it as a JSON object. It checks the modification time of the file against a provided hash (`seen`) to determine if the content has changed. If the content has not changed, it returns `source.ErrNotModified`. Otherwise, it reads the file content, unmarshals it into a `map[string]any` and returns it along with the new modification time hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| seen | source.Hash | The previously seen modification time hash of the file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| map[string]any | map[string]any | The data read from the file, parsed as a JSON object. |
+| source.Hash | source.Hash | The new modification time hash of the file. |
+| error | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Read the file content and modification time hash using the `read` function.
+2. Unmarshal the file content into a `map[string]any` using `json.Unmarshal`.
+3. Return the parsed data and the new modification time hash.
+
+### `read`
+#### Description
+This function is a helper function that reads the content of a file and calculates its modification time hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the file. |
+| seen | []byte | The previously seen modification time hash of the file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| data | []byte | The content of the file. |
+| mod | []byte | The modification time hash of the file. |
+| err | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Get the file information using `os.Stat`.
+2. Calculate the modification time hash of the file.
+3. Compare the calculated hash with the `seen` hash. If they are equal, return `source.ErrNotModified`.
+4. Read the file content using `os.ReadFile`.
+5. Return the file content and the new modification time hash.

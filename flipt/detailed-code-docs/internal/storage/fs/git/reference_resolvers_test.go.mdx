@@ -1,0 +1,139 @@
+---
+title: "reference_resolvers_test.go"
+---
+
+## High-level description
+This file contains unit tests for different reference resolvers used in the Git storage implementation of Flipt. It ensures that the `staticResolver` and `semverResolver` functions correctly resolve Git references (branches, tags) to their corresponding commit hashes.
+
+## Code Structure
+This file defines three main test functions: `TestStaticResolver`, `TestSemverResolver`, and a helper struct `gitRepoTest` with its associated methods. The test functions utilize the `gitRepoTest` struct to interact with a Git repository for testing purposes.
+
+## Symbols
+
+### `TestStaticResolver`
+#### Description
+This function tests the `staticResolver` function, which is designed to resolve static Git references (branch names). It creates a Git repository, performs commits and branch checkouts, and verifies that the resolver correctly returns the expected commit hash for each branch.
+
+#### Inputs
+This function takes a single argument:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `t` | `*testing.T` | A testing object from the `testing` package, used for reporting test results and errors. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Arrange:**
+    - Initializes a new Git repository using the `newGitRepo` helper function.
+    - Creates a `staticResolver`.
+2. **Act:**
+    - Creates a commit on the `main` branch and retrieves its hash.
+    - Calls the `staticResolver` to resolve the `main` reference.
+    - Checks if the resolved hash matches the expected commit hash.
+    - Checks out a new branch (`new-branch`).
+    - Creates a commit on the `new-branch` and retrieves its hash.
+    - Calls the `staticResolver` to resolve the `new-branch` reference.
+    - Checks if the resolved hash matches the expected commit hash.
+3. **Assert:**
+    - Uses `require.NoError` to assert that no errors occurred during the resolution process.
+    - Uses `require.Equal` to assert that the resolved commit hash matches the expected hash for each branch.
+
+### `TestSemverResolver`
+#### Description
+This function tests the `semverResolver` function, which is designed to resolve Git references based on semantic versioning (SemVer) tags. It creates a Git repository, creates tags following the SemVer convention, and verifies that the resolver correctly returns the commit hash associated with the matching tag.
+
+#### Inputs
+This function takes a single argument:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `t` | `*testing.T` | A testing object from the `testing` package, used for reporting test results and errors. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+This function includes multiple sub-tests to cover different scenarios:
+
+**Sub-test 1: "should resolve semver tags correctly when the reference is a constraint"**
+1. **Arrange:**
+    - Initializes a new Git repository using the `newGitRepo` helper function.
+    - Creates a `semverResolver`.
+    - Defines a SemVer constraint (`v0.1.*`).
+2. **Act:**
+    - Creates a commit and tags it with `v0.1.0`.
+    - Calls the `semverResolver` to resolve the constraint.
+    - Checks if the resolved hash matches the expected commit hash.
+    - Creates another commit and tags it with `v0.1.4`.
+    - Calls the `semverResolver` again to resolve the same constraint.
+    - Checks if the resolved hash now points to the newer commit.
+3. **Assert:**
+    - Uses `require.NoError` to assert that no errors occurred during the resolution process.
+    - Uses `require.Equal` to assert that the resolved commit hash matches the expected hash for each tag.
+
+**Sub-test 2: "should resolve semver tags correctly when the reference is not a constraint"**
+1. **Arrange:**
+    - Initializes a new Git repository using the `newGitRepo` helper function.
+    - Creates a `semverResolver`.
+2. **Act:**
+    - Creates a commit and tags it with `v0.1.0`.
+    - Calls the `semverResolver` to resolve the specific tag `v0.1.0`.
+    - Checks if the resolved hash matches the expected commit hash.
+3. **Assert:**
+    - Uses `require.NoError` to assert that no errors occurred during the resolution process.
+    - Uses `require.Equal` to assert that the resolved commit hash matches the expected hash.
+
+**Sub-test 3: "should resolve semver tags correctly when there is non compliant semver tags"**
+1. **Arrange:**
+    - Initializes a new Git repository using the `newGitRepo` helper function.
+    - Creates a `semverResolver`.
+2. **Act:**
+    - Creates a commit and tags it with a non-SemVer compliant tag (`non-semver-tag`).
+    - Creates another commit and tags it with a SemVer compliant tag (`v0.1.0`).
+    - Calls the `semverResolver` to resolve the `v0.1.0` tag.
+    - Checks if the resolved hash matches the expected commit hash of the SemVer compliant tag.
+3. **Assert:**
+    - Uses `require.NoError` to assert that no errors occurred during the resolution process.
+    - Uses `require.Equal` to assert that the resolved commit hash matches the expected hash.
+
+**Sub-test 4: "should return an error when no matching tag was found"**
+1. **Arrange:**
+    - Initializes a new Git repository using the `newGitRepo` helper function.
+    - Creates a `semverResolver`.
+2. **Act:**
+    - Creates a commit and tags it with `v0.1.0`.
+    - Calls the `semverResolver` to resolve a non-matching SemVer constraint (`v1.*.*`).
+3. **Assert:**
+    - Uses `require.ErrorContains` to assert that the resolver returns an error indicating that no matching tag was found.
+
+### `gitRepoTest`
+#### Description
+This is a helper struct that provides utility methods for interacting with a Git repository within the tests. It simplifies common Git operations like creating commits, checking out branches, and creating tags.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+#### Internal Logic
+This struct defines the following methods:
+
+- `createCommit(t *testing.T) plumbing.Hash`: Creates a new commit in the Git repository with a dummy file and returns the commit hash.
+- `checkout(t *testing.T, branchName string)`: Checks out a branch in the Git repository. If the branch doesn't exist, it creates a new one.
+- `createTag(t *testing.T, tag string, commit plumbing.Hash)`: Creates a new tag on a specific commit in the Git repository.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `github.com/go-git/go-git/v5` | Provides Git functionalities like repository manipulation, commit creation, and branch management. |
+| `github.com/go-git/go-billy/v5/memfs` | Offers an in-memory filesystem implementation used for testing the Git repository without relying on the disk. |
+| `github.com/go-git/go-git/v5/storage/memory` | Provides an in-memory storage implementation for the Git repository. |
+| `github.com/google/uuid` | Used for generating unique file names during commit creation. |
+| `github.com/stretchr/testify/require` | Offers assertion functionalities for testing purposes. |
+
+## Error Handling
+The tests primarily rely on the `require` package for assertions. If any error occurs during the test execution, the `require` functions will fail the test and provide informative error messages.
+
+## TODOs
+N/A - There are no TODOs in the provided code.

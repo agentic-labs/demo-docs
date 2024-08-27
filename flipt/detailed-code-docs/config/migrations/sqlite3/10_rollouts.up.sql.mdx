@@ -1,0 +1,71 @@
+---
+title: "10_rollouts.up.sql"
+---
+
+## High-level description
+This SQL script defines the schema for three tables: `rollouts`, `rollout_thresholds`, and `rollout_segments`. These tables are designed to manage feature rollouts, their associated thresholds, and segment-based rollout rules in a feature flag system.
+
+## Code Structure
+The script creates three interconnected tables with foreign key relationships. The `rollouts` table is the main table, while `rollout_thresholds` and `rollout_segments` are related tables that provide additional functionality for managing rollouts.
+
+## Symbols
+
+### `rollouts` table
+#### Description
+This table stores information about feature rollouts, including their association with namespaces and flags.
+
+#### Internal Logic
+- Primary key: `id`
+- Foreign key relationship with `namespaces` and `flags` tables
+- Includes timestamps for creation and updates
+
+| Column Name | Type | Constraints | Description |
+|:------------|:-----|:------------|:------------|
+| id | VARCHAR(255) | PRIMARY KEY, UNIQUE, NOT NULL | Unique identifier for the rollout |
+| namespace_key | VARCHAR(255) | NOT NULL, REFERENCES namespaces | Associated namespace key |
+| flag_key | VARCHAR(255) | NOT NULL | Associated flag key |
+| type | INTEGER | DEFAULT 0, NOT NULL | Type of rollout |
+| description | TEXT | NOT NULL | Description of the rollout |
+| rank | INTEGER | DEFAULT 1, NOT NULL | Rank of the rollout |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP, NOT NULL | Creation timestamp |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP, NOT NULL | Last update timestamp |
+
+### `rollout_thresholds` table
+#### Description
+This table stores threshold information for rollouts, allowing for percentage-based rollout strategies.
+
+#### Internal Logic
+- Primary key: `id`
+- Foreign key relationships with `namespaces` and `rollouts` tables
+
+| Column Name | Type | Constraints | Description |
+|:------------|:-----|:------------|:------------|
+| id | VARCHAR(255) | PRIMARY KEY, UNIQUE, NOT NULL | Unique identifier for the threshold |
+| namespace_key | VARCHAR(255) | NOT NULL, REFERENCES namespaces | Associated namespace key |
+| rollout_id | VARCHAR(255) | UNIQUE, NOT NULL, REFERENCES rollouts | Associated rollout ID |
+| percentage | float | DEFAULT 0, NOT NULL | Percentage threshold for the rollout |
+| value | BOOLEAN | DEFAULT FALSE, NOT NULL | Value to be applied when threshold is met |
+
+### `rollout_segments` table
+#### Description
+This table stores segment-based rules for rollouts, allowing for targeted feature releases to specific user segments.
+
+#### Internal Logic
+- Primary key: `id`
+- Foreign key relationships with `namespaces`, `rollouts`, and `segments` tables
+
+| Column Name | Type | Constraints | Description |
+|:------------|:-----|:------------|:------------|
+| id | VARCHAR(255) | PRIMARY KEY, UNIQUE, NOT NULL | Unique identifier for the segment rule |
+| namespace_key | VARCHAR(255) | NOT NULL, REFERENCES namespaces | Associated namespace key |
+| rollout_id | VARCHAR(255) | NOT NULL, REFERENCES rollouts | Associated rollout ID |
+| segment_key | VARCHAR(255) | NOT NULL | Associated segment key |
+| value | BOOLEAN | DEFAULT FALSE, NOT NULL | Value to be applied for the segment |
+
+## Dependencies
+This SQL script assumes the existence of the following tables:
+- `namespaces`
+- `flags`
+- `segments`
+
+These tables are referenced in foreign key constraints, indicating that they should be created before executing this script.

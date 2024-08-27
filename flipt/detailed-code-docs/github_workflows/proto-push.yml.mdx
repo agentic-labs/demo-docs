@@ -1,0 +1,85 @@
+---
+title: "proto-push.yml"
+---
+
+## High-level description
+This GitHub Actions workflow automates the process of pushing Protocol Buffer (protobuf) definitions to a Buf Schema Registry (BSR) whenever a new tag starting with "v" is pushed to the repository. It performs linting, breaking change detection, and finally pushes the validated protobuf definitions to the BSR.
+
+## Code Structure
+The workflow defines a single job "proto-push" which runs sequentially on Ubuntu. Each step utilizes a specific GitHub Action from the "bufbuild" organization to perform tasks like checking out the code, setting up Buf, linting, checking for breaking changes, and finally pushing to the BSR.
+
+## Symbols
+### `name: Proto Push`
+#### Description
+Defines the name of the workflow as "Proto Push". This name will be displayed in the GitHub Actions interface.
+
+### `on: push: tags: - "v*"`
+#### Description
+Specifies the trigger for this workflow. It will be automatically triggered on every push event to the repository where the pushed tags start with "v" (e.g., "v1.0.0", "v2.3.1").
+
+### `jobs: proto-push:`
+#### Description
+Defines a single job named "proto-push" within the workflow.
+
+#### `name: "Push Protos"`
+##### Description
+Sets the display name of the job as "Push Protos" in the GitHub Actions interface.
+
+#### `runs-on: ubuntu-latest`
+##### Description
+Specifies that the job will run on the latest available Ubuntu virtual environment provided by GitHub Actions.
+
+#### `steps:`
+##### Description
+Contains a list of sequential steps that will be executed within the "proto-push" job.
+
+##### `- uses: actions/checkout@v4`
+###### Description
+This step checks out the repository's code into the virtual environment so that subsequent steps can access and work with the codebase.
+
+##### `- uses: bufbuild/buf-setup-action@v1.26.0`
+###### Description
+This step sets up the Buf CLI tool, which is used for managing Protocol Buffer definitions. It uses version v1.26.0 of the action.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `github_token` | `string` | The GitHub token used for authentication with the GitHub API. It's automatically provided by GitHub Actions as `${{ secrets.GITHUB_TOKEN }}`. |
+
+##### `- uses: bufbuild/buf-lint-action@v1`
+###### Description
+This step runs the Buf linter against the Protocol Buffer definitions located in the "rpc/flipt" directory. This ensures that the protobuf code adheres to style and best practices.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `input` | `string` | The directory containing the protobuf definitions to be linted. Here, it's set to "rpc/flipt". |
+
+##### `- uses: bufbuild/buf-breaking-action@v1`
+###### Description
+This step checks for breaking changes in the Protocol Buffer definitions compared to the main branch. It ensures that any changes made to the protobuf definitions in the current branch do not introduce compatibility issues with the main branch.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `input` | `string` | The directory containing the protobuf definitions to check for breaking changes. |
+| `against` | `string` | The reference point for breaking change detection. Here, it's set to the main branch of the current repository. |
+
+##### `- uses: bufbuild/buf-push-action@v1`
+###### Description
+This step pushes the Protocol Buffer definitions to the Buf Schema Registry (BSR). This makes the definitions accessible for use in other projects and services.
+
+###### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `input` | `string` | The directory containing the protobuf definitions to be pushed. |
+| `buf_token` | `string` | The authentication token for the Buf Schema Registry, accessed from the repository's secrets as `${{ secrets.BUF_TOKEN }}`. |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository's code. |
+| bufbuild/buf-setup-action | Sets up the Buf CLI tool. |
+| bufbuild/buf-lint-action | Lints the Protocol Buffer definitions. |
+| bufbuild/buf-breaking-action | Checks for breaking changes in the protobuf definitions. |
+| bufbuild/buf-push-action | Pushes the protobuf definitions to the Buf Schema Registry. |

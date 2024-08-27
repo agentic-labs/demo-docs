@@ -1,0 +1,84 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+The `internal/tracing` directory contains the implementation of tracing functionality for the Flipt application using OpenTelemetry. It provides the necessary components to create and configure tracing resources, providers, and exporters. The package is designed to be flexible, supporting various tracing backends such as Jaeger, Zipkin, and OTLP (OpenTelemetry Protocol).
+
+## What does it do?
+
+This package sets up and configures distributed tracing for the Flipt application. Distributed tracing helps developers understand the flow of requests through various components of a distributed system. Here's what the tracing package does:
+
+1. Creates a tracing resource with Flipt-specific attributes, including service name, version, and environment data.
+2. Configures a TracerProvider, which is responsible for creating tracers and managing span creation.
+3. Sets up different types of exporters (Jaeger, Zipkin, or OTLP) based on the provided configuration, allowing traces to be sent to various backends for analysis and visualization.
+
+These components work together to instrument the Flipt application, enabling developers to track requests, measure performance, and diagnose issues across different parts of the system.
+
+## Key Files
+
+1. `tracing.go`: This is the main file implementing the tracing functionality. It contains the following key functions:
+
+   - `newResource`: Creates a new tracing resource with Flipt-specific attributes.
+   - `NewProvider`: Creates a new TracerProvider configured for Flipt tracing.
+   - `GetExporter`: Retrieves a configured span exporter based on the provided configuration.
+
+2. `tracing_test.go`: This file contains unit tests for the tracing package, ensuring that the resource creation and exporter configuration work as expected under various conditions.
+
+## Dependencies
+
+The tracing package relies on several external libraries and frameworks:
+
+1. OpenTelemetry Go SDK (v1.26.0):
+   - `go.opentelemetry.io/otel/exporters/jaeger`
+   - `go.opentelemetry.io/otel/exporters/otlp/otlptrace`
+   - `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`
+   - `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`
+   - `go.opentelemetry.io/otel/exporters/zipkin`
+   - `go.opentelemetry.io/otel/sdk/resource`
+   - `go.opentelemetry.io/otel/sdk/trace`
+   - `go.opentelemetry.io/otel/semconv/v1.26.0`
+
+These dependencies were chosen because OpenTelemetry is a widely adopted, vendor-neutral observability framework that provides a single set of APIs, libraries, agents, and collector services for capturing distributed traces and metrics.
+
+2. Testing dependencies:
+   - `github.com/stretchr/testify/assert`: Used for test assertions in the unit tests.
+
+## Configuration
+
+The tracing package uses a `config.TracingConfig` struct to configure the tracing behavior. This configuration includes:
+
+- `Exporter`: The type of exporter to use (Jaeger, Zipkin, or OTLP).
+- `Endpoint`: The endpoint URL for the chosen exporter.
+- `Sampler`: The sampling rate for traces.
+- `SamplerArg`: Additional arguments for the sampler.
+
+Environment variables are also used to configure certain aspects of the tracing, such as service name, version, and other attributes.
+
+For the OTLP exporter, different endpoint schemes are supported:
+- `https://`: Uses OTLP over HTTPS
+- `http://`: Uses OTLP over HTTP
+- `grpc://`: Uses OTLP over gRPC
+
+The code includes TODOs for supporting additional configuration options and TLS support for the OTLP exporter.
+
+Example configuration usage:
+
+```go
+cfg := &config.TracingConfig{
+    Exporter:   "jaeger",
+    Endpoint:   "http://localhost:14268/api/traces",
+    Sampler:    "parentbased_always_on",
+    SamplerArg: 1,
+}
+
+provider, err := tracing.NewProvider(ctx, "1.0.0", cfg)
+if err != nil {
+    // Handle error
+}
+```
+
+This configuration would set up a Jaeger exporter with the specified endpoint and sampling configuration.
+
+The tracing package in Flipt provides a robust and flexible way to implement distributed tracing, allowing developers to gain insights into the application's performance and behavior across different components and services.

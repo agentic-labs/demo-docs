@@ -1,0 +1,95 @@
+---
+title: "publish.go"
+---
+
+## High-level description
+This Go package, named "publish", provides functionality for publishing container images to different target environments: local, remote, and Kind (Kubernetes in Docker). It supports multi-platform variants and handles the complexities of image loading, tagging, and distribution across these different targets.
+
+## Code Structure
+The main function `Publish` orchestrates the publishing process based on the provided `PublishSpec`. It delegates to specific functions (`local`, `remote`, `kind`) depending on the target type. The `Variants` type and its methods manage multi-platform container variants.
+
+## Symbols
+
+### `PublishSpec`
+#### Description
+A struct that defines the specification for publishing a container image.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TargetType | TargetType | The type of target environment (local, remote, or kind) |
+| KindCluster | string | The name of the Kind cluster (used only for Kind target type) |
+| Target | string | The target path or reference for the image |
+
+### `Variants`
+#### Description
+A type alias for a map of dagger.Platform to dagger.Container, representing multi-platform variants of a container image.
+
+#### Internal Logic
+The `ToSlice` method converts the map to a slice of containers, which is useful for certain operations.
+
+### `Publish`
+#### Description
+The main function that handles the publishing process based on the provided specification.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| spec | PublishSpec | The specification for publishing |
+| daggerClient | *dagger.Client | The Dagger client |
+| variants | Variants | The multi-platform variants of the container |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The reference or path of the published image |
+| error | error | Any error encountered during the process |
+
+#### Internal Logic
+1. Creates a new Docker client.
+2. If the target type is remote, calls the `remote` function.
+3. For local and Kind target types, selects the appropriate platform variant.
+4. Calls the `local` function to load the image.
+5. For Kind target type, calls the `kind` function to load the image into the Kind cluster.
+
+### `kind`
+#### Description
+Loads an image into a Kind (Kubernetes in Docker) cluster.
+
+#### Internal Logic
+1. Creates a Kind cluster provider.
+2. Lists the nodes in the specified cluster.
+3. Saves the Docker image to a temporary file.
+4. Loads the image archive into the first node of the cluster.
+
+### `local`
+#### Description
+Loads an image into the local Docker daemon.
+
+#### Internal Logic
+1. Exports the container image to a temporary tar file.
+2. Loads the image into the local Docker daemon.
+3. Parses the response to extract the image ID.
+4. Tags the loaded image with the specified path.
+
+### `remote`
+#### Description
+Publishes an image to a remote registry.
+
+#### Internal Logic
+1. Prepares the container and publish options based on the number of variants.
+2. Uses the Dagger client to publish the container to the specified path.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| dagger.io/dagger | Interacting with the Dagger CI/CD engine |
+| github.com/docker/docker/client | Interacting with the Docker daemon |
+| sigs.k8s.io/kind | Managing Kind clusters |
+
+## Error Handling
+The code uses Go's standard error handling patterns, wrapping errors with additional context using `fmt.Errorf` and the `%w` verb for error wrapping.
+
+## Performance Considerations
+The code uses temporary files for image export and import operations, which are cleaned up after use. This approach balances memory usage and performance for large image files.

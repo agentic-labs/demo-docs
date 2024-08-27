@@ -1,0 +1,89 @@
+---
+title: "integration-test.yml"
+---
+
+## High-level description
+This GitHub Actions workflow defines a series of integration tests for the project, triggered on push events to the main branch, pull requests, or manual workflow dispatches. It runs different test suites (CLI, integration, UI) using Dagger, a portable devkit for CI/CD pipelines, and uploads test logs as artifacts.
+
+## Code Structure
+The workflow defines three jobs: `cli`, `test`, and `ui`. Each job runs on the latest Ubuntu runner and uses Dagger to execute specific test suites. The `test` job utilizes a matrix strategy to run tests for different components of the project.
+
+## Symbols
+### `name: Integration Tests`
+#### Description
+This line defines the name of the workflow as it will appear in the GitHub Actions interface.
+
+### `on:`
+#### Description
+This section specifies the events that will trigger the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `push` | event | Triggers the workflow on push events to branches matching the specified pattern. |
+| `pull_request` | event | Triggers the workflow on pull requests. |
+| `workflow_dispatch` | event | Allows manual triggering of the workflow. |
+
+### `env:`
+#### Description
+This section defines environment variables available to all jobs in the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `GO_VERSION` | string | Specifies the Go version to use (1.22). |
+| `DAGGER_VERSION` | string | Specifies the Dagger version to use (0.12.3). |
+
+### `concurrency:`
+#### Description
+This section configures concurrent workflow run behavior.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `group` | string | Groups concurrent runs based on workflow and branch/tag. |
+| `cancel-in-progress` | boolean | Cancels any in-progress runs from the same group when a new run is triggered. |
+
+### `jobs:`
+#### Description
+This section defines the individual jobs that make up the workflow.
+
+#### `cli`, `test`, `ui`
+##### Description
+These jobs define the execution steps for different test suites:
+
+- `cli`: Runs CLI integration tests.
+- `test`: Runs a matrix of integration tests for various components.
+- `ui`: Runs UI integration tests.
+
+##### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `name` | string | The name of the job. |
+| `runs-on` | string | The runner environment to use (ubuntu-latest). |
+| `timeout-minutes` | number | The maximum execution time for the job in minutes. |
+| `strategy` | object | (Only for `test` job) Defines the matrix strategy for running tests. |
+| `steps` | array | A sequence of steps to execute within the job. |
+
+##### Internal Logic
+Each job consists of the following steps:
+
+1. **Checkout Code:** Checks out the repository's code.
+2. **Free Disk Space:** Runs a script to free up disk space by clearing caches.
+3. **Run Tests:** Uses the `dagger/dagger-for-github` action to execute the specified test suite with Dagger.
+4. **Upload Logs:** (Only for `test` job) Uploads test logs as artifacts.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `actions/checkout@v4` | Checks out the repository's code. |
+| `jlumbroso/free-disk-space@v1.3.1` | Frees up disk space by clearing caches. |
+| `dagger/dagger-for-github@v6` | Executes Dagger commands for running tests. |
+| `actions/upload-artifact@v4` | Uploads test logs as artifacts. |
+
+## Configuration
+The workflow uses secrets for authentication:
+
+| Option | Type | Description |
+|:-------|:-----|:------------|
+| `DAGGER_CLOUD_TOKEN` | secret | A Dagger Cloud API token for authentication. |

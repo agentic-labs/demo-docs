@@ -1,0 +1,69 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/cleanup` directory contains the implementation of an authentication cleanup service for the Flipt application. This service is responsible for periodically removing expired authentication tokens from the authentication store, ensuring the security and efficiency of the authentication system.
+
+## What does it do?
+The authentication cleanup service performs the following tasks:
+
+1. Periodically checks for expired authentication tokens in the authentication store.
+2. Deletes expired tokens after a configurable grace period.
+3. Coordinates cleanup operations across multiple Flipt instances using an operation lock service.
+4. Handles different authentication methods, each with its own cleanup requirements.
+
+The service runs in the background, starting separate goroutines for each enabled authentication method that requires database cleanup. It uses a configurable cleanup interval and grace period to determine when to perform cleanup operations and which tokens to delete.
+
+## Key Files
+
+### cleanup.go
+This file contains the main implementation of the authentication cleanup service. It defines the `AuthenticationService` struct and its methods, including:
+
+- `NewAuthenticationService`: Constructs and configures a new instance of the service.
+- `Run`: Starts the cleanup service, launching background goroutines for each authentication method.
+- `Shutdown`: Gracefully stops the service and its background goroutines.
+
+The `AuthenticationService` uses an operation lock service to coordinate cleanup operations across multiple Flipt instances, ensuring that cleanup happens at the configured interval without conflicts.
+
+### cleanup_test.go
+This file contains unit tests for the authentication cleanup service. The main test function, `TestCleanup`, verifies the service's ability to:
+
+- Delete expired authentication tokens after the configured grace period.
+- Preserve non-expiring tokens.
+- Handle multiple concurrent instances of the cleanup service.
+
+The test simulates the creation of both expiring and non-expiring tokens, runs multiple instances of the cleanup service concurrently, and asserts the expected behavior regarding token deletion and persistence.
+
+## Dependencies
+The cleanup service relies on several internal and external dependencies:
+
+1. `go.flipt.io/flipt/internal/config`: Provides configuration options for the authentication cleanup service.
+2. `go.flipt.io/flipt/internal/storage/authn`: Defines the interface for the authentication store.
+3. `go.flipt.io/flipt/internal/storage/oplock`: Provides the operation lock service for coordinating cleanup operations.
+4. `go.uber.org/zap`: Used for logging throughout the service.
+5. `golang.org/x/sync/errgroup`: Used for managing concurrent goroutines in the `Run` method.
+
+For testing, additional dependencies are used, including:
+
+6. `github.com/stretchr/testify`: Provides assertion functions for unit tests.
+7. `go.flipt.io/flipt/internal/storage/authn/memory`: Provides an in-memory implementation of the authentication store for testing.
+8. `go.flipt.io/flipt/internal/storage/oplock/memory`: Provides an in-memory implementation of the operation lock service for testing.
+
+## Configuration
+The authentication cleanup service is configured using the `config.AuthenticationConfig` struct, which includes the following key settings:
+
+1. Cleanup schedule (interval)
+2. Grace period for expired tokens
+3. Enabled authentication methods
+
+These configuration options allow for fine-tuning the cleanup process based on the specific needs of the Flipt deployment.
+
+## Error Handling and Logging
+The cleanup service implements robust error handling and logging:
+
+- Errors during lock acquisition or token deletion are logged as warnings, and the service continues to retry.
+- The `zap.Logger` is used to record various events, including service startup, shutdown, lock operations, and token deletions.
+- The `Shutdown` method ensures graceful termination of all background goroutines and logs any errors encountered during the process.
+
+In summary, the `internal/cleanup` directory provides a crucial service for maintaining the security and efficiency of Flipt's authentication system by automatically removing expired tokens while coordinating operations across multiple instances.

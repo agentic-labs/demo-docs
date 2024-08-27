@@ -1,0 +1,55 @@
+---
+title: "5_create_table_operation_lock.up.sql"
+---
+
+## High-level description
+This SQL script creates a table named `operation_lock` in a PostgreSQL database. The table is designed to manage locks for various operations, allowing for version control and time-based locking mechanisms.
+
+## Symbols
+
+### `operation_lock` table
+#### Description
+The `operation_lock` table is created to store information about locks on different operations. It includes fields for the operation name, version, and timestamps for when the lock was last acquired and when it expires.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| operation | VARCHAR(255) | The name or identifier of the operation being locked |
+| version | INTEGER | A version number for the lock, defaulting to 0 |
+| last_acquired_at | TIMESTAMP | The timestamp when the lock was last acquired |
+| acquired_until | TIMESTAMP | The timestamp until which the lock is valid |
+
+#### Internal Logic
+The table is created with the following structure and constraints:
+1. `operation` is the primary key and is set as UNIQUE and NOT NULL, ensuring each operation has a unique entry.
+2. `version` is an integer field with a default value of 0 and is NOT NULL.
+3. `last_acquired_at` and `acquired_until` are TIMESTAMP fields that default to the current timestamp (CURRENT_TIMESTAMP) when a new record is inserted.
+
+The `IF NOT EXISTS` clause is used to prevent errors if the table already exists in the database.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| PostgreSQL | The database system for which this SQL script is written |
+
+## Performance Considerations
+The `operation` column is set as the primary key, which automatically creates an index on this column. This ensures fast lookups when querying the table by operation name.
+
+## Error Handling
+The `IF NOT EXISTS` clause in the CREATE TABLE statement prevents the script from throwing an error if the table already exists in the database. This allows for idempotent execution of the migration script.
+
+## API/Interface Reference
+While this is a database table and not an API, the table structure implies the following interface for interacting with operation locks:
+
+| Column | Type | Description |
+|:-------|:-----|:------------|
+| operation | VARCHAR(255) | The unique identifier for the operation being locked |
+| version | INTEGER | A version number for the lock, useful for implementing optimistic locking |
+| last_acquired_at | TIMESTAMP | When the lock was last acquired, useful for debugging and monitoring |
+| acquired_until | TIMESTAMP | The expiration time of the lock, useful for implementing time-based locking |
+
+This table structure suggests that applications interacting with it would need to implement logic for:
+1. Acquiring a lock by inserting or updating a row
+2. Releasing a lock by updating or deleting a row
+3. Checking lock status by querying the table
+4. Handling version conflicts and lock expirations based on the `version` and `acquired_until` fields

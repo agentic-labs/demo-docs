@@ -1,0 +1,109 @@
+---
+title: "nightly.yml"
+---
+
+## High-level description
+This GitHub Actions workflow automates the nightly build, release, and security scanning of the Flipt application. It builds binaries for Linux and macOS, publishes them as release artifacts, and pushes Docker images to Docker Hub and GitHub Container Registry. Additionally, it runs a StackHawk security scan against the nightly build.
+
+## Code Structure
+The workflow consists of three jobs:
+
+- `nightly-build`: Builds Flipt binaries for Linux and macOS and uploads them as artifacts.
+- `nightly-release`: Uses GoReleaser to create and publish release artifacts, including Docker images, based on the binaries built in the `nightly-build` job.
+- `stackhawk`: Runs a StackHawk security scan against the Flipt application using the `nightly` Docker image built and published in the `nightly-release` job.
+
+## Symbols
+
+### `nightly-build`
+#### Description
+This job builds Flipt binaries for Linux and macOS and uploads them as artifacts.
+
+#### Inputs
+None
+
+#### Outputs
+- `flipt-nightly-linux` artifact containing the Linux binary.
+- `flipt-nightly-darwin` artifact containing the macOS binary.
+
+#### Internal Logic
+1. **Checkout Code:** Checks out the repository.
+2. **Setup Go:** Sets up the Go 1.21 environment.
+3. **Setup Caching:** Caches Go tools and dependencies.
+4. **Setup Node:** Sets up Node.js 18.
+5. **Install GCC (Linux):** Installs GCC for arm64 architecture on Linux.
+6. **Install Quill (macOS):** Installs the Quill signing tool on macOS.
+7. **Install Mage:** Installs the Mage build tool.
+8. **Prep Build:** Runs the `mage prep` command to prepare the build environment.
+9. **Git Tag:** Retrieves the latest Git tag matching the pattern `v[0-9]*`.
+10. **GoReleaser (Nightly) Build:** Uses GoReleaser to build Flipt binaries for Linux and macOS based on the specified configuration file (`.goreleaser.${{ matrix.name }}.yml`).
+11. **Upload Artifacts:** Uploads the built binaries as artifacts named `flipt-nightly-linux` and `flipt-nightly-darwin`.
+
+### `nightly-release`
+#### Description
+This job uses GoReleaser to create and publish release artifacts, including Docker images, based on the binaries built in the `nightly-build` job.
+
+#### Inputs
+- `flipt-nightly-linux` artifact from the `nightly-build` job.
+- `flipt-nightly-darwin` artifact from the `nightly-build` job.
+
+#### Outputs
+- Docker images pushed to Docker Hub and GitHub Container Registry.
+- Release artifacts published to GitHub Releases.
+
+#### Internal Logic
+1. **Checkout Code:** Checks out the repository.
+2. **Setup Go:** Sets up the Go 1.21 environment.
+3. **Setup QEMU:** Sets up QEMU for cross-platform Docker image builds.
+4. **Setup Buildx:** Sets up Docker Buildx for building multi-platform images.
+5. **Login to Docker Hub:** Logs in to Docker Hub using the provided credentials.
+6. **Login to GitHub Container Registry:** Logs in to GitHub Container Registry using the provided credentials.
+7. **Download Artifacts:** Downloads the `flipt-nightly-linux` and `flipt-nightly-darwin` artifacts from the `nightly-build` job.
+8. **Install Syft:** Installs the Syft tool for generating SBOMs.
+9. **Git Tag:** Retrieves the latest Git tag matching the pattern `v[0-9]*`.
+10. **GoReleaser (Nightly) Release:** Uses GoReleaser to create and publish release artifacts, including Docker images, based on the specified configuration file (`.goreleaser.nightly.yml`).
+
+### `stackhawk`
+#### Description
+This job runs a StackHawk security scan against the Flipt application using the `nightly` Docker image built and published in the `nightly-release` job.
+
+#### Inputs
+None
+
+#### Outputs
+- StackHawk scan results.
+
+#### Internal Logic
+1. **Checkout Code:** Checks out the repository.
+2. **Setup Java:** Sets up Java 17.
+3. **Update HawkScan Configuration:** Updates the StackHawk configuration file (`stackhawk.yml`) to use the `Nightly` environment.
+4. **Run HawkScan:** Runs the StackHawk security scan using the specified API key and configuration file.
+
+## Dependencies
+- `actions/checkout`
+- `actions/setup-go`
+- `actions/cache`
+- `actions/setup-node`
+- `actions/upload-artifact`
+- `actions/download-artifact`
+- `docker/setup-qemu-action`
+- `docker/setup-buildx-action`
+- `docker/login-action`
+- `goreleaser/goreleaser-action`
+- `magefile/mage-action`
+- `mikefarah/yq`
+- `stackhawk/hawkscan-action`
+
+## Configuration
+The workflow uses several secrets stored in the GitHub repository:
+
+| Option | Description |
+|:-------|:------------|
+| `DOCKER_USERNAME` | Docker Hub username. |
+| `DOCKER_TOKEN` | Docker Hub access token. |
+| `GITHUB_TOKEN` | GitHub access token. |
+| `GORELEASER_KEY` | GoReleaser Pro API key. |
+| `ANALYTICS_WRITE_KEY` | Write key for analytics. |
+| `ANALYTICS_WRITE_ENDPOINT` | Endpoint for writing analytics data. |
+| `QUILL_SIGN_P12` | P12 certificate for signing with Quill. |
+| `QUILL_SIGN_PASSWORD` | Password for the Quill signing certificate. |
+| `HAWK_API_KEY` | StackHawk API key. | 

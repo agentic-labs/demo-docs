@@ -1,0 +1,97 @@
+---
+title: "errors.go"
+---
+
+## High-level description
+The `errors.go` file defines a set of error handling functions specific to the `ofrep` package, which seems to be related to Open Feature Repository operations. These functions create standardized gRPC errors with custom details embedded for better error identification and handling.
+
+## Code Structure
+The code consists of several functions that all return an `error` type. Each function represents a specific error scenario related to Open Feature Repository operations, such as bad requests, missing flags, or not found errors. The `statusWithKey` function is used internally by other functions to embed a custom key into the gRPC error details.
+
+## Symbols
+
+### `statusWithKey`
+#### Description
+Embeds a custom key-value pair into the details of a gRPC status object. This is used to attach additional context to errors, making them easier to identify and handle.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| st | *status.Status | The original gRPC status object. |
+| key | string | The key to embed in the error details. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *status.Status | The modified gRPC status object with the embedded key-value pair. |
+| error | An error object if the embedding process fails. |
+
+#### Internal Logic
+The function creates a new `structpb.Struct` to hold the custom details. It then adds a field with the specified `key` and a string value to the struct. Finally, it uses the `WithDetails` method of the `status.Status` object to attach the custom details.
+
+### `newBadRequestError`
+#### Description
+Creates a new gRPC error with `codes.InvalidArgument` (Bad Request) and embeds a custom key for identification.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The custom key to embed in the error details. |
+| err | error | The original error that triggered this bad request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | The constructed gRPC error object. |
+
+#### Internal Logic
+The function first creates a new `status.Status` object with `codes.InvalidArgument` and the original error message. Then, it calls `statusWithKey` to embed the custom `key` into the error details. If embedding fails, it returns an internal error.
+
+### `newFlagNotFoundError`
+#### Description
+Creates a new gRPC error indicating a flag was not found, using `codes.NotFound` and embedding the flag key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The key of the flag that was not found. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | The constructed gRPC error object. |
+
+#### Internal Logic
+Similar to `newBadRequestError`, this function creates a `status.Status` object with `codes.NotFound` and a message indicating the flag key that wasn't found. It then embeds the `key` using `statusWithKey` and returns the resulting error.
+
+### `newFlagMissingError`
+#### Description
+Creates a new gRPC error with `codes.InvalidArgument` indicating a required flag key was not provided.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | The constructed gRPC error object. |
+
+#### Internal Logic
+This function directly returns a `status.Error` with `codes.InvalidArgument` and a message stating the flag key was missing.
+
+### `newFlagsMissingError`
+#### Description
+Creates a new gRPC error with `codes.InvalidArgument` indicating required flags were not provided in the context.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | The constructed gRPC error object. |
+
+#### Internal Logic
+Similar to `newFlagMissingError`, this function directly returns a `status.Error` with `codes.InvalidArgument` and a message stating that flags were missing from the context.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| "fmt" | Used for string formatting in error messages. |
+| "google.golang.org/grpc/codes" | Provides gRPC error codes. |
+| "google.golang.org/grpc/status" | Used for creating and manipulating gRPC status objects. |
+| "google.golang.org/protobuf/types/known/structpb" | Used for creating structured data to embed in gRPC error details. |

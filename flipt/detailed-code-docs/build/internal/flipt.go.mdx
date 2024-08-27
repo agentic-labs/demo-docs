@@ -1,0 +1,79 @@
+---
+title: "flipt.go"
+---
+
+## High-level description
+The `flipt.go` file in the `build/internal` package defines functions for building and packaging the Flipt application using Dagger. It leverages Dagger's containerization and build caching capabilities to create a production-ready Flipt container image.
+
+## Code Structure
+The `Base` function builds the Flipt application from source code, while the `Package` function takes a pre-built Flipt container and packages it into a smaller Alpine Linux-based image for distribution.
+
+## Symbols
+
+### `Base`
+#### Description
+This function builds the Flipt application from source code within a Dagger container. It sets up the Go build environment, fetches dependencies, compiles the source code, and packages it into an executable.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the function execution. |
+| dag | *dagger.Client | The Dagger client instance. |
+| source | *dagger.Directory | The Dagger directory containing the Flipt source code. |
+| uiDist | *dagger.Directory | The Dagger directory containing the built UI assets. |
+| platform | platforms.Platform | The target platform for the build. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *dagger.Container | A Dagger container with the built Flipt application. |
+| error | error | An error object if an error occurred during the build process. |
+
+#### Internal Logic
+1. Sets up a Go build environment within a Dagger container based on the `golang:1.22-alpine3.19` image.
+2. Configures Go build cache and module cache paths.
+3. Parses the `go.work` file to determine project dependencies.
+4. Fetches project dependencies using `go mod download`.
+5. Mounts the Flipt source code and UI assets into the container.
+6. Sets build flags and compiles the Flipt binary using `go build`.
+
+### `Package`
+#### Description
+This function takes a pre-built Flipt container and packages it into a smaller Alpine Linux-based image for distribution. It copies the Flipt binary and configuration files into a new container, sets up necessary permissions, and configures the entrypoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the function execution. |
+| client | *dagger.Client | The Dagger client instance. |
+| flipt | *dagger.Container | The Dagger container containing the pre-built Flipt application. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *dagger.Container | A Dagger container with the packaged Flipt application in an Alpine Linux image. |
+| error | error | An error object if an error occurred during the packaging process. |
+
+#### Internal Logic
+1. Retrieves the platform of the pre-built Flipt container.
+2. Creates a new Dagger container based on the `alpine:3.19` image.
+3. Installs necessary packages like PostgreSQL client, OpenSSL, and CA certificates.
+4. Copies the Flipt binary and default configuration file from the pre-built container.
+5. Creates the `flipt` user and group and sets appropriate ownership for Flipt directories.
+6. Sets the default command to execute the Flipt binary.
+
+## Dependencies
+This code depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a way to pass request-scoped values and cancellation signals across API boundaries. |
+| fmt | Implements formatted I/O with functions analogous to C's printf and scanf. |
+| path | Provides functions for manipulating hierarchical paths. |
+| time | Provides functionality for measuring and displaying time. |
+| github.com/containerd/containerd/platforms | Defines platform specifications for containers. |
+| go.flipt.io/build/internal/dagger | Provides a Go client for interacting with Dagger. |
+| golang.org/x/mod/modfile | Provides functionality for parsing and manipulating Go module files. |
+
+## Error Handling
+Both `Base` and `Package` functions return an `error` object if any error occurs during the build or packaging process. The calling code is responsible for handling these errors.

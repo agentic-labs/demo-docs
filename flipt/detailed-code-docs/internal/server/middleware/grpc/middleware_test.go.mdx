@@ -1,0 +1,186 @@
+---
+title: "middleware_test.go"
+---
+
+## High-level description
+The `grpc_middleware` package defines a set of gRPC interceptors for Flipt's gRPC server. These interceptors handle request validation, error mapping to gRPC status codes, evaluation request/response field setting, and audit event logging.
+
+## Code Structure
+The code consists of several functions that act as gRPC interceptors. Each interceptor function takes a `context.Context`, request object, `grpc.UnaryServerInfo`, and `grpc.UnaryHandler` as input and returns a response object and an error. The interceptors are chained together to form a middleware pipeline for gRPC requests.
+
+## References
+- `flipt.Validator`: An interface for validating incoming requests.
+- `errors`: A package for defining and handling errors.
+- `metrics`: A package for recording metrics.
+- `audit`: A package for logging audit events.
+- `authn`: A package for handling authentication.
+- `flipt`: A package containing Flipt's gRPC service definitions.
+- `evaluation`: A package containing Flipt's evaluation service definitions.
+- `trace`: A package for OpenTelemetry tracing.
+- `zap`: A package for logging.
+- `grpc`: A package for gRPC.
+- `codes`: A package for gRPC status codes.
+- `metadata`: A package for gRPC metadata.
+- `status`: A package for gRPC status.
+
+## Symbols
+
+### `ValidationUnaryInterceptor`
+#### Description
+This interceptor validates incoming requests that implement the `flipt.Validator` interface.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `interface{}` | The request object. |
+| _ | `*grpc.UnaryServerInfo` | Information about the gRPC service and method being invoked. |
+| handler | `grpc.UnaryHandler` | The next handler in the gRPC middleware chain. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resp | `interface{}` | The response object. |
+| err | `error` | An error, if any. |
+
+#### Internal Logic
+1. Checks if the request object implements the `flipt.Validator` interface.
+2. If it does, calls the `Validate()` method on the request object.
+3. If validation fails, returns an error.
+4. Otherwise, calls the next handler in the chain.
+
+### `ErrorUnaryInterceptor`
+#### Description
+This interceptor intercepts known errors and returns the appropriate gRPC status code.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `interface{}` | The request object. |
+| _ | `*grpc.UnaryServerInfo` | Information about the gRPC service and method being invoked. |
+| handler | `grpc.UnaryHandler` | The next handler in the gRPC middleware chain. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| resp | `interface{}` | The response object. |
+| err | `error` | An error, if any. |
+
+#### Internal Logic
+1. Calls the next handler in the chain.
+2. If an error occurs, increments the `metrics.ErrorsTotal` counter.
+3. If the error is already a `*status.Error`, returns it unchanged.
+4. Otherwise, maps the error to a gRPC status code based on its type:
+    - `context.Canceled`: `codes.Canceled`
+    - `context.DeadlineExceeded`: `codes.DeadlineExceeded`
+    - `errors.ErrNotFound`: `codes.NotFound`
+    - `errors.ErrInvalid`, `errors.ErrValidation`: `codes.InvalidArgument`
+    - `errors.ErrUnauthenticated`: `codes.Unauthenticated`
+    - `errors.ErrUnauthorized`: `codes.PermissionDenied`
+    - Other errors: `codes.Internal`
+5. Returns a new `*status.Error` with the mapped code and the original error message.
+
+### `EvaluationUnaryInterceptor`
+#### Description
+This interceptor sets required request/response fields for evaluation requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| analyticsEnabled | `bool` | Whether analytics are enabled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `grpc.UnaryServerInterceptor` | A function that acts as a gRPC unary server interceptor. |
+
+#### Internal Logic
+1. Records the start time of the request.
+2. If the request object implements the `RequestIdentifiable` interface:
+    - Sets a unique request ID if not already present.
+    - Calls the next handler in the chain.
+    - If an error occurs, returns the response and error.
+    - Sets the request ID on the response object if it implements the `RequestIdentifiable` interface.
+    - Records the start and end times on the response object if it implements the `ResponseDurationRecordable` interface.
+    - If analytics are enabled, adds an event to the OpenTelemetry span with the evaluation response details.
+3. Otherwise, calls the next handler in the chain.
+
+### `AuditEventUnaryInterceptor`
+#### Description
+This interceptor captures audit events and adds them to the OpenTelemetry span.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| eventPairChecker | `audit.EventPairChecker` | An event pair checker instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `grpc.UnaryServerInterceptor` | A function that acts as a gRPC unary server interceptor. |
+
+#### Internal Logic
+1. Extracts the request details from the request object if it implements the `flipt.Requester` interface.
+2. Creates an audit event object.
+3. Defers a function that adds the audit event to the OpenTelemetry span if it's not nil and the event pair is allowed by the event pair checker.
+4. Calls the next handler in the chain.
+5. If an error occurs:
+    - If the error is an `errs.ErrUnauthorized`, sets the request status to `flipt.StatusDenied` and creates an audit event.
+    - Returns the response and error.
+6. If the request action is `flipt.ActionDelete` or the request object is an `*flipt.OrderRulesRequest` or `*flipt.OrderRolloutsRequest`, creates an audit event.
+7. If an audit event was created in the previous step, returns the response and error.
+8. Otherwise, creates an audit event based on the response object type:
+    - `*flipt.Flag`: Creates an audit event for a flag.
+    - `*flipt.Variant`: Creates an audit event for a variant.
+    - `*flipt.Segment`: Creates an audit event for a segment.
+    - `*flipt.Distribution`: Creates an audit event for a distribution.
+    - `*flipt.Constraint`: Creates an audit event for a constraint.
+    - `*flipt.Namespace`: Creates an audit event for a namespace.
+    - `*flipt.Rollout`: Creates an audit event for a rollout.
+    - `*flipt.Rule`: Creates an audit event for a rule.
+    - `*auth.CreateTokenResponse`: Creates an audit event for a token creation.
+9. Returns the response and error.
+
+### `FliptAcceptServerVersionUnaryInterceptor`
+#### Description
+This interceptor extracts the `x-flipt-accept-server-version` header from the gRPC metadata and sets it in the context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `grpc.UnaryServerInterceptor` | A function that acts as a gRPC unary server interceptor. |
+
+#### Internal Logic
+1. Extracts the gRPC metadata from the context.
+2. If the metadata contains the `x-flipt-accept-server-version` header:
+    - Parses the version string using `semver.ParseTolerant`.
+    - If parsing is successful, sets the version in the context using `WithFliptAcceptServerVersion`.
+    - If parsing fails, logs a warning message.
+3. Calls the next handler in the chain.
+
+### `ForwardFliptAcceptServerVersion`
+#### Description
+This function extracts the `x-flipt-accept-server-version` header from an HTTP request and forwards it as gRPC metadata entries.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*http.Request` | The HTTP request object. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `metadata.MD` | The gRPC metadata entries. |
+
+#### Internal Logic
+1. Extracts the gRPC metadata from the context.
+2. If the HTTP request contains the `x-flipt-accept-server-version` header, adds it to the gRPC metadata.
+3. Returns the gRPC metadata.

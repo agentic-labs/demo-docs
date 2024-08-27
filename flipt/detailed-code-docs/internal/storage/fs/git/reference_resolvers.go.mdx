@@ -1,0 +1,69 @@
+---
+title: "reference_resolvers.go"
+---
+
+## High-level description
+This code defines a set of reference resolvers for a Git repository, used to determine the commit hash associated with a given reference (branch, tag, or commit SHA). It includes resolvers for static references (branches and commit SHAs) and semantic versioning (SemVer) tags.
+
+## Code Structure
+The code defines a `referenceResolver` type for functions that resolve Git references to commit hashes. It implements two resolvers: `staticResolver` for branches and commit SHAs, and `semverResolver` for SemVer tags. Both resolvers take a Git repository and a reference string as input and return the corresponding commit hash.
+
+## Symbols
+### `referenceResolver`
+#### Description
+`referenceResolver` is a function type that defines the signature for reference resolver functions. These functions take a Git repository and a reference string as input and return the corresponding commit hash or an error if the reference cannot be resolved.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| repo | *git.Repository | A pointer to the Git repository. |
+| ref | string | The reference string to resolve (branch, tag, or commit SHA). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plumbing.Hash |  | The commit hash corresponding to the resolved reference. |
+| error |  | An error if the reference cannot be resolved. |
+
+### `staticResolver`
+#### Description
+`staticResolver` is a function that resolves static references, which are either branch names or commit SHAs.
+
+#### Inputs
+N/A - It doesn't take explicit inputs, but it uses the inputs provided to the returned `referenceResolver` function.
+
+#### Outputs
+N/A - It doesn't return explicit outputs, but it uses the outputs of the returned `referenceResolver` function.
+
+#### Internal Logic
+1. It checks if the input `ref` is a valid commit SHA using `plumbing.IsHash`. If it is, it returns the SHA as a `plumbing.Hash`.
+2. Otherwise, it assumes the `ref` is a branch name and attempts to retrieve the branch reference using `repo.Reference` with `plumbing.NewBranchReferenceName`.
+3. If the branch is found, it returns the commit hash associated with the branch head.
+4. If the branch is not found or any error occurs, it returns an error.
+
+### `semverResolver`
+#### Description
+`semverResolver` is a function that resolves semantic versioning (SemVer) tags.
+
+#### Inputs
+N/A - It doesn't take explicit inputs, but it uses the inputs provided to the returned `referenceResolver` function.
+
+#### Outputs
+N/A - It doesn't return explicit outputs, but it uses the outputs of the returned `referenceResolver` function.
+
+#### Internal Logic
+1. It parses the input `ref` as a SemVer constraint using `semver.NewConstraint`.
+2. It retrieves all tags from the repository using `repo.Tags`.
+3. It iterates through each tag and attempts to parse the tag name as a SemVer version using `semver.NewVersion`.
+4. If the tag name is a valid SemVer version and satisfies the constraint, it compares it with the current maximum version found.
+5. If the current tag version is greater than the maximum version, it updates the maximum version and its corresponding commit hash.
+6. After iterating through all tags, it returns the commit hash associated with the maximum SemVer tag that satisfies the constraint.
+7. If no matching tag is found or any error occurs, it returns an error.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/Masterminds/semver/v3 | Used for parsing and comparing semantic versions. |
+| github.com/go-git/go-git/v5 | Used for interacting with Git repositories. |
+| github.com/go-git/go-git/v5/plumbing | Used for working with low-level Git objects and data structures. |
+

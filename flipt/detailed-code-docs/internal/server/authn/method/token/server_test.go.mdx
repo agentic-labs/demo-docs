@@ -1,0 +1,89 @@
+---
+title: "server_test.go"
+---
+
+## High-level description
+The code defines a test suite for the `Server` struct within the token authentication method package. It tests the server's ability to create, retrieve, and delete authentication tokens, as well as handle invalid input and namespace-scoped authentication attempts.
+
+## Code Structure
+The main component is the `TestServer` function, which sets up a test gRPC server and client to interact with the `Server` being tested. It defines several test cases within its scope, each testing a specific aspect of the server's functionality.
+
+## Symbols
+### `TestServer`
+#### Description
+This function sets up a test environment with a gRPC server and client to test the `Server` struct's functionality. It then defines and runs several test cases to verify the server's behavior.
+
+#### Inputs
+This function takes a single argument:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing framework's testing object. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Initializes a logger, an in-memory authentication store, and a buffered connection listener.
+    - Creates a gRPC server with error handling middleware.
+    - Registers the `AuthenticationMethodTokenServiceServer` with the server, using a new `Server` instance.
+    - Starts the server in a separate goroutine.
+    - Creates a gRPC client connected to the server.
+2. **Test Cases:**
+    - **Token Creation:**
+        - Sends a `CreateToken` request to the server with valid parameters.
+        - Verifies that the response contains the expected client token and authentication metadata.
+        - Retrieves the authentication from the store using the client token and compares it to the response.
+    - **Invalid Token Creation:**
+        - Sends a `CreateToken` request with an invalid `ExpiresAt` timestamp.
+        - Verifies that the server returns an `InvalidArgument` error.
+    - **Namespace-Scoped Authentication:**
+        - Calls the `DisallowsNamespaceScopedAuthentication` method of the server.
+        - Verifies that the method returns `false`, indicating that namespace-scoped authentication is not allowed.
+3. **Cleanup:**
+    - Stops the gRPC server and waits for it to shut down.
+    - Closes the gRPC client connection.
+
+### `Test_Server_DisallowsNamespaceScopedAuthentication`
+#### Description
+This function tests that the `Server` does not allow namespace-scoped authentication.
+
+#### Inputs
+This function takes a single argument:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing framework's testing object. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Initializes a logger and an in-memory authentication store.
+    - Creates a new `Server` instance.
+2. **Test:**
+    - Calls the `AllowsNamespaceScopedAuthentication` method of the server.
+    - Asserts that the method returns `false`.
+
+## Dependencies
+This code depends on several external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides functions for managing and propagating context within goroutines. |
+| `net` | Provides network-related functionality. |
+| `testing` | Provides testing framework functionalities. |
+| `github.com/google/go-cmp/cmp` | Provides functions for comparing Go values. |
+| `github.com/stretchr/testify/assert` | Provides assertion functions for testing. |
+| `github.com/stretchr/testify/require` | Provides assertion functions that stop test execution on failure. |
+| `go.flipt.io/flipt/internal/server/middleware/grpc` | Provides gRPC middleware for error handling. |
+| `go.flipt.io/flipt/internal/storage/authn/memory` | Provides an in-memory implementation of the authentication store. |
+| `go.flipt.io/flipt/rpc/flipt/auth` | Provides gRPC service definitions for authentication. |
+| `go.uber.org/zap/zaptest` | Provides a testing logger implementation. |
+| `google.golang.org/grpc` | Provides gRPC framework functionalities. |
+| `google.golang.org/grpc/codes` | Provides gRPC status codes. |
+| `google.golang.org/grpc/credentials/insecure` | Provides insecure gRPC credentials for testing. |
+| `google.golang.org/grpc/status` | Provides functions for working with gRPC statuses. |
+| `google.golang.org/grpc/test/bufconn` | Provides a buffered connection listener for testing gRPC servers. |
+| `google.golang.org/protobuf/testing/protocmp` | Provides functions for comparing protocol buffer messages. |
+| `google.golang.org/protobuf/types/known/timestamppb` | Provides functions for working with `google.protobuf.Timestamp` values. |
+

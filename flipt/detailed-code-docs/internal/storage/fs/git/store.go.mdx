@@ -1,0 +1,293 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `SnapshotStore` struct provides a mechanism for accessing and managing snapshots of a Git repository. It implements the `storagefs.ReferencedSnapshotStore` interface, allowing it to track and retrieve snapshots based on Git references (branches, tags, or commit hashes). The store polls the remote repository for updates and builds new snapshots when changes are detected.
+
+## Code Structure
+The `SnapshotStore` struct uses a `git.Repository` to interact with the Git repository and a `storagefs.SnapshotCache` to cache snapshots. It also utilizes a `referenceResolver` to determine the commit hash corresponding to a given reference. The `update` method fetches updates from the remote repository and triggers snapshot builds if necessary. The `View` method allows accessing snapshots, building them on demand if they are not yet cached.
+
+## References
+- `go.flipt.io/flipt/internal/containers`
+- `go.flipt.io/flipt/internal/gitfs`
+- `go.flipt.io/flipt/internal/storage`
+- `go.flipt.io/flipt/internal/storage/fs`
+
+## Symbols
+
+### `SnapshotStore`
+#### Description
+The `SnapshotStore` struct represents a snapshot store backed by a Git repository. It tracks an upstream reference and polls for updates on a configurable interval.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+#### Internal Logic
+The `SnapshotStore` struct maintains a cache of snapshots (`snaps`) and uses a poller (`Poller`) to periodically check for updates from the remote repository. When `View` is called with a reference, it first checks if a snapshot for that reference exists in the cache. If not, it resolves the reference to a commit hash, builds a new snapshot, and adds it to the cache. The `update` method fetches updates from the remote repository and triggers the rebuilding of snapshots for updated references.
+
+## Side Effects
+- The `NewSnapshotStore` function clones or fetches the Git repository from the provided URL.
+- The `update` method modifies the internal snapshot cache.
+
+#### Performance Considerations
+- The snapshot cache helps to reduce the number of Git operations required to serve snapshots.
+- The poller interval should be chosen carefully to balance update frequency with resource consumption.
+
+### `WithRef`
+#### Description
+`WithRef` is a configuration option for `SnapshotStore` that sets the target Git reference to be used for fetching and building snapshots.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The Git reference (branch, tag, or commit hash). |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithSemverResolver`
+#### Description
+`WithSemverResolver` is a configuration option for `SnapshotStore` that configures the store to use a semantic versioning resolver for Git tags.
+
+#### Inputs
+N/A - This is a configuration option.
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithPollOptions`
+#### Description
+`WithPollOptions` is a configuration option for `SnapshotStore` that allows customizing the poller used to trigger update procedures.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...containers.Option[storagefs.Poller] | Options for configuring the poller. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithAuth`
+#### Description
+`WithAuth` is a configuration option for `SnapshotStore` that sets the authentication method used to connect to the Git repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auth | transport.AuthMethod | The authentication method to use. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithInsecureTLS`
+#### Description
+`WithInsecureTLS` is a configuration option for `SnapshotStore` that controls whether to skip TLS certificate verification when connecting to the Git repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| insecureSkipTLS | bool | Whether to skip TLS certificate verification. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithCABundle`
+#### Description
+`WithCABundle` is a configuration option for `SnapshotStore` that sets the CA bundle to use for verifying the TLS certificate of the Git repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| caCertBytes | []byte | The CA bundle in bytes. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithDirectory`
+#### Description
+`WithDirectory` is a configuration option for `SnapshotStore` that sets a root directory within the Git repository to be used for discovering feature flag state files.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| directory | string | The root directory path within the Git repository. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `WithFilesystemStorage`
+#### Description
+`WithFilesystemStorage` is a configuration option for `SnapshotStore` that configures the store to clone the Git repository into the local filesystem instead of using an in-memory representation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the directory where the Git repository should be cloned. |
+
+#### Outputs
+N/A - This is a configuration option.
+
+### `NewSnapshotStore`
+#### Description
+`NewSnapshotStore` constructs a new `SnapshotStore` instance with the provided configuration options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger to use. |
+| url | string | The URL of the Git repository. |
+| opts | ...containers.Option[SnapshotStore] | Configuration options for the store. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | *SnapshotStore | The newly created `SnapshotStore` instance. |
+| err | error | An error, if any occurred during the creation of the store. |
+
+#### Internal Logic
+The function initializes a new `SnapshotStore` struct and applies the provided configuration options. It then clones or fetches the Git repository from the provided URL, performs an initial fetch to set up remote tracking branches, and fetches the base reference snapshot. Finally, it creates a poller to periodically check for updates and returns the initialized store.
+
+### `String`
+#### Description
+`String` returns a string identifier for the `SnapshotStore` type.
+
+#### Inputs
+N/A - This is a method of the `SnapshotStore` struct.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The string "git", representing the store type. |
+
+### `View`
+#### Description
+`View` retrieves a snapshot for the given reference and executes the provided function with the snapshot as input.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| storeRef | storage.Reference | The reference for the desired snapshot. |
+| fn | func(storage.ReadOnlyStore) error | The function to execute with the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error, if any occurred during the retrieval or execution. |
+
+#### Internal Logic
+The method first checks if a snapshot for the given reference exists in the cache. If so, it executes the provided function with the cached snapshot. If not, it resolves the reference to a commit hash, builds a new snapshot, adds it to the cache, and then executes the function with the newly built snapshot.
+
+### `update`
+#### Description
+`update` fetches updates from the remote repository and updates the internal snapshot cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if any updates were fetched, false otherwise. |
+| error | error | An error, if any occurred during the update process. |
+
+#### Internal Logic
+The method fetches updates from the remote repository for all cached references. For each updated reference, it resolves the reference to a commit hash, builds a new snapshot, and updates the cache.
+
+### `fetch`
+#### Description
+`fetch` fetches updates from the remote repository for the specified references.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| heads | []string | The references to fetch. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if any updates were fetched, false otherwise. |
+| error | error | An error, if any occurred during the fetch operation. |
+
+#### Internal Logic
+The method constructs a list of refspecs based on the provided references and the configured reference type (branch or tag). It then performs a fetch operation using the configured authentication and TLS settings.
+
+### `buildReference`
+#### Description
+`buildReference` builds a new snapshot for the given reference and returns the snapshot and its corresponding commit hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| ref | string | The reference for the desired snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *storagefs.Snapshot | *storagefs.Snapshot | The newly built snapshot. |
+| plumbing.Hash | plumbing.Hash | The commit hash corresponding to the snapshot. |
+| error | error | An error, if any occurred during the build process. |
+
+#### Internal Logic
+The method resolves the reference to a commit hash, builds a new snapshot using the resolved hash, and returns both the snapshot and the hash.
+
+### `resolve`
+#### Description
+`resolve` resolves the given reference to a commit hash using the configured reference resolver.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The reference to resolve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| plumbing.Hash | plumbing.Hash | The resolved commit hash. |
+| error | error | An error, if any occurred during the resolution process. |
+
+### `buildSnapshot`
+#### Description
+`buildSnapshot` builds a new snapshot for the given commit hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| hash | plumbing.Hash | The commit hash for the desired snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *storagefs.Snapshot | *storagefs.Snapshot | The newly built snapshot. |
+| error | error | An error, if any occurred during the build process. |
+
+#### Internal Logic
+The method retrieves the Git tree object for the given commit hash, creates a new `gitfs.FS` instance using the tree, and builds a new `storagefs.Snapshot` from the filesystem.
+
+## Dependencies
+- `github.com/go-git/go-billy/v5/osfs`
+- `github.com/go-git/go-git/v5`
+- `github.com/go-git/go-git/v5/config`
+- `github.com/go-git/go-git/v5/plumbing`
+- `github.com/go-git/go-git/v5/plumbing/cache`
+- `github.com/go-git/go-git/v5/plumbing/transport`
+- `github.com/go-git/go-git/v5/storage`
+- `github.com/go-git/go-git/v5/storage/filesystem`
+- `github.com/go-git/go-git/v5/storage/memory`
+- `go.uber.org/zap`
+
+## Error Handling
+The code uses the `error` interface for error handling. Most functions return an `error` value that can be checked for errors. Specific error types, such as `git.NoErrAlreadyUpToDate` and `object.ErrEntryNotFound`, are handled to provide more informative error messages.
+
+## Logging
+The `SnapshotStore` uses a `zap.Logger` for logging. Log messages are emitted for events such as opening files, updating snapshots, and encountering errors.

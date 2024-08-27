@@ -1,0 +1,114 @@
+---
+title: "cleanup.go"
+---
+
+## High-level description
+The `cleanup` package provides an authentication cleanup service that periodically removes expired authentication tokens from the authentication store. This service helps maintain the security and efficiency of the authentication system by removing outdated and potentially compromised tokens.
+
+## Code Structure
+The `AuthenticationService` struct is the core component of the cleanup service. It uses an `oplock.Service` to coordinate cleanup operations across multiple Flipt instances, ensuring that cleanup happens at the configured interval without conflicts. The `Run` method starts a background goroutine for each configured authentication method that requires cleanup, and the `Shutdown` method gracefully stops these goroutines.
+
+## References
+- `go.flipt.io/flipt/internal/config`: Provides configuration options for the authentication cleanup service, including the cleanup schedule and grace period.
+- `go.flipt.io/flipt/internal/storage/authn`: Defines the interface for the authentication store, which is used to delete expired tokens.
+- `go.flipt.io/flipt/internal/storage/oplock`: Provides the operation lock service used to coordinate cleanup operations.
+
+## Symbols
+
+### `AuthenticationService`
+#### Description
+The `AuthenticationService` struct manages the cleanup of expired authentication tokens. It uses an operation lock to ensure that cleanup happens at the configured interval and a grace period to avoid deleting tokens that are still valid.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `NewAuthenticationService`
+#### Description
+`NewAuthenticationService` constructs and configures a new instance of the `AuthenticationService`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger instance for recording events. |
+| lock | oplock.Service | The operation lock service used to coordinate cleanup operations. |
+| store | authstorage.Store | The authentication store used to delete expired tokens. |
+| config | config.AuthenticationConfig | Configuration options for the authentication cleanup service. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *AuthenticationService |  | A pointer to a new instance of the `AuthenticationService`. |
+
+#### Internal Logic
+The function initializes a new `AuthenticationService` struct with the provided logger, operation lock service, authentication store, and configuration options.
+
+### `Run`
+#### Description
+`Run` starts the authentication cleanup service, launching background goroutines to periodically delete expired authentication tokens for each configured authentication method.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for managing the lifecycle of the service. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+1. Creates a cancelable context from the provided context.
+2. Iterates through each configured authentication method.
+3. For each method that requires database cleanup and is enabled:
+    - Starts a goroutine that:
+        - Acquires an operation lock with the configured cleanup interval.
+        - If the lock is acquired:
+            - Deletes expired authentication tokens from the store, considering the configured grace period.
+        - Releases the lock.
+        - Sleeps until the next cleanup interval.
+
+### `Shutdown`
+#### Description
+`Shutdown` gracefully shuts down the authentication cleanup service, stopping all background goroutines and waiting for them to finish.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for managing the shutdown process. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the shutdown process encounters any issues. |
+
+#### Internal Logic
+1. Logs a debug message indicating the shutdown process has started.
+2. Cancels the service's context to signal goroutines to stop.
+3. Waits for all background goroutines to finish.
+4. Logs a debug message indicating the shutdown process has completed.
+5. Returns any error encountered during the shutdown process.
+
+## Side Effects
+- Modifies the authentication store by deleting expired tokens.
+- Acquires and releases operation locks, potentially affecting other Flipt instances.
+
+## Dependencies
+- `context`
+- `fmt`
+- `time`
+- `go.flipt.io/flipt/internal/config`
+- `go.flipt.io/flipt/internal/storage/authn`
+- `go.flipt.io/flipt/internal/storage/oplock`
+- `go.uber.org/zap`
+- `golang.org/x/sync/errgroup`
+
+## Error Handling
+The `Run` method includes error handling for acquiring the operation lock and deleting expired tokens. If an error occurs during these operations, a warning message is logged, and the service continues to retry.
+
+## Logging
+The `AuthenticationService` uses a `zap.Logger` to record events, including:
+- Service startup and shutdown.
+- Acquisition and release of operation locks.
+- Deletion of expired authentication tokens.
+- Errors encountered during cleanup operations.

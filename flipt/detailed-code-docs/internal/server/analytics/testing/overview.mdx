@@ -1,0 +1,108 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `testing` package provides utilities for setting up and tearing down a ClickHouse database within a test environment. It leverages Docker containers to spin up a ClickHouse instance and applies database migrations to ensure a clean and consistent state for testing.
+
+## Code Structure
+The `testing` package defines two main symbols: `Database` and `NewAnalyticsDBContainer`. `NewAnalyticsDBContainer` is responsible for creating and configuring a Docker container running a ClickHouse instance. `Database` represents a test database instance and uses `NewAnalyticsDBContainer` to manage the container lifecycle. It also handles database connections and migrations.
+
+## Symbols
+
+### `Database`
+#### Description
+The `Database` struct represents a test instance of a ClickHouse database. It encapsulates the Docker container running the database, the database connection, and the database driver.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Database` struct doesn't have any methods with complex internal logic.
+
+### `Open`
+#### Description
+The `Open` function creates a new `Database` instance, starts a ClickHouse container, establishes a database connection, and runs database migrations.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | \*Database | A pointer to the initialized `Database` instance. |
+| err | error | An error object if something went wrong during the setup process. |
+
+#### Internal Logic
+1. Calls `NewAnalyticsDBContainer` to create a Docker container running ClickHouse.
+2. Creates a new ClickHouse database connection using the container's host and port.
+3. Creates a new migrator instance using `newMigrator`.
+4. Drops the existing database to ensure a clean slate.
+5. Creates a new migrator instance again.
+6. Applies pending migrations using `Up` method of the migrator.
+7. Returns the initialized `Database` instance.
+
+### `newMigrator`
+#### Description
+The `newMigrator` function creates a new database migrator instance for ClickHouse.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | \*sql.DB | A pointer to the database connection. |
+| driver | fliptsql.Driver | The database driver to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| mm | \*migrate.Migrate | A pointer to the initialized database migrator. |
+| err | error | An error object if the migrator creation fails. |
+
+#### Internal Logic
+1. Creates a ClickHouse database driver instance using `clickhouseMigrate.WithInstance`.
+2. Creates a migration source driver from the embedded file system using `iofs.New`.
+3. Creates a new migrator instance with the source and database drivers using `migrate.NewWithInstance`.
+4. Returns the initialized migrator.
+
+### `NewAnalyticsDBContainer`
+#### Description
+The `NewAnalyticsDBContainer` function creates and configures a Docker container running a ClickHouse instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for managing the container lifecycle. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| container | testcontainers.Container | The created Docker container. |
+| hostIP | string | The IP address of the Docker host. |
+| port | int | The mapped port on which ClickHouse is listening. |
+| err | error | An error object if container creation or configuration fails. |
+
+#### Internal Logic
+1. Defines the required port for ClickHouse.
+2. Creates a container request with the ClickHouse image, exposed port, and waiting strategy.
+3. Starts a generic Docker container based on the request.
+4. Starts the container's log producer.
+5. Retrieves the mapped port for the exposed ClickHouse port.
+6. Retrieves the IP address of the Docker host.
+7. Returns the container, host IP, mapped port, and any error encountered.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/ClickHouse/clickhouse-go/v2 | Provides the ClickHouse database driver. |
+| github.com/docker/go-connections/nat | Offers utilities for working with Docker network address translation (NAT). |
+| github.com/golang-migrate/migrate/v4 | Enables database migration management. |
+| github.com/golang-migrate/migrate/v4/database/clickhouse | Provides the ClickHouse database driver for migrations. |
+| github.com/golang-migrate/migrate/v4/source/iofs | Allows loading migrations from an in-memory file system. |
+| github.com/testcontainers/testcontainers-go | Facilitates the creation and management of Docker containers for testing. |
+| github.com/testcontainers/testcontainers-go/wait | Provides waiting strategies for container readiness checks. |
+| go.flipt.io/flipt/config/migrations | Contains the database migration files. |
+| go.flipt.io/flipt/internal/storage/sql | Offers utilities for interacting with SQL databases. |
+

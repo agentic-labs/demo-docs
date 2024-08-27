@@ -1,0 +1,97 @@
+---
+title: "common.go"
+---
+
+## High-level description
+This Go code defines a set of structures and interfaces for managing feature flags, segments, and namespaces. It provides custom marshaling and unmarshaling methods for YAML and JSON formats, allowing for flexible representation of these entities in different data formats.
+
+## Code Structure
+The code defines several interconnected structs and interfaces, with the main `Document` struct serving as the root container. Other key structures include `Flag`, `Segment`, `Variant`, `Rule`, and `Namespace`. The code also implements custom marshaling and unmarshaling for `SegmentEmbed` and `NamespaceEmbed` to handle different representations.
+
+## Symbols
+
+### `Document`
+#### Description
+Represents the root structure containing version information, namespace, flags, segments, and an ETag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Version | string | Version information |
+| Namespace | *NamespaceEmbed | Namespace information |
+| Flags | []*Flag | List of feature flags |
+| Segments | []*Segment | List of segments |
+| Etag | string | Entity tag for caching purposes |
+
+### `Flag`
+#### Description
+Represents a feature flag with its properties, variants, rules, and rollouts.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Key | string | Unique identifier for the flag |
+| Name | string | Display name of the flag |
+| Type | string | Type of the flag |
+| Description | string | Description of the flag |
+| Enabled | bool | Whether the flag is enabled |
+| Metadata | map[string]any | Additional metadata for the flag |
+| Variants | []*Variant | List of variants for the flag |
+| Rules | []*Rule | List of rules for the flag |
+| Rollouts | []*Rollout | List of rollouts for the flag |
+
+### `Segment`
+#### Description
+Represents a segment used for targeting specific users or groups.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Key | string | Unique identifier for the segment |
+| Name | string | Display name of the segment |
+| Description | string | Description of the segment |
+| Constraints | []*Constraint | List of constraints for the segment |
+| MatchType | string | Type of matching for the segment |
+
+### `SegmentEmbed`
+#### Description
+A wrapper for `IsSegment` interface, providing custom marshaling and unmarshaling for YAML and JSON.
+
+#### Internal Logic
+The `MarshalYAML`, `UnmarshalYAML`, `MarshalJSON`, and `UnmarshalJSON` methods handle the conversion between the `SegmentEmbed` struct and its YAML/JSON representations. They attempt to marshal/unmarshal the data as either a `SegmentKey` (string) or a `Segments` struct.
+
+### `NamespaceEmbed`
+#### Description
+A wrapper for `IsNamespace` interface, providing custom marshaling and unmarshaling for YAML and JSON.
+
+#### Internal Logic
+Similar to `SegmentEmbed`, this struct implements custom marshaling and unmarshaling methods for YAML and JSON. It handles conversion between `NamespaceEmbed` and its representations as either a `NamespaceKey` (string) or a `Namespace` struct.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/json | Used for JSON marshaling and unmarshaling |
+| errors | Used for error handling |
+
+## Error Handling
+The code uses custom error messages for marshaling and unmarshaling failures. For example:
+- "failed to marshal to string or segmentKeys"
+- "failed to unmarshal to string or segmentKeys"
+- "failed to marshal to string or namespace"
+- "failed to unmarshal to string or namespace"
+
+These errors are returned when the code fails to convert between struct representations and their YAML/JSON formats.
+
+## API/Interface Reference
+The code defines two main interfaces:
+
+1. `IsSegment`:
+   - Implemented by `SegmentKey` and `*Segments`
+   - Used to unify different types of segments
+
+2. `IsNamespace`:
+   - Implemented by `NamespaceKey` and `*Namespace`
+   - Used to unify different types of namespaces
+   - Includes a `GetKey()` method to retrieve the namespace key
+
+These interfaces allow for flexible representation of segments and namespaces in the system.

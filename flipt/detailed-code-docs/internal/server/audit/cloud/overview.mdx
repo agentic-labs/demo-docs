@@ -1,0 +1,49 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a cloud-based audit sink for the Flipt server. The main purpose of this module is to send audit events to a configurable cloud endpoint using a webhook template. It provides a way to integrate Flipt's audit logging with external cloud-based logging or monitoring systems.
+
+## What does it do?
+The cloud audit sink allows Flipt to send audit events to a remote cloud endpoint. When certain actions occur in Flipt (such as creating or updating flags or constraints), this module formats those events and sends them as HTTP requests to a specified URL. This enables administrators to monitor and track important changes or actions within Flipt using their preferred cloud-based logging or analytics platform.
+
+The module uses a templating system to format the audit events into a JSON payload, which is then sent via HTTP POST to the configured endpoint. It also handles authentication by including an API key in the request headers.
+
+## Key Files
+
+### cloud.go
+This file contains the main implementation of the cloud audit sink. It defines the `Sink` struct, which implements the `audit.Sink` interface. The key components of this file are:
+
+1. `NewSink` function: Creates a new instance of the cloud audit sink with the provided configuration (logger, API key, and URL).
+2. `SendAudits` method: Implements the logic for sending multiple audit events to the cloud endpoint.
+3. `Close` method: Implements the closing behavior of the sink (currently a no-op).
+4. `String` method: Returns a string representation of the sink type.
+
+### cloud_test.go
+This file contains unit tests for the cloud audit sink implementation. It ensures that the `Sink` struct correctly implements the `audit.Sink` interface and can successfully send audit events. The main test function, `TestSink`, creates a mock sink and verifies its behavior.
+
+## Dependencies
+The cloud audit sink relies on the following external libraries and internal packages:
+
+1. `github.com/hashicorp/go-multierror`: Used for error handling and aggregation when sending multiple audit events.
+2. `go.flipt.io/flipt/internal/server/audit`: Provides the `audit.Sink` interface and related types.
+3. `go.flipt.io/flipt/internal/server/audit/template`: Offers the `template.Executer` interface for executing webhook templates.
+4. `go.uber.org/zap`: Used for structured logging throughout the module.
+
+## Configuration
+The cloud audit sink is configured with the following parameters:
+
+1. `logger`: A `*zap.Logger` instance for logging.
+2. `apiKey`: A string containing the API key for authenticating with the cloud endpoint.
+3. `url`: A string specifying the URL of the cloud endpoint where audit events will be sent.
+
+The sink uses a fixed JSON template for formatting the audit events, which includes fields such as `timestamp`, `action`, `subject`, `entity`, and `metadata`. This template is defined as a constant `body` within the `NewSink` function.
+
+The HTTP request to the cloud endpoint is configured with the following headers:
+- `Content-Type: application/json`
+- `Authorization: Bearer &lt;apiKey&gt;`
+
+The sink also uses a fixed timeout of 15 seconds for each HTTP request to the cloud endpoint.
+
+In summary, this module provides a flexible and configurable way to integrate Flipt's audit logging with external cloud-based systems, allowing administrators to monitor and analyze important events and actions within their Flipt deployment.

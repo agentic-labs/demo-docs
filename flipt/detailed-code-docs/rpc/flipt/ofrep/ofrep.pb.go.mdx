@@ -1,0 +1,116 @@
+---
+title: "ofrep.pb.go"
+---
+
+## High-level description
+
+This code defines the OpenFeature Remote Evaluation Protocol (OFREP) server implementation for Flipt, a feature flag management system. It provides functionality for evaluating feature flags and retrieving provider configuration, adhering to the OFREP specification.
+
+## Code Structure
+
+The main components of this code are:
+
+1. `Server`: The core OFREP server implementation.
+2. `Bridge`: An interface that bridges OFREP requests to Flipt's internal evaluation system.
+3. Error handling and transformation functions.
+4. Helper functions for extracting context information.
+
+The `Server` uses the `Bridge` to perform flag evaluations, and then transforms the results into OFREP-compliant responses.
+
+## Symbols
+
+### `Server`
+
+#### Description
+The `Server` struct implements the OFREP service, handling requests for flag evaluation and provider configuration.
+
+#### Internal Logic
+- Uses a `Bridge` interface to perform actual flag evaluations.
+- Transforms evaluation results from Flipt's internal format to OFREP-compliant responses.
+- Handles error cases and transforms them into appropriate OFREP error responses.
+
+### `Bridge`
+
+#### Description
+An interface that defines the contract for evaluating flags using Flipt's internal system.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the evaluation request |
+| input | EvaluationBridgeInput | Input parameters for flag evaluation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output | EvaluationBridgeOutput | The result of the flag evaluation |
+| error | error | Any error that occurred during evaluation |
+
+### `EvaluateFlag`
+
+#### Description
+Evaluates a single feature flag according to the OFREP specification.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the evaluation request |
+| r | *ofrep.EvaluateFlagRequest | The OFREP flag evaluation request |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.EvaluatedFlag | The evaluated flag result |
+| error | Any error that occurred during evaluation |
+
+#### Internal Logic
+1. Extracts the targeting key and namespace from the request context.
+2. Calls the `Bridge` to perform the actual flag evaluation.
+3. Transforms the evaluation result into an OFREP-compliant response.
+4. Handles and transforms any errors that occur during the process.
+
+### `EvaluateBulk`
+
+#### Description
+Evaluates multiple feature flags in a single request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the evaluation request |
+| r | *ofrep.EvaluateBulkRequest | The OFREP bulk evaluation request |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.BulkEvaluationResponse | The bulk evaluation results |
+| error | Any error that occurred during evaluation |
+
+#### Internal Logic
+1. Extracts the targeting key, namespace, and flag keys from the request context.
+2. Iterates over the requested flags, calling `Bridge.OFREPFlagEvaluation` for each.
+3. Aggregates the results into a bulk response.
+4. Handles and transforms any errors that occur during the process.
+
+### `GetProviderConfiguration`
+
+#### Description
+Returns the OFREP provider configuration for Flipt.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.GetProviderConfigurationResponse | The provider configuration |
+| error | Any error that occurred |
+
+## Error Handling
+The code includes custom error handling functions that transform internal Flipt errors into OFREP-compliant error responses. This includes handling cases such as invalid requests, not found flags, and other general errors.
+
+## Dependencies
+- `go.flipt.io/flipt/rpc/flipt/ofrep`: OFREP protocol definitions
+- `go.flipt.io/flipt/rpc/flipt/evaluation`: Flipt's internal evaluation protocol
+- `go.uber.org/zap`: Logging
+- `google.golang.org/grpc`: gRPC related utilities
+- `google.golang.org/protobuf`: Protocol Buffers utilities
+
+This code serves as the OFREP-compliant layer for Flipt, allowing it to be used as an OpenFeature provider while leveraging Flipt's existing evaluation capabilities.

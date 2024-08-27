@@ -1,0 +1,100 @@
+---
+title: "protobuf.go"
+---
+
+## High-level description
+The `protobuf.go` file defines the `protobufEncoder` type, which is responsible for encoding Flipt audit events into Protobuf messages for sending to a Kafka topic. This encoder implements the `encodingFn` interface, providing methods for defining the schema and encoding audit events.
+
+## Code Structure
+The `protobufEncoder` is the main symbol in this file. It implements the `encodingFn` interface by providing `Schema()` and `Encode()` methods. The `Schema()` method defines the schema used for encoding, while the `Encode()` method handles the actual encoding of audit events into Protobuf messages.
+
+## Symbols
+### `protobufEncoder`
+#### Description
+The `protobufEncoder` is a struct that implements the `encodingFn` interface for encoding audit events as Protobuf messages.
+
+#### Inputs
+This struct has no input parameters.
+
+#### Outputs
+This struct has no output values.
+
+#### Internal Logic
+This struct doesn't have any complex internal logic.
+
+### `newProtobufEncoder`
+#### Description
+This function initializes and returns a new `protobufEncoder`.
+
+#### Inputs
+This function has no input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (protobufEncoder) | `*protobufEncoder` | A pointer to a new `protobufEncoder` instance. |
+
+#### Internal Logic
+This function simply initializes a new `protobufEncoder` struct and returns a pointer to it.
+
+### `(*protobufEncoder) Schema`
+#### Description
+This method returns the schema used for encoding audit events as Protobuf messages.
+
+#### Inputs
+This method has no input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (sr.Schema) | `sr.Schema` | The schema used for encoding audit events, defined in the `protoaudit` package. |
+
+#### Internal Logic
+This method returns a `sr.Schema` struct with the schema defined in the `protoaudit.ProtoSchema` variable and the type set to `sr.TypeProtobuf`.
+
+### `(*protobufEncoder) Encode`
+#### Description
+This method encodes an audit event into a Protobuf message.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v | `any` | The audit event to encode. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ([]byte, error) | `([]byte, error)` | A byte slice containing the encoded Protobuf message and an error if encoding fails. |
+
+#### Internal Logic
+1. **Type Assertion:** Checks if the input `v` is of type `audit.Event`. If not, it returns an error.
+2. **Protobuf Message Creation:** Creates a new `protoaudit.Event` message and populates its fields with the data from the input `audit.Event`.
+3. **Timestamp Conversion:** Converts the `Timestamp` field from the input event (which is in RFC3339 format) to a `google.golang.org/protobuf/types/known/timestamppb.Timestamp`.
+4. **Payload Handling:** If the input event has a `Payload`, it converts it to a map and then to a `google.golang.org/protobuf/types/known/structpb.Struct` before setting it in the Protobuf message.
+5. **Marshaling:** Marshals the `protoaudit.Event` message into a byte slice using `proto.Marshal`.
+6. **Return:** Returns the encoded byte slice and any error encountered during the process.
+
+## References
+- `audit.Event`: This type represents an audit event and is defined in the `go.flipt.io/flipt/internal/server/audit` package.
+- `protoaudit`: This package contains the Protobuf definitions for audit events.
+- `google.golang.org/protobuf/proto`: This package provides functions for working with Protobuf messages.
+- `google.golang.org/protobuf/types/known/structpb`: This package defines the `Struct` type for representing arbitrary JSON-like data in Protobuf.
+- `google.golang.org/protobuf/types/known/timestamppb`: This package defines the `Timestamp` type for representing timestamps in Protobuf.
+- `github.com/twmb/franz-go/pkg/sr`: This package provides types and functions for working with schemas in Kafka.
+
+## Error Handling
+This code returns an error if:
+- The input to the `Encode` method is not an `audit.Event`.
+- There is an error converting the timestamp to RFC3339 format.
+- There is an error converting the payload to a map or a `structpb.Struct`.
+- There is an error marshaling the `protoaudit.Event` message.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `github.com/twmb/franz-go/pkg/sr` | Used for defining the Kafka schema. |
+| `go.flipt.io/flipt/internal/server/audit` | Provides the `audit.Event` type. |
+| `go.flipt.io/flipt/rpc/flipt/audit` | Contains the Protobuf definitions for audit events. |
+| `google.golang.org/protobuf/proto` | Used for marshaling Protobuf messages. |
+| `google.golang.org/protobuf/types/known/structpb` | Used for representing arbitrary JSON-like data in Protobuf. |
+| `google.golang.org/protobuf/types/known/timestamppb` | Used for representing timestamps in Protobuf. |

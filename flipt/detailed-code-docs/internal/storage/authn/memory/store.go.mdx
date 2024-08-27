@@ -1,0 +1,208 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `memory` package provides an in-memory implementation of the `storage.AuthenticationStore` interface. This implementation stores authentication data in memory, making it suitable for testing and development environments.
+
+## Code Structure
+The `Store` struct holds the in-memory data structures and configuration for the authentication store. It uses two maps, `byID` and `byToken`, to store `rpcauth.Authentication` instances. The `CreateAuthentication`, `GetAuthenticationByClientToken`, `GetAuthenticationByID`, `ListAuthentications`, `DeleteAuthentications`, and `ExpireAuthenticationByID` methods operate on this data.
+
+## Symbols
+### `Store`
+#### Description
+The `Store` struct represents an in-memory store for authentication data. It implements the `storage.AuthenticationStore` interface.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Store` struct uses a mutex (`mu`) to protect access to the in-memory maps (`byID` and `byToken`) from concurrent access. It also stores function pointers for generating timestamps (`now`), IDs (`generateID`), and tokens (`generateToken`).
+
+### `Option`
+#### Description
+The `Option` type defines a function signature for configuring a `Store` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| s | *Store | A pointer to the `Store` instance to configure. |
+
+#### Outputs
+None
+
+### `NewStore`
+#### Description
+The `NewStore` function creates a new `Store` instance with the provided options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...Option | A variadic list of options to configure the store. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Store | A pointer to the newly created `Store` instance. |
+
+#### Internal Logic
+The function initializes a `Store` struct with default values for its fields. It then iterates over the provided options, applying each option to the store.
+
+### `WithNowFunc`
+#### Description
+The `WithNowFunc` function creates an `Option` that overrides the store's `now` function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() *timestamppb.Timestamp | The function to use for generating timestamps. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | An `Option` that sets the store's `now` function. |
+
+### `WithTokenGeneratorFunc`
+#### Description
+The `WithTokenGeneratorFunc` function creates an `Option` that overrides the store's token generator function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() string | The function to use for generating tokens. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | An `Option` that sets the store's `generateToken` function. |
+
+### `WithIDGeneratorFunc`
+#### Description
+The `WithIDGeneratorFunc` function creates an `Option` that overrides the store's ID generator function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() string | The function to use for generating IDs. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | An `Option` that sets the store's `generateID` function. |
+
+### `CreateAuthentication`
+#### Description
+The `CreateAuthentication` method creates a new authentication entry in the store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *authn.CreateAuthenticationRequest | The request containing the authentication details. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | The generated client token. |
+| *rpcauth.Authentication | The created authentication entry. |
+| error | An error if the operation fails. |
+
+#### Internal Logic
+The method generates a new ID and token (if not provided), hashes the token, and stores the authentication entry in both `byID` and `byToken` maps.
+
+### `GetAuthenticationByClientToken`
+#### Description
+The `GetAuthenticationByClientToken` method retrieves an authentication entry by its client token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| clientToken | string | The client token to search for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcauth.Authentication | The authentication entry if found. |
+| error | An error if the operation fails or the entry is not found. |
+
+#### Internal Logic
+The method hashes the provided token and searches for it in the `byToken` map.
+
+### `GetAuthenticationByID`
+#### Description
+The `GetAuthenticationByID` method retrieves an authentication entry by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| id | string | The ID to search for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcauth.Authentication | The authentication entry if found. |
+| error | An error if the operation fails or the entry is not found. |
+
+#### Internal Logic
+The method searches for the provided ID in the `byID` map.
+
+### `ListAuthentications`
+#### Description
+The `ListAuthentications` method retrieves a list of authentication entries based on the provided request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storage.ListRequest[authn.ListAuthenticationsPredicate] | The request containing the listing parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| storage.ResultSet[*rpcauth.Authentication] | The result set containing the authentication entries. |
+| error | An error if the operation fails. |
+
+#### Internal Logic
+The method retrieves all authentication entries, sorts them by creation time, applies pagination, and returns the result set.
+
+### `DeleteAuthentications`
+#### Description
+The `DeleteAuthentications` method deletes authentication entries based on the provided request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *authn.DeleteAuthenticationsRequest | The request containing the deletion parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | An error if the operation fails. |
+
+#### Internal Logic
+The method iterates over the authentication entries and deletes those matching the criteria specified in the request.
+
+### `ExpireAuthenticationByID`
+#### Description
+The `ExpireAuthenticationByID` method expires an authentication entry by setting its expiration time.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| id | string | The ID of the authentication entry to expire. |
+| expireAt | *timestamppb.Timestamp | The new expiration time. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | An error if the operation fails or the entry is not found. |
+
+#### Internal Logic
+The method retrieves the authentication entry by ID and updates its `ExpiresAt` field.

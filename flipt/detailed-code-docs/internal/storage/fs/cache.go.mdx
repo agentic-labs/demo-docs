@@ -1,0 +1,200 @@
+---
+title: "cache.go"
+---
+
+## High-level description
+The `cache.go` file implements a snapshot cache for the file system storage backend in Flipt. This cache stores snapshots of file system content, keyed by a generic content address type (e.g., commit SHA or OCI digest), and allows efficient retrieval and management of these snapshots.
+
+## Code Structure
+The main symbol in this file is the `SnapshotCache` struct, which represents the snapshot cache. It uses two internal maps: `fixed` for non-evictable entries and `extra` for entries managed by an LRU cache. The `AddFixed` and `AddOrBuild` methods are used to add entries to the cache, while the `Get` method retrieves snapshots by reference. The `evict` method handles garbage collection when entries are evicted from the LRU cache.
+
+## References
+- `Snapshot` struct (defined in `internal/storage/fs/snapshot.go`) represents a snapshot of file system content.
+
+## Symbols
+
+### `CacheBuildFunc`
+#### Description
+`CacheBuildFunc` is a generic function type that defines the signature for functions responsible for building a `Snapshot` for a given content key (K).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the build operation. |
+| k | K | The content key for which to build a snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Snapshot | *Snapshot | A pointer to the built snapshot. |
+| error | error | An error encountered during the build process, if any. |
+
+### `SnapshotCache`
+#### Description
+`SnapshotCache` is a generic struct that implements a snapshot cache with a fixed set of non-evictable entries and an LRU cache for additional entries.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The `SnapshotCache` struct uses two internal maps:
+- `fixed`: A map storing non-evictable reference entries.
+- `extra`: An LRU cache storing additional reference entries.
+
+It provides methods for adding, retrieving, and managing snapshots:
+- `AddFixed`: Adds a reference, key, and snapshot tuple to the `fixed` map.
+- `AddOrBuild`: Adds or builds a snapshot for a given reference and key.
+- `Get`: Retrieves a snapshot by reference.
+- `evict`: Handles garbage collection by removing dangling snapshots from the `store` map.
+
+### `NewSnapshotCache`
+#### Description
+`NewSnapshotCache` is a constructor function that creates a new `SnapshotCache` instance with the specified size for the LRU cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger instance for recording events. |
+| extra | int | The size of the LRU cache. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotCache[K] | *SnapshotCache[K] | A pointer to the newly created `SnapshotCache`. |
+| error | error | An error encountered during initialization, if any. |
+
+### `SnapshotCache.AddFixed`
+#### Description
+`AddFixed` adds a reference, key, and snapshot tuple to the fixed storage of the `SnapshotCache`. Entries added using this method are not subject to eviction.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| ref | string | The reference to the snapshot. |
+| k | K | The content key associated with the snapshot. |
+| s | *Snapshot | A pointer to the snapshot to store. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The method acquires a write lock on the cache, updates the `fixed` map with the provided reference and key, and stores the snapshot in the `store` map using the key.
+
+### `SnapshotCache.AddOrBuild`
+#### Description
+`AddOrBuild` adds a reference, key, and snapshot tuple to the `SnapshotCache`. If the reference already exists in the fixed set, it updates the entry. Otherwise, it adds the entry to the LRU cache. If a snapshot needs to be built, it uses the provided `CacheBuildFunc`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| ref | string | The reference to the snapshot. |
+| k | K | The content key associated with the snapshot. |
+| build | CacheBuildFunc[K] | A function to build a snapshot if needed. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Snapshot | *Snapshot | A pointer to the added or built snapshot. |
+| error | error | An error encountered during the process, if any. |
+
+#### Internal Logic
+1. Checks if a snapshot exists for the given reference and key using `getByRefAndKey`.
+2. If not, builds a new snapshot using the provided `build` function.
+3. Acquires a write lock on the cache.
+4. Updates the `fixed` map or `extra` LRU cache with the reference and key.
+5. Updates the `store` map with the snapshot.
+6. Attempts to evict the previous snapshot if the key has changed.
+
+### `SnapshotCache.Get`
+#### Description
+`Get` attempts to retrieve a snapshot from the cache for a given reference.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The reference to the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Snapshot | *Snapshot | A pointer to the retrieved snapshot, if found. |
+| ok | bool | A boolean indicating whether the snapshot was found. |
+
+#### Internal Logic
+1. Acquires a read lock on the cache.
+2. Checks if the reference exists in the `fixed` map.
+3. If not, checks if the reference exists in the `extra` LRU cache.
+4. If found in either map, retrieves the corresponding snapshot from the `store` map.
+
+### `SnapshotCache.getByRefAndKey`
+#### Description
+`getByRefAndKey` is an internal helper method that checks if a snapshot exists for a given reference and key, ensuring consistency between the reference maps and the snapshot store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The reference to the snapshot. |
+| k | K | The content key associated with the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Snapshot | *Snapshot | A pointer to the snapshot, if found and consistent. |
+| ok | bool | A boolean indicating whether a consistent snapshot was found. |
+
+#### Internal Logic
+1. Acquires a read lock on the cache.
+2. Checks if the key exists in the `store` map.
+3. If found, checks if the reference exists in either the `fixed` map or the `extra` LRU cache and points to the provided key.
+4. Returns true only if the snapshot exists and the reference points to the correct key.
+
+### `SnapshotCache.References`
+#### Description
+`References` returns a slice of all references currently tracked within the cache.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []string | []string | A slice of all tracked references. |
+
+#### Internal Logic
+1. Acquires a read lock on the cache.
+2. Combines the keys from the `fixed` map and the `extra` LRU cache.
+
+### `SnapshotCache.evict`
+#### Description
+`evict` is an internal helper method responsible for garbage collection when a reference is evicted from the LRU cache or when `AddOrBuild` leaves old keys dangling.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The evicted reference. |
+| k | K | The content key associated with the evicted reference. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+1. Logs the eviction event.
+2. Iterates through all references in both the `fixed` map and the `extra` LRU cache.
+3. If the key is still referenced, returns early.
+4. If the key is dangling (not referenced), deletes the corresponding snapshot from the `store` map and logs the event.
+
+## Dependencies
+- `github.com/hashicorp/golang-lru/v2`: Used for implementing the LRU cache.
+- `go.uber.org/zap`: Used for logging.
+- `golang.org/x/exp/maps`: Used for working with maps.
+
+## Error Handling
+The code uses the `error` interface for error handling. Errors encountered during cache operations are returned to the caller.
+
+## Logging
+The `SnapshotCache` uses a `zap.Logger` instance to log events, such as cache evictions and snapshot updates.

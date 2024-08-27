@@ -1,0 +1,89 @@
+---
+title: "http.go"
+---
+
+## High-level description
+
+This file contains the implementation of an HTTP server for the Flipt feature flag management system. It defines the `HTTPServer` struct and methods for configuring, starting, and shutting down the server. The server handles various API endpoints, including evaluation, authentication, and metadata services.
+
+## Code Structure
+
+The main components of this code are:
+
+1. `HTTPServer` struct: Represents the HTTP server and its configuration.
+2. `NewHTTPServer` function: Constructs and configures the HTTP server.
+3. `Run` method: Starts the HTTP server.
+4. `Shutdown` method: Gracefully shuts down the HTTP server.
+
+The code also includes various middleware and route configurations for handling different API endpoints and services.
+
+## Symbols
+
+### HTTPServer
+#### Description
+Represents the HTTP server for Flipt, wrapping the standard `http.Server` with additional configuration and logging capabilities.
+
+#### Inputs
+- `*http.Server`: The underlying HTTP server
+- `*zap.Logger`: Logger for server operations
+- `func() error`: Function to start the server (either HTTP or HTTPS)
+
+#### Internal Logic
+- Stores the server configuration and logger
+- Provides methods for running and shutting down the server
+
+### NewHTTPServer
+#### Description
+Constructs and configures a new `HTTPServer` instance.
+
+#### Inputs
+- `context.Context`: Context for the server
+- `*zap.Logger`: Logger for server operations
+- `*config.Config`: Configuration for the server
+- `*grpc.ClientConn`: gRPC client connection
+- `info.Flipt`: Flipt information
+
+#### Outputs
+- `*HTTPServer`: Configured HTTP server
+- `error`: Any error encountered during setup
+
+#### Internal Logic
+1. Configures the Chi router with various middleware and API handlers
+2. Sets up CORS if enabled
+3. Mounts various API endpoints (evaluation, analytics, etc.)
+4. Configures authentication and authorization
+5. Sets up the UI file server
+6. Configures TLS if HTTPS is enabled
+
+### Run
+#### Description
+Starts the HTTP server and listens for incoming requests.
+
+#### Internal Logic
+Calls the `listenAndServe` function, which is either `ListenAndServe` for HTTP or `ListenAndServeTLS` for HTTPS.
+
+### Shutdown
+#### Description
+Gracefully shuts down the HTTP server.
+
+#### Inputs
+- `context.Context`: Context for the shutdown operation
+
+#### Internal Logic
+Calls the underlying `http.Server.Shutdown` method with the provided context.
+
+## Dependencies
+- `github.com/go-chi/chi/v5`: HTTP router
+- `github.com/grpc-ecosystem/grpc-gateway/v2`: gRPC to JSON proxy generator
+- `go.flipt.io/flipt/internal/config`: Configuration package
+- `go.flipt.io/flipt/internal/server`: Various server components
+- `go.uber.org/zap`: Logging library
+- Standard Go libraries (net/http, crypto/tls, etc.)
+
+## Error Handling
+The code uses error wrapping and logging to handle and report errors during server setup, running, and shutdown.
+
+## Logging
+The server uses the `zap` logging library for structured logging throughout its operations.
+
+This HTTP server acts as a wrapper around the gRPC server, providing RESTful API endpoints and serving the UI. It integrates various middleware for authentication, authorization, and other cross-cutting concerns.

@@ -1,0 +1,68 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a public authentication service for a gRPC server. It provides functionality to list available authentication methods and register the service with a gRPC server. The code is part of a larger system, likely an authentication system for a service called Flipt.
+
+## What does it do?
+The code in this directory implements a gRPC server that handles authentication-related requests. Its main functionality is to provide a list of available authentication methods to clients. These methods can include various types such as token-based authentication, GitHub authentication, OIDC (OpenID Connect), Kubernetes authentication, JWT (JSON Web Token), and cloud-based authentication.
+
+The server responds to client requests by returning information about each enabled authentication method, including whether it supports sessions and any additional metadata specific to the method. This allows clients to understand what authentication options are available and how to use them.
+
+The server is designed to be flexible and configurable, with the ability to enable or disable different authentication methods based on the provided configuration. It also supports forwarding prefixes, which can be useful in scenarios where the server is behind a proxy or gateway.
+
+## Key Files
+
+1. server.go
+   - This file contains the main implementation of the authentication server.
+   - It defines the `Server` struct, which holds the server's configuration and logger.
+   - The `NewServer` function creates a new instance of the server.
+   - The `ListAuthenticationMethods` method handles requests to list available authentication methods.
+   - The `RegisterGRPC` method registers the server with a gRPC server.
+   - The `SkipsAuthentication` method always returns true, indicating that this service doesn't require authentication itself.
+
+2. server_test.go
+   - This file contains unit tests for the `Server` struct, particularly the `ListAuthenticationMethods` function.
+   - It uses a table-driven test approach to verify the server's behavior with different configurations.
+   - The `responseBuilder` helper function is used to construct expected responses for comparison in tests.
+
+## Dependencies
+The code relies on several external libraries and frameworks:
+
+1. gRPC (google.golang.org/grpc): Used for implementing the gRPC server and client communication.
+2. Protocol Buffers (google.golang.org/protobuf): Used for serializing structured data in the gRPC communication.
+3. Zap (go.uber.org/zap): Used for logging within the server.
+4. Testify (github.com/stretchr/testify): Used in the test file for assertions and test suite setup.
+
+These dependencies are chosen to provide robust, high-performance gRPC communication, efficient logging, and comprehensive testing capabilities.
+
+## Configuration
+The server uses a `config.AuthenticationConfig` struct for configuration, which is passed to the `NewServer` function. This configuration likely includes settings for enabling or disabling different authentication methods and their specific configurations.
+
+The exact structure of the `AuthenticationConfig` is not provided in the given code, but it's used to determine which authentication methods are available and to provide method-specific information when listing the available methods.
+
+Example usage of the configuration in the `ListAuthenticationMethods` method:
+
+```go
+if s.conf.Token.Enabled {
+    methods = append(methods, &auth.MethodInfo{
+        Type:              auth.MethodType_METHOD_TYPE_TOKEN,
+        SessionCompatible: true,
+    })
+}
+```
+
+This pattern is repeated for each supported authentication method, allowing for flexible configuration of the available authentication options.
+
+The server also supports a forwarded prefix, which can be extracted from the gRPC metadata:
+
+```go
+md, _ := metadata.FromIncomingContext(ctx)
+forwardedPrefix := ""
+if len(md.Get("X-Forwarded-Prefix")) &gt; 0 {
+    forwardedPrefix = md.Get("X-Forwarded-Prefix")[0]
+}
+```
+
+This allows the server to adapt its responses based on its position in a larger system architecture, such as when it's behind a proxy or API gateway.

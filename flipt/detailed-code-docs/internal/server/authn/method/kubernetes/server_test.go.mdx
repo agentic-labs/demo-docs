@@ -1,0 +1,65 @@
+---
+title: "server_test.go"
+---
+
+## High-level description
+The `Test_Server` function in `server_test.go` is a test suite designed to verify the functionality of the Kubernetes authentication server. It specifically tests the `/auth/v1/method/kubernetes/serviceaccount` endpoint, which is responsible for verifying service account tokens and issuing client tokens for authenticated requests.
+
+## Symbols
+
+### `Test_Server`
+#### Description
+This function sets up a test environment with a mock OIDC provider and a Flipt server configured to use Kubernetes authentication. It then simulates a service account token verification request to the server and asserts that the response contains a valid client token and the expected authentication metadata.
+
+#### Inputs
+This function takes no inputs.
+
+#### Outputs
+This function has no explicit outputs, but it uses the `testing.T` object to report test results.
+
+#### Internal Logic
+1. **Setup:**
+    - Creates a new router using `chi.NewRouter()`.
+    - Starts a test HTTP server using `httptest.NewServer(router)`.
+    - Generates an RSA key pair for signing and verifying JWTs.
+    - Starts a mock OIDC provider using `oidc.StartTestProvider()`.
+    - Writes the CA certificate and a Flipt service account token to temporary files.
+    - Creates an `authConfig` object with Kubernetes authentication enabled and configured to use the mock OIDC provider and service account token.
+    - Starts a Flipt HTTP server with the configured authentication settings.
+2. **Test Execution:**
+    - Defines a test case named "Valid service account token".
+    - Generates a service account JWT using the private key and sets the appropriate claims.
+    - Creates a `VerifyServiceAccountRequest` with the generated token.
+    - Marshals the request to JSON and creates a new HTTP POST request to the `/auth/v1/method/kubernetes/serviceaccount` endpoint.
+    - Sends the request to the server and reads the response.
+3. **Assertions:**
+    - Unmarshals the response JSON into a `CallbackResponse` object.
+    - Asserts that the response contains a non-empty client token.
+    - Asserts that the authentication method is `METHOD_KUBERNETES`.
+    - Asserts that the authentication metadata contains the expected Kubernetes service account information.
+    - Asserts that the authentication expiry is set.
+4. **Cleanup:**
+    - Stops the Flipt HTTP server.
+    - Stops the mock OIDC provider.
+
+### `writeStringToTemp`
+#### Description
+This helper function writes a given string to a temporary file and returns the file path.
+
+#### Inputs
+| Name     | Type   | Description                               |
+|:---------|:-------|:-------------------------------------------|
+| `t`      | `*testing.T` | The testing object for reporting errors. |
+| `pattern` | `string` | The pattern to use for the temporary file name. |
+| `contents` | `string` | The string to write to the file.        |
+
+#### Outputs
+| Name | Type   | Description                     |
+|:-----|:-------|:---------------------------------|
+|      | `string` | The path to the created file. |
+
+#### Internal Logic
+1. Creates a temporary file using `os.CreateTemp()` with the given pattern.
+2. Writes the provided string to the file using `io.Copy()`.
+3. Closes the file.
+4. Returns the file path.

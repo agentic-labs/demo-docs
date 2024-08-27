@@ -1,0 +1,73 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for demonstrating LibSQL database functionality. It sets up a primary-replica database cluster using `sqld` images and connects two instances of the `flipt` feature flagging service to them, each pointing to a different database instance.
+
+## Code Structure
+The code defines four services: `sqld-primary`, `sqld-replica`, `flipt-one`, and `flipt-two`. The `sqld` services form a primary-replica database cluster, while the `flipt` services depend on the respective `sqld` instances and connect to them using the provided environment variables.
+
+## Symbols
+### `sqld-primary`
+#### Description
+This service defines the primary node of the LibSQL database cluster. It uses the `ghcr.io/libsql/sqld:main` image and exposes HTTP and gRPC ports for communication.
+
+#### Inputs
+None
+
+#### Outputs
+- Exposes port 8000 for HTTP communication.
+- Exposes port 5000 for gRPC communication.
+
+#### Internal Logic
+- Sets the `SQLD_NODE` environment variable to `primary` to configure the node as the primary.
+- Sets the `SQLD_HTTP_LISTEN_ADDR` and `SQLD_GRPC_LISTEN_ADDR` environment variables to define the listening addresses for HTTP and gRPC communication.
+- Mounts the `/tmp/data.db` directory on the host machine to `/var/lib/sqld/iku.db` inside the container to persist the database data.
+
+### `sqld-replica`
+#### Description
+This service defines a replica node for the LibSQL database cluster. It uses the same image as the primary node and connects to it using the provided environment variable.
+
+#### Inputs
+- Depends on the `sqld-primary` service to be running.
+
+#### Outputs
+- Exposes port 8080 for HTTP communication (mapped from container's port 8000).
+
+#### Internal Logic
+- Sets the `SQLD_NODE` environment variable to `replica` to configure the node as a replica.
+- Sets the `SQLD_PRIMARY_URL` environment variable to `http://sqld-primary:5000` to connect to the primary node's gRPC port.
+- Mounts the `/tmp/replica.db` directory on the host machine to `/var/lib/sqld/iku.db` inside the container to persist the replica's data.
+
+### `flipt-one`
+#### Description
+This service runs an instance of the `flipt` feature flagging service connected to the primary LibSQL database.
+
+#### Inputs
+- Depends on the `sqld-primary` service to be running.
+
+#### Outputs
+- Exposes port 8080 for HTTP communication.
+
+#### Internal Logic
+- Sets the `FLIPT_DB_URL` environment variable to `http://sqld-primary:8000` to connect to the primary database's HTTP port.
+- Configured to restart on failure.
+
+### `flipt-two`
+#### Description
+This service runs another instance of the `flipt` feature flagging service, connected to the replica LibSQL database.
+
+#### Inputs
+- Depends on the `sqld-replica` service to be running.
+
+#### Outputs
+- Exposes port 8081 for HTTP communication.
+
+#### Internal Logic
+- Sets the `FLIPT_DB_URL` environment variable to `http://sqld-replica:8080` to connect to the replica database's HTTP port.
+- Configured to restart on failure.
+
+## Dependencies
+- `ghcr.io/libsql/sqld:main`: Docker image for the LibSQL database.
+- `flipt/flipt:nightly`: Docker image for the Flipt feature flagging service.

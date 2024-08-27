@@ -1,0 +1,73 @@
+---
+title: "server_test.go"
+---
+
+## High-level description
+The code in `server_test.go` defines unit tests for the `Server` struct in the `github` package, which handles the server-side logic for GitHub authentication in the Flipt application. The tests cover various scenarios, including retrieving the authorization URL, handling the OAuth callback, and managing user authorization based on organization and team membership.
+
+## Code Structure
+The code consists of a series of test functions, each testing a specific aspect of the `Server` struct's functionality. The tests use the `gock` library to mock HTTP requests to the GitHub API and the `bufconn` package to create an in-memory gRPC connection for testing.
+
+## References
+- `github.com/h2non/gock`: Used for mocking HTTP requests to the GitHub API.
+- `google.golang.org/grpc/test/bufconn`: Used for creating an in-memory gRPC connection for testing.
+- `go.flipt.io/flipt/internal/config`: Provides configuration settings for the authentication method.
+- `go.flipt.io/flipt/internal/storage/authn/memory`: Provides an in-memory store for authentication data.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines the gRPC service for authentication.
+
+## Symbols
+
+### `Test_Server`
+#### Description
+This function defines a suite of tests for the `Server` struct.
+
+#### Internal Logic
+The test suite includes the following test cases:
+- **"should return the authorize url correctly"**: Tests that the `AuthorizeURL` method returns the correct authorization URL for GitHub.
+- **"should authorize the user correctly"**: Tests that the `Callback` method successfully authorizes a user and retrieves their information from the GitHub API.
+- **"should authorize successfully when the user is a member of one of the allowed organizations"**: Tests that the `Callback` method authorizes a user who is a member of an allowed organization.
+- **"should not authorize when the user is not a member of one of the allowed organizations"**: Tests that the `Callback` method rejects a user who is not a member of an allowed organization.
+- **"should authorize successfully when the user is a member of one of the allowed organizations and it's inside the allowed team"**: Tests that the `Callback` method authorizes a user who is a member of an allowed organization and team.
+- **"should not authorize when the user is a member of one of the allowed organizations and but it's not inside the allowed team"**: Tests that the `Callback` method rejects a user who is a member of an allowed organization but not an allowed team.
+- **"should return an internal error when github user route returns a code different from 200 (OK)"**: Tests that the `Callback` method returns an error when the GitHub API returns an error for the user information request.
+- **"should return an internal error when github user orgs route returns a code different from 200 (OK)"**: Tests that the `Callback` method returns an error when the GitHub API returns an error for the user organizations request.
+- **"should return an internal error when github user teams route returns a code different from 200 (OK)"**: Tests that the `Callback` method returns an error when the GitHub API returns an error for the user teams request.
+
+### `Test_Server_SkipsAuthentication`
+#### Description
+This function tests that the `SkipsAuthentication` method of the `Server` struct returns `true`.
+
+#### Internal Logic
+The test creates a new `Server` instance and asserts that the `SkipsAuthentication` method returns `true`.
+
+### `TestCallbackURL`
+#### Description
+This function tests the `callbackURL` function, which constructs the callback URL for the GitHub OAuth flow.
+
+#### Internal Logic
+The test calls the `callbackURL` function with different host values and asserts that the returned callback URL is correct.
+
+### `TestGithubSimpleOrganizationDecode`
+#### Description
+This function tests the decoding of a JSON response from the GitHub API containing organization information.
+
+#### Internal Logic
+The test defines a sample JSON response and uses the `json.Unmarshal` function to decode it into a slice of `githubSimpleOrganization` structs. It then asserts that the decoded data is correct.
+
+### `newTestServer`
+#### Description
+This function creates a new test server for the `AuthenticationMethodGithubService`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| cfg | config.AuthenticationMethod[config.AuthenticationMethodGithubConfig] | The authentication method configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | auth.AuthenticationMethodGithubServiceClient | The gRPC client for the authentication method service. |
+
+#### Internal Logic
+The function creates a new in-memory gRPC server using `bufconn`, registers the `Server` struct as a handler, and starts the server in a separate goroutine. It then creates a gRPC client connected to the in-memory server and returns the client.

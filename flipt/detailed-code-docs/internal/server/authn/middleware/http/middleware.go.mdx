@@ -1,0 +1,106 @@
+---
+title: "middleware.go"
+---
+
+## High-level description
+The code defines an HTTP middleware for the Flipt authentication service, specifically handling cookie management for logout and unauthenticated responses. It ensures that appropriate cookies are cleared when a user logs out or when an unauthenticated response is returned due to invalid cookie-based authentication.
+
+## Code Structure
+The `Middleware` struct holds configuration for authentication sessions and a default error handler. It provides two main functionalities:
+1. `Handler`: This function intercepts HTTP requests and clears relevant cookies when a logout request (`PUT /auth/v1/self/expire`) is detected.
+2. `ErrorHandler`: This function intercepts error responses and clears cookies if an unauthenticated error occurs due to an invalid authentication cookie.
+
+## References
+- `middlewarecommon.TokenCookieKey`: This constant, defined in another package, represents the key used for storing the authentication token in a cookie.
+
+## Symbols
+
+### `Middleware`
+#### Description
+A struct containing configuration and methods for managing authentication cookies in HTTP requests and responses.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewHTTPMiddleware`
+#### Description
+Constructs a new `Middleware` instance with the provided authentication session configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| config | `config.AuthenticationSession` | Configuration for authentication sessions, including cookie domains and lifetimes. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| middleware | `*Middleware` | A pointer to a new `Middleware` instance. |
+
+### `Middleware.Handler`
+#### Description
+An HTTP middleware function that intercepts requests and clears relevant cookies upon logout.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| next | `http.Handler` | The next handler in the middleware chain. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| handler | `http.Handler` | An HTTP handler function that wraps the next handler in the chain. |
+
+#### Internal Logic
+1. Checks if the request method is `PUT` and the path is `/auth/v1/self/expire` (logout endpoint).
+2. If true, calls `clearAllCookies` to clear the relevant cookies.
+3. Calls the next handler in the chain.
+
+### `Middleware.ErrorHandler`
+#### Description
+An error handling middleware function that clears cookies for unauthenticated responses due to invalid cookie authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| sm | `*runtime.ServeMux` | The gRPC gateway serve mux. |
+| ms | `runtime.Marshaler` | The gRPC gateway marshaler. |
+| w | `http.ResponseWriter` | The HTTP response writer. |
+| r | `http.Request` | The HTTP request. |
+| err | `error` | The error that occurred. |
+
+#### Outputs
+None
+
+#### Internal Logic
+1. Checks if the `TokenCookieKey` cookie is present in the request.
+2. If present and the error code is `codes.Unauthenticated`, calls `clearAllCookies` to clear relevant cookies.
+3. Delegates error handling to the default error handler.
+
+### `Middleware.clearAllCookies`
+#### Description
+Clears the `stateCookieKey` and `TokenCookieKey` cookies by setting their values to empty strings and maximum age to -1.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| w | `http.ResponseWriter` | The HTTP response writer. |
+
+#### Outputs
+None
+
+## Dependencies
+- `context`
+- `errors`
+- `net/http`
+- `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`
+- `go.flipt.io/flipt/internal/config`
+- `go.flipt.io/flipt/internal/server/authn/middleware/common`
+- `google.golang.org/grpc/codes`
+- `google.golang.org/grpc/status`
+
+## Side Effects
+- Modifies the `http.ResponseWriter` by setting cookies.

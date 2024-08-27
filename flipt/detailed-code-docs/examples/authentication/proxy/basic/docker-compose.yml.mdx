@@ -1,0 +1,50 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for running Flipt, a feature flag management service, behind a Caddy web server acting as a reverse proxy with basic authentication. It sets up two services, "caddy" and "flipt", and configures their networking, volumes, and environment variables.
+
+## Code Structure
+The `docker-compose.yml` file defines two services: `caddy` and `flipt`. The `caddy` service depends on the `flipt` service. Both services share the same network `flipt_network`.
+
+## Symbols
+### `caddy`
+#### Description
+This service defines the configuration for the Caddy web server, which acts as a reverse proxy, routing traffic to the Flipt service and handling basic authentication.
+
+#### Inputs
+This service uses the following environment variables as input:
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| HTTP_USERNAME | string | Username for basic authentication. |
+| HTTP_PASSWORD_HASH | string | Bcrypt hashed password for basic authentication. |
+
+#### Internal Logic
+- It uses the `caddy:latest` image.
+- Exposes port 8080 to the host machine.
+- Mounts the `./Caddyfile` file from the host to `/etc/caddy/Caddyfile` in the container.
+- Sets environment variables for basic authentication username and password hash.
+
+### `flipt`
+#### Description
+This service defines the configuration for the Flipt feature flag service.
+
+#### Internal Logic
+- It uses the `flipt/flipt:latest` image.
+- Runs the `./flipt` command with the `--force-migrate` flag.
+- Sets the log level to `debug` and disables telemetry.
+
+## Dependencies
+- **Caddy:** Used as a reverse proxy and for basic authentication.
+- **Flipt:** The main feature flag management service.
+
+## Configuration
+The `docker-compose.yml` file defines several configuration options through environment variables:
+
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| HTTP_USERNAME | string |  | Username for basic authentication in Caddy. |
+| HTTP_PASSWORD_HASH | string |  | Bcrypt hashed password for basic authentication in Caddy. |
+| FLIPT_LOG_LEVEL | string |  | Log level for the Flipt service. Set to `debug` in this configuration. |
+| FLIPT_META_TELEMETRY_ENABLED | boolean |  | Flag to enable or disable telemetry in the Flipt service. Set to `false` in this configuration. |

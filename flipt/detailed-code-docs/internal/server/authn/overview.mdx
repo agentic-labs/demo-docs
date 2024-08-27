@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authn` directory contains the implementation of the authentication server and related components for the Flipt application. It provides various authentication methods, middleware for both gRPC and HTTP, and a public authentication service. The directory is structured to handle different aspects of authentication, including method-specific implementations, middleware for request processing, and a public-facing service for listing available authentication methods.
+
+## What does it do?
+This directory implements a comprehensive authentication system for Flipt, including:
+
+1. Multiple authentication methods:
+   - GitHub OAuth
+   - OpenID Connect (OIDC)
+   - Kubernetes service account tokens
+   - Static token-based authentication
+   - JWT validation
+
+2. Middleware for both gRPC and HTTP:
+   - Authentication validation
+   - Authorization checks (email pattern matching, namespace access)
+   - Request processing (extracting auth info, adding to context)
+   - Error handling
+
+3. Public authentication service:
+   - Listing available authentication methods
+   - Providing method-specific information
+
+4. Core authentication server:
+   - Managing authentication data (retrieve, list, delete, expire)
+   - Interacting with underlying storage
+
+The system is designed to be flexible and configurable, allowing for easy addition or removal of authentication methods based on the application's needs.
+
+## Entry points
+The main entry points for this authentication system are:
+
+1. `server.go`: Implements the core `Server` struct, which handles authentication-related requests and interacts with the storage layer.
+
+2. `method/` directory: Contains implementations for specific authentication methods (GitHub, OIDC, Kubernetes, token-based).
+
+3. `middleware/` directory: Provides gRPC and HTTP middleware for authentication and authorization.
+
+4. `public/server.go`: Implements the public authentication service for listing available methods.
+
+## Key Files
+1. `server.go`: Core authentication server implementation.
+2. `method/github/server.go`: GitHub authentication implementation.
+3. `method/oidc/server.go`: OIDC authentication implementation.
+4. `method/kubernetes/server.go`: Kubernetes authentication implementation.
+5. `method/token/server.go`: Token-based authentication implementation.
+6. `middleware/grpc/middleware.go`: gRPC authentication middleware.
+7. `middleware/http/middleware.go`: HTTP authentication middleware.
+8. `public/server.go`: Public authentication service implementation.
+
+## Dependencies
+The authentication system relies on several key dependencies:
+
+- `github.com/coreos/go-oidc/v3/oidc`: For OIDC token verification.
+- `golang.org/x/oauth2`: For OAuth2 client implementation.
+- `go.uber.org/zap`: For structured logging.
+- `google.golang.org/grpc`: For gRPC server and client implementations.
+- `github.com/grpc-ecosystem/go-grpc-middleware`: For chaining multiple gRPC interceptors.
+- `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`: For gRPC-Gateway runtime utilities.
+- `go.flipt.io/flipt/internal/storage/authn`: For authentication data storage.
+- `go.flipt.io/flipt/rpc/flipt/auth`: For gRPC service definitions related to authentication.
+
+## Configuration
+The authentication system is highly configurable, with options for each authentication method and middleware component:
+
+1. Authentication methods:
+   - GitHub: Client ID, secret, redirect address, allowed organizations/teams.
+   - OIDC: Provider endpoints, client ID, secret, allowed scopes, redirect URIs.
+   - Kubernetes: CA certificate path, service account token path, discovery URL.
+   - Token: Configured through the provided authentication store implementation.
+
+2. Middleware:
+   - gRPC: `InterceptorOptions` struct for customizing authentication behavior, JWT validation rules, allowed email patterns.
+   - HTTP: Cookie domain and lifetime settings.
+
+3. Public authentication service:
+   - Uses `config.AuthenticationConfig` to determine which methods are available and their specific configurations.
+
+Example configuration for gRPC middleware:
+
+```go
+options := []containers.Option[InterceptorOptions]{
+    WithServerSkipsAuthentication(myServer),
+}
+
+jwtInterceptor := JWTAuthenticationInterceptor(
+    logger,
+    jwtValidator,
+    jwt.Expected{Issuer: "https://example.com"},
+    options...,
+)
+```
+
+Example configuration for HTTP middleware:
+
+```go
+authSessionConfig := config.AuthenticationSession{
+    CookieDomain: "example.com",
+    Lifetime:     3600, // in seconds
+}
+
+httpMiddleware := NewHTTPMiddleware(authSessionConfig)
+```
+
+The authentication system in the `internal/server/authn` directory provides a robust and flexible solution for handling various authentication methods, middleware processing, and public-facing services. It is designed to integrate seamlessly with Flipt's gRPC-based architecture while offering comprehensive error handling and logging capabilities.

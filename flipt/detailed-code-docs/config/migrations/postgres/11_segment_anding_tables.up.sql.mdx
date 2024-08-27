@@ -1,0 +1,57 @@
+---
+title: "11_segment_anding_tables.up.sql"
+---
+
+## High-level description
+This SQL script creates two new tables: `rule_segments` and `rollout_segment_references`. These tables establish many-to-many relationships between rules and segments, and between rollout segments and segments, respectively. The script also populates these new tables with existing data from the `rules` and `rollout_segments` tables.
+
+## Symbols
+
+### `rule_segments` table
+#### Description
+This table creates a many-to-many relationship between rules and segments. It allows multiple segments to be associated with a single rule and vice versa.
+
+#### Internal Logic
+- Creates a table with columns: `rule_id`, `namespace_key`, and `segment_key`
+- Establishes a foreign key relationship with the `rules` table on `rule_id`
+- Creates a composite foreign key relationship with the `segments` table using `namespace_key` and `segment_key`
+- Ensures uniqueness of the combination of `rule_id`, `namespace_key`, and `segment_key`
+- Implements cascading deletes for both foreign key relationships
+
+### `INSERT INTO rule_segments` statement
+#### Description
+This statement populates the `rule_segments` table with existing data from the `rules` table.
+
+#### Internal Logic
+- Selects `id` (aliased as `rule_id`), `namespace_key`, and `segment_key` from the `rules` table
+- Inserts these values into the corresponding columns of the `rule_segments` table
+
+### `rollout_segment_references` table
+#### Description
+This table creates a many-to-many relationship between rollout segments and segments. It allows multiple segments to be associated with a single rollout segment and vice versa.
+
+#### Internal Logic
+- Creates a table with columns: `rollout_segment_id`, `namespace_key`, and `segment_key`
+- Establishes a foreign key relationship with the `rollout_segments` table on `rollout_segment_id`
+- Creates a composite foreign key relationship with the `segments` table using `namespace_key` and `segment_key`
+- Ensures uniqueness of the combination of `rollout_segment_id`, `namespace_key`, and `segment_key`
+- Implements cascading deletes for both foreign key relationships
+
+### `INSERT INTO rollout_segment_references` statement
+#### Description
+This statement populates the `rollout_segment_references` table with existing data from the `rollout_segments` table.
+
+#### Internal Logic
+- Selects `id` (aliased as `rollout_segment_id`), `namespace_key`, and `segment_key` from the `rollout_segments` table
+- Inserts these values into the corresponding columns of the `rollout_segment_references` table
+
+## Dependencies
+This script assumes the existence of the following tables:
+| Dependency | Purpose |
+|:-----------|:--------|
+| rules | Referenced by `rule_segments` table |
+| segments | Referenced by both `rule_segments` and `rollout_segment_references` tables |
+| rollout_segments | Referenced by `rollout_segment_references` table |
+
+## Error Handling
+The script uses `IF NOT EXISTS` clause when creating tables to prevent errors if the tables already exist. It also relies on database-level constraints (foreign keys and unique constraints) to maintain data integrity and prevent invalid insertions.

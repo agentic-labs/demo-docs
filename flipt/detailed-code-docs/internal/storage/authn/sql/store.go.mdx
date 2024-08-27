@@ -1,0 +1,240 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `sql` package provides a SQL-backed implementation of the `storageauth.Store` interface, which manages the persistence of authentication data. It uses a SQL statement builder for database interactions and offers options for customizing ID and token generation, as well as the current time function.
+
+## Code Structure
+The `Store` struct holds the necessary dependencies like the logger, SQL driver, statement builder, and customizable functions for ID/token generation and time retrieval. It implements methods for creating, retrieving, listing, deleting, and expiring authentication entries in the database.
+
+## References
+This code references the following packages:
+- `github.com/gofrs/uuid`: For generating UUIDs.
+- `go.flipt.io/flipt/internal/storage`: Defines the `Store` interface for authentication data.
+- `go.flipt.io/flipt/internal/storage/authn`: Provides common authentication-related types and functions.
+- `go.flipt.io/flipt/internal/storage/sql`: Offers utilities for interacting with SQL databases.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines the protobuf messages for authentication.
+
+## Symbols
+
+### `Store`
+#### Description
+The `Store` struct represents the SQL-backed authentication store. It implements the `storageauth.Store` interface.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `NewStore`
+#### Description
+`NewStore` constructs a new `Store` instance with the provided SQL driver, statement builder, logger, and options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| driver | storagesql.Driver | The SQL driver for database interactions. |
+| builder | sq.StatementBuilderType | The SQL statement builder. |
+| logger | *zap.Logger | The logger instance. |
+| opts | ...Option | Optional configurations for the store. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | *Store | A pointer to the newly created `Store` instance. |
+
+#### Internal Logic
+- Initializes the `Store` struct with the provided dependencies.
+- Sets default functions for generating IDs (UUID v4), tokens (random string), and retrieving the current time.
+- Applies any provided options to customize the store's behavior.
+
+### `WithNowFunc`
+#### Description
+`WithNowFunc` is an option function that overrides the default function for getting the current time.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() *timestamppb.Timestamp | The function to use for retrieving the current time as a protobuf timestamp. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | func(*Store) | An option function that sets the `now` function of the `Store`. |
+
+### `WithTokenGeneratorFunc`
+#### Description
+`WithTokenGeneratorFunc` overrides the default function for generating client tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() string | The function to use for generating new client tokens. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | func(*Store) | An option function that sets the `generateToken` function of the `Store`. |
+
+### `WithIDGeneratorFunc`
+#### Description
+`WithIDGeneratorFunc` overrides the default function for generating authentication IDs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fn | func() string | The function to use for generating new authentication IDs. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | func(*Store) | An option function that sets the `generateID` function of the `Store`. |
+
+### `CreateAuthentication`
+#### Description
+`CreateAuthentication` creates a new authentication entry in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *storageauth.CreateAuthenticationRequest | The request containing authentication details. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| clientToken | string | The generated client token for the authentication. |
+| *rpcauth.Authentication |  | A pointer to the created authentication object. |
+| error | error | An error if the operation fails. |
+
+#### Internal Logic
+- Generates a new ID and token (if not provided).
+- Hashes the client token.
+- Inserts a new row into the "authentications" table with the authentication details.
+- Returns the generated client token and the created authentication object.
+
+### `GetAuthenticationByClientToken`
+#### Description
+`GetAuthenticationByClientToken` retrieves an authentication entry by its client token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| clientToken | string | The client token to search for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcauth.Authentication |  | A pointer to the retrieved authentication object. |
+| error | error | An error if the operation fails or the authentication is not found. |
+
+#### Internal Logic
+- Hashes the provided client token.
+- Queries the "authentications" table for a matching hashed token.
+- If found, populates an `rpcauth.Authentication` object with the retrieved data and returns it.
+- If not found, returns a `storage.ErrNotFound` error.
+
+### `GetAuthenticationByID`
+#### Description
+`GetAuthenticationByID` retrieves an authentication entry by its ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| id | string | The ID of the authentication to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcauth.Authentication |  | A pointer to the retrieved authentication object. |
+| error | error | An error if the operation fails or the authentication is not found. |
+
+#### Internal Logic
+- Queries the "authentications" table for a matching ID.
+- If found, populates an `rpcauth.Authentication` object with the retrieved data and returns it.
+- If not found, returns a `storage.ErrNotFound` error.
+
+### `ListAuthentications`
+#### Description
+`ListAuthentications` retrieves a paginated list of authentication entries based on the provided request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storage.ListRequest[storageauth.ListAuthenticationsPredicate] | The request containing pagination and filtering options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| set | storage.ResultSet[*rpcauth.Authentication] | The result set containing the retrieved authentication entries and pagination information. |
+| error | error | An error if the operation fails. |
+
+#### Internal Logic
+- Normalizes the query parameters from the request.
+- Builds a SQL query to select authentication entries from the "authentications" table, applying any provided filters and pagination.
+- Executes the query and iterates over the results.
+- For each row, populates an `rpcauth.Authentication` object and adds it to the result set.
+- Sets the next page token if there are more results.
+
+### `DeleteAuthentications`
+#### Description
+`DeleteAuthentications` deletes one or more authentication entries based on the provided request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storageauth.DeleteAuthenticationsRequest | The request containing criteria for deleting authentications. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the operation fails. |
+
+#### Internal Logic
+- Validates the delete request.
+- Builds a SQL delete query for the "authentications" table, applying any provided filters.
+- Executes the query.
+
+### `ExpireAuthenticationByID`
+#### Description
+`ExpireAuthenticationByID` expires an authentication entry by setting its expiration timestamp.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| id | string | The ID of the authentication to expire. |
+| expireAt | *timestamppb.Timestamp | The new expiration timestamp. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the operation fails. |
+
+#### Internal Logic
+- Builds a SQL update query to set the "expires_at" column for the matching authentication ID.
+- Executes the query.
+
+### `scanAuthentication`
+#### Description
+`scanAuthentication` is an internal helper function that scans a SQL row into an `rpcauth.Authentication` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scanner | sq.RowScanner | The SQL row scanner. |
+| authentication | *rpcauth.Authentication | A pointer to the authentication object to populate. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the scan operation fails. |
+
+#### Internal Logic
+- Scans the row data into the fields of the `rpcauth.Authentication` object, handling nullable timestamps and JSON fields.

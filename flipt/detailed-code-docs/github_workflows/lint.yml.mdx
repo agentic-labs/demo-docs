@@ -1,0 +1,75 @@
+---
+title: "lint.yml"
+---
+
+## High-level description
+This code defines a GitHub Actions workflow named "Lint" that performs various linting tasks on the codebase, including Go code linting, Markdown linting, UI linting, and ensuring `go mod tidy` is run. It is triggered on push events to the 'main' branch, on pull requests, or manually via workflow dispatch.
+
+## Code Structure
+The code defines a single workflow "Lint" with four jobs: "go-lint", "markdown-lint", "ui-lint", and "go-mod-tidy". Each job runs on the latest Ubuntu environment and performs linting using specific tools and configurations.
+
+## Symbols
+### `name: Lint`
+#### Description
+Defines the name of the workflow as "Lint".
+
+### `on:`
+#### Description
+Specifies the events that trigger the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `push` | event | Triggers the workflow on push events to branches matching the specified pattern. |
+| `branches` | string array | Specifies the branches for which the workflow will be triggered on push events. In this case, it's only the 'main' branch. |
+| `pull_request` | event | Triggers the workflow on pull request events. |
+| `workflow_dispatch` | event | Allows triggering the workflow manually via the GitHub Actions interface. |
+
+### `env:`
+#### Description
+Defines environment variables available to all jobs in the workflow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `GO_VERSION` | string | Specifies the Go version to be used in the workflow. |
+
+### `jobs:`
+#### Description
+Contains a collection of jobs that run in parallel by default.
+
+####  Internal Logic
+Each job under `jobs` represents a separate linting task:
+
+- **`go-lint`**: Lints Go code using `golangci-lint`.
+- **`markdown-lint`**: Lints Markdown files using `markdownlint-cli2`.
+- **`ui-lint`**: Lints UI code (presumably JavaScript) using `npm run lint`.
+- **`go-mod-tidy`**: Ensures the Go module dependency file is tidy.
+
+Each job defines its own set of steps for checking out the code, setting up the environment, and running the linting tools. 
+
+### `steps:`
+#### Description
+A sequence of tasks that are executed in order as part of a job.
+
+#### Internal Logic
+Each step under `steps` represents an individual action within a job. Common actions include:
+
+- **`uses: actions/checkout@v4`**: Checks out the repository's code.
+- **`uses: actions/setup-go@v5`**: Sets up the Go environment.
+- **`uses: golangci/golangci-lint-action@v6.1.0`**: Runs `golangci-lint` for Go code linting.
+- **`uses: DavidAnson/markdownlint-cli2-action@v16`**: Runs `markdownlint-cli2` for Markdown linting.
+- **`uses: actions/setup-node@v4`**: Sets up the Node.js environment.
+- `run: npm ci && npm run lint`: Installs dependencies and runs linting for the UI code.
+- `run: go mod tidy`: Runs `go mod tidy` to clean up the Go module dependencies.
+- `run: git diff-index --quiet HEAD -- || (echo "Please run 'go mod tidy' and commit changes." && exit 1)`: Checks if the `go mod tidy` command introduced any changes and fails the job if it did.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository's code. |
+| actions/setup-go | Sets up the Go environment. |
+| golangci/golangci-lint-action | Runs `golangci-lint` for Go code linting. |
+| DavidAnson/markdownlint-cli2-action | Runs `markdownlint-cli2` for Markdown linting. |
+| actions/setup-node | Sets up the Node.js environment. |
+

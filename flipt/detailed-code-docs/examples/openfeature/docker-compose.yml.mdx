@@ -1,0 +1,77 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for running an example OpenFeature service with Flipt feature flag management and Jaeger tracing. It sets up containers for Jaeger, Flipt initialization, the Flipt service, and an example application.
+
+## Code Structure
+The code defines several services: `jaeger`, `init`, `flipt`, and `example`. `jaeger` provides tracing, `init` initializes Flipt with a config file, `flipt` runs the main Flipt service, and `example` represents an application using Flipt. The services are connected through a Docker network and share a volume for data persistence.
+
+## Symbols
+### `version`
+#### Description
+Specifies the Docker Compose file format version being used, which is "3" in this case.
+
+### `services`
+#### Description
+Defines the different containers (services) that make up the application.
+
+#### Internal Logic
+Each service is defined with its configuration including image, command, ports, networks, environment variables, and volumes.
+
+### `jaeger`
+#### Description
+Configures the Jaeger container for distributed tracing.
+
+#### Internal Logic
+- Uses the `jaegertracing/all-in-one:1` image.
+- Exposes port `16686` for the Jaeger UI.
+- Connects to the `flipt_network`.
+
+### `init`
+#### Description
+Initializes Flipt by importing a configuration file (`flipt.yml`).
+
+#### Internal Logic
+- Uses the `flipt/flipt:latest` image.
+- Runs the command `./flipt import flipt.yml`.
+- Sets environment variables for logging and disables telemetry.
+- Mounts the `flipt.yml` file and `flipt_data` volume.
+
+### `flipt`
+#### Description
+Runs the main Flipt service.
+
+#### Internal Logic
+- Uses the `flipt/flipt:latest` image.
+- Runs the command `./flipt --force-migrate`.
+- Depends on the `init` and `jaeger` services.
+- Exposes port `8080` for the Flipt API.
+- Connects to the `flipt_network`.
+- Sets environment variables for logging, tracing, and disables telemetry.
+- Mounts the `flipt_data` volume.
+
+### `example`
+#### Description
+Builds and runs an example application that uses Flipt.
+
+#### Internal Logic
+- Builds the image from the current directory (`.`).
+- Depends on the `flipt` service.
+- Exposes port `8000` for the example application.
+- Connects to the `flipt_network`.
+
+### `volumes`
+#### Description
+Defines named volumes for data persistence.
+
+#### Internal Logic
+- `flipt_data`: A named volume used to persist Flipt data.
+
+### `networks`
+#### Description
+Defines networks for communication between containers.
+
+#### Internal Logic
+- `flipt_network`: A user-defined bridge network for the application.

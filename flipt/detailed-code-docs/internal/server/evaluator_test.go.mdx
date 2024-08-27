@@ -1,0 +1,124 @@
+---
+title: "evaluator_test.go"
+---
+
+## High-level description
+The `evaluator_test.go` file contains unit tests for the batch evaluation functionality of the Flipt server. It covers scenarios like evaluating multiple flags for a single entity, handling namespace mismatches, and the behavior when a flag is not found.
+
+## Symbols
+
+### `TestBatchEvaluate`
+#### Description
+Tests the `BatchEvaluate` function for a successful batch evaluation of flag rules. It mocks the storage layer to return predefined flags and rules, then asserts that the response contains the expected number of evaluations and the correct match result.
+
+#### Inputs
+This test function does not take any inputs.
+
+#### Outputs
+This test function does not return any outputs.
+
+#### Internal Logic
+- **Arrange:**
+    - Sets up a mock storage (`store`) with predefined flags ("foo" - enabled, "bar" - disabled) and empty evaluation rules for flag "foo".
+    - Creates a new `Server` instance (`s`) using the mock storage and a test logger.
+- **Act:**
+    - Calls the `BatchEvaluate` function with a request containing two evaluation requests:
+        - One for flag "foo" with an entity ID of "1" and a context.
+        - One for flag "bar" with an entity ID of "1".
+- **Assert:**
+    - Verifies that there is no error returned from `BatchEvaluate`.
+    - Asserts that the response is not nil and contains two evaluation responses.
+    - Checks that the first response (for flag "foo") has `Match` set to false, indicating no match based on the provided context and empty rules.
+
+### `TestBatchEvaluate_NamespaceMismatch`
+#### Description
+Tests the `BatchEvaluate` function to ensure it returns an error when there's a namespace mismatch between the batch request and individual evaluation requests.
+
+#### Inputs
+This test function does not take any inputs.
+
+#### Outputs
+This test function does not return any outputs.
+
+#### Internal Logic
+- **Arrange:**
+    - Sets up a mock storage and a test logger, but doesn't define any specific flag or rule behavior.
+    - Creates a new `Server` instance using the mock storage and logger.
+- **Act:**
+    - Calls the `BatchEvaluate` function with a request that has:
+        - `NamespaceKey` set to "foo".
+        - `ExcludeNotFound` set to true.
+        - One evaluation request with `NamespaceKey` set to "bar".
+- **Assert:**
+    - Verifies that the call to `BatchEvaluate` returns an error.
+    - Asserts that the error message is "invalid field namespace_key: must be the same for all requests if specified".
+
+### `TestBatchEvaluate_FlagNotFoundExcluded`
+#### Description
+Tests the behavior of `BatchEvaluate` when the `ExcludeNotFound` flag is set to true and a requested flag is not found in the storage. It expects the function to not return an error and exclude the non-existent flag from the response.
+
+#### Inputs
+This test function does not take any inputs.
+
+#### Outputs
+This test function does not return any outputs.
+
+#### Internal Logic
+- **Arrange:**
+    - Sets up a mock storage (`store`) with predefined flags ("foo" - enabled, "bar" - disabled) and empty evaluation rules for flag "foo".
+    - Configures the mock storage to return an `ErrNotFound` when attempting to retrieve a flag with the key "NotFoundFlag".
+    - Creates a new `Server` instance (`s`) using the mock storage and a test logger.
+- **Act:**
+    - Calls the `BatchEvaluate` function with a request that has:
+        - `ExcludeNotFound` set to true.
+        - Three evaluation requests:
+            - One for flag "foo".
+            - One for flag "bar".
+            - One for the non-existent flag "NotFoundFlag".
+- **Assert:**
+    - Verifies that there is no error returned from `BatchEvaluate`.
+    - Asserts that the response is not nil and contains only two evaluation responses, effectively excluding the response for the non-existent flag "NotFoundFlag".
+    - Checks that the first response (for flag "foo") has `Match` set to false.
+
+### `TestBatchEvaluate_FlagNotFound`
+#### Description
+Tests the behavior of `BatchEvaluate` when the `ExcludeNotFound` flag is set to false and a requested flag is not found in the storage. It expects the function to return an error indicating that the flag was not found.
+
+#### Inputs
+This test function does not take any inputs.
+
+#### Outputs
+This test function does not return any outputs.
+
+#### Internal Logic
+- **Arrange:**
+    - Sets up a mock storage (`store`) with predefined flags ("foo" - enabled, "bar" - disabled) and empty evaluation rules for flag "foo".
+    - Configures the mock storage to return an `ErrNotFound` when attempting to retrieve a flag with the key "NotFoundFlag".
+    - Creates a new `Server` instance (`s`) using the mock storage and a test logger.
+- **Act:**
+    - Calls the `BatchEvaluate` function with a request that has:
+        - `ExcludeNotFound` set to false.
+        - Three evaluation requests:
+            - One for flag "foo".
+            - One for flag "bar".
+            - One for the non-existent flag "NotFoundFlag".
+- **Assert:**
+    - Verifies that the call to `BatchEvaluate` returns an error.
+    - Asserts that the error message is "flag \"NotFoundFlag\" not found".
+
+## References
+- `flipt.BatchEvaluationRequest`: Represents a request to evaluate multiple flags.
+- `flipt.EvaluationRequest`: Represents a request to evaluate a single flag.
+- `common.StoreMock`: A mock implementation of the storage interface used for testing.
+- `storage.NewResource`: A function to create a new storage resource identifier.
+- `errs.ErrNotFoundf`: A function to create a new "not found" error.
+
+## Dependencies
+- `github.com/stretchr/testify/assert`: Used for assertions in tests.
+- `github.com/stretchr/testify/mock`: Used for creating mocks.
+- `github.com/stretchr/testify/require`: Used for assertions that should stop test execution on failure.
+- `go.flipt.io/flipt/errors`: Package containing error definitions.
+- `go.flipt.io/flipt/internal/common`: Package containing common data structures and interfaces.
+- `go.flipt.io/flipt/internal/storage`: Package containing storage-related definitions.
+- `go.flipt.io/flipt/rpc/flipt`: Package containing protocol buffer definitions for Flipt RPC.
+- `go.uber.org/zap/zaptest`: Used for creating a test logger.

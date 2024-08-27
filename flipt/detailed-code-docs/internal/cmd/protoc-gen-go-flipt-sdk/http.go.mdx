@@ -1,0 +1,75 @@
+---
+title: "http.go"
+---
+
+## High-level description
+This code is part of a code generation tool for creating an HTTP client SDK for a gRPC-based API. It generates Go code that implements HTTP transport for gRPC services, translating gRPC method calls into HTTP requests and responses.
+
+## Code Structure
+The main function `generateHTTP` processes protobuf service definitions and generates corresponding HTTP client code. It uses a `mappings` structure to store HTTP rules for each gRPC method. The generated code includes a `Transport` struct and methods for each service and its RPCs.
+
+## Symbols
+
+### `generateHTTP`
+#### Description
+This function is the entry point for generating HTTP client code based on gRPC service definitions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| gen | *protogen.Plugin | The protogen plugin instance |
+| grpcAPIConfig | string | Path to the gRPC API configuration file |
+
+#### Internal Logic
+1. Reads and parses the gRPC API configuration file
+2. Extracts HTTP rules for each gRPC method
+3. Generates Go code for the HTTP transport and client methods
+
+### `generateHTTPMethod`
+#### Description
+Generates code for an individual HTTP method corresponding to a gRPC method.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| g | *protogen.GeneratedFile | The file being generated |
+| m | mappings | HTTP rule mappings |
+| method | *protogen.Method | The gRPC method being processed |
+| typ | string | The type name for the generated client |
+
+#### Internal Logic
+1. Determines the HTTP method and path from the rule
+2. Generates code to create an HTTP request
+3. Handles request body and query parameters
+4. Generates code to send the request and process the response
+
+### `renderPath`
+#### Description
+Renders the HTTP path for a given rule and message, replacing path parameters with placeholders.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pkgfmt | func(string) string | Function to format package names |
+| rule | rule | The HTTP rule |
+| msg | *protogen.Message | The protobuf message |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The rendered path |
+| map[*protogen.Field]struct{} | map | Fields used in the path |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| google.golang.org/genproto/googleapis/api/annotations | For HTTP annotations |
+| google.golang.org/protobuf/compiler/protogen | For protobuf code generation |
+| google.golang.org/protobuf/encoding/protojson | For JSON encoding/decoding of protobufs |
+| sigs.k8s.io/yaml | For YAML to JSON conversion |
+
+## Error Handling
+The code uses panic for error handling in the main generation function, which is typical for code generators where errors should halt the entire process.
+
+## Performance Considerations
+The code generates static HTTP client code, so runtime performance is not a significant concern. However, the generated code includes some runtime marshaling and unmarshaling of protobuf messages, which could impact performance in high-throughput scenarios.

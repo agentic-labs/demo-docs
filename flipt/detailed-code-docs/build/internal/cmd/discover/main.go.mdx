@@ -1,0 +1,98 @@
+---
+title: "main.go"
+---
+
+## High-level description
+This code implements an OIDC (OpenID Connect) authentication server for Flipt. It handles the OIDC authorization flow, including generating authorization URLs and processing callbacks from OIDC providers. The server supports multiple OIDC providers and integrates with Flipt's authentication system.
+
+## Code Structure
+The main component is the `Server` struct, which implements the OIDC authentication flow. It uses a storage interface for persisting authentication data and relies on configuration for OIDC provider settings. The server exposes two main operations: `AuthorizeURL` and `Callback`, which correspond to the two legs of the OIDC flow.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct is the core implementation of the OIDC server for Flipt. It handles the OIDC authentication flow and integrates with Flipt's authentication system.
+
+#### Internal Logic
+- Manages OIDC providers based on configuration
+- Generates authorization URLs for OIDC providers
+- Processes callbacks from OIDC providers
+- Verifies and extracts claims from ID tokens
+- Creates and stores authentication tokens in Flipt's system
+
+### `NewServer`
+#### Description
+Constructor function for creating a new `Server` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | Logger for the server |
+| store | storageauth.Store | Storage interface for authentication data |
+| config | config.AuthenticationConfig | Configuration for authentication |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Server | *Server | New instance of the OIDC server |
+
+### `AuthorizeURL`
+#### Description
+Generates an authorization URL for the specified OIDC provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| req | *auth.AuthorizeURLRequest | Request containing provider and state information |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *auth.AuthorizeURLResponse | *auth.AuthorizeURLResponse | Response containing the generated authorization URL |
+| error | error | Error, if any |
+
+#### Internal Logic
+1. Retrieves the OIDC provider configuration
+2. Creates an authorization URL using the provider's settings
+3. Returns the URL in the response
+
+### `Callback`
+#### Description
+Processes the callback from an OIDC provider after user authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| req | *auth.CallbackRequest | Request containing callback data (state, code, provider) |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *auth.CallbackResponse | *auth.CallbackResponse | Response containing the created client token and authentication |
+| error | error | Error, if any |
+
+#### Internal Logic
+1. Validates the callback state
+2. Retrieves the OIDC provider configuration
+3. Exchanges the authorization code for an ID token
+4. Verifies the ID token and extracts claims
+5. Creates a new authentication entry in Flipt's system
+6. Returns the created client token and authentication information
+
+## Dependencies
+- `github.com/coreos/go-oidc/v3/oidc`: OIDC library
+- `github.com/hashicorp/cap/oidc`: Hashicorp's OIDC client library
+- `go.flipt.io/flipt/errors`: Flipt's error package
+- `go.flipt.io/flipt/internal/config`: Flipt's configuration package
+- `go.flipt.io/flipt/internal/server/authn/method`: Flipt's authentication method package
+- `go.flipt.io/flipt/internal/storage/authn`: Flipt's authentication storage package
+- `go.flipt.io/flipt/rpc/flipt/auth`: Flipt's authentication RPC package
+
+## Error Handling
+The code uses error wrapping to provide context for errors. It also defines a custom error `errProviderNotFound` for cases where a requested OIDC provider is not configured.
+
+## Configuration
+The server relies on the `config.AuthenticationConfig` struct for its configuration, which includes settings for OIDC providers and session management.

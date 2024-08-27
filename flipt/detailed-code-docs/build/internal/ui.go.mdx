@@ -1,0 +1,46 @@
+---
+title: "ui.go"
+---
+
+## High-level description
+This code defines a function `UI` that builds a Docker container for a user interface project using Dagger. It installs Node.js dependencies, builds the project, and leverages caching for faster rebuilds.
+
+## Symbols
+
+### `UI`
+#### Description
+This function defines a Dagger pipeline for building a UI project. It sets up a container with the necessary dependencies and executes build commands.
+
+#### Inputs
+| Name    | Type             | Description                                  |
+|:--------|:-----------------|:---------------------------------------------|
+| `ctx`   | `context.Context` | The context for the function execution.     |
+| `client`| `*dagger.Client` | The Dagger client for interacting with the API. |
+| `source`| `*dagger.Directory` | The source directory of the UI project.     |
+
+#### Outputs
+| Name        | Type                  | Description                                                              |
+|:-----------|:-----------------------|:--------------------------------------------------------------------------|
+| `container` | `*dagger.Container` | A Dagger container representing the built UI project.                     |
+| `error`     | `error`                | An error object if something went wrong during the build process, nil otherwise. |
+
+#### Internal Logic
+1. **Cache Setup:** Creates a Dagger cache volume named "node-modules-cache" to store Node.js dependencies between builds.
+2. **Container Definition:**
+   - Starts with a base image `node:18-bullseye`.
+   - Mounts the project source directory (`/src`) into the container, excluding `dist` and `node_modules` directories.
+   - Sets the working directory to `/src`.
+   - Mounts the `node-modules-cache` volume to `/src/node_modules` for caching dependencies.
+3. **Build Execution:**
+   - Executes `npm install` to install project dependencies.
+   - Executes `npm run build` to build the UI project.
+4. **Return:** Returns the built Dagger container and any potential errors.
+
+## Dependencies
+| Dependency | Purpose                               |
+|:-----------|:---------------------------------------|
+| `context`  | Provides a context for function execution. |
+| `go.flipt.io/build/internal/dagger` | Provides the Dagger client and related types. |
+
+## Error Handling
+The function returns an `error` object, allowing for basic error propagation. Specific error handling within the Dagger pipeline would need to be implemented separately.

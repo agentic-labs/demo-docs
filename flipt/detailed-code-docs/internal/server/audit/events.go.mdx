@@ -1,0 +1,187 @@
+---
+title: "events.go"
+---
+
+## High-level description
+The `events.go` file defines the structure and functionality for audit events within the Flipt system. It provides a mechanism to record, decode, and manage information about actions performed within the application.
+
+## Code Structure
+The code defines the `Event` struct, which represents an audit event, and several functions that operate on it. The `NewEvent` function creates a new `Event` instance, while `DecodeToAttributes` converts an `Event` into a format suitable for OpenTelemetry tracing. Other functions handle tasks like adding events to spans, validating events, and marshalling them for logging.
+
+## References
+This code references the `flipt.Request` and `flipt.Action` types from the `go.flipt.io/flipt/rpc/flipt` package, indicating its role in processing requests within the Flipt system.
+
+## Symbols
+
+### `Event`
+#### Description
+The `Event` struct represents an audit event, capturing details about an action performed within the Flipt system.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+#### Internal Logic
+The `Event` struct contains fields for storing information such as the event version, type, action, metadata, payload, timestamp, and status.
+
+### `NewEvent`
+#### Description
+The `NewEvent` function creates a new `Event` instance populated with details from a `flipt.Request` and associated metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| r | `flipt.Request` | The Flipt request that triggered the event. |
+| actor | `*Actor` | Information about the actor who initiated the request. |
+| payload | `interface{}` | The payload associated with the event. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Event` | `*Event` | A pointer to the newly created `Event` instance. |
+
+#### Internal Logic
+The function determines the action type based on the `flipt.Request.Action` field. It sets the event type based on the request's resource or subject. It then populates the `Event` struct with the provided information and a timestamp.
+
+### `DecodeToAttributes`
+#### Description
+The `DecodeToAttributes` method converts an `Event` instance into a slice of `attribute.KeyValue`, suitable for use with OpenTelemetry tracing.
+
+#### Inputs
+N/A - This is a method of the `Event` struct.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `[]attribute.KeyValue` | `[]attribute.KeyValue` | A slice of key-value pairs representing the event attributes. |
+
+#### Internal Logic
+The method iterates through the fields of the `Event` struct and converts them into `attribute.KeyValue` pairs. It handles JSON marshalling for complex fields like `Metadata.Actor` and `Payload`.
+
+### `AddToSpan`
+#### Description
+The `AddToSpan` method adds an `Event` to an OpenTelemetry trace span.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context containing the OpenTelemetry trace span. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The method retrieves the span from the context and adds an event with attributes derived from the `Event` instance using `DecodeToAttributes`.
+
+### `Valid`
+#### Description
+The `Valid` method checks if an `Event` instance is valid by ensuring required fields are populated.
+
+#### Inputs
+N/A - This is a method of the `Event` struct.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `bool` | `bool` | True if the event is valid, false otherwise. |
+
+#### Internal Logic
+The method checks if the `Version`, `Action`, `Type`, and `Timestamp` fields of the `Event` are non-empty.
+
+### `MarshalLogObject`
+#### Description
+The `MarshalLogObject` method encodes an `Event` instance into a Zap logger's object encoder.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| enc | `zapcore.ObjectEncoder` | The Zap object encoder to encode the event into. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` | `error` | An error if encoding fails, nil otherwise. |
+
+#### Internal Logic
+The method adds the fields of the `Event` struct to the provided `zapcore.ObjectEncoder`. It handles errors during reflection for complex fields like `Metadata` and `Payload`.
+
+### `CopyInto`
+#### Description
+The `CopyInto` method copies the contents of one `Event` instance into another.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| out | `*Event` | A pointer to the `Event` instance to copy the data into. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The method performs a deep copy of the `Event` instance, including the `Metadata` and `Payload` fields.
+
+### `PayloadToMap`
+#### Description
+The `PayloadToMap` method attempts to convert the event's payload into a `map[string]any`.
+
+#### Inputs
+N/A - This is a method of the `Event` struct.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `map[string]any, error` | `map[string]any, error` | A map representing the payload, or an error if conversion fails. |
+
+#### Internal Logic
+The method first checks if the payload is nil. If not, it marshals the payload to JSON, then unmarshals it into a `map[string]any`.
+
+### `decodeToEvent`
+#### Description
+The `decodeToEvent` function decodes a slice of `attribute.KeyValue` into an `Event` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| kvs | `[]attribute.KeyValue` | A slice of key-value pairs representing event attributes. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Event, error` | `*Event, error` | A pointer to the decoded `Event` instance, or an error if decoding fails. |
+
+#### Internal Logic
+The function iterates through the provided key-value pairs and populates the corresponding fields of a new `Event` instance. It handles JSON unmarshalling for complex fields like `Metadata.Actor` and `Payload`. It also validates the decoded event using the `Valid` method.
+
+### `Actor`
+#### Description
+The `Actor` struct represents information about the entity that initiated an action, such as authentication method, IP address, email, name, and profile picture.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+#### Internal Logic
+The `Actor` struct contains fields for storing information about the actor.
+
+### `Metadata`
+#### Description
+The `Metadata` struct holds additional information about an event, currently just the `Actor`.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+#### Internal Logic
+The `Metadata` struct contains a pointer to an `Actor` instance.
+
+## Error Handling
+The code uses basic error handling with the `error` type. Functions return errors for situations like JSON marshalling/unmarshalling failures or when a decoded event is invalid.
+
+## Logging
+The code does not directly implement logging but provides a `MarshalLogObject` method to facilitate logging events using the Zap logger.

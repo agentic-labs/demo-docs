@@ -1,0 +1,101 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration files and instructions for setting up and running Flipt with OpenID Connect (OIDC) authentication using Dex as the identity provider. It demonstrates how to integrate Flipt with an external authentication system in a Docker-based environment.
+
+## What does it do?
+This setup creates a local development environment where:
+
+1. Dex acts as an OIDC provider, handling user authentication.
+2. Flipt is configured to use Dex for authentication, allowing users to log in using OIDC.
+3. Users can access Flipt's feature flag management system after authenticating through Dex.
+
+The workflow is as follows:
+1. A user navigates to Flipt's login page.
+2. They choose to "Login with Dex".
+3. Dex presents a login form where the user enters their credentials.
+4. Upon successful authentication, Dex redirects the user back to Flipt.
+5. Flipt establishes an authenticated session for the user.
+
+## Entry points
+The main files in this directory are:
+
+1. `docker-compose.yml`: This file defines the Docker services for both Flipt and Dex, orchestrating their deployment and network configuration.
+
+2. `config.yml`: This file configures Flipt, particularly its authentication settings, enabling OIDC with Dex as the provider.
+
+3. `dex-config.yml`: This file configures the Dex server, defining its OIDC settings, static clients (Flipt in this case), and user accounts.
+
+The data flow starts with the `docker-compose.yml` file, which sets up the services. The `config.yml` file then configures Flipt to use Dex for authentication, while `dex-config.yml` sets up Dex to accept authentication requests from Flipt and manage user accounts.
+
+## Configuration
+### Flipt Configuration (`config.yml`)
+The `config.yml` file configures Flipt with the following key settings:
+
+```yaml
+authentication:
+  required: true
+  session:
+    domain: localhost
+    secure: false
+    csrf:
+      key: "insecure-csrf-secret-key"
+  methods:
+    oidc:
+      enabled: true
+      providers:
+        dex:
+          issuer_url: "http://dex:5556/dex"
+          client_id: "flipt"
+          client_secret: "ZXhhbXBsZS1hcHAtc2VjcmV0"
+          redirect_address: "http://localhost:8080"
+```
+
+This configuration enables OIDC authentication, sets up the session management, and configures the Dex provider.
+
+### Dex Configuration (`dex-config.yml`)
+The `dex-config.yml` file sets up Dex with the following important configurations:
+
+```yaml
+issuer: http://dex:5556/dex
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+staticClients:
+- id: flipt
+  redirectURIs:
+  - 'http://localhost:8080/auth/v1/method/oidc/dex/callback'
+  name: 'Flipt'
+  secret: ZXhhbXBsZS1hcHAtc2VjcmV0
+
+staticPasswords:
+- email: "admin@example.com"
+  hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+  username: "admin"
+  userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+```
+
+This configuration sets up Dex as an OIDC provider, defines Flipt as a client, and creates a static user account for testing.
+
+### Docker Compose Configuration (`docker-compose.yml`)
+The `docker-compose.yml` file sets up two services:
+
+1. `dex`: Runs the Dex server using the `dexidp/dex:latest` image.
+2. `flipt`: Runs the Flipt server using the `flipt/flipt:latest` image.
+
+Both services are connected to a custom network `flipt_network`, and their respective configuration files are mounted into the containers.
+
+## Dependencies
+This setup relies on the following external dependencies:
+
+1. Docker and docker-compose for containerization and orchestration.
+2. Dex (version: latest) as the OIDC provider.
+3. Flipt (version: latest) as the feature flag management system.
+
+These dependencies are specified in the `docker-compose.yml` file and are automatically pulled when running the setup.
+
+In conclusion, this directory provides a complete example of integrating Flipt with Dex for OIDC authentication in a Dockerized environment. It demonstrates how to configure both services, set up the network communication between them, and manage user authentication for accessing Flipt's feature flag management system.

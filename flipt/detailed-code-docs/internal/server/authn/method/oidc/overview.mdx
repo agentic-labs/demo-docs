@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authn/method/oidc` directory implements the OpenID Connect (OIDC) authentication method for Flipt. It provides a server that handles the authorization URL generation and callback logic for the OIDC/OAuth flow, allowing users to authenticate with Flipt using their existing identity provider accounts.
+
+## What does it do?
+This directory implements the OIDC authentication workflow for Flipt:
+
+1. It generates an authorization URL for a specified OIDC provider when requested.
+2. It handles the callback from the OIDC provider after user authentication.
+3. It exchanges the authorization code for an ID token.
+4. It verifies the ID token and extracts user claims.
+5. It creates a Flipt client token based on the authenticated user information.
+6. It provides utilities for testing the OIDC authentication flow in isolation.
+
+The implementation supports both implicit flow and PKCE (Proof Key for Code Exchange) flow for enhanced security.
+
+## Entry points
+The main entry point for the OIDC authentication method is the `Server` struct in `server.go`. This struct implements the gRPC service for OIDC authentication, providing methods for generating authorization URLs and handling callbacks.
+
+The flow of control typically goes as follows:
+1. The `AuthorizeURL` method is called to generate a URL for the user to authenticate with the OIDC provider.
+2. After the user authenticates, the provider redirects to the `Callback` method, which handles the token exchange and user authentication.
+
+For testing purposes, the `testing` subdirectory provides utilities to set up both gRPC and HTTP test servers that simulate the OIDC authentication flow.
+
+## Key Files
+
+### server.go
+This file contains the core implementation of the OIDC authentication method:
+
+- `Server` struct: Implements the OIDC authentication server.
+- `AuthorizeURL` method: Generates the authorization URL for the OIDC provider.
+- `Callback` method: Handles the callback from the OIDC provider, including token exchange and user authentication.
+- Helper functions for configuring OIDC providers and handling user claims.
+
+### server_test.go
+This file contains integration tests for the OIDC server implementation:
+
+- `Test_Server_ImplicitFlow`: Tests the OIDC implicit flow authentication process.
+- `Test_Server_PKCE`: Tests the OIDC authentication process using the PKCE flow.
+- `testOIDCFlow`: A helper function that performs the actual OIDC authentication flow for testing.
+
+### testing/grpc.go and testing/http.go
+These files provide utilities for setting up test environments:
+
+- `GRPCServer` and related functions: Set up a gRPC server for OIDC authentication testing.
+- `StartHTTPServer` and related functions: Set up an HTTP server that simulates Flipt's OIDC authentication flow.
+
+## Dependencies
+The OIDC implementation relies on several key dependencies:
+
+- `github.com/coreos/go-oidc/v3/oidc`: Used for interacting with OIDC providers.
+- `github.com/hashicorp/cap/oidc`: Provides OIDC-related utilities.
+- `go.flipt.io/flipt/errors`: Used for defining custom errors.
+- `go.flipt.io/flipt/internal/config`: Used for accessing the authentication configuration.
+- `go.flipt.io/flipt/internal/storage/authn`: Used for interacting with the authentication store.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines gRPC services and messages for authentication.
+- `go.uber.org/zap`: Used for logging.
+- `google.golang.org/grpc`: Used for gRPC communication.
+
+Testing utilities additionally use:
+- `github.com/go-chi/chi`: For HTTP routing in test servers.
+- `github.com/stretchr/testify`: For test assertions.
+
+## Configuration
+The OIDC authentication method is configured using the `config.AuthenticationConfig` struct, which includes settings such as:
+
+- OIDC provider endpoints
+- Client ID and secret
+- Allowed scopes
+- Redirect URIs
+
+These configuration options allow for flexible setup of different OIDC providers and authentication flows.
+
+In summary, the `internal/server/authn/method/oidc` directory provides a comprehensive implementation of OIDC authentication for Flipt, including the core authentication logic, testing utilities, and integration tests to ensure the reliability of the authentication process.

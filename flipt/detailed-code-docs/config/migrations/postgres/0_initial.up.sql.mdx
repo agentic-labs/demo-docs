@@ -1,0 +1,86 @@
+---
+title: "0_initial.up.sql"
+---
+
+## High-level description
+This SQL script defines the initial database schema for a feature flag management system using PostgreSQL. It creates six tables: flags, segments, variants, constraints, rules, and distributions, which together form the structure for managing feature flags, user segments, and flag distribution rules.
+
+## Code Structure
+The script consists of six `CREATE TABLE` statements, each defining a table with its columns, data types, constraints, and relationships. The tables are interconnected through foreign key references, creating a relational structure for the feature flag system.
+
+## Symbols
+
+### CREATE TABLE flags
+#### Description
+Creates a table to store feature flags.
+
+#### Internal Logic
+- Defines a primary key `key` of type VARCHAR(255)
+- Includes columns for name, description, enabled status, and timestamps
+- Sets default values for `enabled` (FALSE) and timestamps (CURRENT_TIMESTAMP)
+
+### CREATE TABLE segments
+#### Description
+Creates a table to store user segments.
+
+#### Internal Logic
+- Defines a primary key `key` of type VARCHAR(255)
+- Includes columns for name, description, and timestamps
+- Sets default values for timestamps (CURRENT_TIMESTAMP)
+
+### CREATE TABLE variants
+#### Description
+Creates a table to store variants of feature flags.
+
+#### Internal Logic
+- Defines a primary key `id` of type VARCHAR(255)
+- Includes a foreign key `flag_key` referencing the `flags` table
+- Includes columns for key, name, description, and timestamps
+- Sets default values for timestamps (CURRENT_TIMESTAMP)
+- Implements cascading delete for related flags
+
+### CREATE TABLE constraints
+#### Description
+Creates a table to store constraints for user segments.
+
+#### Internal Logic
+- Defines a primary key `id` of type VARCHAR(255)
+- Includes a foreign key `segment_key` referencing the `segments` table
+- Includes columns for constraint type, property, operator, value, and timestamps
+- Sets default values for `type` (0) and timestamps (CURRENT_TIMESTAMP)
+- Implements cascading delete for related segments
+
+### CREATE TABLE rules
+#### Description
+Creates a table to store rules that link flags to segments.
+
+#### Internal Logic
+- Defines a primary key `id` of type VARCHAR(255)
+- Includes foreign keys `flag_key` and `segment_key` referencing the `flags` and `segments` tables respectively
+- Includes columns for rank and timestamps
+- Sets default values for `rank` (1) and timestamps (CURRENT_TIMESTAMP)
+- Implements cascading delete for related flags and segments
+
+### CREATE TABLE distributions
+#### Description
+Creates a table to store distribution rules for variants within flag rules.
+
+#### Internal Logic
+- Defines a primary key `id` of type VARCHAR(255)
+- Includes foreign keys `rule_id` and `variant_id` referencing the `rules` and `variants` tables respectively
+- Includes columns for rollout percentage and timestamps
+- Sets default values for `rollout` (0) and timestamps (CURRENT_TIMESTAMP)
+- Implements cascading delete for related rules and variants
+
+## Dependencies
+This SQL script is designed for PostgreSQL and uses PostgreSQL-specific syntax and data types.
+
+## Configuration
+The script uses the following configuration for all timestamp columns:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| created_at | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp for record creation |
+| updated_at | TIMESTAMP | CURRENT_TIMESTAMP | Timestamp for record updates |
+
+## Error Handling
+The script uses `IF NOT EXISTS` clauses in the `CREATE TABLE` statements to prevent errors if the tables already exist. This allows for idempotent execution of the script.

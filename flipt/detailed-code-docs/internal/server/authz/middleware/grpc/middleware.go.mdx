@@ -1,0 +1,113 @@
+---
+title: "middleware.go"
+---
+
+## High-level description
+The `grpc_middleware` package provides a gRPC interceptor `AuthorizationRequiredInterceptor` that enforces authorization for incoming requests. It checks if the request should skip authorization, retrieves authentication information from the context, and verifies if the requester is allowed to perform the requested action based on the provided policy verifier.
+
+## Code Structure
+The `AuthorizationRequiredInterceptor` function is the main component of this code. It uses the `skipped` function to determine if authorization should be skipped and the `errUnauthorized` variable for a standardized error response. The interceptor relies on the `flipt.Requester` interface for accessing request details and the `authz.Verifier` for policy verification.
+
+## References
+- `go.flipt.io/flipt/errors`: Used for defining and handling authorization errors.
+- `go.flipt.io/flipt/internal/containers`: Provides options pattern for configuring the interceptor.
+- `go.flipt.io/flipt/internal/server/authn/middleware/grpc`: Used for retrieving authentication information from the context.
+- `go.flipt.io/flipt/internal/server/authz`: Defines the `Verifier` interface for policy verification.
+- `go.flipt.io/flipt/rpc/flipt`: Defines the `Requester` interface and request structures.
+
+## Symbols
+
+### `SkipsAuthorizationServer`
+#### Description
+`SkipsAuthorizationServer` is an interface for gRPC servers that can explicitly indicate whether authorization should be skipped for a given context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool |  | True if authorization should be skipped, false otherwise. |
+
+### `InterceptorOptions`
+#### Description
+`InterceptorOptions` is a struct that holds configuration options for the `AuthorizationRequiredInterceptor`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| skippedServers | []any | A list of server instances for which authorization should be skipped. |
+
+### `skipped`
+#### Description
+The `skipped` function checks if authorization should be skipped for the given request context and server information.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| info | *grpc.UnaryServerInfo | Information about the incoming gRPC request. |
+| o | InterceptorOptions | Configuration options for the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool |  | True if authorization should be skipped, false otherwise. |
+
+#### Internal Logic
+The function checks for the following conditions to determine if authorization should be skipped:
+1. If the server implements `authmiddlewaregrpc.SkipsAuthenticationServer` and `SkipsAuthentication` returns true.
+2. If the server implements `SkipsAuthorizationServer` and `SkipsAuthorization` returns true.
+3. If the request method is present in the `skippedMethods` map.
+4. If the server instance is present in the `skippedServers` list from the `InterceptorOptions`.
+
+### `WithServerSkipsAuthorization`
+#### Description
+`WithServerSkipsAuthorization` is a function that returns a `containers.Option` to configure the `AuthorizationRequiredInterceptor` to skip authorization for a specific server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | any | The server instance for which authorization should be skipped. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[InterceptorOptions] |  | An option to configure the interceptor. |
+
+### `errUnauthorized`
+#### Description
+`errUnauthorized` is a variable of type `errors.Error` that represents an unauthorized error with the message "permission denied".
+
+### `AuthorizationRequiredInterceptor`
+#### Description
+`AuthorizationRequiredInterceptor` is a gRPC unary server interceptor that enforces authorization for incoming requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger instance for recording events. |
+| policyVerifier | authz.Verifier | An instance of the policy verifier used to check authorization. |
+| o | ...containers.Option[InterceptorOptions] | Optional configuration options for the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor |  | A gRPC unary server interceptor. |
+
+#### Internal Logic
+1. **Check if authorization should be skipped:** Calls the `skipped` function to determine if authorization should be skipped based on the request context, server information, and configuration options.
+2. **Retrieve authentication information:** Extracts the `Authentication` instance from the request context using `authmiddlewaregrpc.GetAuthenticationFrom`.
+3. **Verify authorization:**
+    - Retrieves the request details from the `flipt.Requester`.
+    - Calls the `IsAllowed` method of the `policyVerifier` to check if the requester is allowed to perform the requested action.
+    - Returns an `errUnauthorized` error if authorization fails.
+4. **Call the next handler:** If authorization is successful, calls the next handler in the gRPC interceptor chain.
+
+## Error Handling
+The interceptor returns an `errUnauthorized` error (wrapped in a gRPC status error) if authorization fails. This error signals that the request is not authorized to perform the requested action.
+
+## Logging
+The interceptor uses the provided `zap.Logger` instance to log events, such as skipped authorization, unauthorized requests, and errors encountered during authorization verification.

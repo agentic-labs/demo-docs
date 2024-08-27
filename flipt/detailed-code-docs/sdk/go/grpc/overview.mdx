@@ -1,0 +1,95 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the gRPC transport implementation for the Flipt SDK in Go. It provides the necessary components to establish a gRPC connection with a Flipt server and interact with various Flipt services, such as authentication, evaluation, and metadata retrieval.
+
+## What does it do?
+The code in this directory enables developers to create a gRPC-based transport for the Flipt SDK. This transport allows applications to communicate with a Flipt server using gRPC, a high-performance, open-source universal RPC framework. The implementation provides methods to access different Flipt services, including authentication, evaluation, and metadata services. 
+
+Here's a simplified explanation of the workflow:
+
+1. A developer creates a gRPC client connection to a Flipt server.
+2. They use this connection to create a new Transport instance.
+3. The Transport instance is then used to initialize the Flipt SDK.
+4. With the initialized SDK, the application can make calls to various Flipt services, such as retrieving metadata or performing feature flag evaluations.
+
+This approach allows for efficient, type-safe, and protocol-buffer-based communication between the client application and the Flipt server.
+
+## Key Files
+
+### grpc.sdk.gen.go
+This file contains the core implementation of the gRPC transport for the Flipt SDK. It defines the following key components:
+
+1. `Transport` struct: Implements the `_go.Transport` interface and provides methods for accessing different Flipt service clients.
+
+   ```go
+   type Transport struct {
+       cc grpc.ClientConnInterface
+   }
+   ```
+
+2. `authClient` struct: Provides methods for accessing different authentication service clients.
+
+   ```go
+   type authClient struct {
+       cc grpc.ClientConnInterface
+   }
+   ```
+
+3. `NewTransport` function: Creates a new `Transport` instance with the provided gRPC client connection.
+
+   ```go
+   func NewTransport(cc grpc.ClientConnInterface) *Transport {
+       return &Transport{cc: cc}
+   }
+   ```
+
+The `Transport` struct exposes methods like `AuthClient()`, `EvaluationClient()`, `FliptClient()`, and `MetaClient()` that return specific client instances for interacting with corresponding Flipt services.
+
+### example_test.go
+This file contains an example demonstrating how to use the gRPC transport with the Flipt SDK. It showcases the following steps:
+
+1. Creating a gRPC client connection
+2. Initializing a new Transport instance
+3. Creating a Flipt SDK instance with the transport
+4. Making a simple API call to retrieve metadata
+
+Here's a snippet from the example:
+
+```go
+func ExampleNewTransport() {
+    conn, _ := grpc.NewClient("localhost:9000")
+    defer conn.Close()
+
+    transport := NewTransport(conn)
+    client := sdk.New(transport)
+
+    info, _ := client.Meta().GetInfo(context.Background())
+    fmt.Println(info)
+}
+```
+
+## Dependencies
+The gRPC transport implementation relies on the following key dependencies:
+
+1. `go.flipt.io/flipt/rpc/flipt`: This package contains the gRPC service definitions for Flipt, including protobuf-generated code for various Flipt services.
+
+2. `go.flipt.io/flipt/sdk/go`: The core Flipt SDK for Go, which defines the interfaces and types that the gRPC transport implements.
+
+3. `google.golang.org/grpc` (version not specified): The official gRPC library for Go, used for creating and managing gRPC connections and clients.
+
+These dependencies were chosen to ensure compatibility with the Flipt ecosystem and to leverage the performance and type safety benefits of gRPC.
+
+## Configuration
+The gRPC transport itself doesn't require specific configuration files or environment variables. However, when using the transport, developers need to provide a properly configured gRPC client connection. This connection can be customized with various options, such as:
+
+- Server address
+- Authentication credentials
+- Connection timeouts
+- TLS/SSL settings
+
+These configurations are typically set when creating the gRPC client connection, which is then passed to the `NewTransport` function.
+
+In conclusion, this directory provides a crucial component for integrating Flipt into Go applications using gRPC. It offers a clean and efficient way to communicate with Flipt servers, leveraging the power and performance of gRPC while maintaining a simple and intuitive API for developers.

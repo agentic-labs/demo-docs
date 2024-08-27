@@ -1,0 +1,33 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/storage/cache` directory contains a caching middleware implementation for Flipt's storage layer. It provides a caching layer on top of an existing storage.Store implementation to improve performance by reducing the number of calls to the underlying storage system for frequently accessed data.
+
+## What does it do?
+This caching middleware intercepts calls to the underlying storage system and caches the results for specific methods. It handles caching for various data types, including flags, evaluation rules, and evaluation rollouts. The cache implementation uses a generic caching interface, allowing for different cache backends to be used.
+
+When data is requested, the middleware first checks if it's available in the cache. If found, it returns the cached data. Otherwise, it fetches the data from the underlying storage, caches it, and then returns it. For write operations (create, update, delete), the middleware invalidates the relevant cache entries to ensure data consistency.
+
+## Entry points
+The main entry point for this caching middleware is the `NewStore` function in `cache.go`. This function creates a new `Store` struct that wraps an existing `storage.Store` implementation and a `cache.Cacher` interface.
+
+The code is organized around the `Store` struct, which implements the `storage.Store` interface. This struct intercepts calls to the underlying store and adds caching logic for various operations.
+
+## Key Files
+1. `cache.go`: Contains the main implementation of the caching middleware, including the `Store` struct and methods for interacting with the cache.
+2. `cache_test.go`: Contains unit tests for the caching middleware, covering various scenarios such as cache hits, misses, and error handling.
+3. `support_test.go`: Defines support types (`cacheMock` and `cacheSpy`) used in testing the caching middleware.
+
+## Dependencies
+- `go.flipt.io/flipt/internal/cache`: Provides the `Cacher` interface used for the caching implementation.
+- `go.flipt.io/flipt/internal/storage`: Defines the `Store` interface that the caching middleware implements and wraps.
+- `go.flipt.io/flipt/rpc/flipt`: Contains Flipt-specific types and requests used in the caching middleware.
+- `go.uber.org/zap`: Used for logging within the caching middleware.
+- `google.golang.org/protobuf/proto`: Used for Protobuf marshaling and unmarshaling in the cache.
+
+## Configuration
+The caching middleware doesn't have explicit configuration files or environment variables. Its behavior is determined by the `cache.Cacher` implementation provided when creating a new `Store` instance using the `NewStore` function.
+
+The caching strategy is conservative, with cache entries being invalidated on any update operation related to the cached entity. This approach ensures data consistency but may reduce cache effectiveness for frequently updated entities.

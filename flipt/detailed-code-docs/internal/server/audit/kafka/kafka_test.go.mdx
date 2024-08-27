@@ -1,0 +1,92 @@
+---
+title: "kafka_test.go"
+---
+
+## High-level description
+The `kafka_test.go` file contains unit tests for the Kafka sink implementation in the Flipt audit logging system. It covers various scenarios, including successful audit event sending with different encodings and schema registry configurations, as well as error cases like unsupported encodings, authentication failures, and TLS connection issues.
+
+## References
+- `go.flipt.io/flipt/internal/config`: Provides configuration structures for Kafka sink, including authentication and schema registry settings.
+- `go.flipt.io/flipt/internal/server/audit`: Defines the `audit.Event` structure, representing an audit event to be logged.
+- `go.flipt.io/flipt/rpc/flipt`: Contains Protobuf definitions for Flipt RPC messages, including audit event representation.
+
+## Symbols
+
+### `adminCreateUser`
+#### Description
+This helper function creates an admin user in the Kafka cluster using the Admin API. It's used to set up the testing environment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | testing.TB | The testing object. |
+| base | string | The base URL of the Kafka Admin API. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. Constructs the Admin API endpoint URL for user creation.
+2. Creates an HTTP POST request with the user credentials (username: "admin", password: "password", algorithm: "SCRAM-SHA-256").
+3. Sends the request and checks for a 200 OK status code, indicating successful user creation.
+
+### `adminCreateTopic`
+#### Description
+This helper function creates a topic in the Kafka cluster using the Admin client. It's used to prepare the topic for testing audit event publishing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | testing.TB | The testing object. |
+| bootstrapServers | []string | A list of Kafka bootstrap server addresses. |
+| topic | string | The name of the topic to create. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. Creates a Kafka client with TLS and SCRAM authentication configured.
+2. Initializes a Kafka Admin client using the created client.
+3. Attempts to create the specified topic with 1 partition and 1 replica.
+4. Sets up a cleanup function to delete the created topic after the test.
+
+### `TestNewSinkAndSend`
+#### Description
+This test function tests the creation of a new Kafka sink and the sending of audit events. It covers successful scenarios with different encodings and error cases.
+
+#### Inputs
+This function takes a testing object `t` of type `*testing.T` as input.
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. Checks for the availability of Kafka bootstrap servers. Skips the test if none are provided.
+2. Creates an admin user and a test topic in the Kafka cluster.
+3. Defines a test audit event.
+4. Iterates through different encoding configurations (Avro with and without schema registry, Protobuf with and without schema registry).
+    - Creates a new Kafka sink with the specified configuration.
+    - Sends the test audit event through the sink.
+    - Asserts that there are no errors during sink creation and event sending.
+5. Defines a set of failure test cases with invalid configurations (unsupported encoding, incorrect authentication, missing TLS).
+    - Attempts to create a Kafka sink with each invalid configuration.
+    - Asserts that the expected error is returned in each case.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/stretchr/testify/assert | Provides assertion functions for testing. |
+| github.com/stretchr/testify/require | Offers assertion functions that halt test execution on failure. |
+| github.com/twmb/franz-go/pkg/kadm | Provides Kafka Admin client functionality. |
+| github.com/twmb/franz-go/pkg/kgo | Offers Kafka client implementation. |
+| github.com/twmb/franz-go/pkg/sasl/scram | Provides SCRAM authentication mechanism for Kafka clients. |
+| go.flipt.io/flipt/internal/config | Defines configuration structures for Flipt components. |
+| go.flipt.io/flipt/internal/server/audit | Contains audit logging related structures and functions. |
+| go.flipt.io/flipt/rpc/flipt | Provides Protobuf definitions for Flipt RPC messages. |
+| go.uber.org/zap/zaptest | Offers a testing logger implementation. |
+
+## Error Handling
+The test cases in this file primarily rely on assertion functions from the `testify` package to handle errors. The `require` package's assertions halt test execution on failure, while the `assert` package's assertions allow the test to continue even if an assertion fails.
+
+## TODOs
+There are no TODOs or other notes left in the code.

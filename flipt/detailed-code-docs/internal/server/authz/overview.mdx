@@ -1,0 +1,81 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authz` directory contains the implementation of an authorization system for the Flipt project. It provides a flexible and powerful mechanism for enforcing access control policies using Open Policy Agent (OPA) and supports both Rego-based policies and Role-Based Access Control (RBAC) configurations.
+
+## What does it do?
+This authorization system performs several key functions:
+
+1. Defines an interface (`Verifier`) for authorization checks.
+2. Implements an authorization engine using Open Policy Agent (OPA) that:
+   - Initializes with provided configurations
+   - Loads and evaluates policies from various sources (local filesystem or cloud storage)
+   - Supports different user roles and permissions
+   - Periodically updates policies and data
+3. Provides a gRPC middleware that:
+   - Intercepts incoming gRPC requests
+   - Determines if authorization should be applied
+   - Retrieves authentication information
+   - Verifies if the requester is allowed to perform the requested action
+   - Allows or denies requests based on authorization results
+
+In simpler terms, it acts as a sophisticated gatekeeper for Flipt, deciding whether a user or system can perform a specific action based on predefined rules and policies.
+
+## Entry points
+The main entry points for this package are:
+
+1. The `Verifier` interface in `authz.go`, which defines the contract for authorization logic.
+2. The `Engine` struct in `engine/bundle/engine.go` and `engine/rego/engine.go`, which implements the OPA-based authorization engine.
+3. The `AuthorizationRequiredInterceptor` function in `middleware/middleware.go`, which provides the gRPC middleware for authorization.
+
+## Key Files
+1. `authz.go`: Defines the `Verifier` interface.
+2. `engine/bundle/engine.go`: Implements the OPA bundle-based authorization engine.
+3. `engine/rego/engine.go`: Implements the Rego-based authorization engine.
+4. `engine/rego/source/cloud/cloud.go`: Implements cloud-based policy and data sources.
+5. `engine/rego/source/filesystem/filesystem.go`: Implements filesystem-based policy and data sources.
+6. `middleware/middleware.go`: Contains the gRPC middleware implementation.
+
+## Dependencies
+The authorization system relies on several external libraries and frameworks:
+
+1. Open Policy Agent (OPA) SDK and related packages
+2. Uber's Zap logger
+3. gRPC
+4. Various internal Flipt packages
+
+## Configuration
+The authorization system can be configured through the Flipt configuration (`config.Config`). Key configurable aspects include:
+
+1. Authorization backend type (local files or cloud-based storage)
+2. Policy and data file paths
+3. Cloud backend settings (for cloud-based backends)
+4. Middleware options for skipping authorization on specific servers
+
+Example configuration for the authorization engine:
+
+```yaml
+authorization:
+  backend:
+    type: s3
+    region: us-west-2
+    bucket: my-policy-bucket
+  policy:
+    path: /policies/authz.rego
+  data:
+    path: /data/rbac.json
+```
+
+Example usage of the gRPC middleware:
+
+```go
+interceptor := AuthorizationRequiredInterceptor(
+    logger,
+    policyVerifier,
+    WithServerSkipsAuthorization(someServer),
+)
+```
+
+This authorization system provides a powerful and flexible way to implement complex authorization rules in the Flipt server, supporting both bundle-based and Rego-based policies, as well as local and cloud-based policy management.

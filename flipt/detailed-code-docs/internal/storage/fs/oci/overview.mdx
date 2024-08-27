@@ -1,0 +1,69 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a read-only storage backend for Flipt feature flags, backed by an OCI (Open Container Initiative) repository. The main component is the `SnapshotStore` struct, which periodically polls an OCI repository for updates and maintains a snapshot of the feature flag data.
+
+## What does it do?
+The code in this directory provides a way to store and retrieve Flipt feature flags using an OCI repository as the underlying storage mechanism. Here's a simplified explanation of how it works:
+
+1. The system connects to an OCI repository, which is like a special kind of container for storing data.
+2. It regularly checks this repository for any changes to the feature flag data.
+3. When it detects a change, it downloads the latest version of the data and creates a new "snapshot" of all the feature flags.
+4. This snapshot is then made available for the rest of the Flipt system to use when it needs to check feature flag states.
+5. The system ensures that reading from this snapshot is thread-safe, meaning multiple parts of the application can safely access the data at the same time.
+
+This approach allows Flipt to use OCI repositories as a reliable and scalable way to store and distribute feature flag configurations across different environments or systems.
+
+## Key Files
+
+### store.go
+This file contains the core implementation of the OCI-backed storage system. Key components include:
+
+- `SnapshotStore` struct: The main structure that implements the read-only storage backend.
+- `NewSnapshotStore` function: Creates and configures a new `SnapshotStore` instance.
+- `View` method: Provides thread-safe read-only access to the latest snapshot of feature flag data.
+- `update` method: Fetches the latest state from the OCI repository and updates the snapshot if necessary.
+
+### store_test.go
+This file contains unit tests for the `SnapshotStore` implementation. Key test cases include:
+
+- `Test_SourceString`: Verifies the string representation of the `SnapshotStore`.
+- `Test_SourceSubscribe`: Tests the subscription mechanism for detecting changes in the OCI repository.
+
+It also includes several helper functions for setting up test environments and manipulating OCI repositories for testing purposes.
+
+## Dependencies
+The implementation relies on several external libraries and internal packages:
+
+1. `github.com/opencontainers/go-digest`: Used for digest calculation and comparison.
+2. `go.flipt.io/flipt/internal/containers`: Provides utility functions for working with containers.
+3. `go.flipt.io/flipt/internal/oci`: Offers functions for interacting with OCI repositories.
+4. `go.flipt.io/flipt/internal/storage`: Defines interfaces and types for Flipt storage backends.
+5. `go.flipt.io/flipt/internal/storage/fs`: Implements file system-based storage backend.
+6. `go.uber.org/zap`: Used for logging.
+
+## Configuration
+The `SnapshotStore` can be configured using the following options:
+
+- `WithPollOptions`: Allows setting options for the embedded `storagefs.Poller`, which controls how often the OCI repository is checked for updates.
+
+Example usage:
+```go
+store, err := NewSnapshotStore(ctx, logger, ociStore, ociRef,
+    WithPollOptions(storagefs.WithPollInterval(time.Minute)))
+```
+
+This configuration would set the poll interval to one minute, meaning the store will check for updates in the OCI repository every minute.
+
+The `SnapshotStore` also uses a logger instance (`zap.Logger`) for logging operations and errors. This logger is passed during the creation of the `SnapshotStore`.
+
+## Error Handling
+Error handling in this implementation is primarily done by returning errors to the caller. The `update` method, which is responsible for fetching and applying updates from the OCI repository, returns both a boolean indicating whether an update occurred and an error if any issues were encountered.
+
+The `View` method, which provides read-only access to the snapshot, passes through any errors returned by the user-provided function.
+
+Errors are logged using the provided `zap.Logger` instance, allowing for centralized error tracking and debugging.
+
+In summary, this directory implements a crucial part of Flipt's storage system, enabling the use of OCI repositories as a backend for feature flag data. It provides a thread-safe, read-only interface to this data, with built-in mechanisms for keeping the local snapshot up-to-date with the remote repository.

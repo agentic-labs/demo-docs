@@ -1,0 +1,97 @@
+---
+title: "browser.go"
+---
+
+## High-level description
+The provided code is the main package for the Flipt application, a self-hosted feature flag solution. It sets up the command-line interface, configures logging, handles configuration loading, and initializes various components of the application, including telemetry, gRPC server, HTTP server, and cloud connectivity.
+
+## Code Structure
+The main function `exec()` sets up the root command and its subcommands using the Cobra library. The `run()` function is the core of the application, initializing and running various components based on the configuration. Other functions like `buildConfig()`, `determineConfig()`, and `clientConn()` support the main functionality by handling configuration and connection setup.
+
+## Symbols
+
+### `exec()`
+#### Description
+This function sets up the root command and its subcommands, and executes the command.
+
+#### Internal Logic
+1. Creates the root command and its subcommands
+2. Sets up flags and configuration
+3. Handles interrupts and cancellation
+4. Executes the root command
+
+### `run(ctx context.Context, logger *zap.Logger, cfg *config.Config) error`
+#### Description
+This is the main function that runs the Flipt application.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for cancellation and timeout |
+| logger | *zap.Logger | The logger instance |
+| cfg | *config.Config | The application configuration |
+
+#### Internal Logic
+1. Checks for updates if enabled
+2. Sets up telemetry if enabled
+3. Initializes and runs the gRPC server
+4. Initializes and runs the HTTP server
+5. Sets up cloud connectivity if enabled
+6. Waits for shutdown signal and performs graceful shutdown
+
+### `buildConfig(ctx context.Context) (*zap.Logger, *config.Config, error)`
+#### Description
+This function loads the configuration and sets up the logger.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for cancellation and timeout |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | The configured logger |
+| cfg | *config.Config | The loaded configuration |
+| error | error | Any error encountered during the process |
+
+#### Internal Logic
+1. Determines the configuration file to use
+2. Loads the configuration
+3. Sets up the logger based on the configuration
+
+### `determineConfig(configFile string) (string, bool)`
+#### Description
+This function determines which configuration file to use.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| configFile | string | The provided configuration file path |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The path of the configuration file to use |
+| bool | bool | Whether a configuration file was found |
+
+#### Internal Logic
+1. Checks if a config file is provided
+2. Checks for a user config file
+3. Checks for a default config file
+4. Returns the appropriate file path or empty string if not found
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/spf13/cobra | Command-line interface framework |
+| go.uber.org/zap | Logging library |
+| go.flipt.io/flipt/internal/config | Configuration management |
+| go.flipt.io/flipt/internal/cmd | Command implementations |
+| go.flipt.io/reverst/client | Cloud connectivity client |
+
+## Error Handling
+The code uses error wrapping and returning throughout. Most functions return errors which are then handled by the caller. The main error handling is done in the `exec()` function, which exits the program with a non-zero status if an error occurs.
+
+## Logging
+The application uses the `zap` logging library. It configures the logger based on the application configuration, allowing for different log levels, output formats, and destinations (console or file).

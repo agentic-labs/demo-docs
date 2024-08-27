@@ -1,0 +1,132 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `SnapshotStore` struct implements a storage mechanism for Flipt snapshots that is backed by the local filesystem. It uses `os.DirFS` to interact with the filesystem and provides functionality for reading, updating, and polling for changes in the snapshot data.
+
+## Code Structure
+The `SnapshotStore` struct embeds a `storagefs.Poller` for polling the filesystem for changes. It holds a logger, the directory path, a mutex for synchronization, and the current snapshot. The `NewSnapshotStore` function initializes a new `SnapshotStore` and starts the polling process. The `View` method allows reading the current snapshot under a read lock. The `update` method fetches a new snapshot from the filesystem and updates the stored snapshot under a write lock.
+
+## References
+- `storagefs.SnapshotFromFS`: Used to create a snapshot from the local filesystem.
+- `storagefs.NewPoller`: Used to create a new poller instance for watching for file changes.
+- `storagefs.Poller`: Provides functionality for polling the filesystem for changes.
+- `storage.ReadOnlyStore`: Interface for reading snapshot data.
+
+## Symbols
+
+### `SnapshotStore`
+#### Description
+The `SnapshotStore` struct represents a storage backend for Flipt snapshots that uses the local filesystem as its backing store.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `SnapshotStore` struct maintains a snapshot of the Flipt configuration stored in the local filesystem. It uses a `sync.RWMutex` to ensure safe concurrent access to the snapshot data. The `Poller` field is used to periodically check for changes in the filesystem and update the snapshot accordingly.
+
+### `NewSnapshotStore`
+#### Description
+`NewSnapshotStore` constructs a new `SnapshotStore` instance. It initializes the store with the provided logger, directory path, and options. It also seeds the initial state by calling the `update` method and starts the polling process.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger to use for logging. |
+| dir | string | The directory path where the snapshots are stored. |
+| opts | ...containers.Option[SnapshotStore] | Optional configuration options for the store. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotStore | *SnapshotStore | A pointer to the newly created `SnapshotStore` instance. |
+| error | error | An error if the initialization fails. |
+
+#### Internal Logic
+1. Initializes a new `SnapshotStore` with the provided logger and directory path.
+2. Applies any provided options to configure the store.
+3. Seeds the initial state by calling the `update` method to load the initial snapshot from the filesystem.
+4. Creates a new `storagefs.Poller` instance to poll for changes in the filesystem.
+5. Starts the polling process in a separate goroutine.
+6. Returns the newly created `SnapshotStore` instance.
+
+### `WithPollOptions`
+#### Description
+`WithPollOptions` is a function that configures the poller options for the `SnapshotStore`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...containers.Option[storagefs.Poller] | The poller options to apply. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[SnapshotStore] | containers.Option[SnapshotStore] | An option function that can be used to configure the `SnapshotStore`. |
+
+#### Internal Logic
+Returns an option function that appends the provided poller options to the `pollOpts` slice of the `SnapshotStore`.
+
+### `View`
+#### Description
+`View` allows reading the current snapshot while holding a read lock. It takes a function as an argument and passes the current snapshot to it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| fn | func(storage.ReadOnlyStore) error | The function to execute with the current snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the provided function returns an error. |
+
+#### Internal Logic
+1. Acquires a read lock on the `SnapshotStore`'s mutex.
+2. Defers releasing the read lock.
+3. Calls the provided function `fn` with the current snapshot.
+4. Returns the error returned by the provided function.
+
+### `update`
+#### Description
+`update` fetches a new snapshot from the local filesystem and updates the current served reference.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| context.Context | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | A boolean indicating whether the update was successful. |
+| error | error | An error if the update fails. |
+
+#### Internal Logic
+1. Calls `storagefs.SnapshotFromFS` to fetch a new snapshot from the filesystem.
+2. If fetching the snapshot fails, returns false and the error.
+3. Acquires a write lock on the `SnapshotStore`'s mutex.
+4. Updates the `snap` field with the new snapshot.
+5. Releases the write lock.
+6. Returns true and nil, indicating a successful update.
+
+### `String`
+#### Description
+`String` returns an identifier string for the store type.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The identifier string "local". |
+
+#### Internal Logic
+Returns the string "local", representing the local filesystem storage type.

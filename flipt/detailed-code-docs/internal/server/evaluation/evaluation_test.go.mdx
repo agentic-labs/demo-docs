@@ -1,0 +1,178 @@
+---
+title: "evaluation_test.go"
+---
+
+## High-level description
+The `evaluation_test.go` file contains unit tests for the `evaluation` package, specifically for the `Variant` and `Boolean` functions which handle flag evaluations based on provided requests. These tests cover various scenarios including flag not found, flag type mismatches, flag disabled, successful evaluations with different rule types, and error handling.
+
+## References
+- `evaluationStoreMock`: A mock implementation of the storage interface used for testing interactions with the storage layer.
+- `New`: A function that creates a new instance of the evaluation server.
+- `errs`: A package containing error definitions.
+- `flipt`: A package containing protocol buffer definitions for Flipt.
+- `rpcevaluation`: A package containing protocol buffer definitions for Flipt evaluation.
+- `storage`: A package providing an interface for interacting with the storage layer.
+
+## Symbols
+
+### `TestVariant_FlagNotFound`
+#### Description
+Tests the scenario where the requested flag is not found in the store.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns `ErrNotFound` when `GetFlag` is called.
+- **Act:** Calls the `Variant` function with a request for the non-existent flag.
+- **Assert:** Verifies that the returned response is nil and the error message indicates the flag was not found.
+
+### `TestVariant_NonVariantFlag`
+#### Description
+Tests the scenario where the requested flag is not a variant flag type.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns a boolean flag when `GetFlag` is called.
+- **Act:** Calls the `Variant` function with a request for the boolean flag.
+- **Assert:** Verifies that the returned response is nil and the error message indicates an invalid flag type.
+
+### `TestVariant_FlagDisabled`
+#### Description
+Tests the scenario where the requested variant flag is disabled.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns a disabled variant flag when `GetFlag` is called.
+- **Act:** Calls the `Variant` function with a request for the disabled flag.
+- **Assert:** Verifies that the response indicates no match, the reason is `FLAG_DISABLED_EVALUATION_REASON`, and there is no error.
+
+### `TestVariant_EvaluateFailure_OnGetEvaluationRules`
+#### Description
+Tests the scenario where fetching evaluation rules for a flag results in an error.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns an error when `GetEvaluationRules` is called.
+- **Act:** Calls the `Variant` function.
+- **Assert:** Verifies that the returned response is nil and the error from `GetEvaluationRules` is propagated.
+
+### `TestVariant_Success`
+#### Description
+Tests the successful evaluation of a variant flag against a matching rule.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a flag and a matching rule.
+- **Act:** Calls the `Variant` function with a request matching the rule's constraints.
+- **Assert:** Verifies that the response indicates a match, the reason is `MATCH_EVALUATION_REASON`, the matching segment key is present, and there is no error.
+
+### `TestBoolean_FlagNotFoundError`
+#### Description
+Tests the scenario where the requested boolean flag is not found in the store.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns `ErrNotFound` when `GetFlag` is called.
+- **Act:** Calls the `Boolean` function with a request for the non-existent flag.
+- **Assert:** Verifies that the returned response is nil and the error message indicates the flag was not found.
+
+### `TestBoolean_NonBooleanFlagError`
+#### Description
+Tests the scenario where the requested flag is not a boolean flag type.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns a variant flag when `GetFlag` is called.
+- **Act:** Calls the `Boolean` function with a request for the variant flag.
+- **Assert:** Verifies that the returned response is nil and the error message indicates an invalid flag type.
+
+### `TestBoolean_DefaultRule_NoRollouts`
+#### Description
+Tests the scenario where a boolean flag is evaluated and no rollouts are defined, defaulting to the flag's enabled state.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and no rollouts.
+- **Act:** Calls the `Boolean` function.
+- **Assert:** Verifies that the response indicates the flag's enabled state, the reason is `DEFAULT_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_DefaultRuleFallthrough_WithPercentageRollout`
+#### Description
+Tests the scenario where a boolean flag evaluation falls through a percentage rollout and defaults to the flag's enabled state.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and a percentage rollout that doesn't match the request.
+- **Act:** Calls the `Boolean` function.
+- **Assert:** Verifies that the response indicates the flag's enabled state, the reason is `DEFAULT_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_PercentageRuleMatch`
+#### Description
+Tests the scenario where a boolean flag evaluation matches a percentage rollout.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and a matching percentage rollout.
+- **Act:** Calls the `Boolean` function.
+- **Assert:** Verifies that the response's enabled state matches the rollout's value, the reason is `MATCH_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_PercentageRuleFallthrough_SegmentMatch`
+#### Description
+Tests the scenario where a boolean flag evaluation falls through a percentage rollout and then matches a segment rollout.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag, a non-matching percentage rollout, and a matching segment rollout.
+- **Act:** Calls the `Boolean` function.
+- **Assert:** Verifies that the response's enabled state matches the segment rollout's value, the reason is `MATCH_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_SegmentMatch_MultipleConstraints`
+#### Description
+Tests the scenario where a boolean flag evaluation matches a segment rollout with multiple constraints.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and a segment rollout having multiple constraints.
+- **Act:** Calls the `Boolean` function with a request matching all constraints.
+- **Assert:** Verifies that the response indicates a match, the reason is `MATCH_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_SegmentMatch_Constraint_EntityId`
+#### Description
+Tests the scenario where a boolean flag evaluation matches a segment rollout with a constraint on the entity ID.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and a segment rollout having an entity ID constraint.
+- **Act:** Calls the `Boolean` function with a request matching the entity ID constraint.
+- **Assert:** Verifies that the response indicates a match, the reason is `MATCH_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_SegmentMatch_MultipleSegments_WithAnd`
+#### Description
+Tests the scenario where a boolean flag evaluation matches a segment rollout with multiple segments connected by an "AND" operator.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a boolean flag and a segment rollout having multiple segments and an "AND" operator.
+- **Act:** Calls the `Boolean` function with a request matching all segments' constraints.
+- **Assert:** Verifies that the response indicates a match, the reason is `MATCH_EVALUATION_REASON`, and there is no error.
+
+### `TestBoolean_RulesOutOfOrder`
+#### Description
+Tests the scenario where evaluation rollouts are not defined in the expected order.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with rollouts having ranks that are not in ascending order.
+- **Act:** Calls the `Boolean` function.
+- **Assert:** Verifies that an error is returned indicating the rollout rank is out of order.
+
+### `TestBatch_UnknownFlagType`
+#### Description
+Tests the scenario where a batch evaluation request contains a flag with an unknown type.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with a flag having an unknown type.
+- **Act:** Calls the `Batch` function with a request containing the flag.
+- **Assert:** Verifies that an error is returned indicating the flag type is unknown.
+
+### `TestBatch_InternalError_GetFlag`
+#### Description
+Tests the scenario where fetching a flag during batch evaluation results in an internal error.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store that returns an error when `GetFlag` is called.
+- **Act:** Calls the `Batch` function.
+- **Assert:** Verifies that the internal error from `GetFlag` is propagated.
+
+### `TestBatch_Success`
+#### Description
+Tests the successful evaluation of a batch request containing both boolean and variant flags.
+
+#### Internal Logic
+- **Arrange:** Sets up a mock store with boolean and variant flags, along with their respective rollouts and rules.
+- **Act:** Calls the `Batch` function with requests for these flags.
+- **Assert:** Verifies that the response contains the correct number of evaluations, each having the expected type, values, and reasons based on the defined flags and rules.

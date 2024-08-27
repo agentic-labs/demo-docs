@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains database migration scripts for various database systems (ClickHouse, CockroachDB, MySQL, PostgreSQL, and SQLite3) to support a feature flag management system called Flipt. The migrations create and modify tables to implement features such as namespaces, flags, segments, variants, constraints, rules, distributions, rollouts, and authentication.
+
+## What does it do?
+The migration scripts in this directory collectively set up and evolve the database schema for the Flipt feature flag management system across different database platforms. They perform the following main tasks:
+
+1. Create initial tables for core functionality (flags, segments, variants, constraints, rules, and distributions).
+2. Implement namespace support for organizing flags and related entities.
+3. Add tables and columns for rollout management, including thresholds and segment-based rules.
+4. Introduce authentication and operation locking mechanisms.
+5. Modify existing tables to support new features like default variants, flag metadata, and flag types.
+6. Improve data integrity and relationships between tables.
+7. Add support for analytics and data aggregation (specifically in ClickHouse).
+
+These migrations enable Flipt to manage complex feature flag scenarios, support gradual rollouts, implement user segmentation, and provide multi-tenancy through namespaces.
+
+## Entry points
+The main entry point for each database system is the initial schema creation script, typically named `0_initial.up.sql`. Subsequent migrations build upon this foundation, with each numbered file representing a step in the evolution of the database schema. The migrations should be applied in the order specified by their numerical prefixes to ensure proper schema evolution.
+
+## Key Files
+While the specific file names may vary slightly between database systems, the key files generally include:
+
+1. `0_initial.up.sql`: Creates the initial database schema with core tables.
+2. Files creating and relating namespaces (e.g., `create_namespaces.up.sql`, `namespaces_relationships.up.sql`).
+3. Files implementing rollouts (e.g., `rollouts.up.sql`).
+4. Files adding authentication and operation locking (e.g., `create_table_authentications.up.sql`, `create_table_operation_lock.up.sql`).
+5. Files modifying existing tables for new features (e.g., `flag_metadata.up.sql`).
+
+For ClickHouse specifically, there are additional files for analytics:
+- `0_initial_clickhouse.up.sql`: Creates the `flipt_counter_analytics` table.
+- `1_default_aggregated.up.sql`: Creates the `flipt_counter_aggregated_analytics` table.
+- `2_default_aggregated_view.up.sql`: Creates a materialized view for data aggregation.
+
+## Dependencies
+Each set of migration scripts is designed for a specific database system:
+
+1. ClickHouse: Chosen for high-performance analytics and efficient real-time aggregations.
+2. CockroachDB: A distributed SQL database compatible with PostgreSQL.
+3. MySQL: A popular relational database management system.
+4. PostgreSQL: An advanced open-source relational database.
+5. SQLite3: A lightweight, file-based relational database.
+
+The scripts use features and syntax specific to each database system.
+
+## Configuration
+While the migration scripts don't contain explicit configuration options, they do set up various default values and constraints:
+
+1. Default namespace: Often set to 'default'.
+2. Timestamp columns: Frequently use database-specific functions for automatic timestamping.
+3. Default values: Many columns have default values specified (e.g., `enabled BOOLEAN DEFAULT FALSE` for flags).
+4. Data types: Specific data types are used consistently across migrations (e.g., `VARCHAR(255)` for keys, `JSON` or `JSONB` for storing JSON data).
+5. Foreign key constraints: Used extensively to maintain referential integrity between related tables.
+
+For ClickHouse specifically:
+- Time-to-Live (TTL): Analytics tables are configured with a TTL of one week.
+- Table Engines: MergeTree for `flipt_counter_analytics` and SummingMergeTree for `flipt_counter_aggregated_analytics`.
+
+When implementing these migrations, ensure that:
+1. The database server version supports all used features.
+2. The database user has sufficient privileges to create tables, modify schemas, and add constraints.
+3. The migrations are run in the correct order, as indicated by their numerical prefixes.
+
+These migration scripts provide a solid foundation for the Flipt feature flag management system across various database platforms, allowing for complex targeting, rollout strategies, and organization through namespaces.

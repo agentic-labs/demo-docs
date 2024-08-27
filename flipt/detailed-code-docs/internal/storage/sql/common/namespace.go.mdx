@@ -1,0 +1,179 @@
+---
+title: "namespace.go"
+---
+
+## High-level description
+The `namespace.go` file provides data access methods for managing Flipt Namespaces within a SQL database. It implements the `storage.Store` interface for Namespaces, handling operations like getting, listing, creating, updating, and deleting Namespaces.
+
+## References
+This code references the following symbols from other parts of the codebase:
+
+* `storage.NamespaceRequest`: Represents a request for a Namespace.
+* `flipt.Namespace`: Represents a Flipt Namespace.
+* `storage.ListRequest`: Represents a request to list resources.
+* `storage.ReferenceRequest`: Represents a request for a resource by its reference.
+* `flipt.CreateNamespaceRequest`: Represents a request to create a new Namespace.
+* `flipt.UpdateNamespaceRequest`: Represents a request to update an existing Namespace.
+* `flipt.DeleteNamespaceRequest`: Represents a request to delete a Namespace.
+
+## Symbols
+
+### `(*Store) GetNamespace`
+#### Description
+Retrieves a Namespace from the database based on the provided `storage.NamespaceRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| p | storage.NamespaceRequest | The request containing the Namespace key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Namespace | | The retrieved Namespace. |
+| error | | An error if the Namespace is not found or if there is a database error. |
+
+#### Internal Logic
+1. Constructs a SQL query to select the Namespace fields from the `namespaces` table based on the provided Namespace key.
+2. Executes the query and scans the result into a `flipt.Namespace` struct.
+3. If the query returns no rows, returns an `errs.ErrNotFoundf` error.
+4. If there is an error during the process, returns the error.
+5. Otherwise, returns the retrieved Namespace.
+
+### `(*Store) ListNamespaces`
+#### Description
+Retrieves a list of Namespaces from the database based on the provided `storage.ListRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storage.ListRequest[storage.ReferenceRequest] | The request containing the listing parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| storage.ResultSet[*flipt.Namespace] | | The result set containing the list of Namespaces and pagination information. |
+| error | | An error if there is a database error. |
+
+#### Internal Logic
+1. Constructs a SQL query to select the Namespace fields from the `namespaces` table, ordered by creation date.
+2. Applies limit and offset to the query based on the provided pagination parameters.
+3. Executes the query and iterates over the rows, scanning each row into a `flipt.Namespace` struct.
+4. If the number of retrieved Namespaces exceeds the limit, constructs a `NextPageToken` for pagination.
+5. Returns the result set containing the list of Namespaces and pagination information.
+
+### `(*Store) CountNamespaces`
+#### Description
+Counts the total number of Namespaces in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| _ | storage.ReferenceRequest | This parameter is not used. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uint64 | | The total count of Namespaces. |
+| error | | An error if there is a database error. |
+
+#### Internal Logic
+1. Constructs a SQL query to count all rows in the `namespaces` table.
+2. Executes the query and scans the result into a `uint64` variable.
+3. Returns the count of Namespaces.
+
+### `(*Store) CreateNamespace`
+#### Description
+Creates a new Namespace in the database based on the provided `flipt.CreateNamespaceRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.CreateNamespaceRequest | The request containing the Namespace data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Namespace | | The created Namespace. |
+| error | | An error if there is a database error. |
+
+#### Internal Logic
+1. Sets the creation and update timestamps for the Namespace.
+2. Constructs a SQL query to insert the Namespace data into the `namespaces` table.
+3. Executes the query and checks for any errors.
+4. Returns the created Namespace.
+
+### `(*Store) UpdateNamespace`
+#### Description
+Updates an existing Namespace in the database based on the provided `flipt.UpdateNamespaceRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.UpdateNamespaceRequest | The request containing the Namespace data to update. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Namespace | | The updated Namespace. |
+| error | | An error if the Namespace is not found or if there is a database error. |
+
+#### Internal Logic
+1. Constructs a SQL query to update the Namespace fields in the `namespaces` table based on the provided Namespace key.
+2. Executes the query and checks if exactly one row was affected.
+3. If no rows were affected, returns an `errs.ErrNotFoundf` error.
+4. If there is an error during the process, returns the error.
+5. Otherwise, retrieves and returns the updated Namespace using `GetNamespace`.
+
+### `(*Store) DeleteNamespace`
+#### Description
+Deletes a Namespace from the database based on the provided `flipt.DeleteNamespaceRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.DeleteNamespaceRequest | The request containing the Namespace key to delete. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | | An error if there is a database error. |
+
+#### Internal Logic
+1. Constructs a SQL query to delete the Namespace from the `namespaces` table based on the provided Namespace key.
+2. Executes the query and returns any error encountered.
+
+## Side Effects
+All methods in this file interact with the SQL database, potentially modifying data. 
+Additionally:
+* `CreateNamespace`, `UpdateNamespace`, and `DeleteNamespace` methods call the `setVersion` method, which is expected to update a version counter or timestamp for the affected Namespace. This suggests that changes to Namespaces are tracked and versioned.
+
+## Error Handling
+The code uses the following error handling mechanisms:
+
+* **Returning errors:** Most functions return an `error` value, allowing for the propagation of errors to the caller.
+* **Specific error types:** The code uses custom error types from the `errs` package, such as `errs.ErrNotFoundf`, to provide more context about the error.
+
+## Dependencies
+This code depends on the following external libraries:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a way to pass request-scoped values and cancellation signals. |
+| `database/sql` | Provides a generic interface for interacting with SQL databases. |
+| `encoding/base64` | Used for encoding and decoding pagination tokens. |
+| `encoding/json` | Used for encoding and decoding data structures. |
+| `errors` | Used for working with errors. |
+| `fmt` | Used for formatting strings. |
+| `github.com/Masterminds/squirrel` | Used for constructing SQL queries. |
+| `go.flipt.io/flipt/errors` | Provides custom error types. |
+| `go.flipt.io/flipt/internal/storage` | Defines storage-related interfaces and types. |
+| `go.flipt.io/flipt/internal/storage/sql` | Provides SQL-specific storage utilities. |
+| `go.flipt.io/flipt/rpc/flipt` | Defines Flipt API request and response types. |
+

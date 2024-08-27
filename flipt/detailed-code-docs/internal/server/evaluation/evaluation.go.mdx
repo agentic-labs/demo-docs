@@ -1,0 +1,168 @@
+---
+title: "evaluation.go"
+---
+
+## High-level description
+The `evaluation.go` file contains the implementation of the `EvaluationService` gRPC server, which handles flag evaluation requests for both boolean and variant flags. It adapts the 'v2' evaluation API and proxies the request to the 'v1' evaluation API.
+
+## Code Structure
+The `Server` struct implements the `EvaluationServiceServer` interface. It uses a `Storer` interface to interact with the underlying storage and an `Evaluator` to perform the actual flag evaluation. The `Variant` and `Boolean` methods handle requests for variant and boolean flags, respectively. The `Batch` method handles batch evaluation requests for multiple flags.
+
+## References
+- `storage.Store`: Interface for interacting with the storage layer.
+- `evaluation.Evaluator`: Performs the actual flag evaluation.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct implements the `EvaluationServiceServer` interface and handles flag evaluation requests.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The `Server` struct uses a `Storer` interface to interact with the underlying storage and an `Evaluator` to perform the actual flag evaluation.
+
+### `Variant`
+#### Description
+The `Variant` method evaluates a request for a multi-variate flag and entity. It retrieves the flag from the storage, performs the evaluation using the `Evaluator`, and returns the result in a `VariantEvaluationResponse`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *rpcevaluation.EvaluationRequest | The evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcevaluation.VariantEvaluationResponse |  | The variant evaluation response. |
+| error |  | An error if one occurred. |
+
+#### Internal Logic
+1. Retrieve the flag from the storage using the provided namespace key, flag key, and reference.
+2. Log the request details.
+3. Evaluate the flag using the `Evaluator`.
+4. Map the evaluation reason from the `Evaluator` to the `rpcevaluation.EvaluationReason` enum.
+5. Construct a `VariantEvaluationResponse` with the evaluation result, reason, variant key, and segment keys.
+6. Add OpenTelemetry attributes to the span for tracing.
+7. Log the response details.
+
+### `variant`
+#### Description
+The `variant` method is an internal helper function that performs the actual evaluation of a variant flag using the `Evaluator`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| flag | *flipt.Flag | The flag to evaluate. |
+| r | *rpcevaluation.EvaluationRequest | The evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcevaluation.VariantEvaluationResponse |  | The variant evaluation response. |
+| error |  | An error if one occurred. |
+
+#### Internal Logic
+1. Evaluate the flag using the `Evaluator`.
+2. Map the evaluation reason from the `Evaluator` to the `rpcevaluation.EvaluationReason` enum.
+3. Construct a `VariantEvaluationResponse` with the evaluation result, reason, variant key, and segment keys.
+
+### `Boolean`
+#### Description
+The `Boolean` method evaluates a request for a boolean flag and entity. It retrieves the flag from the storage, performs the evaluation, and returns the result in a `BooleanEvaluationResponse`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *rpcevaluation.EvaluationRequest | The evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcevaluation.BooleanEvaluationResponse |  | The boolean evaluation response. |
+| error |  | An error if one occurred. |
+
+#### Internal Logic
+1. Retrieve the flag from the storage using the provided namespace key, flag key, and reference.
+2. Log the request details.
+3. Check if the flag type is boolean.
+4. Evaluate the flag using the `boolean` helper function.
+5. Add OpenTelemetry attributes to the span for tracing.
+6. Log the response details.
+
+### `boolean`
+#### Description
+The `boolean` method is an internal helper function that performs the actual evaluation of a boolean flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| flag | *flipt.Flag | The flag to evaluate. |
+| r | *rpcevaluation.EvaluationRequest | The evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcevaluation.BooleanEvaluationResponse |  | The boolean evaluation response. |
+| error |  | An error if one occurred. |
+
+#### Internal Logic
+1. Retrieve the evaluation rollouts for the flag from the storage.
+2. Iterate through the rollouts in order of rank.
+3. For each rollout:
+    - If it's a threshold rollout, perform consistent hashing based on the entity ID and flag key. If the hash falls within the threshold percentage, set the response enabled value and reason accordingly.
+    - If it's a segment rollout, evaluate the segment constraints against the request context. If the entity matches the segment, set the response enabled value and reason accordingly.
+4. If no rollout matches, set the response enabled value to the flag's default enabled value and reason to `DEFAULT_EVALUATION_REASON`.
+5. Record evaluation metrics.
+
+### `Batch`
+#### Description
+The `Batch` method evaluates a batch of evaluation requests for both boolean and variant flags.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| b | *rpcevaluation.BatchEvaluationRequest | The batch evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *rpcevaluation.BatchEvaluationResponse |  | The batch evaluation response. |
+| error |  | An error if one occurred. |
+
+#### Internal Logic
+1. Create a `BatchEvaluationResponse` with an empty slice of responses.
+2. Iterate through the requests in the batch request.
+3. For each request:
+    - Retrieve the flag from the storage.
+    - If the flag is not found and `ExcludeNotFound` is true, skip the request.
+    - If the flag type is boolean, evaluate it using the `boolean` helper function.
+    - If the flag type is variant, evaluate it using the `variant` helper function.
+    - Append the evaluation response to the `BatchEvaluationResponse`.
+4. Return the `BatchEvaluationResponse`.
+
+## Side Effects
+- Records evaluation metrics.
+- Adds OpenTelemetry attributes to the span for tracing.
+
+## Error Handling
+- Returns an error if there is an issue retrieving the flag from the storage.
+- Returns an error if the flag type is invalid.
+- Returns an error if there is an issue evaluating the flag.
+
+## Logging
+- Logs request and response details.
+- Logs debug information during evaluation.
+
+## API/Interface Reference
+N/A

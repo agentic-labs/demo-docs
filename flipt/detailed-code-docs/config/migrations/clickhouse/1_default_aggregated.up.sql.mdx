@@ -1,0 +1,42 @@
+---
+title: "1_default_aggregated.up.sql"
+---
+
+## High-level description
+This SQL script creates a table named `flipt_counter_aggregated_analytics` in ClickHouse, designed to store aggregated analytics data for feature flag evaluations. The table is optimized for efficient storage and querying of time-series data with a focus on summarizing counter values.
+
+## Symbols
+
+### `flipt_counter_aggregated_analytics` Table
+#### Description
+This table is created to store aggregated analytics data related to feature flag evaluations. It uses the SummingMergeTree engine, which is optimized for scenarios where you need to sum up data over time.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `timestamp` | DateTime('UTC') | The time of the event in UTC |
+| `analytic_name` | LowCardinality(String) | The name of the analytic being tracked |
+| `namespace_key` | LowCardinality(String) | The key of the namespace |
+| `flag_key` | LowCardinality(String) | The key of the feature flag |
+| `reason` | LowCardinality(String) | The reason for the evaluation result |
+| `evaluation_value` | LowCardinality(String) | The value of the evaluation |
+| `value` | UInt32 | The counter value to be aggregated |
+
+#### Internal Logic
+1. The table uses the SummingMergeTree engine, which automatically sums the `value` column for rows with the same primary key during background merges.
+2. The primary key is defined by the ORDER BY clause, which includes all columns except `value`.
+3. LowCardinality(String) is used for string columns to optimize storage and query performance for columns with a low number of distinct values.
+4. A TTL (Time To Live) is set to automatically delete data older than one week based on the `timestamp` column.
+
+## Performance Considerations
+1. The use of SummingMergeTree engine allows for efficient aggregation of counter values over time.
+2. LowCardinality(String) is used for string columns to improve performance and reduce storage requirements for columns with a limited set of unique values.
+3. The ORDER BY clause defines the primary key, which affects data storage organization and query performance. The chosen order allows for efficient filtering and aggregation based on time and various dimensions (analytic_name, namespace_key, flag_key, reason, evaluation_value).
+4. The TTL clause helps manage data retention and storage usage by automatically removing old data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| ClickHouse | The database system for which this SQL script is written |
+
+This table structure and engine choice are optimized for scenarios where you need to track and aggregate counter values for feature flag evaluations over time, with the ability to efficiently query and analyze the data based on various dimensions.

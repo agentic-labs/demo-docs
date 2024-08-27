@@ -1,0 +1,74 @@
+---
+title: "avro.go"
+---
+
+## High-level description
+The code defines an Avro encoder (`avroEncoder`) that encodes `audit.Event` structs into Avro-formatted byte arrays. This encoder is intended for use with a Kafka producer to send audit events in Avro format.
+
+## Code Structure
+The `avroEncoder` struct holds the Avro schema used for encoding. The `newAvroEncoder` function creates a new instance of the encoder with the schema parsed from a predefined string (`protoaudit.AvroSchema`). The `Encode` method takes an interface{} as input, checks if it's an `audit.Event`, converts its payload to a map, and encodes it into Avro format using the stored schema.
+
+## References
+- `audit.Event`: Represents an audit event structure.
+- `protoaudit.AvroSchema`: A string containing the Avro schema definition for the audit event.
+- `github.com/hamba/avro/v2`: Avro library used for encoding.
+- `github.com/twmb/franz-go/pkg/sr`: Kafka library used for schema registry interaction.
+
+## Symbols
+
+### `newAvroEncoder`
+#### Description
+Creates a new instance of the `avroEncoder` with the Avro schema parsed from `protoaudit.AvroSchema`.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *avroEncoder | `*avroEncoder` | A pointer to the newly created `avroEncoder`. |
+
+### `avroEncoder`
+#### Description
+A struct representing an Avro encoder for `audit.Event` structs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| schema | `avro.Schema` | The Avro schema used for encoding. |
+
+### `(*avroEncoder) Schema`
+#### Description
+Returns the Avro schema used by the encoder as an `sr.Schema` object, which is compatible with the Kafka schema registry.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `sr.Schema` | `sr.Schema` | The Avro schema used by the encoder. |
+
+### `(*avroEncoder) Encode`
+#### Description
+Encodes an `audit.Event` struct into an Avro-formatted byte array.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v | `any` | The value to encode. It should be an `audit.Event` struct. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `[]byte` | `[]byte` | The Avro-encoded byte array representing the event. |
+| `error` | `error` | An error object if encoding fails. |
+
+#### Internal Logic
+1. Checks if the input value `v` is of type `audit.Event`.
+2. Copies the input event to a new `audit.Event` struct to avoid modifying the original.
+3. Converts the event payload to a map using `event.PayloadToMap()`.
+4. Creates a new Avro encoder using the schema stored in the `avroEncoder`.
+5. Encodes the event into a byte buffer using the Avro encoder.
+6. Returns the encoded byte array from the buffer.
+7. If any of the steps fail, returns an error.
+
+## Error Handling
+The `Encode` method returns an `error` object if:
+- The input value is not an `audit.Event`.
+- Converting the event payload to a map fails.
+- Encoding the event into Avro format fails.

@@ -1,0 +1,136 @@
+---
+title: "server_test.go"
+---
+
+## High-level description
+This file contains tests for the OIDC authentication server, covering both implicit flow and PKCE flow. It simulates user login and token exchange with an OIDC provider, and verifies the authentication process and token storage.
+
+## Code Structure
+The code defines two main test functions: `Test_Server_ImplicitFlow` and `Test_Server_PKCE`. Both functions set up a test OIDC provider and a Flipt HTTP server with different authentication configurations. They then simulate a user login flow and verify the authentication results. The `testOIDCFlow` function is a common helper function that performs the actual authentication flow and assertions.
+
+## References
+- `go.flipt.io/flipt/internal/server/authn/method/oidc/testing`: Provides helper functions for testing OIDC authentication.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines the gRPC services and messages for authentication.
+- `github.com/hashicorp/cap/oidc`: Provides utilities for working with OIDC.
+
+## Symbols
+
+### `Test_Server_ImplicitFlow`
+#### Description
+This test function verifies the OIDC implicit flow authentication process. It sets up a test OIDC provider and a Flipt HTTP server configured to use the implicit flow. It then simulates a user login flow, including obtaining an authorization URL, logging in as a test user, and handling the callback. Finally, it verifies the authentication response and token storage.
+
+#### Inputs
+This is a test function, so it does not take any inputs.
+
+#### Outputs
+This is a test function, so it does not return any outputs.
+
+#### Internal Logic
+1. **Arrange:**
+    - Starts a test OIDC provider using `oidc.StartTestProvider`.
+    - Creates a new chi router and starts a test HTTP server using `httptest.NewServer`.
+    - Defines the client ID and secret for the test OIDC provider.
+    - Creates a logger using `zaptest.NewLogger`.
+    - Defines the authentication configuration for the Flipt server, including the OIDC provider settings.
+    - Starts the Flipt HTTP server using `oidctesting.StartHTTPServer`.
+    - Creates a cookie jar for the test client.
+    - Creates an HTTP client with redirect handling disabled and the cookie jar attached.
+2. **Act:**
+    - Calls the `testOIDCFlow` function to perform the actual authentication flow.
+3. **Assert:**
+    - The `testOIDCFlow` function performs assertions on the authentication response and token storage.
+
+### `Test_Server_PKCE`
+#### Description
+This test function verifies the OIDC authentication process using the PKCE (Proof Key for Code Exchange) flow. It sets up a test OIDC provider and a Flipt HTTP server configured to use PKCE. It then simulates a user login flow, including obtaining an authorization URL, logging in as a test user, and handling the callback. Finally, it verifies the authentication response and token storage.
+
+#### Inputs
+This is a test function, so it does not take any inputs.
+
+#### Outputs
+This is a test function, so it does not return any outputs.
+
+#### Internal Logic
+1. **Arrange:**
+    - Starts a test OIDC provider using `oidc.StartTestProvider`, configured to use PKCE.
+    - Creates a new chi router and starts a test HTTP server using `httptest.NewServer`.
+    - Defines the client ID and secret for the test OIDC provider.
+    - Creates a logger using `zaptest.NewLogger`.
+    - Defines the authentication configuration for the Flipt server, including the OIDC provider settings and enabling PKCE.
+    - Starts the Flipt HTTP server using `oidctesting.StartHTTPServer`.
+    - Creates a cookie jar for the test client.
+    - Creates an HTTP client with redirect handling disabled and the cookie jar attached.
+2. **Act:**
+    - Calls the `testOIDCFlow` function to perform the actual authentication flow.
+3. **Assert:**
+    - The `testOIDCFlow` function performs assertions on the authentication response and token storage.
+
+### `testOIDCFlow`
+#### Description
+This helper function performs the actual OIDC authentication flow and assertions for both the implicit and PKCE flow tests. It simulates obtaining an authorization URL, logging in as a test user, handling the callback, and verifying the authentication response and token storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| ctx | context.Context | The context for the request. |
+| tpAddr | string | The address of the test OIDC provider. |
+| clientAddress | string | The address of the Flipt HTTP server. |
+| client | *http.Client | The HTTP client to use for the requests. |
+| server | *oidctesting.HTTPServer | The Flipt HTTP server instance. |
+
+#### Outputs
+This is a test function, so it does not return any outputs.
+
+#### Internal Logic
+1. **Obtain Authorization URL:**
+    - Sends a GET request to the `/auth/v1/method/oidc/google/authorize` endpoint to obtain the authorization URL.
+    - Verifies that the response status code is 200 OK.
+    - Parses the authorization URL from the response body.
+2. **Login as Test User:**
+    - Sends a GET request to the authorization URL.
+    - Parses the login form hidden values from the response body.
+    - Sets the username and password fields in the form values.
+    - Sends a POST request to the `/login` endpoint of the test OIDC provider with the login credentials.
+    - Verifies that the response status code is 302 Found.
+    - Extracts the redirect location from the response headers.
+3. **Handle Callback (Missing/Invalid State):**
+    - Sends a GET request to the redirect location using the default HTTP client (without the state cookie).
+    - Verifies that the response status code is 401 Unauthorized.
+    - Sends another GET request to the redirect location with an invalid state cookie.
+    - Verifies that the response status code is 401 Unauthorized.
+4. **Handle Callback:**
+    - Sends a GET request to the redirect location using the test client (with the valid state cookie).
+    - Verifies that the response status code is 200 OK.
+    - Unmarshals the response body into an `auth.CallbackResponse` object.
+    - Performs assertions on the response:
+        - Verifies that the `ClientToken` field is empty (as it should be stored in a cookie).
+        - Verifies that the `Authentication.Method` field is `auth.Method_METHOD_OIDC`.
+        - Verifies the expected authentication metadata.
+        - Verifies that the `Authentication.ExpiresAt` field is set.
+    - Extracts the `flipt_client_token` cookie from the response headers.
+    - Retrieves the stored authentication from the server's store using the cookie value.
+    - Verifies that the stored authentication matches the response body authentication.
+
+### `parseLoginFormHiddenValues`
+#### Description
+This helper function parses the hidden input values from an HTML login form.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| r | io.Reader | The reader containing the HTML content. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| values | url.Values | The parsed hidden input values. |
+| err | error | An error if parsing fails. |
+
+#### Internal Logic
+1. Parses the HTML content using `html.Parse`.
+2. Defines a recursive function `findNode` to traverse the HTML document tree.
+3. Uses `findNode` to locate the login form element (`&lt;form action="/login"&gt;`).
+4. Within the form element, uses another `findNode` to locate all hidden input elements (`&lt;input type="hidden"&gt;`).
+5. Extracts the `name` and `value` attributes from each hidden input element and adds them to the `url.Values` object.
+6. Returns the parsed values.

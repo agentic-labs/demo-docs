@@ -1,0 +1,88 @@
+---
+title: "migrate.go"
+---
+
+## High-level description
+This code defines a `GRPCServer` struct and associated functions for configuring and running a gRPC server for the Flipt application. It sets up various components such as storage, caching, authentication, authorization, metrics, tracing, and audit logging based on the provided configuration.
+
+## Code Structure
+The main symbol is the `GRPCServer` struct, which encapsulates the gRPC server and its dependencies. The `NewGRPCServer` function is responsible for initializing all the components and setting up the server. The `Run` method starts the server, and the `Shutdown` method gracefully stops it.
+
+## Symbols
+
+### `GRPCServer` struct
+#### Description
+Represents the gRPC server for Flipt, including its dependencies and configuration.
+
+#### Internal Logic
+- Holds the gRPC server instance, logger, configuration, and network listener
+- Maintains a list of shutdown functions to be called during server shutdown
+
+### `NewGRPCServer` function
+#### Description
+Constructs and configures the Flipt gRPC server with all its dependencies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the server initialization |
+| logger | *zap.Logger | Logger instance |
+| cfg | *config.Config | Flipt configuration |
+| info | info.Flipt | Flipt version information |
+| forceMigrate | bool | Flag to force database migrations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *GRPCServer | *GRPCServer | Configured gRPC server instance |
+| error | error | Error if any occurred during initialization |
+
+#### Internal Logic
+1. Sets up network listener
+2. Configures storage based on configuration (database or file system)
+3. Initializes metrics exporter if enabled
+4. Sets up tracing provider and exporter if enabled
+5. Configures authentication and authorization interceptors
+6. Sets up audit logging if enabled
+7. Initializes and registers various gRPC services (Flipt, metadata, evaluation, etc.)
+8. Configures gRPC server options and interceptors
+9. Registers health check and reflection services
+
+### `Run` method
+#### Description
+Starts the gRPC server and begins serving requests.
+
+#### Internal Logic
+Calls the `Serve` method on the underlying gRPC server with the configured listener.
+
+### `Shutdown` method
+#### Description
+Gracefully shuts down the gRPC server and its dependencies.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the shutdown operation |
+
+#### Internal Logic
+Executes all registered shutdown functions in reverse order.
+
+## Dependencies
+The code relies on various external libraries and internal packages:
+- gRPC and related middleware packages
+- Zap for logging
+- OpenTelemetry for tracing and metrics
+- Internal Flipt packages for storage, caching, authentication, authorization, and more
+
+## Error Handling
+The code uses extensive error checking and propagation throughout the initialization process. Errors are wrapped with additional context using `fmt.Errorf` to provide more informative error messages.
+
+## Logging
+Zap logger is used throughout the code for logging at various levels (Debug, Info, Error). The logger is configured based on the provided configuration.
+
+## Performance Considerations
+- The server uses connection pooling for database connections
+- Caching is implemented to improve performance when enabled
+- Tracing and metrics are optional and can be enabled/disabled based on configuration
+
+This code provides a flexible and extensible foundation for the Flipt gRPC server, allowing for easy configuration and management of various components and features.

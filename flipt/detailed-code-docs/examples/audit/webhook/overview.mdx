@@ -1,0 +1,73 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains examples demonstrating how to configure and use Flipt's audit event logging feature with webhooks. It includes Docker configurations, a simple Python webhook server, and configuration files for Flipt.
+
+## What does it do?
+The code in this directory sets up a demonstration environment for Flipt's audit event logging feature. It allows users to:
+
+1. Run Flipt with audit event logging enabled, sending events to a webhook.
+2. Configure which types of events are sent (in this case, flag creation and updates).
+3. Customize the format of the webhook payload using templates.
+4. Receive and log these events using a simple Python HTTP server.
+
+This setup helps developers understand how to integrate Flipt's audit logging with their own systems, allowing them to track important changes to feature flags and other Flipt resources.
+
+## Entry points
+The main entry points for this example are:
+
+1. `docker-compose.yml` and `docker-compose.template.yml`: These files define the Docker environments for running the examples. They set up the Flipt service and the webhook receiver.
+
+2. `server.py`: This is the Python script that implements the webhook receiver, logging incoming audit events.
+
+3. `flipt.config.yml`: This file configures Flipt, particularly its audit logging and webhook settings.
+
+The workflow typically involves:
+1. Starting the Docker environment using one of the compose files.
+2. Interacting with Flipt (e.g., creating or updating flags).
+3. Observing the logged audit events in the webhook server's output.
+
+## Key Files
+1. `Dockerfile`: Defines the Docker image for the webhook server.
+
+2. `README.md`: Provides instructions on how to run the examples and what to expect.
+
+3. `flipt.config.yml`: Configures Flipt's audit logging and webhook settings, including event filtering and payload templating.
+
+## Configuration
+The examples use both environment variables and a configuration file to set up Flipt:
+
+1. Environment variables (in `docker-compose.yml`):
+   - `FLIPT_LOG_LEVEL=debug`
+   - `FLIPT_AUDIT_SINKS_WEBHOOK_ENABLED=true`
+   - `FLIPT_AUDIT_EVENTS=flag:created flag:updated`
+   - `FLIPT_AUDIT_SINKS_WEBHOOK_URL=http://webhook:8081/`
+
+2. Configuration file (`flipt.config.yml`):
+   ```yaml
+   log:
+     level: debug
+   audit:
+     events:
+       - flag:created
+       - flag:updated
+     sinks:
+       webhook:
+         enabled: true
+         templates:
+           - url: http://webhook:8081/
+             method: POST
+             headers:
+               Content-Type: application/json
+             body: |
+               {
+                 "event": "{{ .Type }} {{ .Action }}",
+                 "timestamp": "{{ .Timestamp }}"
+               }
+   ```
+
+These configurations enable audit logging, specify which events to log, set the webhook URL, and define the payload template for the webhook requests.
+
+The Python server (`server.py`) is configured to listen on port 8081 by default, but this can be changed by modifying the `port` parameter in the `run()` function call.

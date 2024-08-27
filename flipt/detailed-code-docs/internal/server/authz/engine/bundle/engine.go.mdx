@@ -1,0 +1,105 @@
+---
+title: "engine.go"
+---
+
+## High-level description
+The `engine.go` file implements an authorization engine using Open Policy Agent (OPA) for Flipt. It provides a way to verify if a given request is allowed based on the configured authorization policies.
+
+## Code Structure
+The `Engine` struct holds an instance of the OPA engine and implements the `authz.Verifier` interface. The `NewEngine` function initializes the OPA engine with the provided configuration and returns a new instance of the `Engine`. The `IsAllowed` method evaluates the authorization policy against the provided input and returns whether the request is allowed or not. The `Shutdown` method gracefully stops the OPA engine.
+
+## References
+- `authz.Verifier`: Interface for authorization verification.
+- `config.Config`: Configuration settings for Flipt.
+- `sdk.OPA`: Open Policy Agent SDK.
+
+## Symbols
+
+### `Engine`
+#### Description
+The `Engine` struct represents the authorization engine that uses OPA to evaluate authorization policies.
+
+#### Inputs
+This struct does not have explicit inputs.
+
+#### Outputs
+This struct does not have explicit outputs.
+
+### `NewEngine`
+#### Description
+The `NewEngine` function initializes a new instance of the `Engine` struct. It reads the authorization configuration and creates an OPA instance with the specified configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger instance. |
+| cfg | *config.Config | The Flipt configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Engine | *Engine | A pointer to the initialized `Engine` instance. |
+| error | error | An error if the initialization fails. |
+
+#### Internal Logic
+1. Reads the authorization configuration from the provided `config.Config`.
+2. Sets the `AWS_REGION` environment variable if it's not set and the region is specified in the S3 object authorization backend configuration.
+3. Creates a new OPA instance with the specified configuration, using an in-memory store and the provided logger.
+4. Returns a new `Engine` instance with the initialized OPA instance and cleanup functions.
+
+### `(e *Engine) IsAllowed`
+#### Description
+The `IsAllowed` method determines if a request is allowed based on the provided input and the loaded OPA policy.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| input | map[string]interface{} | The input data for the authorization policy evaluation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | True if the request is allowed, false otherwise. |
+| error | error | An error if the policy evaluation fails. |
+
+#### Internal Logic
+1. Logs the input data for debugging purposes.
+2. Calls the OPA engine to evaluate the policy at the path "flipt/authz/v1/allow" with the provided input.
+3. If the evaluation is successful, extracts the result as a boolean value.
+4. Returns the boolean result indicating whether the request is allowed.
+
+### `(e *Engine) Shutdown`
+#### Description
+The `Shutdown` method gracefully shuts down the OPA engine and performs any necessary cleanup.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the shutdown process fails. |
+
+#### Internal Logic
+1. Calls the `Stop` method on the OPA instance to gracefully shut it down.
+2. Iterates through the registered cleanup functions and executes them.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a way to pass request-scoped values and cancellation signals. |
+| os | Provides a platform-independent interface to operating system functionality. |
+| strings | Provides functions for manipulating strings. |
+| github.com/open-policy-agent/contrib/logging/plugins/ozap | Provides OPA logging integration with Uber Zap. |
+| github.com/open-policy-agent/opa/sdk | Provides the Open Policy Agent Go SDK. |
+| github.com/open-policy-agent/opa/storage/inmem | Provides an in-memory storage implementation for OPA. |
+| go.flipt.io/flipt/internal/config | Provides configuration settings for Flipt. |
+| go.flipt.io/flipt/internal/server/authz | Provides authorization-related interfaces and functionality. |
+| go.uber.org/zap | Provides a structured logging library. |
+
+## Error Handling
+The `IsAllowed` method returns an error if the OPA policy evaluation fails. The `NewEngine` function returns an error if the OPA initialization fails or if there is an error reading the authorization configuration. The `Shutdown` method returns an error if any of the cleanup functions fail.

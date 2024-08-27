@@ -1,0 +1,160 @@
+---
+title: "client.go"
+---
+
+## High-level description
+The `client.go` file defines a Clickhouse client (`Client`) for querying flag evaluation analytics data. It implements the `analytics.Client` contract and provides methods for retrieving the count of flag evaluations within a specified time range.
+
+## Code Structure
+The `Client` struct holds a database connection (`Conn`) to a Clickhouse database. The `New` function initializes the client, establishing the connection and running migrations if necessary. The `GetFlagEvaluationsCount` method queries the database for flag evaluation counts based on provided parameters. The `getStepFromDuration` function helps determine the appropriate time interval for the query based on the requested duration.
+
+## References
+- `analytics.GetFlagEvaluationsCountRequest`: Defines the request structure for retrieving flag evaluation counts.
+- `config.ClickhouseConfig`: Provides configuration options for connecting to the Clickhouse database.
+
+## Symbols
+
+### `Client`
+#### Description
+Represents a Clickhouse client for querying flag evaluation analytics data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Client` struct holds a `*sql.DB` connection to a Clickhouse database.
+
+### `New`
+#### Description
+Constructs a new Clickhouse client, establishing a database connection and running migrations if necessary.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for recording events. |
+| cfg | `*config.Config` | Application configuration. |
+| forceMigrate | `bool` | Flag indicating whether to force database migrations. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | `*Client` | A new instance of the Clickhouse client. |
+| err | `error` | An error if the client initialization fails. |
+
+#### Internal Logic
+1. Executes database migrations once using `runMigrations` if `forceMigrate` is true.
+2. Establishes a database connection using `connect` based on the provided configuration.
+3. Creates a new `Client` instance with the established connection.
+
+### `runMigrations`
+#### Description
+Executes database migrations for Clickhouse if enabled in the configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for recording events. |
+| cfg | `*config.Config` | Application configuration. |
+| forceMigrate | `bool` | Flag indicating whether to force database migrations. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the migrations fail. |
+
+#### Internal Logic
+1. Creates a new analytics migrator using `fliptsql.NewAnalyticsMigrator`.
+2. Runs the migrations using `m.Up(forceMigrate)`.
+
+### `connect`
+#### Description
+Establishes a connection to the Clickhouse database using the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| clickhouseConfig | `config.ClickhouseConfig` | Clickhouse connection configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| conn | `*sql.DB` | A database connection instance. |
+| err | `error` | An error if the connection fails. |
+
+#### Internal Logic
+1. Retrieves connection options from `clickhouseConfig.Options()`.
+2. Opens a database connection using `clickhouse.OpenDB`.
+3. Pings the database to verify the connection.
+
+### `GetFlagEvaluationsCount`
+#### Description
+Retrieves the count of flag evaluations for a specific flag within a given time range.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context for the request. |
+| req | `*analytics.GetFlagEvaluationsCountRequest` | Request parameters for retrieving flag evaluation counts. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| timestamps | `[]string` | A slice of timestamps representing the time intervals. |
+| values | `[]float32` | A slice of flag evaluation counts corresponding to each timestamp. |
+| err | `error` | An error if the query fails. |
+
+#### Internal Logic
+1. Parses the `from` and `to` timestamps from the request.
+2. Calculates the duration and determines the appropriate time interval step using `getStepFromDuration`.
+3. Executes a Clickhouse query to retrieve the sum of flag evaluations grouped by the calculated time interval.
+4. Iterates over the query results, appending timestamps and corresponding counts to the respective slices.
+
+### `Close`
+#### Description
+Closes the database connection associated with the client.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if closing the connection fails. |
+
+#### Internal Logic
+Closes the database connection using `c.Conn.Close()`.
+
+### `getStepFromDuration`
+#### Description
+Determines the appropriate time interval step for the Clickhouse query based on the provided duration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| from | `time.Duration` | The duration for which to calculate the step. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| step | `*Step` | A pointer to a `Step` struct containing the interval value and step unit. |
+
+#### Internal Logic
+Returns a `Step` with a 1-minute interval for durations up to 4 hours, and a 15-minute interval for longer durations.
+
+### `String`
+#### Description
+Returns a string representation of the client, indicating it's a "clickhouse" client.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string "clickhouse". |
+
+#### Internal Logic
+Returns the string "clickhouse".

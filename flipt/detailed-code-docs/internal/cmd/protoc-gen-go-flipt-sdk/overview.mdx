@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains the source code for a custom protocol buffer code generator plugin called `protoc-gen-go-flipt-sdk`. The plugin is designed to generate a Go SDK for the Flipt project, which includes client-side code for various services such as authentication, evaluation, and metadata. The generator creates gRPC and HTTP client implementations based on the input protocol buffer definitions.
+
+## What does it do?
+
+The `protoc-gen-go-flipt-sdk` plugin automates the process of creating a Go SDK for the Flipt project. It takes protocol buffer definitions as input and generates:
+
+1. A main SDK file that provides the core SDK structure and initialization logic.
+2. Individual service SDK files for each defined service in the Flipt project.
+3. gRPC client implementations for efficient communication with the Flipt server.
+4. HTTP client implementations that translate gRPC method calls into HTTP requests and responses.
+
+This automation simplifies the integration of Flipt services into Go applications by providing developers with type-safe and easy-to-use client libraries.
+
+## Entry points
+
+The main entry point for the code generator is the `main.go` file. It orchestrates the entire code generation process by:
+
+1. Parsing command-line flags and setting up plugin options.
+2. Processing input protocol buffer files.
+3. Generating sub-SDK files for each service.
+4. Creating the main SDK file.
+5. Generating gRPC and HTTP client implementations.
+
+The code generation process is divided into three main components:
+
+1. `main.go`: Coordinates the overall generation process.
+2. `grpc.go`: Handles the generation of gRPC client code.
+3. `http.go`: Manages the creation of HTTP client code.
+
+## Key Files
+
+1. `main.go`:
+   - Contains the `main` function, which is the entry point for the code generator.
+   - Implements `generateSubSDK` and `generateSDK` functions for creating service-specific and main SDK files.
+   - Handles the overall orchestration of the code generation process.
+
+2. `grpc.go`:
+   - Implements the `generateGRPC` function, which creates the gRPC transport layer code.
+   - Generates a `Transport` struct and methods for creating gRPC clients for various services.
+   - Handles cases where a file has a single service or multiple services.
+
+3. `http.go`:
+   - Contains the `generateHTTP` function, which creates HTTP client code based on gRPC service definitions.
+   - Implements `generateHTTPMethod` for generating individual HTTP methods corresponding to gRPC methods.
+   - Handles the translation of gRPC method calls into HTTP requests and responses.
+
+## Dependencies
+
+The code generator relies on several key dependencies:
+
+1. `google.golang.org/protobuf/compiler/protogen`: Provides utilities for protobuf code generation.
+2. `google.golang.org/grpc`: The gRPC framework for Go.
+3. `google.golang.org/genproto/googleapis/api/annotations`: Used for HTTP annotations.
+4. `google.golang.org/protobuf/encoding/protojson`: Handles JSON encoding/decoding of protobufs.
+5. `sigs.k8s.io/yaml`: Used for YAML to JSON conversion.
+
+## Configuration
+
+The code generator accepts a `grpc_api_configuration` flag to specify the path to the gRPC API configuration file. This configuration file is used to extract HTTP rules for each gRPC method, which is essential for generating the HTTP client code.
+
+Example usage:
+```
+protoc --go-flipt-sdk_out=. --go-flipt-sdk_opt=grpc_api_configuration=path/to/config.yaml your_proto_files.proto
+```
+
+The generated SDK includes a `Transport` interface and struct that manages the underlying gRPC connection. The `NewTransport` function creates a new `Transport` instance, which can be used to interact with various Flipt services.
+
+The generated code also includes authentication-related functions, such as `authenticate`, which adds authentication information to the outgoing gRPC context.
+
+In summary, the `protoc-gen-go-flipt-sdk` plugin automates the creation of a comprehensive Go SDK for the Flipt project, handling both gRPC and HTTP communication methods. This significantly reduces the manual effort required to integrate Flipt services into Go applications and ensures consistency in the generated client code.

@@ -1,0 +1,97 @@
+---
+title: "mux.go"
+---
+
+## High-level description
+The `mux.go` file in the `internal/storage/fs/object` package provides functionality to open buckets using various cloud storage providers through a URL-based interface. It leverages the `gocloud.dev/blob` package for a unified API and extends it to support custom schemes for specific providers like Minio and Google Cloud Storage.
+
+## Code Structure
+The code defines a `urlSessionOpener` type that implements the `gcblob.URLOpener` interface. This opener is registered with the default URL mux in `gcblob` to handle specific URL schemes. The `OpenBucket` function uses this mux to open buckets based on the provided URL.
+
+## Symbols
+
+### `s3Schema`
+#### Description
+A constant string representing the custom scheme used for S3-compatible storage, including Minio. This scheme is used to register a custom URL opener for S3 buckets.
+
+### `googlecloudSchema`
+#### Description
+A constant string representing the custom scheme used for Google Cloud Storage. This scheme is used to remap URLs to the appropriate `gcsblob` scheme.
+
+### `init`
+#### Description
+An initialization function that registers the `urlSessionOpener` with the default URL mux in `gcblob` for the `s3Schema` scheme.
+
+### `urlSessionOpener`
+#### Description
+A type that implements the `gcblob.URLOpener` interface, specifically for opening S3 buckets.
+
+### `(*urlSessionOpener) OpenBucketURL`
+#### Description
+This method opens an S3 bucket identified by the provided URL. It extracts AWS credentials from the URL parameters, creates an S3 client, and uses it to open the bucket using the `s3blob` package.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| u | *url.URL | The URL of the bucket to open. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *gcblob.Bucket | A pointer to the opened bucket. |
+| error | An error, if any occurred during the process. |
+
+### `OpenBucket`
+#### Description
+This function opens a bucket identified by the provided URL. It remaps the URL scheme if necessary (e.g., from `s3blob` to `s3Schema`) and uses the default URL mux in `gcblob` to open the bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| urlstr | *url.URL | The URL of the bucket to open. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *gcblob.Bucket | A pointer to the opened bucket. |
+| error | An error, if any occurred during the process. |
+
+### `remapScheme`
+#### Description
+This function remaps a given URL scheme to the appropriate internal scheme. It currently maps `s3blob` to `s3Schema` and `googlecloudSchema` to `gcsblob.Scheme`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| scheme | string | The URL scheme to remap. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | The remapped URL scheme. |
+
+### `SupportedSchemes`
+#### Description
+This function returns a slice of strings representing the supported URL schemes for opening buckets. It includes schemes from the default URL mux in `gcblob` and adds `googlecloudSchema`.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []string | A slice of supported URL schemes. |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides context management for operations. |
+| fmt | Used for formatted output and error messages. |
+| net/url | Used for parsing and manipulating URLs. |
+| github.com/aws/aws-sdk-go-v2/service/s3 | Provides the AWS SDK for interacting with S3. |
+| gocloud.dev/aws | Provides utilities for working with AWS in Go Cloud. |
+| gocloud.dev/blob | Provides a generic interface for interacting with blob storage. |
+| gocloud.dev/blob/gcsblob | Provides an implementation of the `gcblob` interface for Google Cloud Storage. |
+| gocloud.dev/blob/s3blob | Provides an implementation of the `gcblob` interface for S3. |
+
+## Error Handling
+The code uses the standard Go error handling mechanism. Errors are returned from functions and methods, and it's the responsibility of the caller to handle them appropriately.

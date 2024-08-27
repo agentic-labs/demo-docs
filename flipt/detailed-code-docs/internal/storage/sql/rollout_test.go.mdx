@@ -1,0 +1,366 @@
+---
+title: "rollout_test.go"
+---
+
+## High-level description
+The `rollout_test.go` file contains unit tests for the rollout related functionality of the SQL storage implementation in Flipt. It covers various aspects like creating, retrieving, updating, deleting, and ordering rollouts, ensuring the correctness of the SQL storage layer.
+
+## References
+This file references the following symbols from other files:
+- `storage.Store` (from `internal/storage`)
+- `flipt.CreateRolloutRequest` (from `flipt/rpc/flipt`)
+- `flipt.UpdateRolloutRequest` (from `flipt/rpc/flipt`)
+- `flipt.DeleteRolloutRequest` (from `flipt/rpc/flipt`)
+- `flipt.OrderRolloutsRequest` (from `flipt/rpc/flipt`)
+- `storage.Namespace` (from `internal/storage`)
+- `storage.ListWithOptions` (from `internal/storage`)
+- `storage.Resource` (from `internal/storage`)
+- `storage.ListWithQueryParamOptions` (from `internal/storage`)
+- `storage.WithLimit` (from `internal/storage`)
+- `storage.WithOffset` (from `internal/storage`)
+- `common.PageToken` (from `internal/storage/sql/common`)
+- `storage.OrderDesc` (from `internal/storage`)
+- `storage.WithOrder` (from `internal/storage`)
+- `storage.WithPageToken` (from `internal/storage`)
+- `errs.ErrInvalid` (from `go.flipt.io/flipt/errors`)
+- `flipt.CreateFlagRequest` (from `flipt/rpc/flipt`)
+- `flipt.FlagType_BOOLEAN_FLAG_TYPE` (from `flipt/rpc/flipt`)
+- `flipt.CreateVariantRequest` (from `flipt/rpc/flipt`)
+- `flipt.RolloutType_SEGMENT_ROLLOUT_TYPE` (from `flipt/rpc/flipt`)
+- `flipt.RolloutType_THRESHOLD_ROLLOUT_TYPE` (from `flipt/rpc/flipt`)
+- `flipt.CreateSegmentRequest` (from `flipt/rpc/flipt`)
+- `flipt.MatchType_ANY_MATCH_TYPE` (from `flipt/rpc/flipt`)
+- `flipt.SegmentOperator_AND_SEGMENT_OPERATOR` (from `flipt/rpc/flipt`)
+- `flipt.SegmentOperator_OR_SEGMENT_OPERATOR` (from `flipt/rpc/flipt`)
+
+## Symbols
+
+### `(s *DBTestSuite) TestGetRollout()`
+#### Description
+Tests that retrieving a rollout from the default namespace using its ID returns the expected rollout data.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates a rollout associated with the created flag.
+- **Act:**
+    - Calls `GetRollout` with the rollout ID.
+- **Assert:**
+    - Checks if the retrieved rollout is not nil and matches the created rollout's data.
+
+### `(s *DBTestSuite) TestGetRolloutNamespace()`
+#### Description
+Tests that retrieving a rollout from a specific namespace using its ID returns the expected rollout data.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+    - Creates a rollout associated with the created flag in the same namespace.
+- **Act:**
+    - Calls `GetRollout` with the rollout ID and namespace.
+- **Assert:**
+    - Checks if the retrieved rollout is not nil and matches the created rollout's data and namespace.
+
+### `(s *DBTestSuite) TestGetRollout_NotFound()`
+#### Description
+Tests that attempting to retrieve a non-existent rollout returns a "not found" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `GetRollout` with a non-existent rollout ID.
+- **Assert:**
+    - Checks if the returned error matches the expected "not found" error message.
+
+### `(s *DBTestSuite) TestGetRolloutNamespace_NotFound()`
+#### Description
+Tests that attempting to retrieve a rollout using a non-existent namespace returns a "not found" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `GetRollout` with a non-existent namespace and rollout ID.
+- **Assert:**
+    - Checks if the returned error matches the expected "not found" error message for the specific namespace.
+
+### `(s *DBTestSuite) TestListRollouts()`
+#### Description
+Tests that listing rollouts for a flag in the default namespace returns the expected rollouts.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates a variant associated with the flag.
+    - Creates two rollouts associated with the flag.
+- **Act:**
+    - Calls `ListRollouts` for the flag.
+- **Assert:**
+    - Checks if the returned list is not empty and each rollout belongs to the default namespace.
+
+### `(s *DBTestSuite) TestListRollouts_MultipleSegments()`
+#### Description
+Tests that listing rollouts with multiple segments returns the expected rollouts and their associated segments.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates two segments.
+    - Creates two rollouts associated with the flag, each targeting both segments.
+- **Act:**
+    - Calls `ListRollouts` for the flag.
+- **Assert:**
+    - Checks if the returned list is not empty and each rollout:
+        - Belongs to the default namespace.
+        - Has a rule that is a segment rule.
+        - Has two segment keys matching the created segments.
+
+### `(s *DBTestSuite) TestListRolloutsNamespace()`
+#### Description
+Tests that listing rollouts for a flag within a specific namespace returns the expected rollouts.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+    - Creates two rollouts associated with the flag in the same namespace.
+- **Act:**
+    - Calls `ListRollouts` for the flag and namespace.
+- **Assert:**
+    - Checks if the returned list is not empty and each rollout belongs to the specified namespace.
+
+### `(s *DBTestSuite) TestListRolloutsPagination_LimitOffset()`
+#### Description
+Tests that listing rollouts with limit and offset pagination returns the expected number of rollouts.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates two rollouts associated with the flag.
+- **Act:**
+    - Calls `ListRollouts` with a limit of 1 and an offset of 1.
+- **Assert:**
+    - Checks if the returned list contains only one rollout.
+
+### `(s *DBTestSuite) TestListRolloutsPagination_LimitWithNextPage()`
+#### Description
+Tests that listing rollouts with limit and next page token pagination returns the expected rollouts and next page token.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates two rollouts associated with the flag.
+- **Act:**
+    - Calls `ListRollouts` with a limit of 1 and descending order.
+    - Retrieves the next page token from the response.
+    - Calls `ListRollouts` again with the same limit, descending order, and the retrieved next page token.
+- **Assert:**
+    - Checks if the first call returns one rollout and a non-empty next page token.
+    - Checks if the second call returns the other rollout.
+
+### `(s *DBTestSuite) TestCreateRollout_InvalidRolloutType()`
+#### Description
+Tests that attempting to create a rollout without a rule type results in an "invalid rollout type" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `CreateRollout` with a rollout request missing the rule field.
+- **Assert:**
+    - Checks if the returned error matches the expected "invalid rollout type" error message.
+
+### `(s *DBTestSuite) TestCreateRollout_FlagNotFound()`
+#### Description
+Tests that attempting to create a rollout for a non-existent flag returns a "flag not found" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `CreateRollout` with a rollout request referencing a non-existent flag.
+- **Assert:**
+    - Checks if the returned error matches the expected "flag not found" error message.
+
+### `(s *DBTestSuite) TestCreateRolloutNamespace_InvalidRolloutType()`
+#### Description
+Tests that attempting to create a rollout within a specific namespace without a rule type results in an "invalid rollout type" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `CreateRollout` with a rollout request missing the rule field and specifying a namespace.
+- **Assert:**
+    - Checks if the returned error matches the expected "invalid rollout type" error message.
+
+### `(s *DBTestSuite) TestCreateRolloutNamespace_FlagNotFound()`
+#### Description
+Tests that attempting to create a rollout within a specific namespace for a non-existent flag returns a "flag not found" error.
+
+#### Internal Logic
+- **Act:**
+    - Calls `CreateRollout` with a rollout request referencing a non-existent flag and specifying a namespace.
+- **Assert:**
+    - Checks if the returned error matches the expected "flag not found" error message for the specific namespace.
+
+### `(s *DBTestSuite) TestUpdateRollout()`
+#### Description
+Tests that updating a rollout's data in the default namespace works as expected.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates two segments.
+    - Creates a rollout associated with the flag, targeting one of the segments.
+- **Act:**
+    - Calls `UpdateRollout` to modify the rollout's description, rule value, targeted segments, and segment operator.
+- **Assert:**
+    - Checks if the updated rollout reflects the changes made.
+
+### `(s *DBTestSuite) TestUpdateRollout_OneSegment()`
+#### Description
+Tests that updating a rollout with a single segment works as expected.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates two segments.
+    - Creates a rollout associated with the flag, targeting both segments.
+- **Act:**
+    - Calls `UpdateRollout` to modify the rollout's description, rule value, and target to only one segment.
+- **Assert:**
+    - Checks if the updated rollout reflects the changes made.
+
+### `(s *DBTestSuite) TestUpdateRolloutNamespace()`
+#### Description
+Tests that updating a rollout's data within a specific namespace works as expected.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+    - Creates a rollout associated with the flag in the same namespace.
+- **Act:**
+    - Calls `UpdateRollout` to modify the rollout's description, rule value, and percentage.
+- **Assert:**
+    - Checks if the updated rollout reflects the changes made.
+
+### `(s *DBTestSuite) TestUpdateRollout_InvalidType()`
+#### Description
+Tests that attempting to change the type of an existing rollout results in an error.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag and a segment within a specific namespace.
+    - Creates a segment rollout associated with the flag.
+- **Act:**
+    - Calls `UpdateRollout` attempting to change the rollout type from segment to threshold.
+- **Assert:**
+    - Checks if the returned error message indicates that changing the rollout type is not allowed.
+
+### `(s *DBTestSuite) TestUpdateRollout_NotFound()`
+#### Description
+Tests that attempting to update a non-existent rollout returns a "not found" error.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+- **Act:**
+    - Calls `UpdateRollout` with a non-existent rollout ID.
+- **Assert:**
+    - Checks if the returned error matches the expected "not found" error message.
+
+### `(s *DBTestSuite) TestUpdateRolloutNamespace_NotFound()`
+#### Description
+Tests that attempting to update a rollout using a non-existent namespace returns a "not found" error.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+- **Act:**
+    - Calls `UpdateRollout` with a non-existent rollout ID and the specific namespace.
+- **Assert:**
+    - Checks if the returned error matches the expected "not found" error message for the specific namespace.
+
+### `(s *DBTestSuite) TestDeleteRollout()`
+#### Description
+Tests that deleting a rollout in the default namespace removes it and reorders the remaining rollouts correctly.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates three rollouts associated with the flag.
+- **Act:**
+    - Calls `DeleteRollout` to remove the second rollout.
+- **Assert:**
+    - Checks if the remaining two rollouts are present and their ranks are updated correctly (1 and 2).
+
+### `(s *DBTestSuite) TestDeleteRolloutNamespace()`
+#### Description
+Tests that deleting a rollout within a specific namespace removes it and reorders the remaining rollouts correctly.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+    - Creates three rollouts associated with the flag in the same namespace.
+- **Act:**
+    - Calls `DeleteRollout` to remove the second rollout, specifying the namespace.
+- **Assert:**
+    - Checks if the remaining two rollouts are present and theirranks are updated correctly (1 and 2) within the specified namespace.
+
+### `(s *DBTestSuite) TestDeleteRollout_NotFound()`
+#### Description
+Tests that attempting to delete a non-existent rollout does not result in an error.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+- **Act:**
+    - Calls `DeleteRollout` with a non-existent rollout ID.
+- **Assert:**
+    - Checks if no error is returned.
+
+### `(s *DBTestSuite) TestDeleteRolloutNamespace_NotFound()`
+#### Description
+Tests that attempting to delete a rollout using a non-existent namespace does not result in an error.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+- **Act:**
+    - Calls `DeleteRollout` with a non-existent rollout ID and the specific namespace.
+- **Assert:**
+    - Checks if no error is returned.
+
+### `(s *DBTestSuite) TestOrderRollouts()`
+#### Description
+Tests that reordering rollouts in the default namespace works as expected.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag.
+    - Creates three rollouts associated with the flag.
+- **Act:**
+    - Calls `OrderRollouts` to reverse the order of the rollouts.
+- **Assert:**
+    - Checks if the rollouts are reordered correctly with updated ranks.
+
+### `(s *DBTestSuite) TestOrderRolloutsNamespace()`
+#### Description
+Tests that reordering rollouts within a specific namespace works as expected.
+
+#### Internal Logic
+- **Arrange:**
+    - Creates a flag within a specific namespace.
+    - Creates three rollouts associated with the flag in the same namespace.
+- **Act:**
+    - Calls `OrderRollouts` to reverse the order of the rollouts, specifying the namespace.
+- **Assert:**
+    - Checks if the rollouts are reordered correctly with updated ranks within the specified namespace.
+
+## Dependencies
+The test suite relies on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/stretchr/testify/assert | Provides assertion functions for tests |
+| github.com/stretchr/testify/require | Provides required assertion functions for tests |
+| go.flipt.io/flipt/errors | Custom error types for Flipt |
+| go.flipt.io/flipt/internal/storage | Storage interfaces and types |
+| go.flipt.io/flipt/internal/storage/sql/common | Common SQL storage utilities |
+| go.flipt.io/flipt/rpc/flipt | Flipt RPC definitions |
+
+## Error Handling
+The tests use `assert.EqualError` and `require.NoError` to check for specific error conditions and ensure that operations that should succeed do not return errors.
+
+## Logging
+The tests do not implement any specific logging mechanisms. They rely on the testing framework's output for reporting test results and errors.

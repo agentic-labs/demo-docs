@@ -1,0 +1,235 @@
+---
+title: "engine.go"
+---
+
+## High-level description
+The `Engine` struct in `engine.go` implements an authorization engine using Open Policy Agent (OPA) Rego. It loads policy definitions and data from configurable sources, compiles the policy into a query, and provides a mechanism to evaluate authorization requests against the loaded policy.
+
+## Code Structure
+The `Engine` struct holds references to a `PolicySource` and a `DataSource`, which are responsible for providing the policy definition and data for evaluation, respectively. The `updatePolicy` method fetches the policy definition from the `PolicySource`, compiles it using OPA's `rego` package, and prepares a query for evaluation. The `updateData` method fetches data from the `DataSource` and updates the OPA store. The `IsAllowed` method evaluates an authorization request against the compiled policy and data.
+
+## References
+- `authz.Verifier`: An interface defining the authorization verifier.
+- `source.CachedSource`: An interface for cached data sources.
+- `source.Hash`: A type representing a hash value for data versioning.
+- `storage.Store`: An interface for OPA's storage.
+- `rego.PreparedEvalQuery`: A type representing a prepared OPA query.
+
+## Symbols
+
+### `Engine`
+#### Description
+The `Engine` struct represents an authorization engine that uses OPA Rego to evaluate authorization requests. It manages the loading, compilation, and evaluation of policy definitions and data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Engine` struct is initialized with a logger, a policy source, a data source, and poll durations for both sources. It uses a read-write mutex (`mu`) to protect access to its internal state. The `updatePolicy` method fetches the policy definition from the `PolicySource`, compiles it using OPA's `rego` package, and prepares a query for evaluation. The `updateData` method fetches data from the `DataSource` and updates the OPA store. The `IsAllowed` method evaluates an authorization request against the compiled policy and data.
+
+### `NewEngine`
+#### Description
+The `NewEngine` function creates a new `Engine` instance based on the provided configuration. It determines the appropriate policy and data sources based on the configured authorization backend (local or cloud) and initializes the engine with these sources.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| logger | `*zap.Logger` | The logger for the engine. |
+| cfg | `*config.Config` | The configuration for the engine. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| engine | `*Engine` | The newly created authorization engine. |
+| err | `error` | An error if the engine creation failed. |
+
+#### Internal Logic
+The function determines the authorization backend from the configuration and initializes the appropriate policy and data sources. It then creates a new `Engine` instance with these sources and starts goroutines to poll for updates to the policy and data.
+
+### `withPolicySource`
+#### Description
+The `withPolicySource` function is a container option that sets the policy source for the `Engine`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | `PolicySource` | The policy source to set. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[Engine]` | A container option that sets the policy source. |
+
+#### Internal Logic
+The function returns a closure that sets the `policySource` field of the `Engine` to the provided source.
+
+### `withDataSource`
+#### Description
+The `withDataSource` function is a container option that sets the data source and poll duration for the `Engine`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | `DataSource` | The data source to set. |
+| pollDuration | `time.Duration` | The poll duration for the data source. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[Engine]` | A container option that sets the data source and poll duration. |
+
+#### Internal Logic
+The function returns a closure that sets the `dataSource` and `dataSourcePollDuration` fields of the `Engine` to the provided values.
+
+### `withPolicySourcePollDuration`
+#### Description
+The `withPolicySourcePollDuration` function is a container option that sets the poll duration for the policy source of the `Engine`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dur | `time.Duration` | The poll duration for the policy source. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[Engine]` | A container option that sets the policy source poll duration. |
+
+#### Internal Logic
+The function returns a closure that sets the `policySourcePollDuration` field of the `Engine` to the provided duration.
+
+### `newEngine`
+#### Description
+The `newEngine` function is an internal constructor for the `Engine` struct. It is visible for testing purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| logger | `*zap.Logger` | The logger for the engine. |
+| opts | `...containers.Option[Engine]` | Container options for configuring the engine. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| engine | `*Engine` | The newly created authorization engine. |
+| err | `error` | An error if the engine creation failed. |
+
+#### Internal Logic
+The function creates a new `Engine` instance with default values and applies the provided container options. It then updates the data store with initial data if a data source is configured, fetches the policy definition and compiles it, and starts goroutines to poll for updates to the policy and data.
+
+### `IsAllowed`
+#### Description
+The `IsAllowed` method evaluates an authorization request against the loaded policy and data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| input | `map[string]interface{}` | The authorization request input. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| allowed | `bool` | True if the request is allowed, false otherwise. |
+| err | `error` | An error if the evaluation failed. |
+
+#### Internal Logic
+The method acquires a read lock on the engine's mutex. It then evaluates the provided input against the prepared OPA query. If the evaluation is successful and returns a result, it extracts the boolean value from the result and returns it. Otherwise, it returns false or an error.
+
+### `Shutdown`
+#### Description
+The `Shutdown` method shuts down the authorization engine.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the shutdown failed. |
+
+#### Internal Logic
+Currently, the method does not perform any specific shutdown operations and returns nil.
+
+### `poll`
+#### Description
+The `poll` function is a helper function that periodically executes a provided function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| d | `time.Duration` | The polling interval. |
+| fn | `func()` | The function to execute periodically. |
+
+#### Outputs
+None
+
+#### Internal Logic
+The function creates a ticker with the provided interval and enters a loop. In each iteration, it waits for either the context to be done or the ticker to tick. If the context is done, it returns. Otherwise, it executes the provided function.
+
+### `updatePolicy`
+#### Description
+The `updatePolicy` method fetches the policy definition from the policy source, compiles it, and prepares a query for evaluation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the policy update failed. |
+
+#### Internal Logic
+The method acquires a write lock on the engine's mutex. It then fetches the policy definition from the policy source, using the current policy hash for versioning. If the policy has not been modified, it returns nil. Otherwise, it updates the policy hash, compiles the policy using OPA's `rego` package, prepares a query for evaluation, and returns nil or an error.
+
+### `updateData`
+#### Description
+The `updateData` method fetches data from the data source and updates the OPA store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| op | `storage.PatchOp` | The operation to perform on the data store (add or replace). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the data update failed. |
+
+#### Internal Logic
+The method checks if a data source is configured. If not, it returns nil. Otherwise, it fetches the data from the data source, using the current data hash for versioning. If the data has not been modified, it returns nil. Otherwise, it updates the data hash, creates a new transaction on the OPA store, writes the data to the store using the provided operation, commits the transaction, and returns nil or an error.
+
+## Dependencies
+- `github.com/open-policy-agent/opa/rego`: Open Policy Agent (OPA) library for Rego policy evaluation.
+- `github.com/open-policy-agent/opa/storage`: OPA library for data storage.
+- `github.com/open-policy-agent/opa/storage/inmem`: OPA library for in-memory data storage.
+- `go.flipt.io/flipt/internal/config`: Flipt configuration package.
+- `go.flipt.io/flipt/internal/containers`: Flipt container options package.
+- `go.flipt.io/flipt/internal/server/authz`: Flipt authorization package.
+- `go.flipt.io/flipt/internal/server/authz/engine/rego/source`: Flipt Rego source package.
+- `go.flipt.io/flipt/internal/server/authz/engine/rego/source/cloud`: Flipt cloud Rego source package.
+- `go.flipt.io/flipt/internal/server/authz/engine/rego/source/filesystem`: Flipt filesystem Rego source package.
+- `go.uber.org/zap`: Uber's structured logging library.
+
+## Configuration
+The `Engine` is configured through the `Authorization` section of the Flipt configuration. The `Backend` field specifies the authorization backend to use (local or cloud). For the local backend, the `Local` field provides configuration for the policy and data sources. For the cloud backend, the `Cloud` field provides configuration for the poll interval.
+
+## Error Handling
+The `Engine` handles errors by returning them from its methods. The `updatePolicy` and `updateData` methods check for the `source.ErrNotModified` error, which indicates that the data has not been modified, and return nil in this case.
+
+## Logging
+The `Engine` uses the provided `zap.Logger` to log debug messages during policy evaluation and error messages if policy or data updates fail.
+
+## TODOs
+None

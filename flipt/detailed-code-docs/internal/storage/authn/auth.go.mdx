@@ -1,0 +1,189 @@
+---
+title: "auth.go"
+---
+
+## High-level description
+The `authn` package provides functionality for managing authentication tokens. It defines data structures and interfaces for creating, retrieving, deleting, and expiring authentication tokens. The package also includes functions for generating random tokens and hashing client tokens.
+
+## Code Structure
+The `authn` package defines several data structures and interfaces related to authentication:
+
+- `Store` interface defines methods for interacting with the authentication store.
+- `CreateAuthenticationRequest` struct represents a request to create a new authentication token.
+- `ListAuthenticationsPredicate` struct defines predicates for listing authentication tokens.
+- `DeleteAuthenticationsRequest` struct represents a request to delete authentication tokens.
+- Functions like `GenerateRandomToken`, `HashClientToken`, `Delete`, `WithID`, `WithMethod`, and `WithExpiredBefore` provide helper functions for working with authentication tokens.
+
+## Symbols
+
+### `Store`
+#### Description
+`Store` is an interface that defines the methods for interacting with the authentication store. It provides methods for creating, retrieving, listing, deleting, and expiring authentication tokens.
+
+#### Inputs
+This is an interface, so there are no direct inputs. Implementations of this interface will have methods with specific inputs.
+
+#### Outputs
+This is an interface, so there are no direct outputs. Implementations of this interface will have methods with specific outputs.
+
+---
+
+### `CreateAuthenticationRequest`
+#### Description
+`CreateAuthenticationRequest` is a struct that represents a request to create a new authentication token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Method | `auth.Method` | The authentication method to use. |
+| ExpiresAt | `*timestamppb.Timestamp` | The expiration time of the token. |
+| Metadata | `map[string]string` | Metadata associated with the token. |
+| ClientToken | `string` | An optional explicit client token to be associated with the authentication. |
+
+#### Outputs
+This is a struct, not a function, so it doesn't have outputs.
+
+---
+
+### `ListAuthenticationsPredicate`
+#### Description
+`ListAuthenticationsPredicate` is a struct that defines predicates for listing authentication tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Method | `*auth.Method` | The authentication method to filter by. |
+
+#### Outputs
+This is a struct, not a function, so it doesn't have outputs.
+
+---
+
+### `DeleteAuthenticationsRequest`
+#### Description
+`DeleteAuthenticationsRequest` is a struct that represents a request to delete authentication tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ID | `*string` | The ID of the authentication token to delete. |
+| Method | `*auth.Method` | The authentication method to filter by. |
+| ExpiredBefore | `*timestamppb.Timestamp` | The expiration time to filter by. |
+
+#### Outputs
+This is a struct, not a function, so it doesn't have outputs.
+
+---
+
+### `GenerateRandomToken`
+#### Description
+`GenerateRandomToken` generates a URL-safe base64-encoded string of random characters.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | `string` | The generated random token. |
+
+#### Internal Logic
+The function generates a byte array of a fixed length (`decodedTokenLen`) and fills it with random data using `crypto/rand`. Then, it encodes the byte array into a URL-safe base64 string.
+
+---
+
+### `HashClientToken`
+#### Description
+`HashClientToken` performs a SHA256 hash on the input string and returns the result as a URL-safe base64-encoded string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | `string` | The client token to hash. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| hash | `string` | The SHA256 hash of the client token, encoded as a URL-safe base64 string. |
+| err | `error` | An error object indicating any issues during the hashing process. |
+
+#### Internal Logic
+The function creates a new SHA256 hasher, writes the input token to it, and retrieves the resulting hash sum. Then, it encodes the hash sum into a URL-safe base64 string using a `base64.NewEncoder`.
+
+---
+
+### `Delete`
+#### Description
+`Delete` constructs a new `*DeleteAuthenticationsRequest` using the provided options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | `...containers.Option[DeleteAuthenticationsRequest]` | A variadic list of options to configure the delete request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `*DeleteAuthenticationsRequest` | A new `DeleteAuthenticationsRequest` configured with the provided options. |
+
+#### Internal Logic
+The function initializes a new `DeleteAuthenticationsRequest` and iterates over the provided options, applying each option to the request.
+
+---
+
+### `WithID`
+#### Description
+`WithID` is an option that predicates a delete operation with a specific authentication ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | `string` | The ID of the authentication token to delete. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[DeleteAuthenticationsRequest]` | An option function that sets the ID field of the `DeleteAuthenticationsRequest`. |
+
+#### Internal Logic
+The function returns an anonymous function that takes a `*DeleteAuthenticationsRequest` as input and sets its `ID` field to the provided `id`.
+
+---
+
+### `WithMethod`
+#### Description
+`WithMethod` is an option that ensures a delete operation applies to authentication tokens of the provided method.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| method | `auth.Method` | The authentication method to filter by. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[DeleteAuthenticationsRequest]` | An option function that sets the Method field of the `DeleteAuthenticationsRequest`. |
+
+#### Internal Logic
+The function returns an anonymous function that takes a `*DeleteAuthenticationsRequest` as input and sets its `Method` field to the provided `method`.
+
+---
+
+### `WithExpiredBefore`
+#### Description
+`WithExpiredBefore` is an option that ensures a delete operation only applies to authentication tokens with an `expires_at` timestamp occurring before the supplied timestamp.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | `time.Time` | The expiration time to filter by. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| option | `containers.Option[DeleteAuthenticationsRequest]` | An option function that sets the ExpiredBefore field of the `DeleteAuthenticationsRequest`. |
+
+#### Internal Logic
+The function returns an anonymous function that takes a `*DeleteAuthenticationsRequest` as input and sets its `ExpiredBefore` field to a new `timestamppb.Timestamp` representing the provided `time.Time`.
+
+---

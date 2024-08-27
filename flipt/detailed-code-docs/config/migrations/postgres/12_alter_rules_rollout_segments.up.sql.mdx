@@ -1,0 +1,40 @@
+---
+title: "12_alter_rules_rollout_segments.up.sql"
+---
+
+## High-level description
+This SQL migration script alters the structure of the `rules` and `rollout_segments` tables in a PostgreSQL database. It removes the `segment_key` column from both tables, adds a `segment_operator` column, and modifies some constraints. These changes appear to be part of a refactoring of the segmentation system in the application.
+
+## Symbols
+
+### Altering the `rules` table
+#### Description
+This section of the script modifies the `rules` table by removing a foreign key constraint, dropping the `segment_key` column, and adding a new `segment_operator` column.
+
+#### Internal Logic
+1. Drops the foreign key constraint `rules_namespace_key_segment_key_fkey` if it exists.
+2. Removes the `segment_key` column from the `rules` table.
+3. Adds a new column `segment_operator` of type INTEGER, which is NOT NULL and has a default value of 0.
+
+### Altering the `rollout_segments` table
+#### Description
+This section modifies the `rollout_segments` table by removing two foreign key constraints, dropping the `segment_key` and `namespace_key` columns, and adding a new `segment_operator` column.
+
+#### Internal Logic
+1. Drops two foreign key constraints: `rollout_segments_namespace_key_fkey` and `rollout_segments_namespace_key_segment_key_fkey` if they exist.
+2. Removes the `segment_key` column from the `rollout_segments` table.
+3. Removes the `namespace_key` column from the `rollout_segments` table.
+4. Adds a new column `segment_operator` of type INTEGER, which is NOT NULL and has a default value of 0.
+
+## Side Effects
+- The `rules` table will no longer have a `segment_key` column, which may affect queries or application logic that previously relied on this column.
+- The `rollout_segments` table will no longer have `segment_key` and `namespace_key` columns, which may affect queries or application logic that previously relied on these columns.
+- Both tables will have a new `segment_operator` column, which may require updates to application logic to utilize this new field.
+- The removal of foreign key constraints may affect data integrity checks that were previously enforced at the database level.
+
+## Performance Considerations
+- The removal of columns and addition of new columns may affect the performance of existing queries on these tables.
+- The removal of foreign key constraints may improve the performance of insert and update operations on these tables, but at the cost of reduced data integrity checks at the database level.
+
+## Error Handling
+This script uses the `IF EXISTS` clause when dropping constraints, which prevents errors if the constraints don't exist. This makes the migration more robust and allows it to be run multiple times without failing.

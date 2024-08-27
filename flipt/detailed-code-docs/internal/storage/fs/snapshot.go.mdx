@@ -1,0 +1,279 @@
+---
+title: "snapshot.go"
+---
+
+## High-level description
+The `snapshot.go` file defines the `Snapshot` struct, which implements the `storage.ReadOnlyStore` interface. This struct is responsible for loading and representing Flipt feature flag state from a file system (fs.FS) and providing read-only access to this state for evaluation purposes. It parses feature flag configurations from YAML or JSON files, validates them against a CUE schema, and organizes the data into a structured format for efficient retrieval.
+
+## Code Structure
+The `Snapshot` struct contains maps for namespaces, evaluation distributions, and a timestamp. Each namespace is represented by a `namespace` struct, which holds the namespace resource, flags, segments, rules, rollouts, evaluation rules, evaluation rollouts, and an ETag. The `Snapshot` struct is populated by parsing documents from files, which are validated using a `validation.FeaturesValidator`.
+
+## References
+- `storage.ReadOnlyStore`: Interface defining read-only operations for accessing feature flag state.
+- `validation.FeaturesValidator`: Struct used to validate feature flag configurations against a CUE schema.
+- `ext.Document`: Struct representing a Flipt feature flag document.
+- `flipt.Namespace`, `flipt.Flag`, `flipt.Segment`, `flipt.Rule`, `flipt.Rollout`: Protobuf messages defining Flipt entities.
+- `storage.EvaluationRule`, `storage.EvaluationRollout`, `storage.EvaluationDistribution`: Structs used for efficient evaluation of feature flags.
+
+## Symbols
+
+### `Snapshot`
+#### Description
+The `Snapshot` struct represents a read-only snapshot of Flipt feature flag state loaded from a file system. It implements the `storage.ReadOnlyStore` interface, providing methods for retrieving namespaces, flags, segments, rules, rollouts, and evaluation data.
+
+#### Internal Logic
+The `Snapshot` struct is populated by parsing documents from files using the `addDoc` method. Each document is validated against a CUE schema using a `validation.FeaturesValidator`. The parsed data is then organized into maps for efficient retrieval by namespace, flag key, rule ID, etc.
+
+### `SnapshotFromFS`
+#### Description
+Constructs a `Snapshot` from an `fs.FS` implementation by listing all state files and parsing their contents.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging events. |
+| src | `fs.FS` | File system implementation to load state files from. |
+| opts | `...containers.Option[SnapshotOption]` | Optional configuration options for the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snapshot | `*Snapshot` | A pointer to the constructed `Snapshot` instance. |
+| err | `error` | An error if any occurred during snapshot construction. |
+
+#### Internal Logic
+- Lists all state files in the provided `fs.FS` using the `listStateFiles` function.
+- Opens each file and parses its contents using the `SnapshotFromFiles` function.
+- Returns the constructed `Snapshot` instance.
+
+### `SnapshotFromPaths`
+#### Description
+Constructs a `Snapshot` from a slice of file paths resolved against a provided `fs.FS`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging events. |
+| ffs | `fs.FS` | File system implementation to load state files from. |
+| paths | `[]string` | Slice of file paths to load. |
+| opts | `...containers.Option[SnapshotOption]` | Optional configuration options for the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snapshot | `*Snapshot` | A pointer to the constructed `Snapshot` instance. |
+| err | `error` | An error if any occurred during snapshot construction. |
+
+#### Internal Logic
+- Opens each file path and parses its contents using the `SnapshotFromFiles` function.
+- Returns the constructed `Snapshot` instance.
+
+### `SnapshotFromFiles`
+#### Description
+Constructs a `Snapshot` from a slice of `fs.File` implementations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging events. |
+| files | `[]fs.File` | Slice of `fs.File` implementations to load. |
+| opts | `...containers.Option[SnapshotOption]` | Optional configuration options for the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snapshot | `*Snapshot` | A pointer to the constructed `Snapshot` instance. |
+| err | `error` | An error if any occurred during snapshot construction. |
+
+#### Internal Logic
+- Creates a new `Snapshot` instance.
+- Iterates through each `fs.File` and parses its contents using the `documentsFromFile` function.
+- Adds each parsed document to the `Snapshot` using the `addDoc` method.
+- Returns the constructed `Snapshot` instance.
+
+### `WalkDocuments`
+#### Description
+Walks all Flipt feature documents found in the target `fs.FS` and calls a provided function for each document.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging events. |
+| src | `fs.FS` | File system implementation to walk. |
+| fn | `func(*ext.Document) error` | Function to call for each document. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if any occurred during document walking. |
+
+#### Internal Logic
+- Lists all state files in the provided `fs.FS` using the `listStateFiles` function.
+- Opens each file and parses its contents using the `documentsFromFile` function.
+- Calls the provided function `fn` for each parsed document.
+
+### `documentsFromFile`
+#### Description
+Parses and validates a document from a single `fs.File` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fi | `fs.File` | File instance to parse. |
+| opts | `SnapshotOption` | Configuration options for the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| docs | `[]*ext.Document` | Slice of parsed documents. |
+| err | `error` | An error if any occurred during document parsing. |
+
+#### Internal Logic
+- Creates a new `validation.FeaturesValidator` instance.
+- Reads the file contents and validates them against the CUE schema.
+- Decodes the file contents as either YAML or JSON, depending on the file extension.
+- Sets the namespace to default if empty in the document.
+- Sets the ETag for each document using the provided `etagFn`.
+- Returns the slice of parsed documents.
+
+### `listStateFiles`
+#### Description
+Lists all file paths in a provided `fs.FS` containing Flipt feature state.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging events. |
+| src | `fs.FS` | File system implementation to list files from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| paths | `[]string` | Slice of file paths containing Flipt feature state. |
+| err | `error` | An error if any occurred during file listing. |
+
+#### Internal Logic
+- Opens the Flipt index file (`.flipt.yml`) using the `OpenFliptIndex` function.
+- Walks the file system and checks if each file path matches the index filter using the `Match` method.
+- Returns the slice of matching file paths.
+
+### `addDoc`
+#### Description
+Adds a parsed document to the `Snapshot` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| doc | `*ext.Document` | Parsed document to add. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if any occurred during document addition. |
+
+#### Internal Logic
+- Retrieves the namespace from the `Snapshot` or creates a new one if it doesn't exist.
+- Adds the segments, flags, rules, rollouts, evaluation rules, and evaluation rollouts from the document to the corresponding maps in the namespace.
+- Sets the ETag for the namespace.
+
+### `findByKey`
+#### Description
+Finds an item in a slice of items based on its key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | `string` | Key to search for. |
+| ts | `...T` | Slice of items to search. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | `T` | The found item. |
+| ok | `bool` | True if the item was found, false otherwise. |
+
+#### Internal Logic
+- Iterates through the slice of items and checks if the item's key matches the provided key.
+- Returns the found item and true if a match is found, otherwise returns the zero value of the item type and false.
+
+### `find`
+#### Description
+Finds an item in a slice of items based on a provided matching function.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| match | `func(T) bool` | Matching function to apply to each item. |
+| ts | `...T` | Slice of items to search. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | `T` | The found item. |
+| ok | `bool` | True if the item was found, false otherwise. |
+
+#### Internal Logic
+- Iterates through the slice of items and calls the matching function for each item.
+- Returns the found item and true if the matching function returns true, otherwise returns the zero value of the item type and false.
+
+### `paginate`
+#### Description
+Paginates a slice of items based on provided query parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| params | `storage.QueryParams` | Query parameters for pagination. |
+| less | `func(i, j int) bool` | Function to compare two items for sorting. |
+| items | `...T` | Slice of items to paginate. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| set | `storage.ResultSet[T]` | Paginated result set. |
+| err | `error` | An error if any occurred during pagination. |
+
+#### Internal Logic
+- Sorts the items using the provided `less` function and the order specified in the query parameters.
+- Parses the page token as an offset integer.
+- Calculates the end index of the page based on the limit and offset.
+- Sets the next page token if there are more items.
+- Returns the paginated result set.
+
+### `getNamespace`
+#### Description
+Retrieves a namespace from the `Snapshot` instance by key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | `string` | Namespace key to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| namespace | `namespace` | The retrieved namespace. |
+| err | `error` | An error if the namespace is not found. |
+
+#### Internal Logic
+- Checks if the namespace exists in the `ns` map.
+- Returns the namespace if found, otherwise returns an error.
+
+### `GetVersion`
+#### Description
+Retrieves the version (ETag) of a namespace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| req | `storage.NamespaceRequest` | Namespace request containing the namespace key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| version | `string` | The version (ETag) of the namespace. |
+| err | `error` | An error if the namespace is not found. |
+
+#### Internal Logic
+- Retrieves the namespace using the `getNamespace` method.
+- Returns the ETag of the namespace.

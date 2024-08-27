@@ -1,0 +1,108 @@
+---
+title: "server.go"
+---
+
+## High-level description
+The `server.go` file in the `internal/server/evaluation/data` package defines a gRPC server that provides an evaluation snapshot of a namespace. This snapshot includes flags, segments, and rules, formatted for consumption by clients.
+
+## Code Structure
+The `Server` struct implements the `evaluation.DataServiceServer` interface, handling the `EvaluationSnapshotNamespace` RPC call. This call retrieves data from an `EvaluationStore` and transforms it into the format defined in the `evaluation` protobuf package.
+
+## References
+- `storage` package: Provides interfaces for interacting with the underlying storage layer.
+- `evaluation` package: Defines the protobuf messages for the evaluation service.
+- `grpc_middleware` package: Provides utilities for working with gRPC middleware.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct represents the gRPC server for the evaluation data service. It handles requests for evaluation snapshots of namespaces.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `New`
+#### Description
+The `New` function creates a new instance of the `Server` struct, initializing it with the provided logger and evaluation store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger to use for the server. |
+| store | `EvaluationStore` | The evaluation store to retrieve data from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Server` | `*Server` | A pointer to the newly created `Server` instance. |
+
+#### Internal Logic
+The function simply initializes the `logger` and `store` fields of the `Server` struct with the provided values.
+
+### `RegisterGRPC`
+#### Description
+The `RegisterGRPC` method registers the `Server` with the provided gRPC server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | `*grpc.Server` | The gRPC server to register with. |
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The method calls the `evaluation.RegisterDataServiceServer` function, passing in the provided gRPC server and the `Server` instance.
+
+### `EvaluationSnapshotNamespace`
+#### Description
+The `EvaluationSnapshotNamespace` method handles the `EvaluationSnapshotNamespace` RPC call. It retrieves an evaluation snapshot of the specified namespace from the store and returns it to the client.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| r | `*evaluation.EvaluationNamespaceSnapshotRequest` | The request message containing the namespace key and optional reference. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*evaluation.EvaluationNamespaceSnapshot` | `*evaluation.EvaluationNamespaceSnapshot` | The response message containing the evaluation snapshot of the namespace. |
+| `error` | `error` | An error, if any occurred during the processing of the request. |
+
+#### Internal Logic
+1. Extracts the namespace key, reference, and If-None-Match header from the request.
+2. Retrieves the current version of the namespace from the store to generate an ETag.
+3. Sets the ETag header in the response.
+4. If the ETag matches the If-None-Match header, returns a 304 Not Modified response.
+5. Retrieves flags from the store in batches, populating the response message with the transformed data.
+6. For each flag, retrieves its rules and distributions, transforming them into the evaluation format.
+7. For boolean flags, retrieves rollouts and transforms them into the evaluation format.
+8. Returns the populated response message.
+
+## Side Effects
+- Sets the `x-etag` and `x-http-code` headers in the response context.
+
+## Dependencies
+- `github.com/blang/semver/v4`: Used for semantic versioning.
+- `go.flipt.io/flipt/internal/storage`: Provides interfaces for interacting with the storage layer.
+- `go.flipt.io/flipt/rpc/flipt`: Defines the protobuf messages for the Flipt API.
+- `go.flipt.io/flipt/rpc/flipt/evaluation`: Defines the protobuf messages for the evaluation service.
+- `go.uber.org/zap`: Used for logging.
+- `google.golang.org/grpc`: Used for gRPC communication.
+- `google.golang.org/grpc/metadata`: Used for working with gRPC metadata.
+
+## Error Handling
+The `EvaluationSnapshotNamespace` method returns an error if any of the following occur:
+- Error retrieving the current version of the namespace from the store.
+- Error retrieving flags from the store.
+- Error retrieving rules for a flag from the store.
+- Error retrieving distributions for a rule from the store.
+- Error retrieving rollouts for a boolean flag from the store.
+
+## Logging
+The server uses the `zap.Logger` provided during initialization for logging errors and warnings.

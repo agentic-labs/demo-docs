@@ -1,0 +1,148 @@
+---
+title: "sql.go"
+---
+
+## High-level description
+The `sql.go` file implements the `oplock.Service` interface for managing operation locks using a SQL database. This ensures that long-running operations, like data imports, can acquire a lock and prevent concurrent executions.
+
+## Code Structure
+The `Service` struct holds the dependencies for the SQL implementation, including a logger, a SQL driver, and a statement builder. The `TryAcquire` function attempts to acquire a lock, while `acquireEntry`, `insertEntry`, and `readEntry` handle the underlying database operations.
+
+## Symbols
+### `Service`
+#### Description
+The `Service` struct represents the operation lock service backed by a SQL database.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `New`
+#### Description
+Constructs and configures a new `Service` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger instance for recording events. |
+| driver | `storagesql.Driver` | The SQL driver for interacting with the database. |
+| builder | `sq.StatementBuilderType` | The statement builder for constructing SQL queries. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| service | `*Service` | A pointer to the newly created `Service` instance. |
+
+#### Internal Logic
+The function simply initializes a new `Service` struct with the provided logger, driver, and builder.
+
+### `TryAcquire`
+#### Description
+Attempts to acquire a lock for the given operation and duration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| operation | `oplock.Operation` | The name of the operation to acquire a lock for. |
+| duration | `time.Duration` | The desired duration of the lock. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| acquired | `bool` | True if the lock was acquired successfully, false otherwise. |
+| entry | `oplock.LockEntry` | The lock entry associated with the operation. |
+| err | `error` | An error if the operation fails. |
+
+#### Internal Logic
+1. Reads the lock entry for the given operation from the database.
+2. If the entry doesn't exist, attempts to insert a new entry with the specified duration.
+    - If the insert fails due to a uniqueness constraint violation, it means a concurrent operation acquired the lock. In this case, it re-reads the entry and returns it.
+3. If the entry exists, checks if the `AcquiredUntil` timestamp has elapsed.
+    - If the timestamp hasn't elapsed, the lock is still active, so it returns `false`.
+4. If the timestamp has elapsed, attempts to acquire the lock by updating the entry with a new `AcquiredUntil` timestamp.
+5. Returns `true` and the updated entry if the lock is acquired successfully.
+
+### `acquireEntry`
+#### Description
+Attempts to acquire an existing lock entry by updating its `AcquiredUntil` timestamp.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| entry | `*oplock.LockEntry` | A pointer to the lock entry to acquire. |
+| dur | `time.Duration` | The desired duration of the lock. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| acquired | `bool` | True if the lock was acquired successfully, false otherwise. |
+| err | `error` | An error if the operation fails. |
+
+#### Internal Logic
+1. Constructs an SQL UPDATE query to update the entry's `version`, `last_acquired_at`, and `acquired_until` columns.
+2. The query includes a WHERE clause to ensure that the entry hasn't been modified by another operation.
+3. Executes the query and checks the number of rows affected.
+    - If no rows are affected, it means the entry's version has changed, indicating another operation acquired the lock.
+4. If the update is successful, updates the provided `entry` with the new values and returns `true`.
+
+### `insertEntry`
+#### Description
+Inserts a new lock entry into the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| op | `oplock.Operation` | The name of the operation to create a lock entry for. |
+| dur | `time.Duration` | The desired duration of the lock. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| entry | `oplock.LockEntry` | The newly created lock entry. |
+| err | `error` | An error if the operation fails. |
+
+#### Internal Logic
+1. Creates a new `oplock.LockEntry` with the provided operation, an initial version of 1, and the current timestamp for `LastAcquired` and `AcquiredUntil`.
+2. Constructs an SQL INSERT query to insert the new entry into the `operation_lock` table.
+3. Executes the query and returns the created entry.
+
+### `readEntry`
+#### Description
+Reads the lock entry for the given operation from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| operation | `oplock.Operation` | The name of the operation to read the lock entry for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| entry | `oplock.LockEntry` | The lock entry associated with the operation. |
+| err | `error` | An error if the operation fails, such as the entry not being found. |
+
+#### Internal Logic
+1. Constructs an SQL SELECT query to retrieve the entry for the given operation.
+2. Executes the query and scans the result into a new `oplock.LockEntry`.
+3. Returns the retrieved entry.
+
+## Error Handling
+The code uses the `errors` package to wrap and annotate errors for better context. It specifically handles `errors.ErrNotFound` when reading entries, indicating that a lock for the operation doesn't exist.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a mechanism for carrying request-scoped data and cancellation signals. |
+| `fmt` | Used for formatting strings. |
+| `time` | Provides time-related functionalities. |
+| `github.com/Masterminds/squirrel` | Used for building SQL queries. |
+| `go.flipt.io/flipt/errors` | Provides custom error types and handling. |
+| `go.flipt.io/flipt/internal/storage/oplock` | Defines the `oplock.Service` interface and related types. |
+| `go.flipt.io/flipt/internal/storage/sql` | Provides SQL-related utilities and the `storagesql.Driver` interface. |
+| `go.uber.org/zap` | Provides a structured logger. |

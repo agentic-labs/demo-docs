@@ -1,0 +1,152 @@
+---
+title: "store_test.go"
+---
+
+## High-level description
+The `store_test.go` file contains unit tests for the `SnapshotStore` struct, which is responsible for interacting with a Git repository as a source of feature flag configurations. The tests cover various aspects of the store, including initialization, snapshot retrieval, and handling of different Git repository configurations.
+
+## References
+This code references the following symbols from other parts of the codebase:
+- `go.flipt.io/flipt/internal/storage.NewResource`: Used to create a new resource identifier for testing flag retrieval.
+
+## Symbols
+### `Test_Store_String`
+#### Description
+This test verifies the `String()` method of the `SnapshotStore` struct, ensuring it returns the expected string representation "git".
+
+#### Internal Logic
+- It creates a new instance of `SnapshotStore`.
+- It calls the `String()` method on the instance.
+- It asserts that the returned string is equal to "git".
+
+### `Test_Store_Subscribe_Hash`
+#### Description
+This test verifies the `SnapshotStore`'s ability to subscribe to changes in a Git repository based on a specific commit hash. It ensures that the store can initialize and retrieve a snapshot for the specified commit.
+
+#### Internal Logic
+- It retrieves the commit hash from the `TEST_GIT_REPO_HEAD` environment variable.
+- It creates a new `SnapshotStore` instance, configuring it to use the specified commit hash as the reference.
+- It asserts that the store initialization doesn't return an error, implying successful subscription to the specified commit.
+
+### `Test_Store_View`
+#### Description
+This test verifies the `View` method of the `SnapshotStore`, which retrieves a snapshot of the feature flags from the Git repository. It simulates changes in the repository and ensures that the store reflects those changes.
+
+#### Internal Logic
+- It creates a new `SnapshotStore` instance, configuring it to poll the repository for changes.
+- It clones the Git repository into an in-memory filesystem.
+- It modifies a file (`features.yml`) within the cloned repository, simulating a change in feature flag configuration.
+- It commits and pushes the changes to the remote repository.
+- It waits for the `SnapshotStore` to detect the changes and update its internal snapshot.
+- It calls the `View` method to retrieve the latest snapshot.
+- It asserts that the retrieved snapshot reflects the changes made to the `features.yml` file.
+
+### `Test_Store_View_WithFilesystemStorage`
+#### Description
+This test is similar to `Test_Store_View` but utilizes a temporary directory on the filesystem for the Git repository instead of an in-memory filesystem. It verifies that the `SnapshotStore` functions correctly when interacting with a physical Git repository.
+
+#### Internal Logic
+- It follows the same steps as `Test_Store_View` but uses a temporary directory created with `t.TempDir()` to clone the Git repository.
+
+### `Test_Store_View_WithRevision`
+#### Description
+This test verifies the `SnapshotStore`'s ability to retrieve snapshots for specific Git revisions (branches or tags). It ensures that the store can correctly identify and load configurations from different branches.
+
+#### Internal Logic
+- It clones the Git repository.
+- It creates a new branch (`new-branch`) in the cloned repository.
+- It modifies the `features.yml` file in the new branch, adding new flags.
+- It commits and pushes the changes to the remote repository.
+- It calls the `View` method with different revision arguments:
+    - Empty string: Expects the default revision (main branch).
+    - "main": Explicitly requests the main branch.
+    - "new-branch": Requests the newly created branch.
+- It asserts that the retrieved snapshots for each revision contain the expected flags based on the changes made in the respective branches.
+
+### `Test_Store_View_WithSemverRevision`
+#### Description
+This test verifies the `SnapshotStore`'s ability to resolve and retrieve snapshots for Git tags following semantic versioning (SemVer). It ensures that the store can correctly identify the latest tag matching a given SemVer constraint.
+
+#### Internal Logic
+- It retrieves the SemVer tag and commit hash from environment variables.
+- It configures the `SnapshotStore` to use a SemVer resolver and sets the reference to a SemVer constraint (`v0.1.*`).
+- It clones the Git repository.
+- It creates a new branch and modifies the `features.yml` file.
+- It commits the changes and creates a new tag (`v0.1.4`) adhering to the SemVer constraint.
+- It pushes the changes and the new tag to the remote repository.
+- It waits for the `SnapshotStore` to detect the changes.
+- It calls the `resolve` method to verify that the store can resolve the SemVer constraint (`v0.1.*`) to the correct commit hash.
+- It calls the `View` method and asserts that the retrieved snapshot contains the expected flags from the resolved SemVer tag.
+
+### `Test_Store_View_WithDirectory`
+#### Description
+This test verifies the `SnapshotStore`'s ability to scope flag discovery to a specific subdirectory within the Git repository. It ensures that the store only considers configuration files within the specified directory.
+
+#### Internal Logic
+- It configures the `SnapshotStore` to use a specific subdirectory (`subdir`) for flag discovery.
+- It clones the Git repository.
+- It calls the `View` method and asserts that it can retrieve a flag defined within the specified subdirectory.
+
+### `Test_Store_SelfSignedSkipTLS`
+#### Description
+This test verifies the `SnapshotStore`'s behavior when interacting with a Git repository served over HTTPS with a self-signed certificate. It ensures that the store correctly handles TLS configurations, allowing insecure connections when specified.
+
+#### Internal Logic
+- It starts an HTTPS server with a self-signed certificate.
+- It attempts to create a `SnapshotStore` instance, configuring it to connect to the HTTPS server:
+    - First attempt: Without explicitly allowing insecure TLS connections. Expects an error due to certificate verification failure.
+    - Second attempt: With `WithInsecureTLS(true)`, allowing insecure connections. Expects a different error (`transport.ErrRepositoryNotFound`) because the server doesn't host a valid Git repository, but verifies that the TLS error is no longer present.
+
+### `Test_Store_SelfSignedCABytes`
+#### Description
+This test is similar to `Test_Store_SelfSignedSkipTLS` but instead of allowing insecure connections, it provides the CA certificate of the self-signed certificate to the `SnapshotStore`. It ensures that the store can successfully connect to the HTTPS server using the provided CA certificate for verification.
+
+#### Internal Logic
+- It starts an HTTPS server with a self-signed certificate.
+- It extracts the server's certificate and encodes it as a PEM-encoded byte array.
+- It attempts to create a `SnapshotStore` instance:
+    - First attempt: Without providing the CA certificate. Expects an error due to certificate verification failure.
+    - Second attempt: With `WithCABundle`, providing the extracted CA certificate. Expects a different error (`transport.ErrRepositoryNotFound`) because the server doesn't host a valid Git repository, but verifies that the TLS error is no longer present.
+
+### `testStore`
+#### Description
+This function is a helper function used by other tests to create a new `SnapshotStore` instance with common configurations. It reduces code duplication and simplifies test setup.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| gitRepoURL | string | The URL of the Git repository. |
+| opts | ...containers.Option[SnapshotStore] | Optional configurations for the `SnapshotStore`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotStore | *SnapshotStore | The created `SnapshotStore` instance. |
+| bool | bool | A boolean indicating whether the test should be skipped (true if skipped). |
+
+#### Internal Logic
+- It checks if the `TEST_GIT_REPO_URL` environment variable is set. If not, it skips the test.
+- It creates a new `SnapshotStore` instance with the provided Git repository URL, authentication details, and additional options.
+- It sets up a cleanup function to close the store after the test completes.
+
+### `testStoreWithError`
+#### Description
+This function is similar to `testStore` but specifically designed for tests that expect an error during `SnapshotStore` creation. It returns the error encountered during store creation, allowing the calling test to assert the expected error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| gitRepoURL | string | The URL of the Git repository. |
+| opts | ...containers.Option[SnapshotStore] | Optional configurations for the `SnapshotStore`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | The error encountered during `SnapshotStore` creation. |
+
+#### Internal Logic
+- It attempts to create a new `SnapshotStore` instance, similar to `testStore`.
+- If an error occurs during store creation, it returns the error.
+- If no error occurs, it sets up a cleanup function to close the store after the test completes and returns nil.

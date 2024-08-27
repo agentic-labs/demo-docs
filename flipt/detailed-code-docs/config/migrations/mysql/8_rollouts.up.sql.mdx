@@ -1,0 +1,88 @@
+---
+title: "8_rollouts.up.sql"
+---
+
+## High-level description
+This SQL script creates three tables: `rollouts`, `rollout_thresholds`, and `rollout_segments`. These tables are designed to manage feature rollouts, their associated thresholds, and segment-based rollouts in a feature flag system. The script uses MySQL syntax and includes foreign key constraints to maintain data integrity across related tables.
+
+## Code Structure
+The script defines three table creation statements, each with its own set of columns, primary keys, and foreign key relationships. The tables are interconnected through these foreign key constraints, ensuring data consistency and referential integrity.
+
+## Symbols
+
+### `rollouts` Table
+#### Description
+This table stores information about feature rollouts, including their identifiers, associated namespace and flag, type, description, and timestamps.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Unique identifier for the rollout |
+| namespace_key | VARCHAR(255) | Key of the associated namespace |
+| flag_key | VARCHAR(255) | Key of the associated feature flag |
+| type | INTEGER | Type of the rollout (default: 0) |
+| description | TEXT | Description of the rollout |
+| rank | INTEGER | Rank of the rollout (default: 1) |
+| created_at | TIMESTAMP(6) | Creation timestamp |
+| updated_at | TIMESTAMP(6) | Last update timestamp |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Keys:
+  - `namespace_key` references `namespaces(key)`
+  - `(namespace_key, flag_key)` references `flags(namespace_key, key)`
+
+### `rollout_thresholds` Table
+#### Description
+This table stores threshold information for rollouts, including the percentage and associated boolean value.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Unique identifier for the threshold |
+| namespace_key | VARCHAR(255) | Key of the associated namespace |
+| rollout_id | VARCHAR(255) | ID of the associated rollout |
+| percentage | float | Threshold percentage (default: 0) |
+| value | BOOLEAN | Boolean value associated with the threshold (default: FALSE) |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Keys:
+  - `namespace_key` references `namespaces(key)`
+  - `rollout_id` references `rollouts(id)`
+
+### `rollout_segments` Table
+#### Description
+This table stores segment-based rollout information, associating segments with rollouts and their boolean values.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Unique identifier for the rollout segment |
+| namespace_key | VARCHAR(255) | Key of the associated namespace |
+| rollout_id | VARCHAR(255) | ID of the associated rollout |
+| segment_key | VARCHAR(255) | Key of the associated segment |
+| value | BOOLEAN | Boolean value for the segment in this rollout (default: FALSE) |
+
+#### Constraints
+- Primary Key: `id`
+- Foreign Keys:
+  - `namespace_key` references `namespaces(key)`
+  - `rollout_id` references `rollouts(id)`
+  - `(namespace_key, segment_key)` references `segments(namespace_key, key)`
+
+## Dependencies
+This SQL script assumes the existence of the following tables:
+| Dependency | Purpose |
+|:-----------|:--------|
+| namespaces | Referenced by foreign keys in all three tables |
+| flags | Referenced by foreign key in the rollouts table |
+| segments | Referenced by foreign key in the rollout_segments table |
+
+## Error Handling
+The script uses `IF NOT EXISTS` clauses in the `CREATE TABLE` statements to prevent errors if the tables already exist. This allows for idempotent execution of the script.
+
+## Performance Considerations
+1. The use of `VARCHAR(255)` for ID and key fields might impact performance for very large datasets. Consider using more compact data types if possible.
+2. The `rollouts` table includes both `created_at` and `updated_at` timestamps, which may be useful for auditing but could affect insert/update performance.
+3. The `rollout_thresholds` table has a unique constraint on `rollout_id`, which implies a one-to-one relationship between rollouts and thresholds. This might limit flexibility if multiple thresholds per rollout are needed in the future.

@@ -1,0 +1,87 @@
+---
+title: "telemetry_test.go"
+---
+
+## High-level description
+The `telemetry_test.go` file contains unit tests for the telemetry package, which is responsible for sending anonymous usage data to Flipt. The tests cover various scenarios, including the creation of a new reporter, shutting down the reporter, and sending ping events with different configurations.
+
+## References
+This file references the following symbols:
+- `config.Config`: Represents the Flipt server configuration.
+- `info.Flipt`: Contains information about the Flipt instance, such as version, OS, and architecture.
+- `segment.Client`: Interface for interacting with the Segment analytics service.
+
+## Symbols
+
+### `TestNewReporter`
+#### Description
+Tests the `NewReporter` function, which creates a new telemetry reporter.
+
+#### Internal Logic
+- Creates a new `config.Config` with telemetry enabled.
+- Creates a new logger using `zaptest.NewLogger`.
+- Calls `NewReporter` with the config, logger, analytics key, analytics endpoint, and Flipt info.
+- Asserts that the returned reporter is not nil and that there were no errors.
+
+### `TestShutdown`
+#### Description
+Tests the `Shutdown` function, which shuts down the telemetry reporter.
+
+#### Internal Logic
+- Creates a new logger using `zaptest.NewLogger`.
+- Creates a mock `segment.Client`.
+- Creates a new `Reporter` with the mock client and telemetry enabled.
+- Calls `Shutdown` on the reporter.
+- Asserts that the mock client's `Close` method was called, indicating a successful shutdown.
+
+### `TestPing`
+#### Description
+Tests the `ping` function, which sends a ping event to the analytics service.
+
+#### Internal Logic
+- Defines a table of test cases, each with a different configuration and expected output.
+- Iterates through the test cases, creating a new reporter and mock analytics client for each.
+- Calls the `ping` function with a mock file.
+- Asserts that the mock analytics client received a track event with the expected properties, including the Flipt version, OS, architecture, and configuration options.
+- Asserts that the mock file was written to, indicating that the state was persisted.
+
+### `TestPing_Existing`
+#### Description
+Tests the `ping` function when a telemetry state file already exists.
+
+#### Internal Logic
+- Creates a new reporter and mock analytics client.
+- Reads a pre-existing telemetry state file.
+- Calls the `ping` function with the mock file containing the existing state.
+- Asserts that the mock analytics client received a track event with the expected properties, including the existing UUID from the state file.
+- Asserts that the mock file was written to, indicating that the state was updated.
+
+### `TestPing_Disabled`
+#### Description
+Tests that the `ping` function does not send a ping event when telemetry is disabled.
+
+#### Internal Logic
+- Creates a new reporter and mock analytics client with telemetry disabled.
+- Calls the `ping` function.
+- Asserts that the mock analytics client did not receive any events.
+
+### `TestPing_SpecifyStateDir`
+#### Description
+Tests the `ping` function when a custom state directory is specified.
+
+#### Internal Logic
+- Creates a new reporter with a custom state directory.
+- Calls the `report` function, which internally calls `ping`.
+- Asserts that the mock analytics client received a track event with the expected properties.
+- Asserts that a telemetry state file was created in the specified directory.
+
+## Dependencies
+- `github.com/stretchr/testify/assert`: Used for making assertions in tests.
+- `github.com/stretchr/testify/require`: Used for making assertions that should never fail in tests.
+- `go.flipt.io/flipt/internal/config`: Provides the `Config` struct for Flipt server configuration.
+- `go.flipt.io/flipt/internal/info`: Provides the `Flipt` struct for Flipt instance information.
+- `go.uber.org/zap/zaptest`: Provides a test logger for use in tests.
+- `gopkg.in/segmentio/analytics-go.v3`: Provides the Segment analytics client library.
+
+## Error Handling
+The tests use the `assert` and `require` packages to handle errors. If an error occurs during a test, the test will fail and the error message will be printed.

@@ -1,0 +1,201 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `store.go` file implements a `SnapshotStore` that retrieves and manages snapshots of configuration data from an object storage service like AWS S3, Azure Blob Storage, or Google Cloud Storage. It periodically polls the storage for changes and updates its internal snapshot accordingly.
+
+## Code Structure
+The `SnapshotStore` struct holds the configuration for the object storage, a logger, a mutex for synchronization, and a `ReadOnlyStore` representing the current snapshot. The `NewSnapshotStore` function initializes a new `SnapshotStore`, fetches the initial snapshot, and starts a background goroutine to poll for updates. The `View` method allows read-only access to the current snapshot. The `update` method fetches a new snapshot and atomically swaps it with the current one. The `build` method constructs a new snapshot by reading the index file and relevant data files from the object storage. The `getIndex` method retrieves and parses the index file from the object storage.
+
+## References
+This code references the following symbols:
+- `gocloud.dev/blob`: Provides a generic interface for interacting with various cloud storage services.
+- `go.flipt.io/flipt/internal/containers`: Defines utility functions for working with options.
+- `go.flipt.io/flipt/internal/storage`: Defines interfaces for interacting with configuration data storage backends.
+- `go.flipt.io/flipt/internal/storage/fs`: Defines common types and functions for filesystem-based storage backends.
+
+## Symbols
+
+### `SnapshotStore`
+#### Description
+The `SnapshotStore` struct represents a store that retrieves and manages snapshots of configuration data from an object storage service.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `NewSnapshotStore`
+#### Description
+The `NewSnapshotStore` function initializes a new `SnapshotStore` with the provided logger, scheme, bucket, and options. It fetches the initial snapshot from the object storage and starts a background goroutine to periodically poll for updates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger to use for logging. |
+| scheme | string | The scheme of the object storage service (e.g., "s3", "azblob", "gs"). |
+| bucket | *gcblob.Bucket | A `gcblob.Bucket` instance representing the target bucket in the object storage service. |
+| opts | ...containers.Option[SnapshotStore] | Optional configuration options for the `SnapshotStore`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotStore | *SnapshotStore | A pointer to the newly created `SnapshotStore`. |
+| error | error | An error if the initialization fails. |
+
+#### Internal Logic
+1. Initializes a new `SnapshotStore` with the provided logger, scheme, and bucket.
+2. Applies any provided options to configure the `SnapshotStore`.
+3. Fetches the initial snapshot from the object storage using the `update` method.
+4. Creates a new `Poller` instance with the specified polling interval and notification function.
+5. Starts the poller in a background goroutine to periodically update the snapshot.
+
+### `WithPrefix`
+#### Description
+The `WithPrefix` function is a configuration option for `SnapshotStore` that sets the prefix to be used when accessing objects in the bucket.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prefix | string | The prefix to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[SnapshotStore] | containers.Option[SnapshotStore] | A configuration option that sets the prefix for the `SnapshotStore`. |
+
+### `WithPollOptions`
+#### Description
+The `WithPollOptions` function is a configuration option for `SnapshotStore` that sets the polling options used to periodically update the snapshot state.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...containers.Option[storagefs.Poller] | The polling options to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[SnapshotStore] | containers.Option[SnapshotStore] | A configuration option that sets the polling options for the `SnapshotStore`. |
+
+### `View`
+#### Description
+The `View` method provides read-only access to the current snapshot held by the `SnapshotStore`. It accepts a function that takes a `storage.ReadOnlyStore` as an argument and executes it with the current snapshot.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| fn | func(storage.ReadOnlyStore) error | The function to execute with the current snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the provided function returns an error. |
+
+#### Internal Logic
+1. Acquires a read lock on the `SnapshotStore`'s mutex to prevent modifications to the snapshot during the execution of the provided function.
+2. Executes the provided function, passing the current snapshot as an argument.
+3. Releases the read lock on the mutex.
+
+### `String`
+#### Description
+The `String` method returns a string representation of the `SnapshotStore`, which is simply the scheme of the object storage service.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The scheme of the object storage service. |
+
+### `update`
+#### Description
+The `update` method fetches a new snapshot from the object storage and atomically swaps it with the current snapshot held by the `SnapshotStore`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | A boolean value indicating whether the snapshot was updated. |
+| error | error | An error if the update fails. |
+
+#### Internal Logic
+1. Fetches a new snapshot from the object storage using the `build` method.
+2. Acquires a write lock on the `SnapshotStore`'s mutex to prevent concurrent access to the snapshot.
+3. Updates the `snap` field with the newly fetched snapshot.
+4. Releases the write lock on the mutex.
+
+### `build`
+#### Description
+The `build` method constructs a new snapshot by reading the index file and relevant data files from the object storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *storagefs.Snapshot | *storagefs.Snapshot | A pointer to the newly constructed snapshot. |
+| error | error | An error if the snapshot construction fails. |
+
+#### Internal Logic
+1. Retrieves the index file from the object storage using the `getIndex` method.
+2. Creates a new iterator to list objects in the bucket with the configured prefix.
+3. Iterates through the listed objects, skipping those that don't match the index.
+4. For each matching object, creates a new `File` instance representing the object and appends it to a slice.
+5. Constructs a new `storagefs.Snapshot` from the collected files.
+
+### `getIndex`
+#### Description
+The `getIndex` method retrieves and parses the index file from the object storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *storagefs.FliptIndex | *storagefs.FliptIndex | A pointer to the parsed index file. |
+| error | error | An error if the index retrieval or parsing fails. |
+
+#### Internal Logic
+1. Attempts to read the index file from the object storage.
+2. If the index file is not found, returns a default index.
+3. Otherwise, parses the index file and returns the parsed index.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a mechanism for cancellation and request-scoped values. |
+| encoding/hex | Implements hexadecimal encoding and decoding. |
+| errors | Provides standard error handling primitives. |
+| io | Provides basic input/output primitives. |
+| io/fs | Defines the interface for interacting with file systems. |
+| strings | Provides functions for manipulating strings. |
+| sync | Provides basic synchronization primitives. |
+| time | Provides time-related functionality. |
+| go.flipt.io/flipt/internal/containers | Defines utility functions for working with options. |
+| go.flipt.io/flipt/internal/storage | Defines interfaces for interacting with configuration data storage backends. |
+| go.flipt.io/flipt/internal/storage/fs | Defines common types and functions for filesystem-based storage backends. |
+| go.uber.org/zap | Provides a structured logging library. |
+| gocloud.dev/blob | Provides a generic interface for interacting with various cloud storage services. |
+| gocloud.dev/gcerrors | Defines error codes for Google Cloud Platform services. |
+
+## Error Handling
+The code handles errors by returning them to the caller. It uses the `gcerrors` package to check for specific error codes from the Google Cloud Platform services.
+
+## Logging
+The code uses the `zap` logging library to log messages at various levels of severity.

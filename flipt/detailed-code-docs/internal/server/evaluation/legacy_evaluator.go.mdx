@@ -1,0 +1,188 @@
+---
+title: "legacy_evaluator.go"
+---
+
+## High-level description
+The `legacy_evaluator.go` file contains the implementation of the `Evaluator` type, which is responsible for evaluating legacy flag evaluations in Flipt. This evaluator handles requests for variant flags and determines the appropriate variant for a given entity based on the defined rules, segments, and distributions.
+
+## Code Structure
+The `Evaluator` type utilizes the `Storer` interface to interact with the underlying storage layer for retrieving flag configurations and evaluation rules. The `Evaluate` method is the main entry point for evaluation requests, which then calls helper functions like `matchConstraints` to determine segment matches and ultimately returns an `EvaluationResponse` indicating the evaluation result.
+
+## References
+- `storage.EvaluationConstraint`: Represents a constraint within a segment definition.
+- `storage.EvaluationDistribution`: Represents a distribution of variants within a rule.
+- `flipt.EvaluationReason`: An enum defining the possible reasons for an evaluation result.
+- `flipt.MatchType`: An enum defining the matching behavior for segment constraints.
+- `flipt.SegmentOperator`: An enum defining the operator used for combining multiple segments in a rule.
+
+## Symbols
+
+### `Evaluator`
+#### Description
+The `Evaluator` type is responsible for evaluating legacy flag evaluations. It retrieves flag configurations and evaluation rules from the storage layer and determines the appropriate variant for a given entity based on the defined rules, segments, and distributions.
+
+#### Inputs
+This type does not have constructor inputs.
+
+#### Outputs
+This type does not have constructor outputs.
+
+### `NewEvaluator`
+#### Description
+`NewEvaluator` is the constructor for an `Evaluator`. It takes a logger and a `Storer` as input and returns a pointer to a new `Evaluator` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger to use for logging. |
+| store | `Storer` | The storage interface for retrieving flag configurations and evaluation rules. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Evaluator` | `*Evaluator` | A pointer to a new `Evaluator` instance. |
+
+### `Evaluator.Evaluate`
+#### Description
+`Evaluate` is the main method of the `Evaluator` type. It takes a context, a `flipt.Flag`, and an `evaluation.EvaluationRequest` as input and returns a pointer to a `flipt.EvaluationResponse` and an error. This method performs the following steps:
+
+1. **Validate Flag Type:** Ensures that the flag is of the variant type.
+2. **Record Metrics:** Records metrics related to the evaluation request, such as the total number of evaluations and the evaluation latency.
+3. **Handle Disabled Flag:** If the flag is disabled, it sets the response reason to `FLAG_DISABLED_EVALUATION_REASON` and returns.
+4. **Retrieve Evaluation Rules:** Retrieves the evaluation rules associated with the flag from the storage layer.
+5. **Iterate Through Rules:** Iterates through the retrieved rules in ascending order of their rank.
+6. **Match Segments:** For each rule, it checks if the entity matches any of the segments defined in the rule.
+7. **Match Distributions:** If the entity matches the segments, it checks if it falls within any of the distributions defined for the rule.
+8. **Determine Variant:** If the entity matches a distribution, it sets the response values accordingly.
+9. **Return Response:** Returns the evaluation response with the determined variant or the default variant if no match is found.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context of the request. |
+| flag | `*flipt.Flag` | The flag to evaluate. |
+| r | `*evaluation.EvaluationRequest` | The evaluation request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*flipt.EvaluationResponse` | `*flipt.EvaluationResponse` | A pointer to the evaluation response. |
+| err | `error` | An error if one occurred during the evaluation process. |
+
+#### Internal Logic
+The `Evaluate` method implements the core logic for legacy flag evaluation. It iterates through the rules associated with a flag, checks for segment matches based on entity context, and determines the variant based on distribution rollouts. The method utilizes helper functions like `matchConstraints` and `crc32Num` for constraint matching and consistent hashing, respectively.
+
+### `Evaluator.matchConstraints`
+#### Description
+`matchConstraints` is a utility function that determines if an entity matches the constraints defined for a segment. It takes the evaluation context, a slice of `storage.EvaluationConstraint`, the segment match type, and the entity ID as input. It iterates through each constraint and checks if the entity's context value for the constraint's property matches the constraint's operator and value. The function returns a boolean indicating whether the entity matches the constraints, a reason string explaining the match result, and an error if any occurred during the matching process.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| evalCtx | `map[string]string` | The evaluation context containing entity attributes. |
+| constraints | `[]storage.EvaluationConstraint` | A slice of constraints to evaluate. |
+| segmentMatchType | `flipt.MatchType` | The match type for the segment (ALL or ANY). |
+| entityId | `string` | The ID of the entity being evaluated. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the entity matches the constraints, false otherwise. |
+| string | `string` | A reason string explaining the match result. |
+| error | `error` | An error if one occurred during the matching process. |
+
+#### Internal Logic
+The function iterates through each constraint and uses a switch statement to determine the appropriate matching function based on the constraint type. It then compares the entity's context value with the constraint value using the specified operator. The function also handles different segment match types (ALL or ANY) to determine the overall match result.
+
+### `crc32Num`
+#### Description
+`crc32Num` is a utility function that generates a CRC32 checksum for a given entity ID and salt. It takes the entity ID and salt as input and returns the checksum as a `uint`. This function is used for consistent hashing in distribution matching.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| entityID | `string` | The ID of the entity. |
+| salt | `string` | The salt value used for hashing. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uint | `uint` | The CRC32 checksum of the entity ID and salt. |
+
+### `matchesString`
+#### Description
+`matchesString` is a utility function that checks if a string value matches a given constraint. It takes the constraint and the value as input and returns a boolean indicating whether the value matches the constraint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| c | `storage.EvaluationConstraint` | The constraint to evaluate. |
+| v | `string` | The string value to check. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the value matches the constraint, false otherwise. |
+
+### `matchesNumber`
+#### Description
+`matchesNumber` is a utility function that checks if a numeric value matches a given constraint. It takes the constraint and the value as a string as input. It attempts to parse the value as a float64 and returns a boolean indicating whether the parsed value matches the constraint and an error if parsing fails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| c | `storage.EvaluationConstraint` | The constraint to evaluate. |
+| v | `string` | The string representation of the numeric value to check. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the value matches the constraint, false otherwise. |
+| error | `error` | An error if parsing the numeric value fails. |
+
+### `matchesBool`
+#### Description
+`matchesBool` is a utility function that checks if a boolean value matches a given constraint. It takes the constraint and the value as a string as input. It attempts to parse the value as a boolean and returns a boolean indicating whether the parsed value matches the constraint and an error if parsing fails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| c | `storage.EvaluationConstraint` | The constraint to evaluate. |
+| v | `string` | The string representation of the boolean value to check. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the value matches the constraint, false otherwise. |
+| error | `error` | An error if parsing the boolean value fails. |
+
+### `matchesDateTime`
+#### Description
+`matchesDateTime` is a utility function that checks if a date/time value matches a given constraint. It takes the constraint and the value as a string as input. It attempts to parse both the value and the constraint value as time.Time objects and returns a boolean indicating whether the parsed values match the constraint and an error if parsing fails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| c | `storage.EvaluationConstraint` | The constraint to evaluate. |
+| v | `string` | The string representation of the date/time value to check. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the value matches the constraint, false otherwise. |
+| error | `error` | An error if parsing the date/time value fails. |
+
+### `tryParseDateTime`
+#### Description
+`tryParseDateTime` is a utility function that attempts to parse a string into a `time.Time` object. It first tries to parse the string using the RFC3339 format, and if that fails, it tries to parse it using the `time.DateOnly` format. If both attempts fail, it returns an error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v | `string` | The string representation of the date/time value to parse. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `time.Time` | `time.Time` | The parsed `time.Time` object. |
+| error | `error` | An error if parsing the date/time value fails. |

@@ -1,0 +1,72 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a token-based authentication method for the Flipt server. It provides a gRPC server that manages static authentication tokens, allowing for the creation and management of tokens used to authenticate with the Flipt API.
+
+## What does it do?
+The token authentication method allows users to create and manage static authentication tokens for the Flipt API. Here's a breakdown of its functionality:
+
+1. Token Creation: Users can request the creation of new authentication tokens. The server generates a unique client token and stores it along with associated metadata (such as expiration time and description) in the authentication store.
+
+2. Token Management: While not explicitly implemented in the provided code, the structure suggests that the server can handle other token-related operations like retrieval and deletion.
+
+3. Namespace Scoping: This authentication method does not support namespace-scoped authentication, which means tokens are valid across all namespaces in the Flipt instance.
+
+4. gRPC Integration: The implementation is designed to work as part of a gRPC server, allowing it to be easily integrated into the larger Flipt server architecture.
+
+## Key Files
+
+### server.go
+This file contains the main implementation of the token authentication method. Key components include:
+
+- `Server` struct: Implements the `auth.AuthenticationMethodTokenServiceServer` interface, handling gRPC requests for token authentication.
+- `NewServer` function: Constructs and configures a new `Server` instance.
+- `CreateToken` method: Handles the creation of new authentication tokens.
+- `AllowsNamespaceScopedAuthentication` method: Always returns `false`, indicating that this method doesn't support namespace-scoped authentication.
+
+### server_test.go
+This file contains the test suite for the `Server` implementation. It includes:
+
+- `TestServer` function: Sets up a test environment with a gRPC server and client, and runs multiple test cases to verify the server's functionality.
+- Test cases for token creation, invalid input handling, and namespace-scoped authentication behavior.
+
+## Dependencies
+The implementation relies on several external libraries and internal packages:
+
+1. gRPC and Protocol Buffers:
+   - `google.golang.org/grpc`: For implementing the gRPC server and client.
+   - `google.golang.org/protobuf`: For working with Protocol Buffer messages.
+
+2. Logging:
+   - `go.uber.org/zap`: For structured logging.
+
+3. Internal Flipt packages:
+   - `go.flipt.io/flipt/internal/storage/authn`: For the authentication store interface.
+   - `go.flipt.io/flipt/rpc/flipt/auth`: For gRPC service definitions related to authentication.
+
+4. Testing libraries:
+   - `github.com/stretchr/testify`: For assertions in tests.
+   - `github.com/google/go-cmp`: For deep comparisons in tests.
+
+## Configuration
+The token authentication method doesn't appear to use any external configuration files or environment variables. Its behavior is primarily determined by the `storageauth.Store` implementation provided during server initialization.
+
+Key configurable aspects include:
+
+1. Logger: A `*zap.Logger` instance is provided during server initialization for logging purposes.
+2. Authentication Store: A `storageauth.Store` implementation is provided to handle the persistence and retrieval of authentication data.
+
+These configurations are set when creating a new `Server` instance using the `NewServer` function:
+
+```go
+func NewServer(logger *zap.Logger, store storageauth.Store) *Server {
+    return &Server{
+        logger: logger,
+        store:  store,
+    }
+}
+```
+
+The specific implementation of the authentication store (e.g., in-memory, database-backed) can be chosen when setting up the larger Flipt server, allowing for flexibility in how authentication data is stored and managed.

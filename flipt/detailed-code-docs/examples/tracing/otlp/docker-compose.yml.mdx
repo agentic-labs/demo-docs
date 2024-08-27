@@ -1,0 +1,120 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This file is a Docker Compose configuration file that defines a multi-container application for demonstrating distributed tracing in Flipt using OpenTelemetry (OTLP) exporter. It sets up Flipt, OpenTelemetry collector, Jaeger, and Zipkin containers and configures them to work together.
+
+## Code Structure
+The code defines several services: `jaeger`, `zipkin`, `otel`, and `flipt`. `jaeger` and `zipkin` are independent tracing backends. `otel` (OpenTelemetry collector) is configured to receive tracing data from `flipt` and forward it to both `jaeger` and `zipkin`. `flipt` is the main application that sends tracing data.
+
+## Symbols
+### `version`
+#### Description
+Specifies the Docker Compose file format version.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+This line sets the Docker Compose file format version to "3".
+
+### `services`
+#### Description
+Defines the services that make up the application.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+This section defines four services: `jaeger`, `zipkin`, `otel`, and `flipt`. Each service has its own configuration, including image, ports, networks, dependencies, and environment variables.
+
+### `jaeger`
+#### Description
+Configures the Jaeger container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Uses the `jaegertracing/all-in-one:latest` image.
+- Exposes ports `16686`, `14268`, and `14250`.
+- Connects to the `flipt_network` network.
+
+### `zipkin`
+#### Description
+Configures the Zipkin container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Uses the `openzipkin/zipkin:latest` image.
+- Exposes port `9411`.
+- Connects to the `flipt_network` network.
+
+### `otel`
+#### Description
+Configures the OpenTelemetry collector container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Uses the `otel/opentelemetry-collector:latest` image.
+- Runs the collector with a configuration file located at `/etc/otel-collector-config.yaml`.
+- Mounts the local `./otel-collector-config.yaml` file to the container's `/etc/otel-collector-config.yaml`.
+- Exposes ports `1888`, `13133`, `4317`, and `55679` for various extensions.
+- Depends on the `jaeger` and `zipkin` services.
+- Connects to the `flipt_network` network.
+
+### `flipt`
+#### Description
+Configures the Flipt container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Uses the `flipt/flipt:latest` image.
+- Runs the `./flipt` command with the `--force-migrate` flag.
+- Depends on the `otel` service.
+- Exposes port `8080`.
+- Connects to the `flipt_network` network.
+- Sets environment variables for logging, tracing, and telemetry:
+    - `FLIPT_LOG_LEVEL=debug`: Sets the log level to debug.
+    - `FLIPT_TRACING_ENABLED=true`: Enables tracing.
+    - `FLIPT_TRACING_EXPORTER=otlp`: Sets the tracing exporter to OpenTelemetry Protocol (OTLP).
+    - `FLIPT_TRACING_OTLP_ENDPOINT=otel:4317`: Sets the endpoint for the OTLP exporter to the `otel` service on port `4317`.
+    - `FLIPT_META_TELEMETRY_ENABLED=false`: Disables meta telemetry.
+
+### `networks`
+#### Description
+Defines the networks for the application.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+This section defines a single network named `flipt_network`, which is used by all services to communicate with each other.

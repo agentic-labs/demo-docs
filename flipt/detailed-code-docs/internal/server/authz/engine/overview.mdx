@@ -1,0 +1,99 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authz/engine` directory contains the implementation of an authorization engine for Flipt using Open Policy Agent (OPA). This engine is responsible for evaluating and enforcing access control policies based on predefined rules. It supports both Rego-based policies and Role-Based Access Control (RBAC) configurations, providing a flexible and powerful authorization mechanism for the Flipt server.
+
+## What does it do?
+The authorization engine in this directory performs the following main functions:
+
+1. Initializes an OPA engine with the provided configuration, including loading policies and data from various sources (local filesystem or cloud-based storage).
+2. Compiles and evaluates authorization requests against the loaded policies to determine if they are allowed.
+3. Supports different user roles and permissions, allowing for fine-grained access control.
+4. Periodically polls for updates to both policy and data, ensuring that the authorization rules are always up-to-date.
+5. Provides a clean shutdown mechanism for the OPA engine.
+
+In simpler terms, it acts as a sophisticated gatekeeper for Flipt, deciding whether a user or system can perform a specific action based on predefined rules. These rules can be complex and consider various factors like user roles, resource types, and custom conditions.
+
+## Entry points
+The main entry point for this package is the `Engine` struct defined in the `bundle/engine.go` and `rego/engine.go` files. Key functions include:
+
+1. `NewEngine`: Creates a new authorization engine based on the provided configuration.
+2. `IsAllowed`: Evaluates an authorization request against the loaded policy and data.
+3. `Shutdown`: Gracefully shuts down the authorization engine.
+
+The `source` subdirectory in the `rego` package provides implementations for policy and data sources, including both cloud-based and filesystem-based options.
+
+## Key Files
+1. `bundle/engine.go`: Contains the core implementation of the OPA bundle-based authorization engine.
+2. `bundle/engine_test.go`: Provides unit tests for the bundle-based authorization engine.
+3. `rego/engine.go`: Implements the Rego-based authorization engine.
+4. `rego/engine_test.go`: Contains unit tests for the Rego-based authorization engine.
+5. `rego/source/cloud/cloud.go`: Implements cloud-based policy and data sources.
+6. `rego/source/filesystem/filesystem.go`: Implements filesystem-based policy and data sources.
+7. `testdata/rbac.json`: Defines RBAC rules for different user roles.
+
+## Dependencies
+The authorization engine relies on several external libraries and frameworks:
+
+1. Open Policy Agent (OPA) SDK (github.com/open-policy-agent/opa/sdk): Provides the core OPA engine functionality.
+2. OPA Rego package (github.com/open-policy-agent/opa/rego): Used for Rego policy compilation and evaluation.
+3. OPA Storage (github.com/open-policy-agent/opa/storage): Provides storage interfaces for OPA.
+4. Uber's Zap logger (go.uber.org/zap): Used for structured logging throughout the engine.
+5. OPA contrib logging plugin (github.com/open-policy-agent/contrib/logging/plugins/ozap): Integrates OPA's logging with Uber's Zap logger.
+6. OPA in-memory storage (github.com/open-policy-agent/opa/storage/inmem): Provides an in-memory storage implementation for OPA.
+
+## Configuration
+The authorization engine uses configuration settings from the Flipt configuration (`config.Config`). Key configurable aspects include:
+
+1. Authorization backend: Supports different backends for storing authorization policies and data, such as local files or cloud-based storage (e.g., S3 buckets).
+2. Policy and data paths: The locations of the authorization policy and data files can be configured.
+3. Cloud backend settings: For cloud-based backends, settings like host URL, API key, and poll interval can be specified.
+
+Example configuration (hypothetical, based on the code):
+
+```yaml
+authorization:
+  backend:
+    type: s3
+    region: us-west-2
+    bucket: my-policy-bucket
+  policy:
+    path: /policies/authz.rego
+  data:
+    path: /data/rbac.json
+```
+
+The engine is designed to be flexible and can adapt to different authorization requirements by modifying the policies and data without changing the core implementation.
+
+Code snippet for creating and using the authorization engine:
+
+```go
+// Create a new engine
+engine, err := NewEngine(ctx, logger, cfg)
+if err != nil {
+    // Handle error
+}
+
+// Evaluate an authorization request
+input := map[string]interface{}{
+    "user": "alice",
+    "action": "read",
+    "resource": "document1",
+}
+allowed, err := engine.IsAllowed(ctx, input)
+if err != nil {
+    // Handle error
+}
+if allowed {
+    // Perform authorized action
+} else {
+    // Handle unauthorized access
+}
+
+// Shutdown the engine when done
+engine.Shutdown(ctx)
+```
+
+This authorization engine provides a powerful and flexible way to implement complex authorization rules in the Flipt server, supporting both bundle-based and Rego-based policies, as well as local and cloud-based policy management.

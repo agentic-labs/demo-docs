@@ -1,0 +1,76 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a local filesystem-based storage mechanism for Flipt snapshots. The main component is the `SnapshotStore` struct, which provides functionality for reading, updating, and polling for changes in snapshot data stored on the local filesystem.
+
+## What does it do?
+The local filesystem storage implementation allows Flipt to store and manage snapshots of its configuration directly on the server's filesystem. Here's a simplified explanation of its functionality:
+
+1. It creates a storage system that watches a specific directory on the local filesystem.
+2. When the system starts, it reads the initial snapshot from this directory.
+3. It continuously monitors the directory for any changes (like new files or updates to existing files).
+4. If a change is detected, it automatically updates its internal snapshot to reflect the latest state of the filesystem.
+5. It provides a way for other parts of the application to safely read the current snapshot, ensuring that they always have access to the most up-to-date configuration.
+
+This system is particularly useful for scenarios where you want to manage Flipt's configuration directly through files on the server, allowing for easy manual updates or integration with file-based deployment systems.
+
+## Key Files
+
+1. `store.go`: This file contains the core implementation of the `SnapshotStore` struct. It defines the structure and methods for managing snapshots stored on the local filesystem.
+
+   Key components:
+   - `SnapshotStore` struct: Represents the storage backend for Flipt snapshots.
+   - `NewSnapshotStore` function: Initializes a new `SnapshotStore` instance.
+   - `View` method: Allows safe reading of the current snapshot.
+   - `update` method: Fetches a new snapshot from the filesystem and updates the internal state.
+
+2. `store_test.go`: This file contains unit tests for the `SnapshotStore` implementation.
+
+   Key components:
+   - `Test_Store` function: Tests the `SnapshotStore`'s ability to detect and react to filesystem changes.
+
+3. `testdata` directory: Contains YAML files used for testing purposes, defining sample feature flags and their values.
+
+## Dependencies
+The implementation relies on the following internal packages:
+
+1. `github.com/flipt-io/flipt/internal/storage/fs`: Provides common filesystem-related functionality.
+2. `github.com/flipt-io/flipt/internal/storage`: Defines interfaces for storage operations.
+3. `go.uber.org/zap`: Used for logging.
+
+External dependencies:
+- `github.com/stretchr/testify` (v1.8.4): Used for assertions in unit tests.
+
+## Configuration
+The `SnapshotStore` can be configured with the following options:
+
+1. Logger: A `*zap.Logger` instance for logging operations.
+2. Directory: The filesystem path where snapshots are stored.
+3. Polling options: Configurable through the `WithPollOptions` function, allowing customization of the filesystem polling behavior.
+
+Example configuration:
+
+```go
+store, err := NewSnapshotStore(
+    ctx,
+    logger,
+    "/path/to/snapshots",
+    WithPollOptions(storagefs.WithPollInterval(5 * time.Second))
+)
+```
+
+This configuration creates a new `SnapshotStore` that watches the `/path/to/snapshots` directory and checks for changes every 5 seconds.
+
+The `testdata` directory contains YAML files that define feature flags for testing purposes. These files use the following structure:
+
+```yaml
+namespace: production
+flags:
+  - name: example_flag
+    enabled: true
+    # Additional flag properties...
+```
+
+These configuration files are used to simulate real-world snapshot data during testing and development.

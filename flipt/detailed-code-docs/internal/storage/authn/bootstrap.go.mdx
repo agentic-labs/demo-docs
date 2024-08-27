@@ -1,0 +1,109 @@
+---
+title: "bootstrap.go"
+---
+
+## High-level description
+The `bootstrap.go` file in the `internal/storage/authn` package provides functionality to bootstrap the authentication system by creating an initial static authentication token. This token can be used to access the system before other authentication mechanisms are configured.
+
+## Code Structure
+The `Bootstrap` function is the main entry point. It uses the `Store` interface to interact with the authentication data store. The `bootstrapOpt` struct and `BootstrapOption` type are used to configure the bootstrap process.
+
+## References
+- `rpcauth.Method_METHOD_TOKEN`: This constant, defined in the `rpc/flipt/auth` package, represents the token-based authentication method.
+- `storage.ListWithOptions`, `storage.ListMethod`: These functions, defined in the `internal/storage` package, are used to customize the listing of authentications.
+- `CreateAuthenticationRequest`: This struct, defined in the same package, represents a request to create a new authentication entry.
+
+## Symbols
+
+### `Bootstrap`
+#### Description
+This function creates an initial static authentication token if no token-based authentications exist in the system. It uses the provided `Store` to interact with the authentication data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| store | Store | The authentication data store. |
+| opts | ...BootstrapOption | Optional configuration for the bootstrap process. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string |  | The client token of the created authentication, or an empty string if a token already exists. |
+| error |  | An error if the bootstrap process fails. |
+
+#### Internal Logic
+1. **Configure bootstrap options:** Process the provided `BootstrapOption` functions to configure the token's value, expiration, and metadata.
+2. **Check for existing tokens:** List existing authentications using the `ListAuthentications` method of the `Store`, filtering for token-based methods.
+3. **Return if token exists:** If any token-based authentications are found, return an empty string and no error, indicating that bootstrapping is not needed.
+4. **Create authentication request:** Create a `CreateAuthenticationRequest` with the token method, metadata, optional client token, and optional expiration.
+5. **Create authentication:** Call the `CreateAuthentication` method of the `Store` to create the new authentication entry.
+6. **Return result:** Return the generated client token and any error encountered during the process.
+
+## Side Effects
+- **Creates an authentication entry:** If no token-based authentication exists, this function creates one in the provided `Store`.
+
+## Dependencies
+- `context`
+- `fmt`
+- `time`
+- `go.flipt.io/flipt/internal/storage`
+- `go.flipt.io/flipt/rpc/flipt/auth`
+- `google.golang.org/protobuf/types/known/timestamppb`
+
+### `bootstrapOpt`
+#### Description
+A struct to hold configuration options for the bootstrap process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `BootstrapOption`
+#### Description
+A function type representing an option to configure the bootstrap process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `WithToken`
+#### Description
+A `BootstrapOption` function to override the generated token with a provided value.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The token to use for bootstrapping. |
+
+#### Outputs
+None
+
+### `WithExpiration`
+#### Description
+A `BootstrapOption` function to set the expiration time for the generated token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| expiration | time.Duration | The duration after which the token will expire. |
+
+#### Outputs
+None
+
+### `WithMetadataAttribute`
+#### Description
+A `BootstrapOption` function to add a key-value pair to the metadata of the generated token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The key of the metadata attribute. |
+| value | string | The value of the metadata attribute. |
+
+#### Outputs
+None

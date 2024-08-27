@@ -1,0 +1,60 @@
+---
+title: "middleware_test.go"
+---
+
+## High-level description
+The code defines a test suite for the `ErrorHandler` function, which is responsible for handling errors during Open Feature and Flags Repository (OFREP) API requests and translating them into appropriate HTTP responses. The tests cover various error types, including custom errors specific to OFREP operations and general errors, and verify that the correct HTTP status codes and error messages are returned.
+
+## References
+- `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`: This package is used to define the signature of the `ErrorHandler` function, which is a standard error handler for gRPC Gateway.
+- `newFlagsMissingError`, `newFlagMissingError`, `newFlagNotFoundError`, `newBadRequestError`: These functions are not shown in the provided code but are assumed to be helper functions that create specific error types related to OFREP operations.
+
+## Symbols
+### `TestErrorHandler`
+#### Description
+This function defines a table-driven test suite to verify the behavior of the `ErrorHandler` function. It iterates through a set of test cases, each representing a different input error and its expected HTTP response.
+
+#### Inputs
+This symbol is a test function, it takes `t *testing.T` as input.
+
+#### Outputs
+This symbol is a test function, it doesn't return any output.
+
+#### Internal Logic
+The test suite is structured as follows:
+
+1. **Test Cases Definition:**
+   - A slice named `tests` is defined, containing several test cases.
+   - Each test case is a struct with three fields:
+     - `input`: The error that will be passed to the `ErrorHandler`.
+     - `expectedCode`: The expected HTTP status code that should be returned in the response.
+     - `expectedOutput`: The expected JSON-formatted error message in the response body.
+
+2. **Test Execution Loop:**
+   - The code iterates through each test case in the `tests` slice using a `for` loop.
+   - For each test case:
+     - **Subtest Creation:** A subtest is created using `t.Run` with the name "error".
+     - **Response Recorder:** An `httptest.ResponseRecorder` is created to capture the HTTP response.
+     - **ErrorHandler Invocation:** The `ErrorHandler` function is called with the following arguments:
+       - `context.Background()`: A background context.
+       - `nil`: Represents the HTTP request (not used in this test).
+       - `&runtime.JSONPb{}`: A JSON Protobuf marshaler.
+       - `resp`: The response recorder to capture the response.
+       - `nil`: Represents the error handler (not used in this test).
+       - `tt.input`: The error from the current test case.
+     - **Assertions:** Two assertions are made using `assert.Equal`:
+       - The actual HTTP status code in the response recorder (`resp.Code`) is compared to the `expectedCode` from the test case.
+       - The actual response body (`resp.Body.String()`) is compared to the `expectedOutput` from the test case.
+
+3. **Test Case Variations:**
+   - The `tests` slice includes cases for various error types:
+     - `flagsMissingError`: Represents a scenario where required flags are missing.
+     - `flagMissingError`: Represents a scenario where a specific flag key is missing.
+     - `flagNotFoundError`: Represents a scenario where a flag is not found.
+     - `badRequestError`: Represents a generic bad request error with a custom message.
+     - `general failure`: Represents a general error.
+     - gRPC errors with codes `Unauthenticated` and `PermissionDenied`.
+
+4. **Expected Behavior:**
+   - The test suite ensures that the `ErrorHandler` correctly maps different input errors to the appropriate HTTP status codes and error messages.
+   - This helps to ensure that the OFREP API returns consistent and informative error responses to clients.

@@ -1,0 +1,66 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a two-stage build process for a Next.js application. It first builds the application dependencies in a temporary container and then copies the result to a final container, resulting in a smaller image size. The final container exposes port 3000 for the running application.
+
+## Code Structure
+The Dockerfile uses multi-stage builds. The first stage, named "dependencies", is responsible for installing the npm dependencies. The second stage, using the `node:lts` image, copies the built application and dependencies from the previous stage and defines the final runtime environment.
+
+## Symbols
+### `FROM node:lts as dependencies`
+#### Description
+This line starts the first stage of the build, named "dependencies". It uses the `node:lts` image as the base image for this stage.
+
+#### Internal Logic
+This line instructs Docker to use the official Node.js LTS (Long Term Support) image as a base for the first stage of the build process. The `as dependencies` part names this stage "dependencies", allowing us to reference it later.
+
+### `WORKDIR /app`
+#### Description
+Sets the working directory to `/app` within the container for subsequent commands.
+
+#### Internal Logic
+This command is used twice, once in each stage. It ensures that subsequent commands like `COPY` and `RUN` are executed within the `/app` directory inside the respective container.
+
+### `COPY package.json package-lock.json ./`
+#### Description
+Copies the `package.json` and `package-lock.json` files from the host machine to the container's working directory.
+
+#### Internal Logic
+This line copies the specified files from the directory where the Dockerfile is located on the host machine into the `/app` directory inside the "dependencies" stage container. This is done to prepare for the next step, which is installing dependencies.
+
+### `RUN npm ci`
+#### Description
+Installs the project dependencies within the container using `npm ci`.
+
+#### Internal Logic
+This command executes `npm ci` within the container. `npm ci` is a command that installs dependencies from a `package-lock.json` file, ensuring a consistent and reproducible installation.
+
+### `FROM node:lts`
+#### Description
+Starts the second stage of the build, using the `node:lts` image.
+
+#### Internal Logic
+This line initiates the second and final stage of the Docker build. It uses the same `node:lts` image as the base for the final image.
+
+### `COPY . .`
+#### Description
+Copies the entire application code from the host machine to the container's working directory.
+
+#### Internal Logic
+This line copies all files and directories from the build context (usually the directory where the Dockerfile is located) into the `/app` directory of the final image.
+
+### `COPY --from=dependencies /app/node_modules ./node_modules`
+#### Description
+Copies the `node_modules` directory from the "dependencies" stage to the final stage.
+
+#### Internal Logic
+This line leverages the multi-stage build process. It copies the `node_modules` directory, containing all installed dependencies, from the `/app` directory of the "dependencies" stage container into the `/app` directory of the final image. This ensures that the final image contains only the necessary files and not the intermediate build artifacts, reducing its size.
+
+### `EXPOSE 3000`
+#### Description
+Informs Docker that the container listens on port 3000 at runtime.
+
+#### Internal Logic
+This line doesn't publish the port but documents that the container listens on port 3000. This is usually the port used by Next.js applications. You'll need to use `-p` flag with `docker run` to map this port to the host machine.

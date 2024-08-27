@@ -1,0 +1,127 @@
+---
+title: "store_test.go"
+---
+
+## High-level description
+The `store_test.go` file contains unit tests for the `SnapshotStore` struct, which is an implementation of the `storage.SnapshotStore` interface backed by OCI repositories. The tests cover functionalities like subscribing to changes in the repository, retrieving namespaces and flags, and handling updates from the repository.
+
+## Code Structure
+The file defines several test functions, each testing a specific aspect of the `SnapshotStore`. The tests utilize helper functions like `testStore`, `layer`, `testRepository`, and `updateRepoContents` to set up and manipulate the OCI repository for testing purposes.
+
+## Symbols
+
+### `Test_SourceString`
+#### Description
+This test verifies that the `String()` method of the `SnapshotStore` returns the expected string "oci".
+
+#### Inputs
+This test function takes no inputs.
+
+#### Outputs
+This test function has no outputs.
+
+#### Internal Logic
+- It creates a new instance of `SnapshotStore`.
+- It calls the `String()` method of the `SnapshotStore` and asserts that the returned value is equal to "oci".
+
+### `Test_SourceSubscribe`
+#### Description
+This test checks the subscription mechanism of the `SnapshotStore`, ensuring that it can detect and reflect changes made to the underlying OCI repository.
+
+#### Inputs
+This test function takes no inputs.
+
+#### Outputs
+This test function has no outputs.
+
+#### Internal Logic
+- It sets up a test OCI repository and a `SnapshotStore` instance that polls the repository for changes every second.
+- It defines a notification channel (`ch`) that will be closed when a change is detected.
+- It verifies that initially, the store does not contain a specific flag ("foo" in the "production" namespace).
+- It then updates the repository with a new layer containing the flag.
+- The test waits for the notification channel to be closed, indicating that the store has detected the change.
+- Finally, it asserts that the store now contains the newly added flag.
+
+### `testStore`
+#### Description
+This helper function creates and initializes a `SnapshotStore` instance for testing purposes. It sets up a temporary directory for the OCI repository, populates it with an initial layer, and configures the store to poll the repository for changes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| opts | ...containers.Option[SnapshotStore] | Optional configuration options for the `SnapshotStore`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotStore |  | A pointer to the initialized `SnapshotStore` instance. |
+| oras.Target |  | The OCI repository target used by the store. |
+
+#### Internal Logic
+- Creates a temporary directory for the OCI repository.
+- Initializes an OCI repository in the temporary directory and adds an initial layer containing a namespace.
+- Creates a new `SnapshotStore` instance, configuring it with the repository, a reference to the latest tag, and any provided options.
+- Sets up a cleanup function to close the store and remove the temporary directory after the test.
+
+### `layer`
+#### Description
+This helper function creates a new layer for the OCI repository with the given namespace, payload, and media type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ns | string | The namespace associated with the layer. |
+| payload | string | The content of the layer. |
+| mediaType | string | The media type of the layer content. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| func(*testing.T, oras.Target) v1.Descriptor |  | A function that takes a testing object and an OCI repository target, pushes the layer to the repository, and returns a descriptor for the layer. |
+
+#### Internal Logic
+- Creates a new layer descriptor with the provided namespace, payload, and media type.
+- Defines a function that pushes the layer to the provided OCI repository target and returns the layer descriptor.
+
+### `testRepository`
+#### Description
+This helper function creates a temporary OCI repository and populates it with layers based on the provided layer functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| layerFuncs | ...func(*testing.T, oras.Target) v1.Descriptor | Variadic parameter accepting functions that create and push layers to the repository. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| oras.Target |  | The OCI repository target. |
+| string |  | The path to the temporary directory containing the repository. |
+| string |  | The name of the repository. |
+
+#### Internal Logic
+- Creates a temporary directory for the repository.
+- Initializes an OCI repository in the temporary directory.
+- Iterates through the provided layer functions, calling each to create and push a layer to the repository.
+- Returns the repository target, directory path, and repository name.
+
+### `updateRepoContents`
+#### Description
+This helper function updates the contents of an OCI repository by creating a new manifest with the provided layers and tagging it as "latest".
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object. |
+| target | oras.Target | The OCI repository target to update. |
+| layerFuncs | ...func(*testing.T, oras.Target) v1.Descriptor | Variadic parameter accepting functions that create and push layers to the repository. |
+
+#### Outputs
+This function has no outputs.
+
+#### Internal Logic
+- Iterates through the provided layer functions, calling each to create and push a layer to the repository.
+- Creates a new manifest with the collected layers and the "flipt/features" media type.
+- Tags the new manifest as "latest" in the repository.

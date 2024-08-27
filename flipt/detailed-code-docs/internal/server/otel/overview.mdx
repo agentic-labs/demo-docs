@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/otel` directory contains code related to OpenTelemetry (OTel) integration for Flipt's server-side operations. It provides functionality for instrumenting the server with tracing and metrics data, as well as no-op implementations for disabling tracing when needed.
+
+## What does it do?
+This directory implements the following functionalities:
+
+1. Defines a set of OpenTelemetry attribute keys specific to Flipt's feature flag evaluations and server operations. These attributes are used to add context and details to spans and metrics, enhancing the observability of Flipt's behavior.
+
+2. Provides a no-op span exporter that can be used to discard all received spans. This is useful for testing or disabling tracing without modifying application code.
+
+3. Implements a no-op tracer provider that can be used to disable tracing functionality when desired, such as in testing or development environments.
+
+## Key Files
+
+### attributes.go
+This file defines a set of OpenTelemetry attribute keys used for instrumenting Flipt's server-side operations. These attributes provide context for feature flag evaluations, including information such as:
+
+- Whether a feature flag evaluation resulted in a match
+- The name and namespace of the feature flag being evaluated
+- Whether the feature flag is enabled
+- The segment key(s) associated with a feature flag evaluation
+- The reason for the outcome of a feature flag evaluation
+- The value returned by a feature flag evaluation
+- The ID of the entity for which the feature flag is being evaluated
+- The ID of the request that triggered the feature flag evaluation
+
+Example usage:
+```go
+span.SetAttributes(
+    AttributeFlag.String(flag.Key),
+    AttributeNamespace.String(flag.Namespace),
+    AttributeFlagEnabled.Bool(flag.Enabled),
+    AttributeMatch.Bool(matched),
+)
+```
+
+### noop_exporter.go
+This file defines a "no-op" span exporter that implements the `trace.SpanExporter` interface. It discards all received spans, which is useful for testing or disabling tracing without modifying application code.
+
+Example usage:
+```go
+exporter := NewNoopSpanExporter()
+// Use exporter in trace provider configuration
+```
+
+### noop_provider.go
+This file implements a no-operation `TracerProvider` that can be used to disable tracing functionality. It's particularly useful in testing or development environments where tracing is not needed.
+
+Example usage:
+```go
+provider := NewNoopProvider()
+// Use provider instead of a real tracer provider
+```
+
+## Dependencies
+The code in this directory primarily depends on the OpenTelemetry Go SDK:
+
+1. `go.opentelemetry.io/otel/attribute` (version not specified): Provides types for defining and working with OTel attributes.
+2. `go.opentelemetry.io/otel/semconv/v1.26.0`: Defines semantic conventions for OTel, including specific attributes for feature flags.
+3. `go.opentelemetry.io/otel/sdk/trace` (version not specified): Provides the OpenTelemetry tracing SDK, including interface definitions for span exporters and tracer providers.
+
+These dependencies were chosen to integrate Flipt with the OpenTelemetry observability framework, allowing for standardized tracing and metrics collection.
+
+## Configuration
+This directory does not contain any specific configuration files or environment variables. The OpenTelemetry integration is likely configured elsewhere in the Flipt server code, using the components defined in this directory.
+
+In summary, the `internal/server/otel` directory provides the necessary building blocks for integrating OpenTelemetry tracing into Flipt's server operations, with a focus on feature flag evaluation observability. It also offers no-op implementations for scenarios where tracing needs to be disabled or ignored.

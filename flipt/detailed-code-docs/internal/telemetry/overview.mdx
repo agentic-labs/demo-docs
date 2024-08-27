@@ -1,0 +1,109 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/telemetry` directory contains code responsible for collecting and reporting anonymous usage data for Flipt. This telemetry system helps the Flipt team understand how their software is being used and aids in improving future versions. The main components include a `Reporter` struct that handles the telemetry reporting process and associated functions for creating, running, and shutting down the reporter.
+
+## What does it do?
+The telemetry system in this directory performs the following tasks:
+
+1. Periodically collects anonymous usage data about the Flipt instance, including system information, configuration settings, and feature usage.
+2. Sends this data to a Segment backend for analysis.
+3. Maintains a local state file to store the last report timestamp and a unique identifier for the Flipt instance.
+4. Provides mechanisms to enable or disable telemetry reporting based on configuration.
+5. Handles the lifecycle of the reporting process, including initialization, periodic reporting, and graceful shutdown.
+
+This system operates in the background of a Flipt instance, sending reports every 4 hours by default. It respects user privacy by allowing telemetry to be disabled and by anonymizing the data sent.
+
+## Key Files
+
+### telemetry.go
+This file contains the core implementation of the telemetry system. Key components include:
+
+- `Reporter` struct: Manages the telemetry reporting process.
+- `NewReporter` function: Creates a new `Reporter` instance.
+- `Reporter.Run` method: Starts the telemetry reporting loop.
+- `Reporter.Shutdown` method: Stops the reporting loop and closes connections.
+- `Reporter.report` method: Collects and sends telemetry data.
+- `Reporter.ping` method: Sends a ping event with telemetry data to Segment.
+
+### telemetry_test.go
+This file contains unit tests for the telemetry package, covering various scenarios such as:
+
+- Creating a new reporter
+- Shutting down the reporter
+- Sending ping events with different configurations
+- Handling existing telemetry state files
+- Testing telemetry when it's disabled
+- Using custom state directories
+
+## Dependencies
+The telemetry system relies on several external libraries and internal packages:
+
+1. `gopkg.in/segmentio/analytics-go.v3`: Used for sending data to the Segment analytics service.
+2. `go.uber.org/zap`: Provides logging functionality.
+3. `go.flipt.io/flipt/internal/config`: Used for accessing Flipt configuration.
+4. `go.flipt.io/flipt/internal/info`: Provides information about the Flipt instance.
+
+## Configuration
+The telemetry system can be configured through the Flipt configuration. Key configurable aspects include:
+
+- Enabling or disabling telemetry
+- Setting the analytics key and endpoint for Segment
+- Specifying a custom state directory for storing telemetry data
+
+The system respects these configuration settings and adjusts its behavior accordingly.
+
+## Code Snippets
+Here's an example of how the `Reporter` is created:
+
+```go
+func NewReporter(cfg config.Config, logger *zap.Logger, analyticsKey, analyticsEndpoint string, info info.Flipt) (*Reporter, error) {
+    client, err := segment.NewWithConfig(analyticsKey, segment.Config{
+        Endpoint: analyticsEndpoint,
+        Logger:   segmentLogger{logger.Named("segment")},
+    })
+    if err != nil {
+        return nil, fmt.Errorf("creating segment client: %w", err)
+    }
+
+    return &Reporter{
+        cfg:    cfg,
+        logger: logger,
+        client: client,
+        info:   info,
+    }, nil
+}
+```
+
+And here's how the reporting loop is implemented:
+
+```go
+func (r *Reporter) Run(ctx context.Context) {
+    ticker := time.NewTicker(4 * time.Hour)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case &lt;-ctx.Done():
+            return
+        case &lt;-r.shutdown:
+            return
+        case &lt;-ticker.C:
+            if err := r.report(ctx); err != nil {
+                r.logger.Error("error reporting telemetry", zap.Error(err))
+                r.consecutiveFailures++
+                if r.consecutiveFailures &gt;= maxConsecutiveFailures {
+                    r.logger.Error("max consecutive failures reached, stopping telemetry reporting")
+                    return
+                }
+            } else {
+                r.consecutiveFailures = 0
+            }
+        }
+    }
+}
+```
+
+These snippets illustrate the core functionality of the telemetry system, showing how it's initialized and how it operates in the background of a Flipt instance.

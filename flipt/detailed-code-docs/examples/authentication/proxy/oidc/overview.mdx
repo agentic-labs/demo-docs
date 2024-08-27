@@ -1,0 +1,66 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains configuration files and a Docker Compose setup for demonstrating Flipt's OpenID Connect (OIDC) proxy authentication functionality. The setup includes Flipt, a Dex identity provider, and an Nginx reverse proxy, all working together to provide a secure authentication flow for accessing the Flipt application.
+
+## What does it do?
+This setup creates a local environment where:
+
+1. Flipt, an feature flag management tool, is running behind an Nginx reverse proxy.
+2. Dex, an identity provider, is set up to handle OIDC authentication.
+3. When a user tries to access Flipt, they are redirected to Dex for authentication.
+4. After successful authentication, the user is granted access to Flipt.
+
+This demonstrates how Flipt can be secured using OIDC authentication in a reverse proxy setup, which is a common scenario in production environments.
+
+## Entry points
+The main entry point for this setup is the `docker-compose.yml` file, which defines the services and their configurations. The key files and their roles are:
+
+1. `docker-compose.yml`: Orchestrates the entire setup, defining services for Flipt, Dex, and Nginx.
+2. `dex.config.yml`: Configures the Dex identity provider.
+3. `flipt.config.yml`: Sets up Flipt's authentication settings.
+4. `nginx.conf`: Configures Nginx as a reverse proxy.
+5. `features.yml`: Defines example feature flags for Flipt.
+
+The data flow in this setup is as follows:
+1. User requests -&gt; Nginx reverse proxy
+2. Nginx -&gt; Flipt (if authenticated) or Dex (for authentication)
+3. Dex -&gt; Flipt (after successful authentication)
+4. Flipt -&gt; User (serving feature flag data)
+
+## Dependencies
+This setup relies on the following Docker images:
+
+1. `flipt/flipt:latest`: The Flipt application for feature flag management.
+2. `ghcr.io/dexidp/dex:latest-distroless`: The Dex identity provider for OIDC authentication.
+3. `nginx:alpine`: The Nginx web server acting as a reverse proxy.
+
+## Configuration
+The setup uses several configuration files:
+
+1. `dex.config.yml`: Configures Dex as an OIDC provider, including:
+   - Issuer URL: `http://localhost:5556/dex`
+   - Storage: SQLite3
+   - Web server settings
+   - Static client configuration for Flipt
+   - Mock connector for testing
+   - Password database with a sample user
+
+2. `flipt.config.yml`: Sets up Flipt's authentication, including:
+   - Enabling authentication
+   - Configuring session parameters
+   - Setting up OIDC with Dex as the provider
+
+3. `features.yml`: Defines a sample feature flag named "example_flag" in the "default" namespace.
+
+4. `nginx.conf`: (Not provided in the summary, but mentioned in `docker-compose.yml`) Configures Nginx as a reverse proxy for Flipt.
+
+Key configuration details:
+
+- Flipt is served at the `/flipt` path instead of the root.
+- OIDC callback URL is set to `http://localhost:8080/flipt/auth/v1/method/oidc/dex/callback`.
+- A sample user is configured in Dex with email "admin@example.com" and password "password".
+
+This setup provides a comprehensive example of how to integrate Flipt with OIDC authentication in a reverse proxy scenario, which can be used as a starting point for more complex production deployments.

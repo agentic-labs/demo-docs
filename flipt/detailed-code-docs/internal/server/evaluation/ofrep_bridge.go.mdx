@@ -1,0 +1,49 @@
+---
+title: "ofrep_bridge.go"
+---
+
+## High-level description
+The `OFREPFlagEvaluation` function serves as a bridge between the Open Feature Repository (OFREP) and Flipt's internal flag evaluation logic. It receives an evaluation request from OFREP, retrieves the corresponding flag from the Flipt store, and delegates the evaluation to the appropriate handler based on the flag type (variant or boolean). The function then constructs an OFREP-compatible response with the evaluation result and relevant metadata.
+
+## References
+- `s.store`: This likely refers to a storage interface used to interact with Flipt's data store.
+- `s.variant`: This is a function that handles the evaluation of variant flags.
+- `s.boolean`: This is a function that handles the evaluation of boolean flags.
+
+## Symbols
+### `OFREPFlagEvaluation`
+#### Description
+This function acts as a bridge between OFREP and Flipt's internal flag evaluation logic. It retrieves a flag from the store, evaluates it based on its type, and returns an OFREP-compatible response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| input | `ofrep.EvaluationBridgeInput` | The evaluation request from OFREP, containing the namespace, flag key, entity ID, and evaluation context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output1 | `ofrep.EvaluationBridgeOutput` | The evaluation result in OFREP format, including the flag key, reason, variant, value, and metadata. |
+| output2 | `error` | An error if any occurred during the process. |
+
+#### Internal Logic
+1. **Retrieve Flag:** Fetches the flag data from the store based on the provided namespace and flag key.
+2. **Span Creation and Attributes:** Creates an OpenTelemetry span for tracing and sets attributes related to the namespace, flag key, and provider.
+3. **Evaluation Request:** Constructs an internal evaluation request (`rpcevaluation.EvaluationRequest`) with the necessary information.
+4. **Flag Type Handling:**
+   - **Variant Flag:** If the flag is a variant flag, it calls the `s.variant` function to perform the evaluation. The response includes the match result, variant key, reason, segment keys, and variant attachment.
+   - **Boolean Flag:** If the flag is a boolean flag, it calls the `s.boolean` function to perform the evaluation. The response includes the enabled status and reason.
+   - **Unsupported Flag:** If the flag type is not supported, it returns an error.
+5. **Span Attributes (Post-Evaluation):**  Adds attributes to the span based on the evaluation result, including match status, variant, reason, and segments.
+6. **Metadata Construction:** Creates a metadata map containing segment keys and variant attachment (if applicable).
+7. **Response Construction:** Builds and returns an `ofrep.EvaluationBridgeOutput` with the evaluation result, reason, variant, value, and metadata.
+
+## Error Handling
+The function returns an error if any of the following occur:
+- Error retrieving the flag from the store.
+- Error during the evaluation of the flag (delegated to `s.variant` or `s.boolean`).
+- Unsupported flag type encountered.
+
+## Logging
+The function utilizes OpenTelemetry for tracing, creating a span to track the evaluation process. Span attributes are set at various stages to provide insights into the request and the evaluation result.

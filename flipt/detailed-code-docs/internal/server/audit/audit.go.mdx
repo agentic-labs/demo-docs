@@ -1,0 +1,128 @@
+---
+title: "audit.go"
+---
+
+## High-level description
+The `audit.go` file defines the audit logging mechanism for the Flipt server. It introduces a `Sink` interface for sending audit events to various destinations and a `SinkSpanExporter` that implements OpenTelemetry's `SpanExporter` interface to intercept and process span events, converting them into audit events and sending them to configured sinks.
+
+## Code Structure
+The `SinkSpanExporter` uses the `Sink` interface to send audit events. The `Event` struct defines the structure of an audit event. The `decodeToEvent` function converts OpenTelemetry span events to `Event` objects.
+
+## References
+- `sdktrace.ReadOnlySpan`: Used to access span events and attributes.
+- `Event`: Represents an audit event.
+- `Sink`: Interface for audit event destinations.
+
+## Symbols
+
+### `Sink`
+#### Description
+The `Sink` interface defines the contract for different audit log destinations. It requires implementations to have a `SendAudits` method for sending a batch of events and a `Close` method for closing the sink.
+
+#### Inputs
+N/A - This is an interface definition.
+
+#### Outputs
+N/A - This is an interface definition.
+
+### `SinkSpanExporter`
+#### Description
+`SinkSpanExporter` implements OpenTelemetry's `SpanExporter` interface to capture span events, decode them into audit events, and send them to configured sinks.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `NewSinkSpanExporter`
+#### Description
+`NewSinkSpanExporter` is the constructor function for `SinkSpanExporter`. It takes a logger and a list of `Sink` implementations as arguments and returns a new `SinkSpanExporter` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for recording events. |
+| sinks | `[]Sink` | List of sinks to send audit events to. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| EventExporter | `EventExporter` | An instance of `SinkSpanExporter` implementing the `EventExporter` interface. |
+
+### `ExportSpans`
+#### Description
+`ExportSpans` is part of the `SpanExporter` interface implementation. It iterates through the provided spans and their events, attempts to decode each event into an `Event` object, and sends the collected events to the configured sinks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context for the operation. |
+| spans | `[]sdktrace.ReadOnlySpan` | List of spans to export. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any operation fails during the export process. |
+
+#### Internal Logic
+1. Iterates through each span in the provided list.
+2. For each span, iterates through its events.
+3. Attempts to decode each event into an `Event` object using `decodeToEvent`.
+4. Appends successfully decoded events to a slice.
+5. Calls `SendAudits` to send the collected events to the configured sinks.
+
+### `Shutdown`
+#### Description
+`Shutdown` is part of the `SpanExporter` interface implementation. It closes all registered sinks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any sink fails to close. |
+
+#### Internal Logic
+1. Iterates through each registered sink.
+2. Calls the `Close` method on each sink.
+3. Collects and returns any errors encountered during the process.
+
+### `SendAudits`
+#### Description
+`SendAudits` sends a batch of audit events to all configured sinks.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context for the operation. |
+| es | `[]Event` | List of audit events to send. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any sink fails to send the events. |
+
+#### Internal Logic
+1. Checks if there are any events to send.
+2. Iterates through each configured sink.
+3. Calls the `SendAudits` method on each sink with the provided events.
+4. Logs any errors encountered during the process.
+
+## Dependencies
+- `context`
+- `errors`
+- `fmt`
+- `io`
+- `github.com/hashicorp/go-multierror`
+- `sdktrace "go.opentelemetry.io/otel/sdk/trace"`
+- `go.uber.org/zap`
+
+## Error Handling
+The code uses `error` values to indicate failures in various operations. It also leverages the `github.com/hashicorp/go-multierror` library to aggregate and return multiple errors.
+
+## Logging
+The code uses a `*zap.Logger` instance to log debug and error messages during the audit event processing and sending.

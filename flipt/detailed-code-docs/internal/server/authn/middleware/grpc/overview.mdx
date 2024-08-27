@@ -1,0 +1,79 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains gRPC middleware implementations for authentication and authorization in the Flipt server. The middleware provides interceptors for various authentication methods, including JWT, client tokens, and OIDC, as well as authorization checks based on email patterns and namespace matching.
+
+## What does it do?
+The middleware in this directory performs the following key functions:
+
+1. Authentication:
+   - Validates JWT tokens in request headers
+   - Authenticates requests using client tokens
+   - Supports OIDC authentication
+
+2. Authorization:
+   - Checks if authenticated users' emails match allowed patterns
+   - Verifies if users have access to requested namespaces
+
+3. Request processing:
+   - Extracts authentication information from request metadata
+   - Adds authentication data to the request context
+   - Enforces authentication requirements on protected endpoints
+
+4. Error handling:
+   - Returns appropriate gRPC error codes for authentication and authorization failures
+
+## Key Files
+
+### middleware.go
+This file contains the core implementation of the gRPC interceptors and related utilities. Key components include:
+
+1. Interceptors:
+   - `AuthenticationRequiredInterceptor`: Ensures all requests have authentication data
+   - `JWTAuthenticationInterceptor`: Authenticates requests using JWT tokens
+   - `ClientTokenAuthenticationInterceptor`: Authenticates requests using client tokens
+   - `EmailMatchingInterceptor`: Verifies user emails against allowed patterns
+   - `NamespaceMatchingInterceptor`: Checks if users have access to requested namespaces
+
+2. Utility functions:
+   - `GetAuthenticationFrom`: Extracts authentication data from context
+   - `ContextWithAuthentication`: Adds authentication data to context
+   - `clientTokenFromMetadata`: Extracts client token from request metadata
+   - `jwtFromMetadata`: Extracts JWT token from request metadata
+
+### middleware_test.go
+This file contains comprehensive unit tests for the interceptors and utility functions defined in `middleware.go`. It uses table-driven tests to cover various scenarios and edge cases for each interceptor.
+
+## Dependencies
+The middleware relies on the following key external dependencies:
+
+1. `go.uber.org/zap`: For structured logging
+2. `google.golang.org/grpc`: For gRPC server and client interactions
+3. `github.com/grpc-ecosystem/go-grpc-middleware`: For chaining multiple interceptors
+4. `go.flipt.io/flipt/rpc/flipt/auth`: For authentication-related message types
+
+## Configuration
+The middleware can be configured using the `InterceptorOptions` struct, which allows for:
+
+1. Skipping authentication for specific server instances
+2. Customizing JWT validation rules
+3. Specifying allowed email patterns for OIDC authentication
+
+Example configuration:
+
+```go
+options := []containers.Option[InterceptorOptions]{
+    WithServerSkipsAuthentication(myServer),
+}
+
+jwtInterceptor := JWTAuthenticationInterceptor(
+    logger,
+    jwtValidator,
+    jwt.Expected{Issuer: "https://example.com"},
+    options...,
+)
+```
+
+The middleware is designed to be flexible and can be easily integrated into the Flipt server's gRPC setup, providing a robust authentication and authorization layer for API endpoints.

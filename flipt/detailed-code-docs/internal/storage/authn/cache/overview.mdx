@@ -1,0 +1,75 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/storage/authn/cache` directory contains code for implementing a caching layer for authentication storage in the Flipt project. It provides a wrapper around the main authentication store, using a caching mechanism to improve performance by reducing the number of calls to the underlying storage.
+
+## What does it do?
+This caching layer serves as an intermediary between the application and the authentication storage. When the application requests authentication data using a client token, the cache is first checked. If the data is found in the cache, it's returned immediately, avoiding a potentially more expensive database query. If the data is not in the cache, it's fetched from the underlying storage, then stored in the cache for future requests before being returned to the application.
+
+The cache also handles expiration of authentication data. When an authentication is expired, it's removed from both the underlying storage and the cache, ensuring consistency between the two.
+
+## Key Files
+
+1. `cache.go`: This is the main file implementing the caching functionality. It defines the `Store` struct, which wraps the underlying authentication store and the caching mechanism. It provides methods for retrieving authentication data by client token and expiring authentication data.
+
+2. `cache_test.go`: This file contains unit tests for the caching functionality, ensuring that the cache behaves correctly in various scenarios, such as cache hits, cache misses, and cache invalidation.
+
+3. `support_test.go`: This file provides mock implementations of the cache and authentication store interfaces, which are used in the unit tests to simulate different behaviors and scenarios.
+
+## Dependencies
+The caching layer relies on several external packages:
+
+1. `go.flipt.io/flipt/internal/cache`: Provides the `Cacher` interface used for the actual caching mechanism.
+2. `go.flipt.io/flipt/internal/storage/authn`: Defines the `Store` interface that the caching layer wraps.
+3. `go.flipt.io/flipt/rpc/flipt/auth`: Contains the Protobuf definitions for authentication data.
+4. `go.uber.org/zap`: Used for logging.
+5. `google.golang.org/protobuf`: Used for serializing and deserializing Protobuf messages.
+
+## Configuration
+The caching layer doesn't require specific configuration files or environment variables. Its behavior is determined by the underlying caching mechanism (`cache.Cacher`) and authentication store (`authn.Store`) provided during initialization.
+
+## Code Snippets
+
+Here's a key snippet from `cache.go` showing how the `GetAuthenticationByClientToken` method works:
+
+```go
+func (s *Store) GetAuthenticationByClientToken(ctx context.Context, clientToken string) (*authrpc.Authentication, error) {
+    hashedToken := authn.HashClientToken(clientToken)
+    key := fmt.Sprintf("authn:token:%s", hashedToken)
+
+    cached, err := s.cacher.Get(ctx, key)
+    if err == nil {
+        var auth authrpc.Authentication
+        if err := proto.Unmarshal(cached, &auth); err != nil {
+            s.logger.Error("failed to unmarshal cached authentication", zap.Error(err))
+        } else {
+            return &auth, nil
+        }
+    }
+
+    auth, err := s.Store.GetAuthenticationByClientToken(ctx, clientToken)
+    if err != nil {
+        return nil, err
+    }
+
+    data, err := proto.Marshal(auth)
+    if err != nil {
+        s.logger.Error("failed to marshal authentication", zap.Error(err))
+    } else {
+        if err := s.cacher.Set(ctx, key, data); err != nil {
+            s.logger.Error("failed to cache authentication", zap.Error(err))
+        }
+        if err := s.cacher.Set(ctx, fmt.Sprintf("authn:id:%s", auth.Id), []byte(hashedToken)); err != nil {
+            s.logger.Error("failed to cache authentication id", zap.Error(err))
+        }
+    }
+
+    return auth, nil
+}
+```
+
+This method first checks the cache for the authentication data. If it's not found, it retrieves the data from the underlying store and then caches it for future requests.
+
+The caching layer significantly improves the performance of authentication-related operations by reducing the number of calls to the underlying storage, while still maintaining consistency through proper cache invalidation when authentication data is expired.

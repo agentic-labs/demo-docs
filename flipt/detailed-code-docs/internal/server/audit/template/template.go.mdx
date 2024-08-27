@@ -1,0 +1,121 @@
+---
+title: "template.go"
+---
+
+## High-level description
+The `template.go` file defines a sink for the audit logging system in Flipt. This sink sends audit events to a configurable list of webhook endpoints using predefined templates for the request body and headers. 
+
+It provides a mechanism to format and send audit log data to external systems for further processing or storage.
+
+## Code Structure
+The code defines a `Sink` struct that implements the `audit.Sink` interface. The `Sink` struct holds a logger and a list of `Executer` instances, each representing a configured webhook template. The `NewSink` function creates a new `Sink` instance, initializing it with webhook templates from the configuration. The `SendAudits` method iterates through the provided audit events and executes each webhook template with the event data.
+
+## References
+- `audit.Sink`: An interface defining the contract for audit log sinks.
+- `template.Executer`: An interface for executing webhook templates.
+- `config.WebhookTemplate`: A struct representing the configuration for a webhook template.
+
+## Symbols
+
+### `Sink`
+#### Description
+The `Sink` struct represents a template-based webhook sink for audit events. It holds a logger and a list of webhook executors.
+
+#### Inputs
+None.
+
+#### Outputs
+None.
+
+#### Internal Logic
+The `Sink` struct implements the `audit.Sink` interface, providing `SendAudits`, `Close`, and `String` methods.
+
+### `NewSink`
+#### Description
+The `NewSink` function creates a new `Sink` instance with the provided logger, webhook templates, and maximum backoff duration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance for recording events. |
+| webhookTemplates | `[]config.WebhookTemplate` | A slice of webhook template configurations. |
+| maxBackoffDuration | `time.Duration` | The maximum backoff duration for retrying failed webhook requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| audit.Sink | `audit.Sink` | A new instance of the `Sink` struct. |
+| error | `error` | An error if the sink creation fails. |
+
+#### Internal Logic
+1. Creates a slice of `Executer` instances, one for each webhook template.
+2. For each webhook template, creates a new `WebhookTemplate` executor with the template URL, body, headers, and maximum backoff duration.
+3. Returns a new `Sink` instance with the logger and the created executors.
+
+### `(*Sink) SendAudits`
+#### Description
+The `SendAudits` method sends the provided audit events to the configured webhook endpoints using the defined templates.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| events | `[]audit.Event` | A slice of audit events to send. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any of the webhook requests fail. |
+
+#### Internal Logic
+1. Iterates through each provided audit event.
+2. For each event, iterates through the configured webhook executors.
+3. Executes the webhook template with the event data.
+4. If any webhook request fails, logs an error and appends the error to a multi-error.
+5. Returns the multi-error if any errors occurred, otherwise returns nil.
+
+### `(*Sink) Close`
+#### Description
+The `Close` method closes the sink, releasing any resources.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | Always returns nil. |
+
+#### Internal Logic
+Currently, this method does nothing and always returns nil.
+
+### `(*Sink) String`
+#### Description
+The `String` method returns a string representation of the sink type.
+
+#### Inputs
+None.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string "templates", representing the sink type. |
+
+#### Internal Logic
+Returns the string "templates".
+
+## Side Effects
+- Sends HTTP requests to the configured webhook endpoints.
+- Logs errors if webhook requests fail.
+
+## Dependencies
+- `context`
+- `fmt`
+- `time`
+- `github.com/hashicorp/go-multierror`
+- `go.flipt.io/flipt/internal/config`
+- `go.flipt.io/flipt/internal/server/audit`
+- `go.uber.org/zap`
+
+## Error Handling
+The `SendAudits` method uses `multierror.Append` to collect errors encountered while sending audit events to webhooks. This ensures that all errors are reported, even if some webhooks succeed.

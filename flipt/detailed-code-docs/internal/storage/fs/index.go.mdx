@@ -1,0 +1,204 @@
+---
+title: "index.go"
+---
+
+## High-level description
+The `index.go` file defines the functionality for loading and using a Flipt index file (`.flipt.yml`). This index file allows users to specify include and exclude patterns using globs to filter the files loaded by Flipt from a filesystem source.
+
+## Code Structure
+The `FliptIndex` struct holds the parsed include and exclude globs. The `OpenFliptIndex` function attempts to load an index from an `fs.FS`. If found, it parses the index using `ParseFliptIndex`. If not found, it uses a default index. The `Match` function determines if a given path should be included based on the index.
+
+## References
+This code references the `glob` package for glob pattern matching and the `yaml.v3` package for parsing the YAML index file.
+
+## Symbols
+
+### `IndexFileName`
+#### Description
+A constant string representing the name of the Flipt index file (`.flipt.yml`).
+
+### `indexVersion`
+#### Description
+A constant string representing the current version of the Flipt index file format (`1.0`).
+
+### `FliptIndex`
+#### Description
+A struct representing a Flipt index, containing compiled include and exclude glob patterns.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The `FliptIndex` struct stores two slices of `glob.Glob`: `includes` and `excludes`. These are populated by the `newFliptIndex` function.
+
+### `DefaultFliptIndex`
+#### Description
+Returns a new `FliptIndex` instance with default include patterns.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | *FliptIndex | A pointer to a new `FliptIndex` instance with default include patterns. |
+| err | error | An error if the default index cannot be created. |
+
+#### Internal Logic
+The function defines a default `fliptIndex` with a version and include patterns for common Flipt feature file names. It then calls `newFliptIndex` to parse the globs and create the `FliptIndex` instance.
+
+### `OpenFliptIndex`
+#### Description
+Attempts to open and parse a Flipt index file from the provided `fs.FS`. If the file is not found, it returns a default index.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger instance for recording debug information. |
+| src | fs.FS | The filesystem to read the index file from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | *FliptIndex | A pointer to the parsed `FliptIndex` instance or a default index. |
+| err | error | An error if opening or parsing the index file fails. |
+
+#### Internal Logic
+1. Attempts to open the `IndexFileName` from the provided `fs.FS`.
+2. If the file exists, it's parsed using `ParseFliptIndex`.
+3. If the file doesn't exist, a debug log message is emitted, and `DefaultFliptIndex` is called to return a default index.
+4. Any other errors encountered during file opening are returned.
+
+### `ParseFliptIndex`
+#### Description
+Parses a Flipt index from the provided `io.Reader`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| r | io.Reader | The reader to read the index data from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | *FliptIndex | A pointer to the parsed `FliptIndex` instance. |
+| err | error | An error if parsing the index fails. |
+
+#### Internal Logic
+1. Reads the index data from the `io.Reader` and attempts to parse it as YAML.
+2. If parsing is successful, it calls `newFliptIndex` to compile the glob patterns and create the `FliptIndex` instance.
+3. Any errors encountered during parsing are returned.
+
+### `(*FliptIndex) Match`
+#### Description
+Determines if a given path should be included based on the index's include and exclude patterns.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to check against the index. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool |  | True if the path should be included, false otherwise. |
+
+#### Internal Logic
+1. Iterates through each include glob pattern in the `FliptIndex`.
+2. If the path matches an include pattern, it then checks if it matches any exclude patterns.
+3. If the path matches an include pattern and doesn't match any exclude patterns, it returns `true`.
+4. If the path doesn't match any include patterns or matches an exclude pattern, it returns `false`.
+
+### `newFliptIndex`
+#### Description
+Compiles the glob patterns from a `fliptIndex` struct and returns a new `FliptIndex` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| index | fliptIndex | The `fliptIndex` struct containing the glob patterns to compile. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| filter | *FliptIndex | A pointer to the new `FliptIndex` instance with compiled glob patterns. |
+| err | error | An error if compiling any of the glob patterns fails. |
+
+#### Internal Logic
+1. Creates a new `FliptIndex` instance.
+2. Iterates through the `Include` and `Exclude` slices of the `fliptIndex` struct.
+3. For each pattern, it attempts to compile it using `glob.Compile`.
+4. If compilation is successful, the compiled glob is added to the respective slice in the `FliptIndex` instance.
+5. Any errors encountered during glob compilation are returned.
+
+### `fliptIndex`
+#### Description
+A struct representing the structure of the `.flipt.yml` index file.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The `fliptIndex` struct defines three fields:
+- `Version`: The version of the index file format.
+- `Include`: A slice of strings representing the include glob patterns.
+- `Exclude`: A slice of strings representing the exclude glob patterns.
+
+### `defaultFliptIndex`
+#### Description
+Returns a `fliptIndex` struct with default values.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fliptIndex |  | A `fliptIndex` struct with the default version and include patterns for common Flipt feature file names. |
+
+#### Internal Logic
+The function defines a `fliptIndex` struct with the current `indexVersion` and a set of default include patterns.
+
+### `parseFliptIndex`
+#### Description
+Parses a Flipt index from the provided `io.Reader` and returns a `fliptIndex` struct.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| r | io.Reader | The reader to read the index data from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| idx | fliptIndex | The parsed `fliptIndex` struct. |
+| err | error | An error if parsing the index fails. |
+
+#### Internal Logic
+1. Creates a new `fliptIndex` struct with the default `indexVersion`.
+2. Creates a new YAML decoder from the provided `io.Reader`.
+3. Attempts to decode the YAML data into the `fliptIndex` struct.
+4. Returns the `fliptIndex` struct and any errors encountered during decoding.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| errors | Used for error handling and wrapping. |
+| fmt | Used for string formatting. |
+| io | Used for input/output operations, specifically `io.Reader`. |
+| io/fs | Used for interacting with the filesystem. |
+| github.com/gobwas/glob | Used for glob pattern matching. |
+| go.uber.org/zap | Used for logging. |
+| gopkg.in/yaml.v3 | Used for parsing YAML data. |
+
+## Error Handling
+The code uses the `errors` package for error handling. Errors encountered during file operations, glob compilation, and YAML parsing are wrapped and returned.
+
+## Logging
+The `OpenFliptIndex` function uses a `zap.Logger` instance to log debug information when a `.flipt.yml` file is not found and the default index is used.

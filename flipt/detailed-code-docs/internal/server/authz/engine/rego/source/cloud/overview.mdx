@@ -1,0 +1,96 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains code for fetching authorization policies and data from a remote Flipt cloud instance. It implements the `source.PolicySource` and `source.DataSource` interfaces, allowing the Rego authorization engine to retrieve and update policies and data from the cloud.
+
+## What does it do?
+The code in this directory enables the Flipt server to communicate with a remote Flipt cloud instance to fetch and update authorization policies and data. It provides two main components:
+
+1. A CloudPolicySource: This fetches authorization policies from the cloud.
+2. A CloudDataSource: This fetches authorization data from the cloud.
+
+Both components use HTTP requests to communicate with the Flipt cloud API, handling authentication, caching, and error scenarios. The fetched policies and data are then used by the Rego authorization engine to make authorization decisions.
+
+## Key Files
+
+### cloud.go
+This file contains the main implementation of the cloud policy and data sources. It defines the following key components:
+
+1. `CloudPolicySource`: A struct that implements the `source.PolicySource` interface for fetching policies from the cloud.
+2. `CloudDataSource`: A struct that implements the `source.DataSource` interface for fetching data from the cloud.
+3. `fetch`: A helper function that makes HTTP GET requests to the Flipt cloud API, handling authentication and caching.
+
+The `Get` methods of both `CloudPolicySource` and `CloudDataSource` use the `fetch` function to retrieve policies and data, respectively. They handle caching using ETags and can return a `source.ErrNotModified` error if the resource hasn't changed since the last fetch.
+
+### cloud_test.go
+This file contains unit tests for the `fetch` function, covering various scenarios such as successful fetches, different ETag values, and error responses from the server. It uses table-driven tests and a mock HTTP server to simulate different API responses.
+
+## Dependencies
+The code relies on the following external libraries and packages:
+
+1. Standard Go libraries:
+   - `context`: For managing request contexts
+   - `encoding/json`: For parsing JSON responses
+   - `fmt`: For string formatting and error wrapping
+   - `io`: For reading response bodies
+   - `net/http`: For making HTTP requests
+   - `time`: For setting HTTP client timeouts
+
+2. Internal Flipt packages:
+   - `go.flipt.io/flipt/internal/server/authz/engine/rego/source`: Provides the `Hash` type and `ErrNotModified` error
+
+3. Testing libraries (in cloud_test.go):
+   - `github.com/stretchr/testify/assert`: For making test assertions
+   - `net/http/httptest`: For creating a test HTTP server
+
+## Configuration
+The cloud sources are configured with two main parameters:
+
+1. `host`: The URL of the Flipt cloud instance
+2. `apiKey`: The API key for authenticating with the Flipt cloud instance
+
+These parameters are provided when creating new instances of `CloudPolicySource` and `CloudDataSource` using the `PolicySourceFromCloud` and `DataSourceFromCloud` functions, respectively.
+
+The code uses a 30-second timeout for HTTP requests, which is hardcoded in the `fetch` function.
+
+## Error Handling
+The code uses Go's standard error handling mechanisms. Errors are wrapped using `fmt.Errorf` to provide additional context. The `source.ErrNotModified` error is used to indicate that a resource hasn't changed since the last fetch, which is important for caching.
+
+In the test file, various error scenarios are simulated and checked, including network errors, API errors, and the special `source.ErrNotModified` case.
+
+## Code Snippets
+
+Here's an example of how the `Get` method is implemented for the `CloudPolicySource`:
+
+```go
+func (c *CloudPolicySource) Get(ctx context.Context, seen source.Hash) ([]byte, source.Hash, error) {
+    url := fmt.Sprintf("%s/api/v1/auth/policy", c.host)
+    body, hash, err := fetch(ctx, seen, url, c.apiKey)
+    if err != nil {
+        return nil, nil, fmt.Errorf("fetching policy: %w", err)
+    }
+
+    return body, hash, nil
+}
+```
+
+And here's an example of how the `fetch` function handles different HTTP status codes:
+
+```go
+switch resp.StatusCode {
+case http.StatusOK:
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, nil, fmt.Errorf("reading response body: %w", err)
+    }
+    return body, source.Hash(resp.Header.Get("ETag")), nil
+case http.StatusNotModified:
+    return nil, nil, source.ErrNotModified
+default:
+    return nil, nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+}
+```
+
+These snippets illustrate the main functionality of fetching data from the cloud API and handling different response scenarios.

@@ -1,0 +1,223 @@
+---
+title: "db.go"
+---
+
+## High-level description
+The `db.go` file in the `internal/storage/sql` package is responsible for managing database connections for the Flipt application. It provides functions for opening connections to various supported databases (SQLite, Postgres, MySQL, CockroachDB, LibSQL, and Clickhouse) and configuring them based on the provided configuration.
+
+## Code Structure
+The code defines a `Driver` type that represents the different supported database drivers. It also defines an `Options` struct and `Option` functions for customizing the database connection options. The `open` function handles opening a connection to the specified database, while `openAnalytics` specifically handles connections to analytics databases. The `parse` function parses the database URL and returns the appropriate driver and connection string.
+
+## References
+- `github.com/XSAM/otelsql`: Used for instrumenting database connections with OpenTelemetry.
+- `github.com/Masterminds/squirrel`: Used for building SQL queries.
+- `github.com/xo/dburl`: Used for parsing database URLs.
+- `go.flipt.io/flipt/internal/config`: Provides the configuration settings for the database connection.
+
+## Symbols
+
+### `init`
+#### Description
+The `init` function initializes the `dburl` package by registering the LibSQL driver and unregistering the default postgres driver in favor of pgx. It also modifies the `dburl.Stat` function to prevent it from walking up the provided file path when using SQLite.
+
+#### Internal Logic
+- Registers a custom `dburl.Scheme` for the LibSQL driver, overriding the default "file" scheme.
+- Unregisters the "postgres" scheme and registers aliases for "pgx" to be used instead.
+- Modifies the `dburl.Stat` function to return a custom `fileInfo` struct when `fs.ErrNotExist` is encountered, preventing path traversal.
+
+### `Open`
+#### Description
+Opens a database connection based on the provided configuration and options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+| opts | `...Option` | Optional database connection options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | The opened database connection. |
+| driver | `Driver` | The database driver used. |
+| err | `error` | An error if the connection failed. |
+
+#### Internal Logic
+- Applies the provided options to an `Options` struct.
+- Calls the `open` function to open the database connection.
+- Registers OpenTelemetry metrics for the database connection using `otelsql.RegisterDBStatsMetrics`.
+
+### `BuilderFor`
+#### Description
+Returns a Squirrel statement builder configured for the provided database driver.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | The database connection. |
+| driver | `Driver` | The database driver used. |
+| preparedStatementsEnabled | `bool` | Whether prepared statements are enabled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| builder | `sq.StatementBuilderType` | The configured Squirrel statement builder. |
+
+#### Internal Logic
+- Creates a `sq.BaseRunner` based on the database connection and whether prepared statements are enabled.
+- Creates a Squirrel statement builder using the `sq.StatementBuilder` and sets the placeholder format to `sq.Dollar` for Postgres and CockroachDB drivers.
+
+### `Options`
+#### Description
+A struct that holds optional database connection options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sslDisabled | `bool` | Whether SSL should be disabled. |
+| migrate | `bool` | Whether to run database migrations. |
+
+### `Option`
+#### Description
+A function type that modifies the `Options` struct.
+
+### `WithSSLDisabled`
+#### Description
+Sets the `sslDisabled` option to true.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| o | `*Options` | The `Options` struct to modify. |
+
+### `WithMigrate`
+#### Description
+Sets the `migrate` option to true.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| o | `*Options` | The `Options` struct to modify. |
+
+### `open`
+#### Description
+Opens a database connection based on the provided configuration and options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+| opts | `Options` | Database connection options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | The opened database connection. |
+| driver | `Driver` | The database driver used. |
+| err | `error` | An error if the connection failed. |
+
+#### Internal Logic
+- Calls the `parse` function to parse the database URL and get the driver and connection string.
+- Registers an instrumented driver with OpenTelemetry using `otelsql.WrapDriver`.
+- Opens the database connection using `sql.Open`.
+- Sets connection pool settings based on the configuration.
+
+### `openAnalytics`
+#### Description
+Opens a database connection for analytics based on the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | The opened database connection. |
+| driver | `Driver` | The database driver used. |
+| err | `error` | An error if the connection failed. |
+
+#### Internal Logic
+- Checks if Clickhouse is enabled for analytics.
+- If enabled, opens a Clickhouse connection using `clickhouse.OpenDB`.
+- Otherwise, returns an error indicating no analytics database is provided.
+
+### `Driver`
+#### Description
+An enum representing the different supported database drivers.
+
+### `String`
+#### Description
+Returns the string representation of the database driver.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| d | `Driver` | The database driver. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string representation of the driver. |
+
+### `Migrations`
+#### Description
+Returns the string representation of the database driver used for migrations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| d | `Driver` | The database driver. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string representation of the driver used for migrations. |
+
+### `parse`
+#### Description
+Parses the database URL and returns the appropriate driver and connection string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+| opts | `Options` | Database connection options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| driver | `Driver` | The database driver. |
+| url | `*dburl.URL` | The parsed database URL. |
+| err | `error` | An error if parsing failed. |
+
+#### Internal Logic
+- Parses the database URL using `dburl.Parse`.
+- Sets driver-specific query parameters based on the driver and options.
+- Reparses the URL after modifying the query parameters.
+- Returns the driver, parsed URL, and any errors.
+
+## Dependencies
+- `database/sql`: Provides the standard SQL interface.
+- `database/sql/driver`: Defines the interface for database drivers.
+- `errors`: Provides error handling utilities.
+- `fmt`: Provides formatted I/O.
+- `io/fs`: Provides file system interfaces.
+- `net/url`: Provides URL parsing and manipulation.
+- `github.com/ClickHouse/clickhouse-go/v2`: Clickhouse database driver.
+- `github.com/Masterminds/squirrel`: SQL query builder.
+- `github.com/XSAM/otelsql`: OpenTelemetry instrumentation for SQL.
+- `github.com/go-sql-driver/mysql`: MySQL database driver.
+- `github.com/libsql/libsql-client-go/libsql`: LibSQL database driver.
+- `github.com/mattn/go-sqlite3`: SQLite database driver.
+- `github.com/xo/dburl`: Database URL parser.
+- `go.flipt.io/flipt/internal/config`: Application configuration.
+- `go.opentelemetry.io/otel/attribute`: OpenTelemetry attributes.
+- `go.opentelemetry.io/otel/semconv/v1.26.0`: OpenTelemetry semantic conventions.
+
+## Error Handling
+The code uses basic error handling with `error` values. It checks for specific error types, such as `sql.ErrNoRows` and driver-specific errors, and returns appropriate error messages.
+
+## Logging
+The code does not implement any logging mechanisms.

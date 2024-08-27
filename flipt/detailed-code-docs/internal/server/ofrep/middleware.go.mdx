@@ -1,0 +1,71 @@
+---
+title: "middleware.go"
+---
+
+## High-level description
+The code defines a custom error handler `ErrorHandler` for a gRPC gateway. This handler converts errors from gRPC services into a structured JSON error response that is returned to the client. It specifically handles errors related to flag evaluation, providing detailed information about the error type and context.
+
+## Symbols
+
+### `errorCode`
+#### Description
+`errorCode` is a custom type defined as a string. It is used to represent specific error codes that can occur during flag evaluation.
+
+#### Internal Logic
+This type is used in the `errorSchema` struct to provide a structured error response to the client.
+
+### `errorSchema`
+#### Description
+`errorSchema` is a struct that defines the format of the JSON error response returned to the client.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The struct contains the following fields:
+- `Key`: The key of the flag that caused the error (optional).
+- `ErrorCode`: The specific error code, represented by the `errorCode` type.
+- `ErrorDetails`: A detailed message describing the error.
+
+### `ErrorHandler`
+#### Description
+`ErrorHandler` is a function that returns a `runtime.ErrorHandlerFunc`, which is a type defined in the `grpc-gateway/v2/runtime` package. This function is responsible for handling errors returned by gRPC services and converting them into a structured JSON response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance for recording errors. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `runtime.ErrorHandlerFunc` |  | A function that handles errors from gRPC services. |
+
+#### Internal Logic
+1. **Error Conversion:** It first attempts to convert the received `error` into a gRPC `status`. If the conversion fails, it creates a new `status` with `codes.Unknown`.
+2. **Response Initialization:** It initializes an `errorSchema` struct with the error message from the `status`.
+3. **Details Extraction:** If the `status` contains details, it attempts to extract the flag key from the details and adds it to the `errorSchema`.
+4. **Error Code Mapping:** It maps the gRPC `status.Code` to a specific `errorCode` and sets it in the `errorSchema`.
+5. **Response Encoding:** It sets the response headers and writes the HTTP status code.
+6. **JSON Encoding:** It encodes the `errorSchema` into a JSON response and writes it to the `http.ResponseWriter`.
+7. **Error Logging:** If an error occurs during the encoding process, it logs the error using the provided logger.
+
+## Side Effects
+This code modifies the response writer by setting the response headers, status code, and writing the JSON error response.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Used for managing the request context. |
+| `net/http` | Used for interacting with HTTP requests and responses. |
+| `github.com/grpc-ecosystem/grpc-gateway/v2/runtime` | Provides utilities for building gRPC gateways. |
+| `go.uber.org/zap` | Provides a structured logger. |
+| `google.golang.org/grpc/codes` | Defines gRPC status codes. |
+| `google.golang.org/grpc/status` | Provides utilities for working with gRPC statuses. |
+| `google.golang.org/protobuf/types/known/structpb` | Provides types for working with Google Protocol Buffer `struct` values. |
+
+## Error Handling
+The `ErrorHandler` function is itself an error handler. It handles errors returned by gRPC services and maps them to specific error codes and messages in the JSON response. It also logs any errors encountered during the error handling process.

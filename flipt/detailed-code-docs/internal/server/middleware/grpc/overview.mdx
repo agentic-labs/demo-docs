@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains gRPC middleware implementations for the Flipt server. The middleware includes interceptors for request validation, error handling, evaluation request/response manipulation, audit event logging, and client-server version compatibility. These interceptors enhance the functionality, security, and observability of the Flipt gRPC server.
+
+## What does it do?
+The gRPC middleware in this directory performs several important tasks:
+
+1. Request Validation: It validates incoming gRPC requests to ensure they meet the required criteria before processing.
+
+2. Error Handling: It intercepts errors and maps them to appropriate gRPC status codes, providing consistent error responses to clients.
+
+3. Evaluation Request/Response Manipulation: For evaluation requests, it sets required fields, generates unique request IDs, and records request timing information.
+
+4. Audit Logging: It captures audit events for various operations and adds them to the OpenTelemetry trace spans for improved observability.
+
+5. Version Compatibility: It handles client-server version compatibility by processing the `x-flipt-accept-server-version` header.
+
+6. Analytics: When enabled, it records evaluation responses for analytics purposes.
+
+These middleware components work together to create a robust and feature-rich gRPC server for Flipt, handling cross-cutting concerns that are common to multiple gRPC methods.
+
+## Key Files
+
+### middleware.go
+This file contains the main implementation of the gRPC middleware interceptors. Key components include:
+
+- `ValidationUnaryInterceptor`: Validates incoming requests.
+- `ErrorUnaryInterceptor`: Handles error mapping to gRPC status codes.
+- `EvaluationUnaryInterceptor`: Sets required fields for evaluation requests/responses.
+- `AuditEventUnaryInterceptor`: Captures and logs audit events.
+- `FliptAcceptServerVersionUnaryInterceptor`: Handles client-server version compatibility.
+
+### middleware_test.go
+This file contains unit tests for the middleware implementations, ensuring that each interceptor functions correctly under various scenarios.
+
+### support_test.go
+This file provides test support structures, including mocks and spies for authentication and auditing components, which are used in the middleware tests.
+
+## Dependencies
+The middleware relies on several external libraries and internal Flipt packages:
+
+1. gRPC (google.golang.org/grpc): Used for implementing the gRPC server and interceptors.
+2. OpenTelemetry (go.opentelemetry.io/otel/trace): Used for distributed tracing and adding events to spans.
+3. Zap (go.uber.org/zap): Used for logging.
+4. Internal Flipt packages:
+   - `go.flipt.io/flipt/errors`: For error handling and custom error types.
+   - `go.flipt.io/flipt/internal/server/analytics`: For recording evaluation responses.
+   - `go.flipt.io/flipt/internal/server/audit`: For capturing and logging audit events.
+   - `go.flipt.io/flipt/internal/server/authn`: For authentication-related operations.
+   - `go.flipt.io/flipt/internal/server/metrics`: For recording metrics.
+   - `go.flipt.io/flipt/rpc/flipt`: For Flipt's gRPC API definitions.
+
+These dependencies were chosen to provide robust gRPC server functionality, observability, and integration with Flipt's internal systems.
+
+## Configuration
+The middleware components don't directly use configuration files or environment variables. However, they can be configured when setting up the gRPC server:
+
+1. `EvaluationUnaryInterceptor` takes a boolean parameter `analyticsEnabled` to determine whether to record evaluation responses for analytics.
+2. `AuditEventUnaryInterceptor` requires a logger instance and an `audit.EventPairChecker` to determine which audit events should be logged.
+3. `FliptAcceptServerVersionUnaryInterceptor` requires a logger instance for reporting version parsing errors.
+
+These configuration options allow for flexibility in how the middleware behaves, particularly in terms of analytics and audit logging.
+
+In summary, this gRPC middleware package provides a comprehensive set of interceptors that handle various cross-cutting concerns for the Flipt server, enhancing its functionality, security, and observability. The middleware is designed to be flexible and configurable, allowing for easy integration into the main Flipt server implementation.

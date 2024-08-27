@@ -1,0 +1,126 @@
+---
+title: "main.go"
+---
+
+## High-level description
+The `build/main.go` file defines Dagger functions for building, packaging, and testing the Flipt application. It leverages the Dagger Go SDK to define a series of functions that encapsulate the build, test, and packaging logic for Flipt.
+
+## Code Structure
+The code defines two main structs: `Flipt` and `Test`. The `Flipt` struct contains methods for building the base Flipt container (`Base`) and the final packaged container (`Build`). The `Test` struct contains methods for running various test suites against a built Flipt container, such as UI, unit, CLI, migration, load, and integration tests.
+
+## References
+- `internal` package: Provides functions for building the base container, UI container, and packaging the final Flipt container.
+- `testing` package: Provides functions for running various test suites against a built Flipt container.
+
+## Symbols
+
+### `Flipt`
+#### Description
+The `Flipt` struct represents the Flipt application within the Dagger build context. It holds references to the source code directory, the base container, and the UI container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Flipt` struct doesn't have any complex internal logic. It mainly serves as a holder for Dagger resources related to the Flipt build process.
+
+### `Flipt.Base`
+#### Description
+This function builds a Dagger container containing all the compiled assets of Flipt, ready for testing and distribution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the function call. |
+| source | *dagger.Directory | The Dagger directory representing the Flipt source code. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *dagger.Container | A pointer to the Dagger container with the compiled Flipt assets. |
+| error | error | An error object if something went wrong during the build process. |
+
+#### Internal Logic
+1. Retrieves the default platform for the Dagger client.
+2. Builds the UI container using the `internal.UI` function.
+3. Builds the base container using the `internal.Base` function, providing the UI container's `dist` directory and the parsed platform.
+
+### `Flipt.Build`
+#### Description
+This function builds a Dagger container containing the Flipt binaries packaged in a minimal Alpine Linux distribution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the function call. |
+| source | *dagger.Directory | The Dagger directory representing the Flipt source code. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *dagger.Container | A pointer to the Dagger container with the packaged Flipt binaries. |
+| error | error | An error object if something went wrong during the build process. |
+
+#### Internal Logic
+1. Calls the `Flipt.Base` function to build the base container.
+2. Uses the `internal.Package` function to package the Flipt binaries from the base container into a new Alpine Linux container.
+
+### `Test`
+#### Description
+The `Test` struct represents a Flipt testing context within Dagger. It holds references to the source code directory, the base container, the UI container, and the final Flipt container.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Test` struct doesn't have any complex internal logic. It mainly serves as a holder for Dagger resources related to the Flipt testing process.
+
+### `Flipt.Test`
+#### Description
+This function initializes a `Test` struct by building the Flipt container and returning it along with the source, base, and UI containers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the function call. |
+| source | *dagger.Directory | The Dagger directory representing the Flipt source code. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Test | A pointer to the initialized `Test` struct. |
+| error | error | An error object if something went wrong during the build process. |
+
+#### Internal Logic
+1. Calls the `Flipt.Build` function to build the Flipt container.
+2. Returns a new `Test` struct initialized with the source, base, UI, and Flipt containers.
+
+### `Test.UI`, `Test.Unit`, `Test.CLI`, `Test.Migration`, `Test.Load`, `Test.Integration`
+#### Description
+These functions execute specific test suites against the built Flipt container.
+
+#### Inputs
+- `ctx`: The context for the function call.
+- `cases` (Integration only): A space-separated string of test cases to run. Defaults to "*", which runs all cases.
+- `exportLogs` (Integration only): A boolean flag indicating whether to export logs from the test run. Defaults to false.
+
+#### Outputs
+- `*dagger.File` (Unit only): A pointer to the Dagger file containing the unit test results.
+- `error`: An error object if any of the test suites fail.
+
+#### Internal Logic
+These functions utilize the `testing` package to execute the corresponding test suites. They pass the necessary Dagger resources, such as containers and directories, to the testing functions.
+
+## Dependencies
+- `github.com/containerd/containerd/platforms`: Used for platform parsing and formatting.
+- `go.flipt.io/build/internal`: Provides internal build functions.
+- `go.flipt.io/build/testing`: Provides testing functions.
+
+## Error Handling
+The code uses the standard Go error handling mechanism. Most functions return an `error` object as the last return value, which will be non-nil if an error occurred during the function execution.

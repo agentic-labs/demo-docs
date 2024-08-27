@@ -1,0 +1,79 @@
+---
+title: "post-release.yml"
+---
+
+## High-level description
+This GitHub Actions workflow automates post-release tasks for the Flipt project. It triggers upon successful completion of the "Release" workflow or when manually dispatched. Its primary function is to initiate two downstream workflows: "deploy.yml" for `flipt-io/try.flipt.io` and "update.yml" for `flipt-io/helm-charts`.
+
+## Code Structure
+The workflow defines a single job "post_release" which runs on the latest Ubuntu environment. It checks for a successful "Release" workflow run or a manual trigger. Upon either condition, it generates a GitHub App token and uses it to trigger the "deploy.yml" and "update.yml" workflows in the specified repositories.
+
+## Symbols
+### `on`
+#### Description
+This section defines the events that trigger the workflow.
+
+#### Internal Logic
+- **`workflow_run`**: Triggers when a workflow run completes.
+    - **`workflows`**: Specifies the target workflow, in this case, "Release".
+    - **`types`**: Specifies the target workflow run status, in this case, "completed".
+- **`workflow_dispatch`**: Allows manual triggering of the workflow.
+
+### `name`
+#### Description
+Specifies the workflow's name as it appears in the GitHub Actions interface.
+
+### `jobs`
+#### Description
+This section defines the jobs that run within the workflow.
+
+### `post_release`
+#### Description
+This is the primary job of the workflow, responsible for triggering post-release tasks.
+
+#### Internal Logic
+- **`runs-on`**: Specifies the runner environment, in this case, the latest Ubuntu version.
+- **`if`**: Conditionally runs the job based on the success of the "Release" workflow or manual triggering.
+- **`steps`**: Defines a sequence of actions performed by the job.
+    - **`generate_token`**: Generates a GitHub App token using the provided credentials.
+    - **`Trigger Post Release Workflows`**: Uses the generated token to trigger the "deploy.yml" and "update.yml" workflows in their respective repositories.
+
+### `steps`
+#### Description
+This section defines a sequence of actions performed by the job.
+
+### `generate_token`
+#### Description
+This step generates a GitHub App token for authentication.
+
+#### Internal Logic
+- Uses the `tibdex/github-app-token@v2` action to generate a token.
+- Requires the following secrets:
+    - `FLIPT_RELEASE_BOT_APP_ID`: GitHub App ID.
+    - `FLIPT_RELEASE_BOT_APP_PEM`: GitHub App private key.
+    - `FLIPT_RELEASE_BOT_INSTALLATION_ID`: GitHub App installation ID.
+
+### `Trigger Post Release Workflows`
+#### Description
+This step triggers the downstream workflows.
+
+#### Internal Logic
+- Uses the `gh` CLI tool to trigger workflows.
+- `GITHUB_TOKEN`: Uses the token generated in the previous step.
+- Triggers the following workflows:
+    - `deploy.yml` in the `flipt-io/try.flipt.io` repository.
+    - `update.yml` in the `flipt-io/helm-charts` repository.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| tibdex/github-app-token@v2 | Generates a GitHub App token for authentication. |
+
+## Configuration
+This workflow relies on the following secrets stored in the GitHub repository:
+
+| Option | Description |
+|:-------|:------------|
+| `FLIPT_RELEASE_BOT_APP_ID` | GitHub App ID used for authentication. |
+| `FLIPT_RELEASE_BOT_APP_PEM` | Private key of the GitHub App. |
+| `FLIPT_RELEASE_BOT_INSTALLATION_ID` | Installation ID of the GitHub App. |

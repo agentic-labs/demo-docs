@@ -1,0 +1,102 @@
+---
+title: "server.go"
+---
+
+## High-level description
+The `token` package provides a gRPC server implementation for managing static authentication tokens in Flipt. It allows for the creation of tokens that can be used to authenticate with the Flipt API.
+
+## Code Structure
+The `Server` struct is the main component of the package, responsible for handling gRPC requests related to token authentication. It interacts with the `storageauth.Store` to persist and retrieve authentication data.
+
+## References
+- `storageauth.Store`: Used to interact with the authentication data store.
+- `auth.AuthenticationMethodTokenServiceServer`: Defines the gRPC service interface for token authentication.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct implements the `auth.AuthenticationMethodTokenServiceServer` interface and handles gRPC requests for token authentication.
+
+#### Inputs
+This struct does not have explicit inputs. It is configured with a logger and an authentication store during initialization.
+
+#### Outputs
+This struct does not have explicit outputs. It returns responses to gRPC requests.
+
+#### Internal Logic
+The `Server` struct uses the provided `storageauth.Store` to create and manage authentication tokens. It stores token-related metadata in the `Authentication.Metadata` field.
+
+### `NewServer`
+#### Description
+`NewServer` constructs and configures a new `*Server` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger to use for logging. |
+| store | `storageauth.Store` | The authentication store to use for persisting and retrieving authentication data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Server` |  | A pointer to the newly created `Server` instance. |
+
+### `RegisterGRPC`
+#### Description
+`RegisterGRPC` registers the server as an `auth.AuthenticationMethodTokenServiceServer` on the provided gRPC server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | `*grpc.Server` | The gRPC server to register the service on. |
+
+#### Outputs
+This function does not return any values.
+
+### `AllowsNamespaceScopedAuthentication`
+#### Description
+`AllowsNamespaceScopedAuthentication` always returns `false`, indicating that token authentication does not support namespace-scoped authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `bool` |  | Always returns `false`. |
+
+### `CreateToken`
+#### Description
+`CreateToken` handles the `CreateToken` gRPC request. It creates a new static authentication token in the authentication store.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*auth.CreateTokenRequest` | The request message containing the token details. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*auth.CreateTokenResponse` |  | The response message containing the generated client token and authentication details. |
+| `error` |  | An error if the token creation fails. |
+
+#### Internal Logic
+1. Extracts token metadata from the request.
+2. Sets default metadata values if not provided.
+3. Calls the `CreateAuthentication` method of the authentication store to create a new authentication entry with the token details.
+4. Returns the generated client token and authentication details in the response.
+
+## Side Effects
+- Creates a new authentication token in the authentication store.
+
+## Dependencies
+- `context`
+- `fmt`
+- `storageauth "go.flipt.io/flipt/internal/storage/authn"`
+- `"go.flipt.io/flipt/rpc/flipt/auth"`
+- `google.golang.org/grpc`
+

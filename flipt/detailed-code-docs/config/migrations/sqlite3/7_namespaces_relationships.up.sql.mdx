@@ -1,0 +1,103 @@
+---
+title: "7_namespaces_relationships.up.sql"
+---
+
+## High-level description
+This SQL script performs a database migration to introduce namespace relationships to existing tables in a SQLite3 database. It creates temporary tables with namespace support, copies data from existing tables, and then replaces the old tables with the new ones, effectively adding namespace functionality to the database schema.
+
+## Code Structure
+The script follows a consistent pattern for each table:
+1. Create a temporary table with namespace support
+2. Copy data from the existing table to the temporary table
+3. Drop the old table
+4. Rename the temporary table to replace the old one
+
+This process is repeated for flags, variants, segments, constraints, rules, and distributions tables.
+
+## Symbols
+
+### Create temporary flags table
+#### Description
+Creates a new temporary table `flags_temp` with an additional `namespace_key` column and a foreign key relationship to the `namespaces` table.
+
+#### Internal Logic
+- Adds `namespace_key` column with a default value of 'default'
+- Sets up a composite primary key (namespace_key, key)
+- Establishes a foreign key relationship with the `namespaces` table
+
+### Copy data from flags table to temporary flags table
+#### Description
+Copies all existing data from the `flags` table to the new `flags_temp` table.
+
+### Create temporary variants table
+#### Description
+Creates a new temporary table `variants_temp` with an additional `namespace_key` column and updated foreign key relationships.
+
+#### Internal Logic
+- Adds `namespace_key` column with a default value of 'default'
+- Sets up a unique constraint on (namespace_key, flag_key, key)
+- Establishes a foreign key relationship with the `flags_temp` table
+
+### Copy data from variants table to temporary variants table
+#### Description
+Copies all existing data from the `variants` table to the new `variants_temp` table.
+
+### Create temporary segments table
+#### Description
+Creates a new temporary table `segments_temp` with an additional `namespace_key` column and a foreign key relationship to the `namespaces` table.
+
+#### Internal Logic
+- Adds `namespace_key` column with a default value of 'default'
+- Sets up a composite primary key (namespace_key, key)
+- Establishes a foreign key relationship with the `namespaces` table
+
+### Copy data from segments table to temporary segments table
+#### Description
+Copies all existing data from the `segments` table to the new `segments_temp` table.
+
+### Create temporary constraints table
+#### Description
+Creates a new temporary table `constraints_temp` with an additional `namespace_key` column and updated foreign key relationships.
+
+#### Internal Logic
+- Adds `namespace_key` column with a default value of 'default'
+- Establishes a foreign key relationship with the `segments_temp` table
+
+### Copy data from constraints table to temporary constraints table
+#### Description
+Copies all existing data from the `constraints` table to the new `constraints_temp` table.
+
+### Create temporary rules table
+#### Description
+Creates a new temporary table `rules_temp` with an additional `namespace_key` column and updated foreign key relationships.
+
+#### Internal Logic
+- Adds `namespace_key` column with a default value of 'default'
+- Establishes foreign key relationships with both `flags_temp` and `segments_temp` tables
+
+### Copy data from rules table to temporary rules table
+#### Description
+Copies all existing data from the `rules` table to the new `rules_temp` table.
+
+### Create and populate temporary distributions table
+#### Description
+Creates a new temporary table `distributions_temp` and copies data from the existing `distributions` table.
+
+#### Internal Logic
+- Creates the table with updated foreign key references to `rules_temp` and `variants_temp`
+- Copies all existing data from the `distributions` table to the new `distributions_temp` table
+
+### Replace old tables with new temporary tables
+#### Description
+Drops the old tables and renames the temporary tables to replace them.
+
+#### Internal Logic
+For each table (distributions, rules, flags, variants, segments, constraints):
+1. Drop the old table
+2. Rename the temporary table to the original table name
+
+## Side Effects
+This migration script will modify the database schema and potentially affect any existing applications or queries that rely on the old schema. It's important to update any code that interacts with these tables to account for the new namespace relationship.
+
+## Performance Considerations
+This migration involves creating new tables and copying data, which may be time-consuming for large datasets. It's recommended to perform this migration during a maintenance window or low-traffic period.

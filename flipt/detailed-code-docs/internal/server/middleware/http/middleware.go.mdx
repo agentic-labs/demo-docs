@@ -1,0 +1,73 @@
+---
+title: "middleware.go"
+---
+
+## High-level description
+This code defines HTTP middleware functions for modifying HTTP responses in a gRPC gateway. It includes functions for setting custom headers, status codes, and handling responses with no body content.
+
+## Code Structure
+The `HttpResponseModifier` function uses the `runtime.ServerMetadataFromContext` function to extract metadata from the context and sets the `Etag` header and HTTP status code based on the metadata values. The `HandleNoBodyResponse` function uses a custom `noBodyResponseWriter` to intercept and modify the response writer's behavior for specific HTTP status codes.
+
+## Symbols
+
+### `HttpResponseModifier`
+#### Description
+This function is a middleware that modifies the HTTP response based on gRPC metadata. It sets the `Etag` header and custom HTTP status code if specified in the metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context containing gRPC metadata. |
+| w | http.ResponseWriter | The HTTP response writer. |
+| _ | proto.Message | The gRPC response message (unused). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if any occurred during the modification. |
+
+#### Internal Logic
+1. Extracts gRPC metadata from the context using `runtime.ServerMetadataFromContext`.
+2. If the metadata contains the `x-etag` key, it sets the `Etag` header in the HTTP response and removes the `x-etag` metadata.
+3. If the metadata contains the `x-http-code` key, it sets the HTTP status code accordingly and removes the `x-http-code` metadata.
+
+### `HandleNoBodyResponse`
+#### Description
+This function is a middleware that handles responses with no body content for HTTP status codes 204 (No Content) and 304 (Not Modified).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| next | http.Handler | The next handler in the middleware chain. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| http.Handler | An HTTP handler that wraps the next handler in the chain. |
+
+#### Internal Logic
+1. Creates a new `noBodyResponseWriter` that wraps the original response writer.
+2. Calls the next handler in the chain with the modified response writer.
+
+### `noBodyResponseWriter`
+#### Description
+This struct is a custom HTTP response writer that intercepts the `Write` and `WriteHeader` methods to handle responses with no body content.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ResponseWriter | http.ResponseWriter | The original HTTP response writer. |
+
+#### Internal Logic
+- `WriteHeader`: Sets the `wroteHeader` flag to true and stores the HTTP status code.
+- `Write`: If the status code is 204 or 304, it prevents writing the body content. Otherwise, it writes the content using the original response writer.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Used for managing context data, including gRPC metadata. |
+| net/http | Used for HTTP handling, including the `ResponseWriter` interface. |
+| strconv | Used for converting strings to integers. |
+| github.com/grpc-ecosystem/grpc-gateway/v2/runtime | Used for interacting with gRPC gateway runtime, including metadata extraction. |
+| google.golang.org/protobuf/proto | Used for working with protocol buffer messages. |
+

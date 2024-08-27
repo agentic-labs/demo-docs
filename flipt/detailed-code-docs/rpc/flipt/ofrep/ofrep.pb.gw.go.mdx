@@ -1,0 +1,58 @@
+---
+title: "ofrep.pb.gw.go"
+---
+
+## High-level description
+This code is part of a gRPC-Gateway implementation for the OFREP (Open Feature Remote Evaluation Protocol) service. It provides a reverse proxy that translates gRPC into RESTful JSON APIs, allowing HTTP clients to interact with the OFREP service using standard HTTP methods.
+
+## Code Structure
+The code defines several request and response handling functions for different OFREP service methods. These functions are used to register HTTP handlers for the OFREP service, which then forward requests to the appropriate gRPC methods.
+
+## Symbols
+
+### `RegisterOFREPServiceHandlerServer`
+#### Description
+This function registers the HTTP handlers for the OFREP service to a given `ServeMux`. It sets up the routing for different OFREP service methods, translating HTTP requests to gRPC calls.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| mux | *runtime.ServeMux | The ServeMux to register the handlers to |
+| server | OFREPServiceServer | The OFREP service server implementation |
+
+#### Internal Logic
+- Sets up HTTP handlers for three endpoints: GetProviderConfiguration, EvaluateFlag, and EvaluateBulk.
+- For each endpoint, it creates a handler function that:
+  1. Sets up the context and cancellation.
+  2. Prepares the gRPC server stream.
+  3. Unmarshals the request.
+  4. Calls the corresponding server method.
+  5. Marshals and sends the response.
+
+### `RegisterOFREPServiceHandlerFromEndpoint`
+#### Description
+This function is similar to `RegisterOFREPServiceHandlerServer`, but it automatically dials to a specified endpoint and closes the connection when the context is done.
+
+### `RegisterOFREPServiceHandlerClient`
+#### Description
+This function registers the HTTP handlers for the OFREP service using a given OFREP service client. It's used when you want to forward requests to a different gRPC endpoint.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/grpc-ecosystem/grpc-gateway/v2/runtime | Provides the ServeMux and other utilities for the gRPC-Gateway |
+| google.golang.org/grpc | gRPC framework for Go |
+| google.golang.org/protobuf/proto | Protocol Buffers support |
+
+## Error Handling
+The code includes error handling for various scenarios, such as invalid arguments, missing parameters, and general server errors. It uses the `runtime.HTTPError` function to send appropriate HTTP error responses.
+
+## API/Interface Reference
+| Endpoint | Method | Request | Response | Description |
+|:---------|:-------|:--------|:---------|:------------|
+| /ofrep/v1/configuration | GET | - | GetProviderConfigurationResponse | Get OFREP provider configuration |
+| /ofrep/v1/evaluate/flags/{key} | POST | EvaluateFlagRequest | EvaluatedFlag | Evaluate a single flag |
+| /ofrep/v1/evaluate/flags | POST | EvaluateBulkRequest | BulkEvaluationResponse | Evaluate multiple flags in bulk |
+
+This code provides a crucial layer for enabling HTTP-based access to the OFREP service, which is primarily designed for gRPC communication. It allows for easier integration with web-based clients and services that prefer REST APIs over gRPC.

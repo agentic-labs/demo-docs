@@ -1,0 +1,90 @@
+---
+title: "release.yml"
+---
+
+## High-level description
+This GitHub Actions workflow automates the release process for the Flipt application. It builds binaries for Linux and macOS, packages them for distribution, and publishes them to various artifact repositories like Docker Hub and GitHub Container Registry. The workflow is triggered on push events to tags prefixed with "v".
+
+## Code Structure
+The workflow consists of two main jobs: "build" and "release". The "build" job compiles the application for different operating systems and architectures, while the "release" job handles the distribution and publishing of the built artifacts. The "release" job depends on the successful completion of the "build" job.
+
+## References
+This workflow references several secrets stored in the GitHub repository, including:
+- `FLIPT_FORMBRICKS_ENVIRONMENT_ID`: Used during the build preparation phase.
+- `GORELEASER_KEY`: Used for signing releases with GoReleaser Pro.
+- `GITHUB_TOKEN`: Used for authenticating with GitHub APIs.
+- `ANALYTICS_WRITE_KEY` and `ANALYTICS_WRITE_ENDPOINT`: Used for sending analytics data.
+- `QUILL_SIGN_P12` and `QUILL_SIGN_PASSWORD`: Used for signing macOS binaries with Quill.
+- `DOCKER_USERNAME` and `DOCKER_TOKEN`: Used for authenticating with Docker Hub.
+- `FLIPT_RELEASE_BOT_APP_ID`, `FLIPT_RELEASE_BOT_APP_PEM`, and `FLIPT_RELEASE_BOT_INSTALLATION_ID`: Used for generating a GitHub App token.
+- `SLACK_WEBHOOK`: Used for sending notifications to Slack.
+- `DISCORD_WEBHOOK_ID` and `DISCORD_WEBHOOK_TOKEN`: Used for sending notifications to Discord.
+
+## Symbols
+### `build`
+#### Description
+This job builds the Flipt application for Linux and macOS using a matrix strategy. It checks out the code, sets up the Go environment, installs dependencies, prepares the build, and finally builds the application using GoReleaser. The built artifacts are then uploaded as artifacts named "flipt-linux" and "flipt-darwin".
+
+#### Inputs
+None
+
+#### Outputs
+- `flipt-linux`: Artifact containing the Linux build of the Flipt application.
+- `flipt-darwin`: Artifact containing the macOS build of the Flipt application.
+
+#### Internal Logic
+1. **Checkout Code:** Checks out the repository code using `actions/checkout@v4`.
+2. **Setup Go:** Sets up the Go environment using `actions/setup-go@v5`.
+3. **Cache Dependencies:** Caches Go dependencies using `actions/cache@v4`.
+4. **Setup Node.js:** Sets up Node.js using `actions/setup-node@v4`.
+5. **Install GCC for arm64 (Linux only):** Installs GCC for arm64 architecture on Ubuntu.
+6. **Install Quill (macOS only):** Installs Quill for signing macOS binaries.
+7. **Install Mage:** Installs the Mage build tool.
+8. **Prep Build:** Executes the `mage prep` command to prepare the build.
+9. **GoReleaser Build:** Uses `goreleaser/goreleaser-action@v6` to build the application with GoReleaser.
+10. **Upload Artifacts:** Uploads the built artifacts using `actions/upload-artifact@v4`.
+
+### `release`
+#### Description
+This job handles the release process, including publishing Docker images and creating GitHub releases. It downloads the artifacts built in the "build" job, logs in to Docker Hub and GitHub Container Registry, and then uses GoReleaser to publish the release. Finally, it tags and pushes the latest Docker images to the respective registries.
+
+#### Inputs
+- `flipt-linux`: Artifact containing the Linux build of the Flipt application.
+- `flipt-darwin`: Artifact containing the macOS build of the Flipt application.
+
+#### Outputs
+None
+
+#### Internal Logic
+1. **Checkout Code:** Checks out the repository code using `actions/checkout@v4`.
+2. **Setup Go:** Sets up the Go environment using `actions/setup-go@v5`.
+3. **Setup QEMU:** Sets up QEMU for cross-platform emulation using `docker/setup-qemu-action@v3`.
+4. **Setup Buildx:** Sets up Docker Buildx for building multi-platform images using `docker/setup-buildx-action@v3`.
+5. **Download Artifacts:** Downloads the "flipt-linux" and "flipt-darwin" artifacts using `actions/download-artifact@v4`.
+6. **Install Skopeo:** Installs Skopeo for copying Docker images.
+7. **Install Syft:** Installs Syft for generating SBOMs.
+8. **Login to Docker Hub:** Logs in to Docker Hub using `docker/login-action@v3`.
+9. **Login to GitHub Container Registry:** Logs in to GitHub Container Registry using `docker/login-action@v3`.
+10. **Generate Token:** Generates a GitHub App token using `tibdex/github-app-token@v2`.
+11. **GoReleaser Release:** Uses `goreleaser/goreleaser-action@v6` to publish the release with GoReleaser.
+12. **Install Mage:** Installs the Mage build tool.
+13. **Tag and Push Latest:** Tags and pushes the latest Docker images to Docker Hub and GitHub Container Registry.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository code. |
+| actions/setup-go | Sets up the Go environment. |
+| actions/cache | Caches dependencies. |
+| actions/setup-node | Sets up Node.js. |
+| actions/upload-artifact | Uploads build artifacts. |
+| actions/download-artifact | Downloads build artifacts. |
+| docker/setup-qemu-action | Sets up QEMU for cross-platform emulation. |
+| docker/setup-buildx-action | Sets up Docker Buildx for building multi-platform images. |
+| docker/login-action | Logs in to Docker registries. |
+| tibdex/github-app-token | Generates a GitHub App token. |
+| goreleaser/goreleaser-action | Runs GoReleaser for building and publishing releases. |
+| magefile/mage-action | Installs the Mage build tool. |
+
+## TODOs
+- Investigate wiring up the `release-tag-latest` workflow to run after the release with the same tag.

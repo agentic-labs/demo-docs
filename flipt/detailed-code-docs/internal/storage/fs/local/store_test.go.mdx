@@ -1,0 +1,50 @@
+---
+title: "store_test.go"
+---
+
+## High-level description
+The `Test_Store` function tests the functionality of the `SnapshotStore` struct, specifically its ability to watch for changes in a directory and update its internal snapshot accordingly. It simulates a file system change and verifies that the store detects this change and updates its view.
+
+## Code Structure
+The `Test_Store` function sets up a temporary directory and a `SnapshotStore` instance that monitors this directory. It then simulates a file system change by creating a new file. The test then waits for the store to detect this change and verifies that the store's view reflects the updated file system state.
+
+## Symbols
+### `Test_Store`
+#### Description
+This function tests the behavior of the `SnapshotStore` when a file is created in the monitored directory.
+
+#### Inputs
+This function takes a single argument:
+
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object used for reporting test results and errors. |
+
+#### Outputs
+The function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Creates a cancellable context.
+    - Creates a channel `ch` to signal when the file system change is detected.
+    - Creates a new `SnapshotStore` instance with a polling interval of 1 second and a notification function that closes the `ch` channel when a modification is detected.
+    - Defers the closing of the store using `t.Cleanup`.
+    - Gets the current working directory.
+    - Defines the path to a test file `ftc`.
+    - Defers the removal of the test file after the test execution.
+2. **Simulate File System Change:**
+    - Writes data to the test file, simulating a change in the file system.
+3. **Wait for Notification:**
+    - Waits for 10 seconds for the notification from the store that the file system has changed. If no notification is received within the timeout, the test fails.
+4. **Verify Updated Snapshot:**
+    - Calls the `View` method of the store to access the latest snapshot.
+    - Attempts to retrieve a namespace from the snapshot, expecting it to be present due to the file system change.
+
+## Side Effects
+- Creates and deletes a temporary file in the "testdata" directory.
+
+## Error Handling
+The function uses `assert` statements to check for errors at various steps. If an error occurs, the test fails with an appropriate error message.
+
+## Logging
+The `SnapshotStore` is initialized with a `zap.NewNop()` logger, which discards all log messages. Therefore, no logging output is expected during the test execution.

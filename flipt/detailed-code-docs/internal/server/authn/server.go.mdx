@@ -1,0 +1,78 @@
+---
+title: "server.go"
+---
+
+## High-level description
+The `server.go` file in the `internal/server/authn` package defines the `Server` struct, which implements the `auth.AuthenticationServiceServer` interface. This server is responsible for handling authentication-related requests, such as retrieving, listing, deleting, and expiring authentication data. It interacts with the underlying authentication storage to manage authentication information.
+
+## Code Structure
+The `Server` struct relies on the `storageauth.Store` interface for interacting with the authentication storage. It uses the `authmiddlewaregrpc` package to retrieve authentication information from the request context. The server also utilizes the `audit` package for logging audit events related to authentication actions.
+
+## References
+- `storageauth.Store`: Interface for interacting with the authentication storage.
+- `authmiddlewaregrpc`: Package for managing authentication middleware in gRPC.
+- `audit`: Package for logging audit events.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct implements the `auth.AuthenticationServiceServer` interface and handles authentication-related requests.
+
+#### Inputs
+This struct does not have explicit inputs. It receives requests through the gRPC server.
+
+#### Outputs
+This struct does not have explicit outputs. It sends responses through the gRPC server.
+
+#### Internal Logic
+The `Server` struct implements the following methods:
+- `GetAuthenticationSelf`: Retrieves the authentication information from the request context.
+- `GetAuthentication`: Retrieves the authentication information from the storage based on the provided ID.
+- `ListAuthentications`: Retrieves a list of authentications based on the provided filter and pagination parameters.
+- `DeleteAuthentication`: Deletes the authentication information from the storage based on the provided ID.
+- `ExpireAuthenticationSelf`: Expires the authentication information retrieved from the request context.
+
+### `GetActorFromAuthentication`
+#### Description
+This function takes an `auth.Authentication` object and an IP address string as input and returns an `audit.Actor` object. It extracts relevant information from the authentication object and constructs an actor object representing the authenticated user for audit logging purposes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| authentication | `*auth.Authentication` | The authentication object containing user information. |
+| ip | `string` | The IP address of the client. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | `*audit.Actor` | The actor object representing the authenticated user. |
+
+#### Internal Logic
+The function determines the authentication method used (e.g., OIDC, JWT, GitHub) and extracts relevant user information from the authentication object's metadata based on the method. It then constructs an `audit.Actor` object with the extracted information and the provided IP address.
+
+### `ActorFromContext`
+#### Description
+This function extracts the `audit.Actor` from the provided context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context containing the request information. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| actor | `*audit.Actor` | The actor object representing the authenticated user. |
+
+#### Internal Logic
+The function first attempts to retrieve the authentication information from the context using `authmiddlewaregrpc.GetAuthenticationFrom`. If authentication information is found, it calls `GetActorFromAuthentication` to construct the actor object. Otherwise, it creates an actor object with "none" authentication and the client's IP address.
+
+## Side Effects
+The `DeleteAuthentication` and `ExpireAuthenticationSelf` methods modify the authentication data stored in the underlying storage.
+
+## Error Handling
+The server methods return errors using the `error` interface. The errors are typically propagated from the underlying storage or authentication middleware.
+
+## Logging
+The server uses a `*zap.Logger` to log debug and error messages.

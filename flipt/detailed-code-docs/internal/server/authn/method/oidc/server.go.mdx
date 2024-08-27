@@ -1,0 +1,236 @@
+---
+title: "server.go"
+---
+
+## High-level description
+The `oidc` package implements an OIDC authentication method for Flipt. It provides a server that handles the authorization URL generation and callback logic for the OIDC/OAuth flow. This allows users to authenticate with Flipt using their existing identity provider accounts.
+
+## Code Structure
+The `Server` struct is the main component of the package. It holds references to a logger, an authentication store, and the authentication configuration. The `AuthorizeURL` and `Callback` methods handle the two main steps of the OIDC flow. The `providerFor` method is responsible for creating and configuring the OIDC provider based on the requested provider name and state. The `claims` struct represents the user claims extracted from the ID token.
+
+## References
+- `capoidc`: This package is used for interacting with OIDC providers.
+- `storageauth`: This package provides the interface for interacting with the authentication store.
+- `auth`: This package defines the gRPC services and messages for authentication.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct implements the OIDC authentication method server. It handles the `AuthorizeURL` and `Callback` gRPC methods.
+
+#### Inputs
+This symbol does not have explicit inputs.
+
+#### Outputs
+This symbol does not have explicit outputs.
+
+#### Internal Logic
+The `Server` struct does not have complex internal logic. It delegates the handling of the `AuthorizeURL` and `Callback` methods to other functions.
+
+### `NewServer`
+#### Description
+`NewServer` is the constructor for the `Server` struct. It initializes the logger, store, and config fields.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger to use. |
+| store | `storageauth.Store` | The authentication store to use. |
+| config | `config.AuthenticationConfig` | The authentication configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Server` |  | A pointer to the initialized `Server` struct. |
+
+#### Internal Logic
+The function simply initializes the fields of the `Server` struct with the provided values.
+
+### `RegisterGRPC`
+#### Description
+`RegisterGRPC` registers the server as an `auth.AuthenticationMethodOIDCServiceServer` on the provided gRPC server.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | `*grpc.Server` | The gRPC server to register on. |
+
+#### Outputs
+This symbol does not have explicit outputs.
+
+#### Internal Logic
+The function calls the `RegisterAuthenticationMethodOIDCServiceServer` function from the `auth` package, passing in the provided gRPC server and the `Server` instance.
+
+### `SkipsAuthentication`
+#### Description
+`SkipsAuthentication` always returns `true`, indicating that this authentication method does not require authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `bool` |  | Always returns `true`. |
+
+#### Internal Logic
+This function always returns `true`.
+
+### `AuthorizeURL`
+#### Description
+`AuthorizeURL` constructs and returns a URL directed at the requested OIDC provider based on the internal OAuth2 client configuration. The URL redirects to the `Callback` operation after the user authenticates with the provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*auth.AuthorizeURLRequest` | The request containing the provider name and state. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*auth.AuthorizeURLResponse` |  | The response containing the authorization URL. |
+| `error` |  | An error if the provider is not found or the URL cannot be generated. |
+
+#### Internal Logic
+1. Retrieves the provider configuration using `providerFor`.
+2. Generates the authorization URL using the provider's `AuthURL` method.
+3. Returns the URL in the response.
+
+### `Callback`
+#### Description
+`Callback` handles the callback request from the OIDC provider after the user authenticates. It validates the state parameter, exchanges the authorization code for an ID token, verifies the token, and creates a Flipt client token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| req | `*auth.CallbackRequest` | The request containing the provider name, state, and authorization code. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*auth.CallbackResponse` |  | The response containing the Flipt client token and authentication details. |
+| `error` |  | An error if the state is invalid, token exchange fails, or token verification fails. |
+
+#### Internal Logic
+1. Validates the state parameter using `method.CallbackValidateState`.
+2. Retrieves the provider configuration using `providerFor`.
+3. Exchanges the authorization code for an ID token using the provider's `Exchange` method.
+4. Verifies the ID token's signature and claims.
+5. Extracts user information from the ID token claims.
+6. Creates a Flipt client token using the `store.CreateAuthentication` method.
+7. Returns the client token and authentication details in the response.
+
+### `callbackURL`
+#### Description
+`callbackURL` constructs the callback URL for the given provider.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| host | `string` | The host address of the Flipt server. |
+| provider | `string` | The name of the OIDC provider. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `string` |  | The callback URL. |
+
+#### Internal Logic
+The function constructs the callback URL by joining the host address, the OIDC callback path, and the provider name.
+
+### `configFor`
+#### Description
+`configFor` retrieves the OIDC provider configuration for the given provider name.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | `string` | The name of the OIDC provider. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `config.AuthenticationMethodOIDCProvider` |  | The OIDC provider configuration. |
+| `error` |  | An error if the provider is not found. |
+
+#### Internal Logic
+The function retrieves the provider configuration from the `config.Methods.OIDC.Method.Providers` map using the provider name as the key.
+
+### `providerFor`
+#### Description
+`providerFor` creates and configures an OIDC provider instance for the given provider name and state.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| provider | `string` | The name of the OIDC provider. |
+| state | `string` | The state parameter for the OIDC flow. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*capoidc.Provider` |  | The configured OIDC provider instance. |
+| `*capoidc.Req` |  | The OIDC request object. |
+| `error` |  | An error if the provider configuration is invalid or the provider cannot be created. |
+
+#### Internal Logic
+1. Retrieves the provider configuration using `configFor`.
+2. Constructs the callback URL using `callbackURL`.
+3. Creates a new OIDC configuration object using the provider details.
+4. Creates a new OIDC provider instance using the configuration.
+5. Creates an OIDC request object with the state parameter, scopes, and nonce.
+6. Returns the provider instance and request object.
+
+### `claims`
+#### Description
+The `claims` struct represents the user claims extracted from the ID token.
+
+#### Inputs
+This symbol does not have explicit inputs.
+
+#### Outputs
+This symbol does not have explicit outputs.
+
+#### Internal Logic
+The `claims` struct does not have complex internal logic. It defines fields for storing user claims such as email, name, and profile picture.
+
+### `addToMetadata`
+#### Description
+`addToMetadata` adds the user claims from the `claims` struct to the provided metadata map.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| m | `map[string]string` | The metadata map to add the claims to. |
+
+#### Outputs
+This symbol does not have explicit outputs.
+
+#### Internal Logic
+The function iterates over the fields of the `claims` struct and adds them to the metadata map if they are not empty.
+
+## Side Effects
+The `Callback` method modifies the authentication store by creating a new authentication entry.
+
+## Dependencies
+- `github.com/coreos/go-oidc/v3/oidc`: Used for interacting with OIDC providers.
+- `github.com/hashicorp/cap/oidc`: Used for OIDC related utilities.
+- `go.flipt.io/flipt/errors`: Used for defining custom errors.
+- `go.flipt.io/flipt/internal/config`: Used for accessing the authentication configuration.
+- `go.flipt.io/flipt/internal/server/authn/method`: Used for shared authentication method logic.
+- `go.flipt.io/flipt/internal/storage/authn`: Used for interacting with the authentication store.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Used for defining gRPC services and messages for authentication.
+- `go.uber.org/zap`: Used for logging.
+- `google.golang.org/grpc`: Used for gRPC communication.
+- `google.golang.org/protobuf/types/known/timestamppb`: Used for working with protobuf timestamps.
+
+## Error Handling
+The code uses errors returned from function calls to handle failures. It wraps errors with more context using `fmt.Errorf`.
+
+## Logging
+The code uses a `*zap.Logger` to log messages at various log levels.

@@ -1,0 +1,68 @@
+---
+title: "proto.yml"
+---
+
+## High-level description
+This GitHub Actions workflow defines two jobs, "proto-lint" and "proto-check", that are triggered on push and pull request events to the "main" branch for changes in the "sdk" or "rpc" directories. These jobs ensure the quality and consistency of protocol buffer definitions and generated code.
+
+## Code Structure
+The workflow defines two jobs: "proto-lint" and "proto-check". Both jobs run sequentially and utilize various GitHub Actions to set up the environment, lint and check protocol buffer definitions, and verify generated code.
+
+## Symbols
+### `name: Proto`
+#### Description
+Defines the name of the workflow as "Proto". This name will be displayed in the GitHub Actions interface.
+
+### `on`
+#### Description
+Specifies the events that trigger the workflow.
+
+#### Internal Logic
+- **`push`**: Triggers the workflow on push events to the "main" branch when changes are detected in the "sdk" or "rpc" directories.
+- **`pull_request`**: Triggers the workflow on pull requests that modify files within the "sdk" or "rpc" directories.
+
+### `env`
+#### Description
+Defines environment variables available to all jobs in the workflow.
+
+#### Internal Logic
+- **`GO_VERSION: "1.22"`**: Sets the Go version to 1.22 for all jobs.
+
+### `jobs`
+#### Description
+Contains a collection of jobs that define the steps of the workflow.
+
+#### Internal Logic
+- **`proto-lint`**: This job lints protocol buffer definitions using the Buf tool.
+- **`proto-check`**: This job generates code from protocol buffer definitions and checks for any inconsistencies.
+
+### `proto-lint`
+#### Description
+This job ensures the quality and consistency of protocol buffer definitions using the Buf tool.
+
+#### Internal Logic
+1. **`uses: actions/checkout@v4`**: Checks out the repository's code.
+2. **`uses: bufbuild/buf-setup-action@v1.26.0`**: Sets up the Buf CLI tool.
+3. **`uses: bufbuild/buf-lint-action@v1`**: Runs Buf's linting rules against the protocol buffer definitions in the "rpc/flipt" directory.
+4. **`uses: bufbuild/buf-breaking-action@v1`**: Checks for breaking changes in the protocol buffer definitions compared to the "main" branch.
+
+### `proto-check`
+#### Description
+This job generates code from protocol buffer definitions and checks for any inconsistencies.
+
+#### Internal Logic
+1. **`uses: actions/checkout@v4`**: Checks out the repository's code.
+2. **`uses: actions/setup-go@v5`**: Sets up the Go environment.
+3. **`uses: bufbuild/buf-setup-action@v1.26.0`**: Sets up the Buf CLI tool.
+4. **`uses: magefile/mage-action@v3`**: Executes the "proto" target defined in the project's Magefile, likely responsible for generating code from protocol buffer definitions.
+5. **`name: Ensure clean git state`**: Verifies that the "mage proto" command didn't introduce any uncommitted changes. If changes are detected, the job fails and instructs the user to commit the changes.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout | Checks out the repository's code. |
+| bufbuild/buf-setup-action | Sets up the Buf CLI tool. |
+| bufbuild/buf-lint-action | Lints protocol buffer definitions using Buf. |
+| bufbuild/buf-breaking-action | Checks for breaking changes in protocol buffer definitions. |
+| actions/setup-go | Sets up the Go environment. |
+| magefile/mage-action | Executes Mage targets. | 

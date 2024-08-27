@@ -1,0 +1,449 @@
+---
+title: "gitfs.go"
+---
+
+## High-level description
+The `gitfs` package provides a read-only filesystem implementation (`FS`) that retrieves files from a git repository. It uses the `go-git` library to interact with git repositories and implements the `fs.FS` interface for compatibility with Go's standard library.
+
+## Code Structure
+The `FS` struct represents the filesystem and holds references to a `storage.Storer` (for accessing the git repository) and an `object.Tree` (representing the current directory). The `New` function creates a new `FS` instance, while `NewFromRepo` and its variants provide convenient ways to create an `FS` from a `git.Repository` and a reference or hash. The `Open` method is the main entry point for accessing files and directories, delegating to `File` and `Dir` structs for file and directory handling, respectively.
+
+## References
+- `github.com/go-git/go-git/v5`: Used for interacting with git repositories.
+- `io/fs`: Used for implementing the standard Go filesystem interface.
+
+## Symbols
+
+### `FS`
+#### Description
+`FS` is a read-only filesystem implementation that retrieves files from a git repository. It implements the `fs.FS` interface.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Stores a reference to a `storage.Storer` for accessing the git repository.
+- Stores a reference to an `object.Tree` representing the current directory.
+
+### `New`
+#### Description
+`New` instantiates a new `FS` instance with the provided logger, storage, and tree.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging. |
+| storage | `storage.Storer` | Git storage implementation for accessing the repository. |
+| tree | `*object.Tree` | Git tree representing the root directory of the filesystem. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| FS | `FS` | A new instance of the `FS` struct. |
+
+### `Options`
+#### Description
+`Options` is a struct that holds configuration options for creating an `FS` instance from a repository.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- `ref`: The git reference to use (default: `HEAD`).
+
+### `WithReference`
+#### Description
+`WithReference` is a function that returns an option to override the default reference used when creating an `FS` instance from a repository.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | `plumbing.ReferenceName` | The git reference to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[Options] | `func(*Options)` | An option function that sets the `ref` field of the `Options` struct. |
+
+### `NewFromRepo`
+#### Description
+`NewFromRepo` is a convenience function that creates a new `FS` instance from a `git.Repository` and optional configuration options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging. |
+| repo | `*git.Repository` | The git repository to use. |
+| opts | `...containers.Option[Options]` | Optional configuration options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| FS | `FS` | A new instance of the `FS` struct. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- Applies the provided options to an `Options` struct.
+- Resolves the specified git reference.
+- Retrieves the commit and root tree for the resolved reference.
+- Creates a new `FS` instance using the retrieved tree and the repository's storage.
+
+### `NewFromRepoHashString`
+#### Description
+`NewFromRepoHashString` is a convenience function that creates a new `FS` instance from a `git.Repository` and a hash string.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging. |
+| repo | `*git.Repository` | The git repository to use. |
+| hash | `string` | The commit hash to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| FS | `FS` | A new instance of the `FS` struct. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- Delegates to `NewFromRepoHash` after converting the hash string to a `plumbing.Hash`.
+
+### `NewFromRepoHash`
+#### Description
+`NewFromRepoHash` is a convenience function that creates a new `FS` instance from a `git.Repository` and a commit hash.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for logging. |
+| repo | `*git.Repository` | The git repository to use. |
+| hash | `plumbing.Hash` | The commit hash to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| FS | `FS` | A new instance of the `FS` struct. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- Retrieves the commit and root tree for the specified commit hash.
+- Creates a new `FS` instance using the retrieved tree and the repository's storage.
+
+### `Open`
+#### Description
+`Open` opens the named file or directory. It implements the `fs.FS` interface.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| name | `string` | The name of the file or directory to open. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fs.File | `fs.File` | A file or directory handle. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- Validates the provided path.
+- If the path is ".", it returns a `Dir` representing the root directory.
+- Otherwise, it searches for the specified entry in the git tree.
+- If the entry is a file, it returns a `File` representing the file.
+- If the entry is a directory, it returns a `Dir` representing the directory.
+
+### `File`
+#### Description
+`File` represents a file in the git filesystem. It implements the `fs.File` interface.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Stores a `io.ReadCloser` for reading the file contents.
+- Stores a `FileInfo` struct with metadata about the file.
+
+### `Seek`
+#### Description
+`Seek` attempts to seek the embedded read-closer. If the embedded read closer implements seek, then it delegates to that instances implementation. Alternatively, it returns an error signifying that the File cannot be seeked.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| offset | `int64` | The offset to seek to. |
+| whence | `int` | The seek mode. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| int64 | `int64` | The new offset. |
+| error | `error` | An error if the operation fails. |
+
+### `Stat`
+#### Description
+`Stat` returns a `FileInfo` describing the file.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fs.FileInfo | `fs.FileInfo` | Metadata about the file. |
+| error | `error` | An error if the operation fails. |
+
+### `Dir`
+#### Description
+`Dir` represents a directory in the git filesystem. It implements the `fs.File` interface.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Stores a `FileInfo` struct with metadata about the directory.
+- Stores a slice of `fs.DirEntry` representing the directory entries.
+
+### `Read`
+#### Description
+`Read` is not implemented for directories and always returns `io.EOF`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| p | `[]byte` | The buffer to read into. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| n | `int` | The number of bytes read. |
+| error | `error` | An error if the operation fails. |
+
+### `Close`
+#### Description
+`Close` is a no-op for directories and always returns nil.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if the operation fails. |
+
+### `ReadDir`
+#### Description
+`ReadDir` reads the contents of the directory and returns a slice of `fs.DirEntry`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| n | `int` | The maximum number of entries to return. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []fs.DirEntry | `[]fs.DirEntry` | A slice of directory entries. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- If n &lt;= 0, it returns all directory entries.
+- Otherwise, it returns up to n entries, updating the internal index for subsequent calls.
+
+### `FileInfo`
+#### Description
+`FileInfo` contains metadata about a file or directory.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Stores the name, size, mode, and modification time of the file or directory.
+
+### `fileInfoFromEntry`
+#### Description
+`fileInfoFromEntry` creates a `FileInfo` struct from a `object.TreeEntry`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| entry | `*object.TreeEntry` | The git tree entry to create the `FileInfo` from. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| FileInfo | `FileInfo` | The created `FileInfo` struct. |
+| error | `error` | An error if the operation fails. |
+
+### `Name`
+#### Description
+`Name` returns the name of the file or directory.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The name of the file or directory. |
+
+### `Size`
+#### Description
+`Size` returns the size of the file.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| int64 | `int64` | The size of the file. |
+
+### `Mode`
+#### Description
+`Mode` returns the file mode.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fs.FileMode | `fs.FileMode` | The file mode. |
+
+### `ModTime`
+#### Description
+`ModTime` returns the modification time.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| time.Time | `time.Time` | The modification time. |
+
+### `IsDir`
+#### Description
+`IsDir` reports whether the `FileInfo` represents a directory.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the `FileInfo` represents a directory, false otherwise. |
+
+### `Sys`
+#### Description
+`Sys` always returns nil.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| any | `any` | Always nil. |
+
+### `DirEntry`
+#### Description
+`DirEntry` represents an entry within a directory.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- Stores a `object.TreeEntry` representing the directory entry.
+- Stores a `object.File` if the entry is a file.
+- Stores the file mode.
+
+### `Name`
+#### Description
+`Name` returns the name of the directory entry.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The name of the directory entry. |
+
+### `IsDir`
+#### Description
+`IsDir` reports whether the directory entry represents a directory.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | True if the directory entry represents a directory, false otherwise. |
+
+### `Type`
+#### Description
+`Type` returns the type bits for the entry.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fs.FileMode | `fs.FileMode` | The file mode type bits. |
+
+### `Info`
+#### Description
+`Info` returns the `FileInfo` for the directory entry.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| fs.FileInfo | `fs.FileInfo` | The `FileInfo` for the directory entry. |
+| error | `error` | An error if the operation fails. |
+
+#### Internal Logic
+- Creates a `FileInfo` struct with the name and mode of the directory entry.
+- If the entry is a file, it sets the size of the `FileInfo`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/go-git/go-git/v5 | Used for interacting with git repositories |
+| io/fs | Used for implementing the standard Go filesystem interface |
+| go.uber.org/zap | Used for logging |
+
+## Error Handling
+The code uses Go's standard error handling mechanisms. Most functions return an error as their last return value. The `Open` method wraps errors in `fs.PathError` for compatibility with the `fs.FS` interface.
+
+## Performance Considerations
+- The `FS` implementation is read-only, which can provide better performance for read-heavy workloads.
+- The `Seek` method on `File` only works if the underlying `io.ReadCloser` implements `io.Seeker`, which may not always be the case.
+- The `ReadDir` method on `Dir` supports pagination, which can be useful for directories with many entries.
+
+## TODOs
+There are no explicit TODOs in the code.
+
+This completes the documentation for the `gitfs` package. The package provides a flexible and efficient way to interact with git repositories as if they were local filesystems, which can be particularly useful for applications that need to read files from specific git commits or branches without fully cloning the repository.

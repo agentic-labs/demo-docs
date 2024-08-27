@@ -1,0 +1,167 @@
+---
+title: "log.go"
+---
+
+## High-level description
+The `log.go` file defines a log sink (`Sink`) for the Flipt audit system. This sink writes audit events to either the standard output, a specified file, or both, depending on the configuration.
+
+## Code Structure
+The `Sink` struct uses a `zap.Logger` to write audit events. The `NewSink` function creates a new `Sink` instance with configurable options like the log file path and encoding. The `SendAudits` method receives audit events and logs them using the `zap.Logger`.
+
+## Symbols
+
+### `sinkType`
+#### Description
+A constant string representing the type of the sink, which is "log".
+
+### `auditKey`
+#### Description
+A constant string representing the key used for logging audit events, which is "AUDIT".
+
+### `Sink`
+#### Description
+A struct representing the log sink for audit events. It holds a `zap.Logger` for writing logs.
+
+#### Internal Logic
+The `Sink` struct doesn't have complex internal logic. It simply uses the `zap.Logger` to write audit events.
+
+### `logOptions`
+#### Description
+A struct holding configuration options for the log sink, including the log file path and encoding.
+
+### `Option`
+#### Description
+A function type representing an option that can be passed to `NewSink` to customize the log sink.
+
+### `WithPath`
+#### Description
+A function that returns an `Option` for setting the log file path.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| path | string | The path to the log file. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | func(*logOptions) | An option function that sets the log file path in the `logOptions` struct. |
+
+### `WithEncoding`
+#### Description
+A function that returns an `Option` for setting the log encoding.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encoding | config.LogEncoding | The log encoding to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Option | func(*logOptions) | An option function that sets the log encoding in the `logOptions` struct. |
+
+### `NewSink`
+#### Description
+A function that creates a new `Sink` instance with the provided options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...Option | A variadic parameter accepting multiple `Option` functions to customize the log sink. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| audit.Sink | audit.Sink | The created `Sink` instance, implementing the `audit.Sink` interface. |
+| error | error | An error if the sink creation fails. |
+
+#### Internal Logic
+1. Initializes a default `logOptions` struct.
+2. Iterates through the provided `Option` functions, applying each to the `logOptions` struct.
+3. Calls the internal `newSink` function with the configured `logOptions`.
+
+### `consoleEncoderConfig`
+#### Description
+A constant `zapcore.EncoderConfig` defining the encoder configuration for console logging.
+
+### `fileEncoderConfig`
+#### Description
+A constant `zapcore.EncoderConfig` defining the encoder configuration for file logging.
+
+### `newSink`
+#### Description
+An internal function that creates a new `Sink` instance with the provided `logOptions`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | logOptions | The configuration options for the log sink. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| audit.Sink | audit.Sink | The created `Sink` instance, implementing the `audit.Sink` interface. |
+| error | error | An error if the sink creation fails. |
+
+#### Internal Logic
+1. Creates a default `zap.Config` for console logging.
+2. If a log file path is provided in `opts`, configures the `zap.Config` for file logging and creates the log file directory if it doesn't exist.
+3. Builds a `zap.Logger` using the configured `zap.Config`.
+4. Creates and returns a new `Sink` instance with the created `zap.Logger`.
+
+### `(*Sink) SendAudits`
+#### Description
+A method on the `Sink` struct that sends audit events to the log sink.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| events | []audit.Event | A slice of `audit.Event` to be logged. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if logging the events fails. |
+
+#### Internal Logic
+1. Iterates through the provided `audit.Event` slice.
+2. Logs each event using the `zap.Logger` with the `auditKey` and the event data.
+
+### `(*Sink) Close`
+#### Description
+A method on the `Sink` struct that closes the log sink and flushes any buffered log entries.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if closing the logger fails. |
+
+#### Internal Logic
+1. Calls `Sync()` on the `zap.Logger` to flush any buffered log entries.
+2. Returns nil, as closing the logger doesn't return an error in this implementation.
+
+### `(*Sink) String`
+#### Description
+A method on the `Sink` struct that returns a string representation of the sink type.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The string "log", representing the sink type. |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| "context" | Provides a way to pass request-scoped values and cancellation signals. |
+| "fmt" | Used for formatting strings. |
+| "os" | Provides functions for interacting with the operating system, such as creating directories. |
+| "path/filepath" | Provides functions for manipulating file paths. |
+| "go.flipt.io/flipt/internal/config" | Provides the `config.LogEncoding` type. |
+| "go.flipt.io/flipt/internal/server/audit" | Provides the `audit.Sink` interface and `audit.Event` type. |
+| "go.uber.org/zap" | Provides a structured logging library. |
+| "go.uber.org/zap/zapcore" | Provides low-level components for configuring `zap` loggers. |
+
+## Error Handling
+The code uses basic error handling with `error` values returned from functions. The `NewSink` and `newSink` functions return an error if the log sink creation fails. The `SendAudits` method returns an error if logging the events fails. The `Close` method doesn't return an error in this implementation, but it handles the `Sync()` error internally.

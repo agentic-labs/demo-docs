@@ -1,0 +1,78 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of an in-memory operation lock service for the Flipt project. The service provides a thread-safe mechanism for acquiring and managing locks on operations, suitable for single-instance or in-process use cases where multiple Flipt instances don't need to coordinate access to shared resources.
+
+## What does it do?
+The in-memory operation lock service allows different parts of the application to acquire temporary locks on specific operations. This is useful for preventing concurrent execution of critical sections or ensuring that only one process can perform a particular operation at a time. The service maintains a map of lock entries, where each entry corresponds to a unique operation and contains information about when the lock was acquired and when it will expire.
+
+When a part of the application wants to perform an operation, it can attempt to acquire a lock through this service. If the lock is available (either because it hasn't been acquired before or because the previous lock has expired), the service grants the lock and records the acquisition time and expiration time. If the lock is already held by another process and hasn't expired, the acquisition attempt fails.
+
+This implementation uses a mutex to ensure thread-safety, making it suitable for concurrent access within a single application instance. However, it's important to note that this in-memory implementation doesn't provide coordination across multiple instances of the application running on different machines.
+
+## Key Files
+
+1. `memory.go`:
+   This file contains the core implementation of the in-memory operation lock service. It defines the `Service` struct, which holds the lock entries and provides the `TryAcquire` method for attempting to acquire locks.
+
+   Key components:
+   - `Service` struct: Holds a mutex and a map of lock entries.
+   - `New` function: Creates and initializes a new `Service` instance.
+   - `TryAcquire` method: Implements the logic for acquiring a lock on an operation.
+
+2. `memory_test.go`:
+   This file contains unit tests for the in-memory operation lock service. It uses a test harness to verify the correct behavior of the locking mechanism under concurrent access.
+
+   Key components:
+   - `Test_Harness` function: Runs a comprehensive test to ensure that lock acquisitions happen sequentially with the defined interval under concurrent requests.
+
+## Dependencies
+The implementation relies on the following standard Go libraries:
+- `context`: For handling request-scoped data and cancellation signals.
+- `sync`: For providing basic synchronization primitives like mutexes.
+- `time`: For measuring and managing time-related operations.
+
+It also depends on the `go.flipt.io/flipt/internal/storage/oplock` package, which defines the `Operation` and `LockEntry` types, as well as the `Service` interface that this implementation satisfies.
+
+For testing, it uses the `go.flipt.io/flipt/internal/storage/oplock/testing` package, which provides a reusable test harness for validating the behavior of any `oplock.Service` implementation.
+
+## Configuration
+This in-memory implementation doesn't require any specific configuration. It's designed to work out-of-the-box without the need for external configuration files or environment variables.
+
+Here's an example of how to create and use the in-memory operation lock service:
+
+```go
+import (
+    "context"
+    "time"
+    "go.flipt.io/flipt/internal/storage/oplock/memory"
+)
+
+func main() {
+    // Create a new in-memory operation lock service
+    service := memory.New()
+
+    // Attempt to acquire a lock
+    ctx := context.Background()
+    operation := oplock.Operation("my-critical-operation")
+    duration := 5 * time.Second
+
+    acquired, entry, err := service.TryAcquire(ctx, operation, duration)
+    if err != nil {
+        // Handle error
+    }
+
+    if acquired {
+        // Lock was successfully acquired
+        // Perform the critical operation
+        // The lock will automatically expire after the specified duration
+    } else {
+        // Lock acquisition failed (already held by another process)
+        // Handle accordingly (e.g., retry later or skip the operation)
+    }
+}
+```
+
+This implementation provides a simple and efficient way to manage operation locks within a single instance of the Flipt application, ensuring thread-safety and preventing concurrent execution of critical operations.

@@ -1,0 +1,87 @@
+---
+title: "evaluation.go"
+---
+
+## High-level description
+The `evaluation.go` file in the `internal/storage/sql/common` package defines functions related to retrieving evaluation data for feature flags. It includes functions for fetching evaluation rules, distributions, and rollouts from the database.
+
+## Code Structure
+The code consists of three main functions: `GetEvaluationRules`, `GetEvaluationDistributions`, and `GetEvaluationRollouts`. Each function queries the database to retrieve specific evaluation data based on the provided input parameters.
+
+## References
+This code references the following symbols from other parts of the codebase:
+- `storage.ResourceRequest`: A struct representing a request for a resource within a namespace.
+- `storage.EvaluationRule`: A struct representing an evaluation rule for a feature flag.
+- `storage.EvaluationDistribution`: A struct representing a distribution of variants for a rule.
+- `storage.EvaluationRollout`: A struct representing a rollout configuration for a feature flag.
+- `flipt.SegmentOperator`: An enum representing the operator used to combine segments in a rule.
+- `flipt.MatchType`: An enum representing the type of matching used for a segment.
+- `flipt.ComparisonType`: An enum representing the type of comparison used in a constraint.
+- `storage.IDRequest`: A struct representing a request for a resource by its ID.
+
+## Symbols
+
+### `GetEvaluationRules`
+#### Description
+This function retrieves all evaluation rules associated with a given flag key and namespace. It performs two database queries: one to fetch rule metadata (ID, rank, segment operator) and another to fetch segment and constraint data. The results are then combined and sorted by rank to return a slice of `storage.EvaluationRule` structs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| flag | storage.ResourceRequest | A request for a flag resource, containing the flag key and namespace. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rules | []*storage.EvaluationRule | A slice of evaluation rules associated with the flag. |
+| err | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Query the `rules` table for rule metadata based on the flag key and namespace.
+2. Iterate through the rule metadata rows and store them in a map keyed by rule ID.
+3. Query the `rule_segments`, `segments`, and `constraints` tables to fetch segment and constraint data for the rules.
+4. Iterate through the segment and constraint data rows and construct `storage.EvaluationRule` structs, combining data from both queries.
+5. Sort the rules by rank and return the resulting slice.
+
+### `GetEvaluationDistributions`
+#### Description
+This function retrieves all evaluation distributions associated with a given rule ID. It queries the `distributions` and `variants` tables to fetch distribution and variant data, respectively. The results are then combined to return a slice of `storage.EvaluationDistribution` structs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| rule | storage.IDRequest | A request for a rule resource, containing the rule ID. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| distributions | []*storage.EvaluationDistribution | A slice of evaluation distributions associated with the rule. |
+| err | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Query the `distributions` and `variants` tables for distribution and variant data based on the rule ID.
+2. Iterate through the rows and construct `storage.EvaluationDistribution` structs, combining data from both tables.
+3. Return the resulting slice of distributions.
+
+### `GetEvaluationRollouts`
+#### Description
+This function retrieves all evaluation rollouts associated with a given flag key and namespace. It queries the `rollouts`, `rollout_thresholds`, and `rollout_segments` tables to fetch rollout, threshold, and segment data, respectively. The results are then combined and sorted by rank to return a slice of `storage.EvaluationRollout` structs.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| flag | storage.ResourceRequest | A request for a flag resource, containing the flag key and namespace. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rollouts | []*storage.EvaluationRollout | A slice of evaluation rollouts associated with the flag. |
+| err | error | An error, if any occurred during the process. |
+
+#### Internal Logic
+1. Query the `rollouts`, `rollout_thresholds`, and `rollout_segments` tables for rollout, threshold, and segment data based on the flag key and namespace.
+2. Iterate through the rows and construct `storage.EvaluationRollout` structs, combining data from all three tables.
+3. Sort the rollouts by rank and return the resulting slice.

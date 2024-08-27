@@ -1,0 +1,74 @@
+---
+title: "11_segment_anding_tables.up.sql"
+---
+
+## High-level description
+This SQL script performs a database migration for SQLite3, introducing changes to support segment "anding" (logical AND operations) in rules and rollouts. It creates new tables with updated structures, transfers existing data, and establishes new relationships between tables.
+
+## Code Structure
+The script is organized into several sections, each focusing on a specific table or set of related tables:
+1. Rules and Distributions
+2. Rule Segments
+3. Rollouts and Rollout Segments
+4. Cleanup and Renaming
+
+## Symbols
+
+### Rules Table Migration
+#### Description
+Creates a new `rules_temp` table with an additional `segment_operator` column and transfers data from the existing `rules` table.
+
+#### Internal Logic
+1. Creates `rules_temp` table with new structure
+2. Inserts data from `rules` into `rules_temp`
+3. Creates `distributions_temp` table
+4. Transfers data from `distributions` to `distributions_temp`
+
+### Rule Segments Table Creation
+#### Description
+Creates a new `rule_segments` table to establish many-to-many relationships between rules and segments.
+
+#### Internal Logic
+1. Creates `rule_segments` table
+2. Inserts data from `rules` into `rule_segments`
+
+### Rollout Segments Migration
+#### Description
+Creates a new `rollout_segments_temp` table with an additional `segment_operator` column and a new `rollout_segment_references` table for many-to-many relationships.
+
+#### Internal Logic
+1. Creates `rollout_segments_temp` table
+2. Transfers data from `rollout_segments` to `rollout_segments_temp`
+3. Creates `rollout_segment_references` table
+4. Transfers data from `rollout_segments` to `rollout_segment_references`
+
+### Cleanup and Renaming
+#### Description
+Drops old tables and renames temporary tables to their final names.
+
+#### Internal Logic
+1. Drops old `rules` table
+2. Renames `rules_temp` to `rules`
+3. Drops old `rollout_segments` table
+4. Renames `rollout_segments_temp` to `rollout_segments`
+5. Drops old `distributions` table
+6. Renames `distributions_temp` to `distributions`
+
+## Side Effects
+- Modifies the database schema
+- Transfers existing data to new table structures
+- Drops old tables and replaces them with new ones
+
+## Dependencies
+This script depends on the existence of the following tables:
+- `namespaces`
+- `flags`
+- `variants`
+- `segments`
+- `rollouts`
+
+## Error Handling
+The script uses SQL's built-in error handling. If any operation fails, the entire transaction will be rolled back, maintaining database integrity.
+
+## Performance Considerations
+Large tables may take significant time to migrate. Consider running this migration during low-traffic periods.

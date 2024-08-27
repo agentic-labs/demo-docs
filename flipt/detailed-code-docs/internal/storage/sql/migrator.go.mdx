@@ -1,0 +1,142 @@
+---
+title: "migrator.go"
+---
+
+## High-level description
+The `migrator.go` file defines the `Migrator` type, which is responsible for managing database migrations for the Flipt application. It supports multiple database drivers and uses the `golang-migrate` library to apply migrations from embedded resources.
+
+## Code Structure
+The `Migrator` struct holds references to the database connection, the selected database driver, a logger, and a `migrate.Migrate` instance. The `NewMigrator` and `NewAnalyticsMigrator` functions create new `Migrator` instances for different database types. The `Up`, `Drop`, and `Close` methods provide the main functionality for applying migrations, dropping the database, and closing the migrator.
+
+## References
+- `github.com/golang-migrate/migrate/v4`: This library provides the core migration functionality.
+- `go.flipt.io/flipt/config/migrations`: This package contains the embedded migration files.
+- `go.flipt.io/flipt/internal/config`: This package provides access to the application configuration.
+
+## Symbols
+
+### `Migrator`
+#### Description
+The `Migrator` struct manages database migrations for different database drivers.
+
+#### Inputs
+This struct does not have explicit inputs. It is initialized using the `NewMigrator` or `NewAnalyticsMigrator` functions.
+
+#### Outputs
+This struct does not have explicit outputs. Its methods perform actions on the database.
+
+#### Internal Logic
+The `Migrator` struct uses a `migrate.Migrate` instance to manage migrations. It selects the appropriate database driver based on the configured database type.
+
+### `NewMigrator`
+#### Description
+The `NewMigrator` function creates a new `Migrator` instance for the main application database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+| logger | `*zap.Logger` | A logger instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Migrator | `*Migrator` | A new `Migrator` instance. |
+| error | `error` | An error, if any occurred. |
+
+#### Internal Logic
+1. Opens a database connection using the provided configuration.
+2. Creates a new `migrate.Migrate` instance with the appropriate database driver.
+3. Returns a new `Migrator` instance.
+
+### `NewAnalyticsMigrator`
+#### Description
+The `NewAnalyticsMigrator` function creates a new `Migrator` instance for the analytics database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The application configuration. |
+| logger | `*zap.Logger` | A logger instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Migrator | `*Migrator` | A new `Migrator` instance. |
+| error | `error` | An error, if any occurred. |
+
+#### Internal Logic
+1. Opens a database connection to the analytics database using the provided configuration.
+2. Creates a new `migrate.Migrate` instance with the appropriate database driver.
+3. Returns a new `Migrator` instance.
+
+### `Close`
+#### Description
+The `Close` method closes the underlying `migrate.Migrate` instance and the database connection.
+
+#### Inputs
+This method does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| source | `error` | An error, if any occurred while closing the migration source. |
+| db | `error` | An error, if any occurred while closing the database connection. |
+
+### `Up`
+#### Description
+The `Up` method applies any pending database migrations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| force | `bool` | Whether to force a migration even if the database is not backed up. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error, if any occurred during the migration process. |
+
+#### Internal Logic
+1. Checks if any migrations are pending.
+2. If migrations are pending and `force` is true, or if this is the first run, applies all pending migrations.
+3. If migrations are pending and `force` is false, returns an error indicating that migrations are pending.
+
+### `Drop`
+#### Description
+The `Drop` method drops the database schema.
+
+#### Inputs
+This method does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error, if any occurred while dropping the database. |
+
+#### Internal Logic
+1. Disables foreign key checks for SQLite and MySQL databases to avoid errors during the drop process.
+2. Calls the `Drop` method of the underlying `migrate.Migrate` instance to drop the database schema.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `database/sql` | Provides the common interface for interacting with SQL databases. |
+| `errors` | Used for error handling. |
+| `fmt` | Used for string formatting. |
+| `github.com/golang-migrate/migrate/v4` | Provides the core database migration functionality. |
+| `github.com/golang-migrate/migrate/v4/database/clickhouse` | Provides the Clickhouse database driver for `golang-migrate`. |
+| `github.com/golang-migrate/migrate/v4/database/cockroachdb` | Provides the CockroachDB database driver for `golang-migrate`. |
+| `github.com/golang-migrate/migrate/v4/database/mysql` | Provides the MySQL database driver for `golang-migrate`. |
+| `github.com/golang-migrate/migrate/v4/database/pgx/v5` | Provides the PostgreSQL database driver for `golang-migrate`. |
+| `github.com/golang-migrate/migrate/v4/database/sqlite3` | Provides the SQLite database driver for `golang-migrate`. |
+| `github.com/golang-migrate/migrate/v4/source/iofs` | Provides the `iofs` migration source for `golang-migrate`. |
+| `go.flipt.io/flipt/config/migrations` | Contains the embedded migration files. |
+| `go.flipt.io/flipt/internal/config` | Provides access to the application configuration. |
+| `go.uber.org/zap` | Provides a structured logger. |
+
+## Error Handling
+The code uses the `errors` package for error handling. It returns errors from most functions and methods, allowing for centralized error handling at a higher level.
+
+## Logging
+The `Migrator` struct uses a `*zap.Logger` instance to log messages during the migration process.

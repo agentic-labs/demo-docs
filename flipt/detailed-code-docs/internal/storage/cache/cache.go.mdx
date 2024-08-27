@@ -1,0 +1,358 @@
+---
+title: "cache.go"
+---
+
+## High-level description
+The `cache.go` file defines a storage middleware that implements a caching layer on top of an existing storage.Store implementation. It uses a cache.Cacher to store and retrieve frequently accessed data, such as flags, evaluation rules, and evaluation rollouts, to improve performance.
+
+## Code Structure
+The `Store` struct acts as a middleware, wrapping an existing `storage.Store` and adding caching capabilities using a `cache.Cacher`. It intercepts calls to the underlying store and caches the results for specific methods. The `set` and `get` functions provide generic caching logic for different data types, while specialized methods like `setJSON`, `getJSON`, `setProtobuf`, and `getProtobuf` handle serialization and deserialization for JSON and Protobuf data.
+
+## References
+- `go.flipt.io/flipt/internal/cache`
+- `go.flipt.io/flipt/internal/storage`
+- `go.flipt.io/flipt/rpc/flipt`
+
+## Symbols
+
+### `marshaller`
+#### Description
+The `marshaller` interface defines a single method `Marshal` that takes a value of type `T` and returns its byte representation and an error. It is used to serialize data before storing it in the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (value) | `T` | The value to be marshaled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bytes) | `[]byte` | The byte representation of the marshaled value. |
+| (error) | `error` | An error if marshaling fails. |
+
+### `marshalFunc`
+#### Description
+The `marshalFunc` type defines a function that implements the `marshaller` interface. It takes a value of type `T` and returns its byte representation and an error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (value) | `T` | The value to be marshaled. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bytes) | `[]byte` | The byte representation of the marshaled value. |
+| (error) | `error` | An error if marshaling fails. |
+
+### `unmarshaller`
+#### Description
+The `unmarshaller` interface defines a single method `Unmarshal` that takes a byte slice and a pointer to a value of type `T`. It attempts to unmarshal the byte slice into the provided value and returns an error if unmarshaling fails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bytes) | `[]byte` | The byte slice to be unmarshaled. |
+| (value) | `T` | A pointer to the value to store the unmarshaled data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (error) | `error` | An error if unmarshaling fails. |
+
+### `unmarshalFunc`
+#### Description
+The `unmarshalFunc` type defines a function that implements the `unmarshaller` interface. It takes a byte slice and a pointer to a value of type `T` and attempts to unmarshal the byte slice into the provided value. It returns an error if unmarshaling fails.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bytes) | `[]byte` | The byte slice to be unmarshaled. |
+| (value) | `T` | A pointer to the value to store the unmarshaled data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (error) | `error` | An error if unmarshaling fails. |
+
+### `set`
+#### Description
+The `set` function is a generic function that sets a value in the cache. It takes a context, a pointer to the `Store`, a `marshaller`, a key, and a value of type `T`. It first marshals the value using the provided `marshaller` and then sets the marshaled value in the cache using the provided key.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| s | `*Store` | A pointer to the `Store` instance. |
+| m | `marshaller[T]` | A `marshaller` to marshal the value. |
+| key | `string` | The key to use for storing the value in the cache. |
+| value | `T` | The value to be stored in the cache. |
+
+### `get`
+#### Description
+The `get` function is a generic function that retrieves a value from the cache. It takes a context, a pointer to the `Store`, an `unmarshaller`, a key, and a pointer to a value of type `T`. It attempts to retrieve the value associated with the provided key from the cache. If the value is found and successfully unmarshaled into the provided value pointer, it returns `true`, otherwise `false`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| s | `*Store` | A pointer to the `Store` instance. |
+| u | `unmarshaller[T]` | An `unmarshaller` to unmarshal the cached value. |
+| key | `string` | The key to retrieve the value from the cache. |
+| value | `T` | A pointer to the value to store the retrieved data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bool) | `bool` | `true` if the value was found and successfully unmarshaled, `false` otherwise. |
+
+### `Store`
+#### Description
+The `Store` struct implements the `storage.Store` interface and acts as a caching middleware for an underlying `storage.Store` implementation. It uses a `cache.Cacher` to store and retrieve frequently accessed data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+The `Store` struct intercepts calls to the underlying `storage.Store` and caches the results for specific methods. It uses the `set` and `get` functions to interact with the cache, and specialized methods like `setJSON`, `getJSON`, `setProtobuf`, and `getProtobuf` handle serialization and deserialization for JSON and Protobuf data.
+
+### `NewStore`
+#### Description
+The `NewStore` function creates a new instance of the `Store` struct.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | `storage.Store` | The underlying `storage.Store` implementation. |
+| cacher | `cache.Cacher` | The `cache.Cacher` to use for caching. |
+| logger | `*zap.Logger` | A logger instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (*Store) | `*Store` | A pointer to the newly created `Store` instance. |
+
+### `setJSON`
+#### Description
+The `setJSON` method marshals a value to JSON and stores it in the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| key | `string` | The key to use for storing the value in the cache. |
+| value | `any` | The value to be marshaled and stored. |
+
+### `getJSON`
+#### Description
+The `getJSON` method retrieves a JSON value from the cache and unmarshals it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| key | `string` | The key to retrieve the value from the cache. |
+| value | `any` | A pointer to the value to store the unmarshaled data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bool) | `bool` | `true` if the value was found and successfully unmarshaled, `false` otherwise. |
+
+### `setProtobuf`
+#### Description
+The `setProtobuf` method marshals a Protobuf message and stores it in the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| key | `string` | The key to use for storing the message in the cache. |
+| value | `proto.Message` | The Protobuf message to be marshaled and stored. |
+
+### `getProtobuf`
+#### Description
+The `getProtobuf` method retrieves a Protobuf message from the cache and unmarshals it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| key | `string` | The key to retrieve the message from the cache. |
+| value | `proto.Message` | A pointer to the Protobuf message to store the unmarshaled data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (bool) | `bool` | `true` if the message was found and successfully unmarshaled, `false` otherwise. |
+
+### `CreateFlag`
+#### Description
+This method creates a new flag in the store and caches it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `*flipt.CreateFlagRequest` | The request to create a flag. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (*flipt.Flag, error) | `(*flipt.Flag, error)` | A tuple containing the created flag and an error if any. |
+
+#### Internal Logic
+It first calls the underlying store's `CreateFlag` method. If successful, it caches the created flag using a generated cache key.
+
+### `GetFlag`
+#### Description
+This method retrieves a flag from the store, utilizing the cache if available.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `storage.ResourceRequest` | The request to get a flag. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (*flipt.Flag, error) | `(*flipt.Flag, error)` | A tuple containing the retrieved flag and an error if any. |
+
+#### Internal Logic
+It first attempts to retrieve the flag from the cache using a generated cache key. If found, it returns the cached flag. Otherwise, it calls the underlying store's `GetFlag` method, caches the retrieved flag, and then returns it.
+
+### `UpdateFlag`
+#### Description
+This method updates a flag in the store and invalidates the corresponding cache entry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `*flipt.UpdateFlagRequest` | The request to update a flag. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (*flipt.Flag, error) | `(*flipt.Flag, error)` | A tuple containing the updated flag and an error if any. |
+
+#### Internal Logic
+It first deletes the corresponding cache entry using a generated cache key. Then, it calls the underlying store's `UpdateFlag` method and returns the result.
+
+### `DeleteFlag`
+#### Description
+This method deletes a flag from the store and invalidates the corresponding cache entry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `*flipt.DeleteFlagRequest` | The request to delete a flag. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (error) | `error` | An error if any. |
+
+#### Internal Logic
+It first deletes the corresponding cache entry using a generated cache key. Then, it calls the underlying store's `DeleteFlag` method and returns the result.
+
+### `CreateVariant`, `UpdateVariant`, `DeleteVariant`
+#### Description
+These methods handle the creation, updating, and deletion of variants for a flag. They all invalidate the cache entry for the associated flag.
+
+#### Inputs
+| Method | Input Type | Description |
+|:-----|:-----|:------------|
+| `CreateVariant` | `*flipt.CreateVariantRequest` | The request to create a variant. |
+| `UpdateVariant` | `*flipt.UpdateVariantRequest` | The request to update a variant. |
+| `DeleteVariant` | `*flipt.DeleteVariantRequest` | The request to delete a variant. |
+
+#### Outputs
+| Method | Output Type | Description |
+|:-----|:-----|:------------|
+| `CreateVariant` | `(*flipt.Variant, error)` | A tuple containing the created variant and an error if any. |
+| `UpdateVariant` | `(*flipt.Variant, error)`| `UpdateVariant` | `(*flipt.Variant, error)` | A tuple containing the updated variant and an error if any. |
+| `DeleteVariant` | `error` | An error if any. |
+
+#### Internal Logic
+For each of these methods, the cache entry for the associated flag is first deleted using a generated cache key. Then, the corresponding method of the underlying store is called, and the result is returned.
+
+### `GetEvaluationRules`
+#### Description
+This method retrieves evaluation rules for a given resource, utilizing the cache if available.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `storage.ResourceRequest` | The request to get evaluation rules. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ([]*storage.EvaluationRule, error) | `([]*storage.EvaluationRule, error)` | A tuple containing a slice of evaluation rules and an error if any. |
+
+#### Internal Logic
+It first attempts to retrieve the evaluation rules from the cache using a generated cache key. If found, it returns the cached rules. Otherwise, it calls the underlying store's `GetEvaluationRules` method, caches the retrieved rules, and then returns them.
+
+### `GetEvaluationRollouts`
+#### Description
+This method retrieves evaluation rollouts for a given resource, utilizing the cache if available.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| r | `storage.ResourceRequest` | The request to get evaluation rollouts. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ([]*storage.EvaluationRollout, error) | `([]*storage.EvaluationRollout, error)` | A tuple containing a slice of evaluation rollouts and an error if any. |
+
+#### Internal Logic
+It first attempts to retrieve the evaluation rollouts from the cache using a generated cache key. If found, it returns the cached rollouts. Otherwise, it calls the underlying store's `GetEvaluationRollouts` method, caches the retrieved rollouts, and then returns them.
+
+### `cacheKey`
+#### Description
+This function generates a cache key for a given prefix and resource request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| prefix | `string` | The prefix for the cache key. |
+| r | `storage.ResourceRequest` | The resource request to generate the key for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (string) | `string` | The generated cache key. |
+
+#### Internal Logic
+It combines the prefix, namespace, and key from the resource request to form a unique cache key.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | For handling context in method calls. |
+| `encoding/json` | For JSON marshaling and unmarshaling. |
+| `fmt` | For string formatting. |
+| `go.flipt.io/flipt/internal/cache` | For the caching interface. |
+| `go.flipt.io/flipt/internal/storage` | For storage interfaces and types. |
+| `go.flipt.io/flipt/rpc/flipt` | For Flipt-specific types and requests. |
+| `go.uber.org/zap` | For logging. |
+| `google.golang.org/protobuf/proto` | For Protobuf marshaling and unmarshaling. |
+
+## Error Handling
+The code uses error logging extensively. When operations like marshaling, unmarshaling, or cache interactions fail, errors are logged using the `zap.Logger`. In most cases, errors during cache operations do not cause the method to fail; instead, they fall back to using the underlying store directly.
+
+## Logging
+The code uses `zap.Logger` for logging errors. Error logs are generated for issues during marshaling, unmarshaling, and cache operations.
+
+## Performance Considerations
+This caching layer is designed to improve performance by reducing the number of calls to the underlying storage system for frequently accessed data. However, cache invalidation is implemented conservatively, with entries being deleted on any update operation related to the cached entity. This approach ensures data consistency but may reduce the effectiveness of the cache for frequently updated entities.

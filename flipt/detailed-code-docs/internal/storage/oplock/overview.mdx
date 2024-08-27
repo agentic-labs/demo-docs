@@ -1,0 +1,55 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/storage/oplock` directory contains implementations and interfaces for an operation lock (oplock) service in the Flipt project. This service is designed to manage distributed locks for long-running operations, ensuring that concurrent executions of the same operation are prevented across multiple Flipt instances.
+
+## What does it do?
+The oplock service provides a mechanism to acquire and manage locks for named operations. Here's a simplified explanation of its functionality:
+
+1. When an operation needs to run, it attempts to acquire a lock through the service.
+2. The service checks if a lock for that operation already exists.
+3. If no lock exists, it creates a new lock entry with a specified duration.
+4. If a lock exists but has expired, it updates the lock with a new expiration time.
+5. If a lock exists and is still valid, the operation is not allowed to run.
+
+This process ensures that only one instance of an operation can run at a time across multiple Flipt instances, preventing potential conflicts or data inconsistencies that could arise from concurrent executions.
+
+## Key Files
+
+1. `oplock.go`: Defines the core `Service` interface and related types for the oplock service.
+
+2. `memory/memory.go`: Implements an in-memory version of the oplock service, suitable for single-instance or in-process use cases.
+
+3. `sql/sql.go`: Provides a SQL-based implementation of the oplock service, suitable for distributed environments where multiple Flipt instances need to coordinate.
+
+4. `testing/harness.go`: Contains a test harness for verifying the behavior of different oplock service implementations.
+
+## Dependencies
+The oplock service implementations rely on several external libraries and internal packages:
+
+1. `github.com/Masterminds/squirrel`: Used for building SQL queries in a structured and type-safe manner.
+2. `go.uber.org/zap`: Provides a fast, structured logging framework.
+3. Standard Go libraries: `context`, `sync`, and `time`.
+4. Internal Flipt packages: `go.flipt.io/flipt/errors` and `go.flipt.io/flipt/internal/storage/sql`.
+
+## Configuration
+The oplock service implementations don't use specific configuration files or environment variables. Instead, they are configured through their constructors:
+
+- The in-memory implementation (`memory.New()`) doesn't require any configuration.
+- The SQL-based implementation is configured with a logger, SQL driver, and statement builder:
+
+```go
+func New(logger *zap.Logger, driver storagesql.Driver, builder sq.StatementBuilderType) *Service {
+    return &Service{
+        logger:  logger,
+        driver:  driver,
+        builder: builder,
+    }
+}
+```
+
+The actual database connection and configuration for the SQL-based implementation are likely managed elsewhere in the Flipt project.
+
+In summary, the `internal/storage/oplock` directory provides a flexible and extensible system for managing distributed locks in the Flipt project. It offers both in-memory and SQL-based implementations, allowing for different deployment scenarios and scalability requirements. The included test harness ensures that any implementation of the oplock service behaves correctly under concurrent access conditions.

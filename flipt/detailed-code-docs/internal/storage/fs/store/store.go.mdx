@@ -1,0 +1,87 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `store.go` file in the `internal/storage/fs/store` package defines a function `NewStore` that creates a new storage.Store instance based on the configuration provided. It supports various storage types, including Git, Local, Object, and OCI, and configures the appropriate backend for each type.
+
+## Code Structure
+The `NewStore` function uses a switch statement to determine the storage type from the configuration and then configures the appropriate backend. It uses helper functions like `newObjectStore` to handle specific storage subtypes.
+
+## References
+This code references various other packages and types, including:
+- `config` package for configuration options.
+- `storage` package for the `storage.Store` interface.
+- `storagefs` package for filesystem-related storage types.
+- `git`, `local`, `object`, and `oci` packages for specific storage backends.
+- `containers` package for generic options.
+- `zap` package for logging.
+- `gocloud.dev/blob` for object storage backends.
+- `oras.land/oras-go/v2` for OCI storage.
+
+## Symbols
+
+### `NewStore`
+#### Description
+Creates a new `storage.Store` instance based on the configuration provided.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger to use. |
+| cfg | *config.Config | The configuration to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | storage.Store | The new storage.Store instance. |
+| err | error | An error if one occurred. |
+
+#### Internal Logic
+1. **Determine storage type:** Uses a switch statement to determine the storage type from `cfg.Storage.Type`.
+2. **Configure backend:** Based on the storage type, configures the appropriate backend:
+    - **Git:** Creates a `git.SnapshotStore` with options based on the Git configuration.
+    - **Local:** Creates a `local.SnapshotStore` with the configured path.
+    - **Object:** Calls `newObjectStore` to create a store based on the object storage configuration.
+    - **OCI:** Creates an `oci.Store` and an `storageoci.SnapshotStore` with the configured repository and options.
+3. **Wrap store:** Wraps the created snapshot store in a `storagefs.NewStore` or `storagefs.NewSingleReferenceStore` depending on the storage type.
+4. **Return store:** Returns the new `storage.Store` instance and any error that occurred.
+
+### `newObjectStore`
+#### Description
+Creates a new `storage.Store` instance based on the object storage configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| cfg | *config.Config | The configuration to use. |
+| logger | *zap.Logger | The logger to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | storage.Store | The new storage.Store instance. |
+| err | error | An error if one occurred. |
+
+#### Internal Logic
+1. **Determine object storage subtype:** Uses a switch statement to determine the object storage subtype from `cfg.Storage.Object.Type`.
+2. **Configure backend:** Based on the subtype, configures the appropriate backend:
+    - **S3:** Sets the scheme to `s3blob.Scheme`, bucket name, and options based on the S3 configuration.
+    - **AZBlob:** Sets the scheme to `azureblob.Scheme`, container name, and options based on the AZBlob configuration.
+    - **GSBlob:** Sets the scheme to `gcsblob.Scheme`, bucket name, and options based on the GSBlob configuration.
+3. **Open bucket:** Calls `object.OpenBucket` to open the bucket with the configured URL.
+4. **Create snapshot store:** Creates an `object.SnapshotStore` with the opened bucket and options.
+5. **Wrap store:** Wraps the created snapshot store in a `storagefs.NewStore` and `storagefs.NewSingleReferenceStore`.
+6. **Return store:** Returns the new `storage.Store` instance and any error that occurred.
+
+## Side Effects
+The `NewStore` function may create temporary directories or files on the filesystem depending on the configured storage type.
+
+## Dependencies
+- `gocloud.dev/blob` for object storage backends.
+- `oras.land/oras-go/v2` for OCI storage.
+
+## Configuration
+The `NewStore` function uses the `config.Config` struct to determine the storage type and configure the appropriate backend. See the `config` package documentation for details on the available configuration options.

@@ -1,0 +1,56 @@
+---
+title: "testing.go"
+---
+
+## High-level description
+The `Harness` function is a test utility designed to verify the behavior of different implementations of the `oplock.Service` interface. It simulates concurrent attempts to acquire a lock for a specific operation and asserts that the acquisitions happen sequentially, respecting a predefined time interval between each acquisition.
+
+## Code Structure
+The `Harness` function sets up an errgroup to manage multiple goroutines, each attempting to acquire a lock. It uses a channel to track the timestamps of successful acquisitions. After a certain number of acquisitions, it verifies the time taken and the order of acquisitions.
+
+## References
+- `oplock.Service`: The interface being tested, which defines the contract for acquiring and managing operation locks.
+- `oplock.Operation`: Represents a unique operation for which a lock can be acquired.
+
+## Symbols
+### `Harness`
+#### Description
+This function is a test harness for implementations of the `oplock.Service` interface. It launches multiple goroutines that concurrently attempt to acquire a lock for a test operation. The function then verifies that the lock acquisitions happened sequentially, respecting a predefined time interval.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | The testing object used for reporting test results and logging. |
+| s | oplock.Service | An implementation of the `oplock.Service` interface to be tested. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Setup:**
+    - Initializes variables:
+        - `acquiredAt`: A buffered channel to store timestamps of successful lock acquisitions.
+        - `interval`: The desired time interval between consecutive lock acquisitions.
+        - `op`: An `oplock.Operation` representing the test operation.
+        - `ctx`, `cancel`: A context and its cancellation function for managing goroutine lifecycles.
+    - Creates an errgroup to manage goroutines.
+2. **Concurrent Lock Acquisition:**
+    - Launches five goroutines using the errgroup.
+    - Each goroutine repeatedly attempts to acquire the lock for the test operation using `s.TryAcquire`.
+    - If a goroutine successfully acquires the lock:
+        - It sends the acquisition timestamp to the `acquiredAt` channel.
+        - It updates its `acquiredUntil` time based on the lock entry.
+3. **Verification:**
+    - Collects five acquisition timestamps from the `acquiredAt` channel.
+    - Measures the total time taken for five acquisitions.
+    - Asserts that the total time is greater than or equal to 8 seconds (4 intervals).
+    - Cancels the context to stop the goroutines.
+    - Waits for all goroutines to finish and checks for unexpected errors.
+    - Asserts that the acquisitions occurred in strictly ascending order of timestamps.
+    - Asserts that the time difference between consecutive acquisitions is greater than the specified `interval`.
+
+## Error Handling
+The function handles errors by checking the `errgroup.Wait()` result. It specifically checks for context cancellation errors, which are expected when the context is canceled after five acquisitions. Any other error encountered during lock acquisition will fail the test.
+
+## Logging
+The function logs the total time taken to acquire the lock five times along with the configured interval. This information helps in understanding the performance of the lock implementation being tested.

@@ -1,0 +1,125 @@
+---
+title: "cache.go"
+---
+
+## High-level description
+This code defines the configuration structure and related types for Flipt's caching mechanisms. It supports in-memory and Redis-backed caching, with various options for configuring cache behavior, including TTL, backend selection, and Redis connection details.
+
+## Code Structure
+The main structure is `CacheConfig`, which contains fields for enabling and configuring caching. It implements the `defaulter` and `validator` interfaces. The code also defines `CacheBackend`, `MemoryCacheConfig`, and `RedisCacheConfig` types to support different caching options.
+
+## Symbols
+
+### `CacheConfig`
+#### Description
+Represents the main configuration structure for Flipt's caching mechanisms.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Enabled | bool | Indicates if caching is enabled |
+| TTL | time.Duration | Time-to-live for cached items |
+| Backend | CacheBackend | Specifies the cache backend (memory or Redis) |
+| Memory | MemoryCacheConfig | Configuration for in-memory caching |
+| Redis | RedisCacheConfig | Configuration for Redis-backed caching |
+
+#### Internal Logic
+- Implements `defaulter` and `validator` interfaces
+- Provides methods for setting defaults and validating the configuration
+
+### `CacheConfig.setDefaults`
+#### Description
+Sets default values for the cache configuration using Viper.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v | *viper.Viper | Viper instance for setting defaults |
+
+#### Internal Logic
+- Sets default values for cache configuration, including enabled status, backend, TTL, and Redis connection details
+
+### `CacheConfig.validate`
+#### Description
+Validates the cache configuration, specifically for Redis backend.
+
+#### Internal Logic
+- Checks if caching is enabled and the backend is Redis
+- If so, calls the `validate` method of the Redis configuration
+
+### `CacheConfig.IsZero`
+#### Description
+Determines if the cache configuration is considered "zero" (not enabled).
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| isZero | bool | True if caching is not enabled |
+
+### `CacheBackend`
+#### Description
+Represents the type of cache backend (memory or Redis).
+
+#### Internal Logic
+- Implements custom marshaling methods for JSON and YAML
+- Uses maps to convert between string and CacheBackend values
+
+### `MemoryCacheConfig`
+#### Description
+Configuration structure for in-memory caching.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| EvictionInterval | time.Duration | Interval for cache eviction |
+
+### `RedisCacheConfig`
+#### Description
+Configuration structure for Redis-backed caching.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Host | string | Redis host |
+| Port | int | Redis port |
+| RequireTLS | bool | Indicates if TLS is required |
+| Username | string | Redis username |
+| Password | string | Redis password |
+| DB | int | Redis database number |
+| PoolSize | int | Connection pool size |
+| MinIdleConn | int | Minimum idle connections |
+| ConnMaxIdleTime | time.Duration | Maximum idle time for connections |
+| NetTimeout | time.Duration | Network timeout |
+| CaCertBytes | string | CA certificate bytes |
+| CaCertPath | string | Path to CA certificate |
+| InsecureSkipTLS | bool | Flag to skip TLS verification |
+
+#### Internal Logic
+- Implements the `validator` interface
+- Provides a `validate` method to check for conflicting CA certificate configurations
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/json | JSON marshaling for CacheBackend |
+| errors | Error handling |
+| time | Duration and time-related operations |
+| github.com/spf13/viper | Configuration management |
+
+## Error Handling
+The code implements basic error handling, particularly in the `validate` methods of `CacheConfig` and `RedisCacheConfig`. Errors are returned for invalid configurations, such as conflicting CA certificate settings.
+
+## Configuration
+The code defines various configuration options for caching, including:
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| cache.enabled | bool | false | Enables or disables caching |
+| cache.backend | CacheBackend | CacheMemory | Specifies the cache backend |
+| cache.ttl | time.Duration | 1 minute | Time-to-live for cached items |
+| cache.redis.host | string | "localhost" | Redis host |
+| cache.redis.port | int | 6379 | Redis port |
+| cache.redis.password | string | "" | Redis password |
+| cache.redis.db | int | 0 | Redis database number |
+| cache.memory.eviction_interval | time.Duration | 5 minutes | Eviction interval for in-memory cache |
+
+These configuration options can be set using Viper or directly in the `CacheConfig` struct.

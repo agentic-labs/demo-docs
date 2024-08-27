@@ -1,0 +1,126 @@
+---
+title: "sink.go"
+---
+
+## High-level description
+The code defines an analytics sink span exporter that processes OpenTelemetry spans, extracts evaluation responses from them, and forwards them to an analytics store for persistence. It specifically handles spans containing events with evaluation response data, transforming and storing them for later analysis.
+
+## Code Structure
+The `AnalyticsSinkSpanExporter` struct is central, holding a logger and an `AnalyticsStoreMutator`. The `ExportSpans` method of this struct processes spans, extracting evaluation responses from events and using the `AnalyticsStoreMutator` to persist them. The `transformSpanEventToEvaluationResponses` function assists in extracting and deserializing evaluation response data from span events.
+
+## References
+- `sdktrace.Event`: Represents an OpenTelemetry span event.
+- `sdktrace.ReadOnlySpan`: Represents a read-only OpenTelemetry span.
+- `AnalyticsStoreMutator`: An interface for interacting with the analytics store.
+- `EvaluationResponse`: A struct representing a flag evaluation response.
+
+## Symbols
+
+### `errNotTransformable`
+#### Description
+This variable represents an error returned when a span event cannot be transformed into an `EvaluationResponse`.
+
+### `AnalyticsStoreMutator`
+#### Description
+This interface defines the methods required for interacting with an analytics store, specifically for incrementing flag evaluation counts.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `EvaluationResponse`
+#### Description
+This struct represents a flag evaluation response containing details about the evaluation.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `AnalyticsSinkSpanExporter`
+#### Description
+This struct implements the `sdktrace.SpanExporter` interface, enabling it to process and export OpenTelemetry spans to an analytics store.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+### `NewAnalyticsSinkSpanExporter`
+#### Description
+This function constructs a new `AnalyticsSinkSpanExporter` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance for recording events. |
+| analyticsStoreMutator | `AnalyticsStoreMutator` | An instance of an analytics store mutator. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*AnalyticsSinkSpanExporter` |  | A pointer to a new `AnalyticsSinkSpanExporter` instance. |
+
+#### Internal Logic
+The function initializes an `AnalyticsSinkSpanExporter` with the provided logger and analytics store mutator.
+
+### `evaluationResponseKey`
+#### Description
+This constant string defines the key used to identify evaluation response data within span event attributes.
+
+### `transformSpanEventToEvaluationResponses`
+#### Description
+This function attempts to extract and deserialize evaluation response data from a given OpenTelemetry span event.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| event | `sdktrace.Event` | The OpenTelemetry span event to process. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `[]*EvaluationResponse` |  | A slice of pointers to `EvaluationResponse` structs, or nil if extraction fails. |
+| `error` |  | An error object if an error occurs during processing. |
+
+#### Internal Logic
+The function iterates through the event's attributes, searching for an attribute with the key `evaluationResponseKey`. If found, it attempts to unmarshal the attribute value as JSON into a slice of `EvaluationResponse` structs. If successful, it returns the slice; otherwise, it returns an error.
+
+### `ExportSpans`
+#### Description
+This method implements the `sdktrace.SpanExporter` interface, processing a batch of OpenTelemetry spans and extracting evaluation response data for storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the operation. |
+| spans | `[]sdktrace.ReadOnlySpan` | A slice of read-only OpenTelemetry spans to process. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | An error object if an error occurs during processing. |
+
+#### Internal Logic
+The method iterates through each provided span and its events. For each event, it attempts to extract evaluation responses using `transformSpanEventToEvaluationResponses`. If successful, it appends the extracted responses to a slice. Finally, it uses the `analyticsStoreMutator` to increment flag evaluation counts based on the collected responses.
+
+### `Shutdown`
+#### Description
+This method implements the `sdktrace.SpanExporter` interface, gracefully shutting down the exporter and releasing any held resources.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| _ | `context.Context` | The context for the operation (unused). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | An error object if an error occurs during shutdown. |
+
+#### Internal Logic
+The method calls the `Close` method of the `analyticsStoreMutator` to release any resources held by the analytics store.

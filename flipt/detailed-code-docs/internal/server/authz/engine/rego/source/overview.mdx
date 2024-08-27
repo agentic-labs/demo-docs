@@ -1,0 +1,86 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authz/engine/rego/source` directory contains code for managing and retrieving authorization policies and data from various sources for the Flipt authorization engine. It provides implementations for both cloud-based and local filesystem-based policy and data sources.
+
+## What does it do?
+This directory implements two main types of sources for authorization policies and data:
+
+1. Cloud-based sources: These fetch policies and data from a remote Flipt cloud instance using HTTP requests.
+2. Filesystem-based sources: These read policies and data from local files on the server's filesystem.
+
+Both types of sources implement interfaces that allow the Rego authorization engine to retrieve and update policies and data. The code handles caching, error scenarios, and provides mechanisms to check if the data has been modified since the last fetch.
+
+## Key Files
+
+### cloud/cloud.go
+This file implements the cloud-based policy and data sources. It defines:
+- `CloudPolicySource`: Fetches authorization policies from the cloud.
+- `CloudDataSource`: Fetches authorization data from the cloud.
+- `fetch`: A helper function for making HTTP requests to the Flipt cloud API.
+
+### filesystem/filesystem.go
+This file implements the filesystem-based policy and data sources. It defines:
+- `LocalPolicySource`: Reads raw policy data from a local file.
+- `LocalDataSource`: Reads and parses JSON data from a local file.
+- `read`: A helper function for reading file content and calculating modification time hashes.
+
+### source.go
+This file defines common types and errors used by both cloud and filesystem sources:
+- `ErrNotModified`: An error indicating that the source data hasn't changed.
+- `Hash`: A type alias for `[]byte` used to represent version hashes of source data.
+
+## Dependencies
+The code relies on standard Go libraries and internal Flipt packages. For cloud sources, it uses:
+- `net/http` for making HTTP requests
+- `encoding/json` for parsing JSON responses
+- `github.com/stretchr/testify/assert` for testing (in cloud_test.go)
+
+For filesystem sources, it uses:
+- `os` for file operations
+- `encoding/json` for parsing JSON files
+
+## Configuration
+Cloud sources are configured with:
+- `host`: The URL of the Flipt cloud instance
+- `apiKey`: The API key for authentication
+
+Filesystem sources are configured with:
+- `path`: The file path for the policy or data file
+
+## Code Snippets
+
+Example of fetching a policy from the cloud:
+
+```go
+func (c *CloudPolicySource) Get(ctx context.Context, seen source.Hash) ([]byte, source.Hash, error) {
+    url := fmt.Sprintf("%s/api/v1/auth/policy", c.host)
+    body, hash, err := fetch(ctx, seen, url, c.apiKey)
+    if err != nil {
+        return nil, nil, fmt.Errorf("fetching policy: %w", err)
+    }
+    return body, hash, nil
+}
+```
+
+Example of reading data from a local file:
+
+```go
+func (l *LocalDataSource) Get(ctx context.Context, seen source.Hash) (map[string]any, source.Hash, error) {
+    data, mod, err := read(l.path, seen)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    var out map[string]any
+    if err := json.Unmarshal(data, &out); err != nil {
+        return nil, nil, fmt.Errorf("unmarshaling data: %w", err)
+    }
+
+    return out, mod, nil
+}
+```
+
+These implementations provide flexible and efficient ways to retrieve authorization policies and data from different sources, enabling the Flipt server to make authorization decisions based on up-to-date information.

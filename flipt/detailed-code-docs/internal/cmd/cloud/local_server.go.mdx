@@ -1,0 +1,127 @@
+---
+title: "local_server.go"
+---
+
+## High-level description
+This code implements a local server for handling OAuth2 callback in a cloud authentication flow. It sets up a temporary HTTP server on a random port to receive and process the authentication token.
+
+## Code Structure
+The main components are the `TokenResponse` struct, the `localServer` struct, and various methods to initialize, run, and manage the server. The `bindLocalServer` function creates a new server instance, while the `ServeHTTP` method handles incoming requests.
+
+## Symbols
+
+### `bindLocalServer`
+#### Description
+Initializes a new `localServer` instance that listens on a randomly available TCP port on localhost.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *localServer | *localServer | Pointer to the newly created localServer instance |
+| error | error | Error, if any occurred during initialization |
+
+#### Internal Logic
+1. Attempts to listen on a random TCP port on localhost (127.0.0.1).
+2. If successful, creates and returns a new `localServer` instance with the listener and a channel for token responses.
+
+### `localServer` struct
+#### Description
+Represents the local server that handles the OAuth2 callback.
+
+#### Fields
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| WriteSuccessHTML | func(w io.Writer) | Optional function to write custom HTML response |
+| resultChan | chan TokenResponse | Channel to send the received token response |
+| listener | net.Listener | TCP listener for the server |
+
+### `localServer.Port`
+#### Description
+Returns the port number on which the server is listening.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| int | int | Port number |
+
+### `localServer.Close`
+#### Description
+Closes the server's listener.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error, if any occurred during closing |
+
+### `localServer.Serve`
+#### Description
+Starts serving HTTP requests on the server's listener.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error, if any occurred while serving |
+
+### `localServer.Wait`
+#### Description
+Waits for a token response or context cancellation.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for cancellation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| TokenResponse | TokenResponse | Received token response |
+| error | error | Error, if any occurred during waiting |
+
+### `localServer.ServeHTTP`
+#### Description
+Handles incoming HTTP requests, processes the callback, and sends the token response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| w | http.ResponseWriter | HTTP response writer |
+| r | *http.Request | HTTP request |
+
+#### Internal Logic
+1. Checks if the request path matches the callback path.
+2. Writes a success HTML response.
+3. Extracts token and state from query parameters.
+4. Sends the token response through the result channel.
+5. Closes the server and the result channel.
+
+### `defaultSuccessHTML`
+#### Description
+Writes a default success HTML message to the provided writer.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| w | io.Writer | Writer to output the HTML |
+
+### `safeClose`
+#### Description
+Safely closes an `io.Closer`, handling nil cases.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| c | io.Closer | Closer to be closed |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | Error, if any occurred during closing |
+
+## Error Handling
+The code uses Go's standard error handling mechanisms. Errors are returned from functions where they can occur, allowing the caller to handle them appropriately.
+
+## Logging
+This code does not implement any explicit logging mechanisms.
+
+## Performance Considerations
+The server is designed for temporary use during the authentication flow. It uses a random available port to avoid conflicts and closes itself after processing the callback to free up resources.

@@ -1,0 +1,89 @@
+---
+title: "metrics.go"
+---
+
+## High-level description
+This code implements a metrics package for the Flipt feature flag system. It provides functionality for creating and managing various types of metrics (counters, histograms, etc.) using OpenTelemetry, and includes support for different metric exporters such as Prometheus and OTLP.
+
+## Code Structure
+The main components of this code are:
+1. Meter interfaces and implementations for both int64 and float64 metrics.
+2. Functions for creating and managing metric exporters.
+3. Utility functions for creating OpenTelemetry resources.
+
+## Symbols
+
+### `init()`
+#### Description
+Initializes the global meter provider with a no-op provider if none is set.
+
+### `meter()`
+#### Description
+Returns a memoized meter instance for the "github.com/flipt-io/flipt" package.
+
+### `MustInt64()`
+#### Description
+Returns a `MustInt64Meter` interface for creating int64 metrics.
+
+### `MustFloat64()`
+#### Description
+Returns a `MustFloat64Meter` interface for creating float64 metrics.
+
+### `GetExporter()`
+#### Description
+Creates and returns a metric exporter based on the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| cfg | *config.MetricsConfig | The metrics configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| sdkmetric.Reader | sdkmetric.Reader | The created metric reader |
+| func(context.Context) error | function | A function to shut down the exporter |
+| error | error | Any error encountered during exporter creation |
+
+#### Internal Logic
+1. Uses a sync.Once to ensure the exporter is only created once.
+2. Switches on the configured exporter type (Prometheus or OTLP).
+3. For OTLP, it determines the protocol (HTTP, HTTPS, or gRPC) and creates the appropriate exporter.
+4. Returns the created exporter, a shutdown function, and any error encountered.
+
+### `GetResources()`
+#### Description
+Creates and returns OpenTelemetry resources with various attributes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *resource.Resource | *resource.Resource | The created OpenTelemetry resource |
+| error | error | Any error encountered during resource creation |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| go.opentelemetry.io/otel | OpenTelemetry SDK |
+| go.opentelemetry.io/otel/exporters/otlp/otlpmetric | OTLP metric exporter |
+| go.opentelemetry.io/otel/exporters/prometheus | Prometheus exporter |
+| go.opentelemetry.io/otel/metric | Metric API |
+| go.opentelemetry.io/otel/sdk/metric | Metric SDK |
+| go.opentelemetry.io/otel/sdk/resource | Resource creation |
+
+## Configuration
+The code uses a `config.MetricsConfig` struct to configure the metrics system. Key options include:
+- Exporter type (Prometheus or OTLP)
+- OTLP endpoint and headers
+
+## Error Handling
+The code uses error returns for most operations. In the `MustInt64` and `MustFloat64` implementations, it panics if metric creation fails.
+
+## Performance Considerations
+The code uses sync.Once to ensure that the exporter is only created once, which helps with performance in multi-threaded scenarios.

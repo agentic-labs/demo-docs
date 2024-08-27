@@ -1,0 +1,452 @@
+---
+title: "legacy_evaluator_test.go"
+---
+
+## High-level description
+The `legacy_evaluator_test.go` file contains unit tests for the legacy evaluation logic in Flipt, specifically focusing on how constraints are matched against different data types (string, number, boolean, datetime) and how distributions are applied to determine variant selection. 
+
+These tests cover various scenarios, including matching all/any constraints, handling default variants, and ensuring correct behavior when rollout distributions have 0% values.
+
+## Code Structure
+This file primarily consists of test functions, each designed to test a specific aspect of the legacy evaluation logic. The test functions utilize mocks for the storage layer to isolate the evaluation logic and simulate different data retrieval scenarios.
+
+## Symbols
+
+### `Test_matchesString`
+#### Description
+Tests the `matchesString` function, which checks if a given string value matches a constraint.
+
+#### Inputs
+N/A - This is a test function. Refer to individual test cases within the function for specific inputs.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+The function iterates through a series of test cases, each defining a constraint and a value. For each case, it calls `matchesString` and asserts whether the returned match result aligns with the expected outcome.
+
+### `Test_matchesNumber`
+#### Description
+Tests the `matchesNumber` function, which checks if a given string value (parsed as a number) matches a constraint.
+
+#### Inputs
+N/A - This is a test function. Refer to individual test cases within the function for specific inputs.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+Similar to `Test_matchesString`, this function iterates through test cases, each defining a constraint and a value. It calls `matchesNumber` and asserts the match result and any errors returned. It specifically checks for `ferrors.ErrInvalid` when an error is expected due to invalid input.
+
+### `Test_matchesBool`
+#### Description
+Tests the `matchesBool` function, which checks if a given string value (parsed as a boolean) matches a constraint.
+
+#### Inputs
+N/A - This is a test function. Refer to individual test cases within the function for specific inputs.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This function follows the same pattern as `Test_matchesNumber`, iterating through test cases and asserting the match result and errors from `matchesBool`. It also checks for `ferrors.ErrInvalid` when invalid input is provided.
+
+### `Test_matchesDateTime`
+#### Description
+Tests the `matchesDateTime` function, which checks if a given string value (parsed as a datetime) matches a constraint.
+
+#### Inputs
+N/A - This is a test function. Refer to individual test cases within the function for specific inputs.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This function mirrors the structure of `Test_matchesNumber` and `Test_matchesBool`, iterating through test cases and asserting the match result and errors from `matchesDateTime`. It also checks for `ferrors.ErrInvalid` when invalid input is provided.
+
+### `TestEvaluator_FlagDisabled`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a disabled flag is evaluated.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+The test sets up a mock storage and creates an `Evaluator`. It then calls `Evaluate` with a disabled flag and asserts that the response indicates no match, has empty values and attachment, and the reason is `FLAG_DISABLED_EVALUATION_REASON`.
+
+### `TestEvaluator_FlagDisabled_DefaultVariant`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a disabled flag with a default variant is evaluated.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+Similar to `TestEvaluator_FlagDisabled`, this test uses a disabled flag but with a default variant. It asserts that the response indicates no match, but the variant key and attachment from the default variant are returned, and the reason is still `FLAG_DISABLED_EVALUATION_REASON`.
+
+### `TestEvaluator_NonVariantFlag`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a flag with an invalid type (BOOLEAN_FLAG_TYPE) is evaluated.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test uses a flag with an invalid type. It asserts that the evaluation returns an error, the response indicates no match, and the reason is `ERROR_EVALUATION_REASON`.
+
+### `TestEvaluator_FlagNoRules`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an enabled flag with no evaluation rules is evaluated.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a mock storage that returns no rules for the given flag. It asserts that the response indicates no match and the reason is `UNKNOWN_EVALUATION_REASON`.
+
+### `TestEvaluator_FlagNoRules_DefaultVariant`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an enabled flag with a default variant but no matching rules is evaluated.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test is similar to `TestEvaluator_FlagNoRules` but uses a flag with a default variant. It asserts that the response indicates no match, the variant key and attachment from the default variant are returned, and the reason is `DEFAULT_EVALUATION_REASON`.
+
+### `TestEvaluator_ErrorGettingRules`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an error occurs while fetching evaluation rules.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+The test sets up a mock storage that returns an error when fetching rules. It asserts that the evaluation returns an error, the response indicates no match, and the reason is `ERROR_EVALUATION_REASON`.
+
+### `TestEvaluator_RulesOutOfOrder`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when evaluation rules are returned in an unexpected order (out of order ranks).
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a mock storage that returns rules with out-of-order ranks. It asserts that the evaluation returns an error indicating the rank issue, the response indicates no match, and the reason is `ERROR_EVALUATION_REASON`.
+
+### `TestEvaluator_ErrorParsingNumber`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an error occurs while parsing a number constraint.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where a number constraint cannot be parsed correctly. It asserts that the response indicates no match and the reason is `UNKNOWN_EVALUATION_REASON`.
+
+### `TestEvaluator_ErrorParsingDateTime`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an error occurs while parsing a datetime constraint.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test is similar to `TestEvaluator_ErrorParsingNumber` but focuses on datetime parsing errors. It asserts that the response indicates no match and the reason is `UNKNOWN_EVALUATION_REASON`.
+
+### `TestEvaluator_ErrorGettingDistributions`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when an error occurs while fetching distributions.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+The test sets up a mock storage that returns an error when fetching distributions. It asserts that the evaluation returns an error, the response indicates no match, and the reason is `ERROR_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_NoVariants_NoDistributions`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when all constraints match, and there are no variants or distributions.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where all constraints in a rule match. It asserts that the response indicates a match, the correct segment key is returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_NoDistributions_DefaultVariant`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when all constraints match, there are no distributions, but a default variant is present.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test is similar to `TestEvaluator_MatchAll_NoVariants_NoDistributions` but uses a flag with a default variant. It asserts that the response indicates a match, the correct segment key and default variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_MultipleSegments`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when all constraints in multiple segments match.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a rule with multiple segments and ensures all constraints within each segment match. It asserts that the response indicates a match, all matching segment keys are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_DistributionNotMatched`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a distribution is present but not matched based on the entity ID.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where a distribution is present, but the entity ID does not fall within the rollout percentage. It asserts that the response indicates no match.
+
+### `TestEvaluator_DistributionNotMatched_DefaultVariant`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a distribution is present but not matched, and a default variant is used.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test is similar to `TestEvaluator_DistributionNotMatched` but uses a flag with a default variant. It asserts that the response indicates no match for the distribution, but the default variant information is returned, and the reason is `DEFAULT_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_SingleVariantDistribution`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when all constraints match, and a single variant distribution is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where a single variant distribution is used, and the entity ID falls within the rollout percentage. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_RolloutDistribution`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when all constraints match, and a rollout distribution with multiple variants is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a rollout distribution with multiple variants and tests different entity IDs to ensure they are assigned to the correct variants based on the rollout percentages. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_RolloutDistribution_MultiRule`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when multiple rules are present, and a rollout distribution is applied to a matching rule.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up multiple rules and a rollout distribution. It ensures that the evaluation process selects the correct rule based on constraint matching and applies the distributionaccordingly. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAll_NoConstraints`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a rule matches all entities (no constraints) and a rollout distribution is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a rule with no constraints, effectively matching all entities, and applies a rollout distribution. It tests different entity IDs to ensure they are assigned to the correct variants based on the rollout percentages. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_NoVariants_NoDistributions`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when any constraint matches, and there are no variants or distributions.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where at least one constraint in a rule matches. It asserts that the response indicates a match, the correct segment key is returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_NoDistributions_DefaultVariant`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when any constraint matches, there are no distributions, but a default variant is present.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test is similar to `TestEvaluator_MatchAny_NoVariants_NoDistributions` but uses a flag with a default variant. It asserts that the response indicates a match, the correct segment key and default variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_SingleVariantDistribution`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when any constraint matches, and a single variant distribution is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where at least one constraint matches and a single variant distribution is used. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_RolloutDistribution`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when any constraint matches, and a rollout distribution with multiple variants is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a rollout distribution with multiple variants and tests different entity IDs to ensure they are assigned to the correct variants based on the rollout percentages when any constraint matches. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_RolloutDistribution_MultiRule`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when multiple rules are present, any constraint matches, and a rollout distribution is applied to a matching rule.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up multiple rules and a rollout distribution. It ensures that the evaluation process selects the correct rule based on any constraint matching and applies the distribution accordingly. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchEntityId`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a constraint matches based on the entity ID.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where a constraint specifically matches the entity ID. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MatchAny_NoConstraints`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when a rule matches any entity (no constraints) and a rollout distribution is applied.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a rule with no constraints, effectively matching any entity, and applies a rollout distribution. It tests different entity IDs to ensure they are assigned to the correct variants based on the rollout percentages. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_FirstRolloutRuleIsZero`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when the first rollout rule has a 0% distribution.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario where the first rollout rule has a 0% distribution and the second rule has a 100% distribution. It ensures that the evaluation process correctly skips the 0% distribution and assigns the variant from the 100% distribution. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+### `TestEvaluator_MultipleZeroRolloutDistributions`
+#### Description
+Tests the `Evaluate` function of the `Evaluator` when multiple rollout rules have 0% distributions.
+
+#### Inputs
+N/A - This is a test function.
+
+#### Outputs
+N/A - This is a test function. It uses the `assert` package for assertions.
+
+#### Internal Logic
+This test sets up a scenario with multiple rollout rules, some with 0% distributions and others with non-zero distributions. It ensures that the evaluation process correctly skips the 0% distributions and assigns the variant from a non-zero distribution. It asserts that the response indicates a match, the correct segment key and variant information are returned, and the reason is `MATCH_EVALUATION_REASON`.
+
+## Dependencies
+The test file imports and uses the following packages:
+- `context`
+- `errors`
+- `testing`
+- `github.com/gofrs/uuid`
+- `github.com/stretchr/testify/assert`
+- `github.com/stretchr/testify/mock`
+- `go.flipt.io/flipt/errors`
+- `go.flipt.io/flipt/internal/storage`
+- `go.flipt.io/flipt/rpc/flipt`
+- `go.flipt.io/flipt/rpc/flipt/evaluation`
+- `go.uber.org/zap/zaptest`
+
+## Error Handling
+The tests use the `assert` package to check for expected errors and error types. In particular, they check for `ferrors.ErrInvalid` in cases where invalid input is provided to the evaluation functions.
+
+## Logging
+The tests use `zaptest.NewLogger(t)` to create a logger for testing purposes, which is then passed to the `Evaluator` constructor.
+
+## Performance Considerations
+These tests focus on correctness rather than performance. However, they do cover various scenarios that could impact performance in a production environment, such as handling multiple rules, constraints, and distributions.

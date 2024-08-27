@@ -1,0 +1,115 @@
+---
+title: "file_test.go"
+---
+
+## High-level description
+The `file_test.go` file contains unit tests for the `oci` package, specifically focusing on the functionality of the `Store` type. The `Store` type is responsible for interacting with OCI-compliant registries, both local and remote, to fetch and store Flipt feature files.
+
+## References
+- `oras.land/oras-go/v2`: This library provides the underlying functionality for interacting with OCI registries.
+- `github.com/opencontainers/go-digest`: This library is used for calculating and working with content digests.
+- `github.com/opencontainers/image-spec/specs-go/v1`: This library defines the OCI image specification.
+
+## Symbols
+
+### `TestParseReference`
+#### Description
+This test function verifies the behavior of the `ParseReference` function, which parses a string representation of a repository reference into a structured `Reference` type.
+
+#### Internal Logic
+The test iterates over a set of predefined test cases, each with a different input reference string and expected output. For each case, it calls `ParseReference` with the input string and compares the returned `Reference` and error against the expected values.
+
+### `TestStore_Fetch_InvalidMediaType`
+#### Description
+This test function ensures that the `Fetch` method of the `Store` type correctly handles cases where the fetched manifest contains layers with invalid media types.
+
+#### Internal Logic
+The test sets up a local OCI repository with a layer having an unexpected media type. It then attempts to fetch the bundle using the `Fetch` method and asserts that the expected error is returned.
+
+### `TestStore_Fetch`
+#### Description
+This test function verifies the functionality of the `Fetch` method of the `Store` type, which retrieves Flipt feature files from a specified repository reference.
+
+#### Internal Logic
+The test sets up a local OCI repository with predefined layers containing Flipt feature data. It then calls the `Fetch` method and asserts that the returned files contain the expected content. Additionally, it tests the `IfNoMatch` option, which allows skipping the fetch operation if the provided digest matches the target manifest.
+
+### `TestStore_Build`
+#### Description
+This test function verifies the functionality of the `Build` method of the `Store` type, which creates a new Flipt feature bundle from a given filesystem source.
+
+#### Internal Logic
+The test uses an embedded filesystem containing test data to simulate a source directory. It calls the `Build` method to create a new bundle and asserts that the returned `Bundle` struct contains the expected metadata. It also verifies that the created bundle can be successfully fetched using the `Fetch` method.
+
+### `TestStore_List`
+#### Description
+This test function verifies the functionality of the `List` method of the `Store` type, which returns a list of available Flipt feature bundles.
+
+#### Internal Logic
+The test creates two bundles with different timestamps and then calls the `List` method to retrieve the list of bundles. It asserts that the returned list contains both bundles and that they are ordered correctly based on their creation timestamps.
+
+### `TestStore_Copy`
+#### Description
+This test function verifies the functionality of the `Copy` method of the `Store` type, which copies a Flipt feature bundle from a source reference to a destination reference.
+
+#### Internal Logic
+The test sets up a source bundle and then iterates over a set of test cases, each defining a different source and destination reference. For each case, it calls the `Copy` method and asserts that the bundle is copied to the expected destination with the correct metadata.
+
+### `TestFile`
+#### Description
+This test function verifies the behavior of the `File` type, which represents a Flipt feature file within a bundle.
+
+#### Internal Logic
+The test creates a `File` instance with predefined content and metadata. It then performs various operations on the file, such as retrieving its stat information, seeking to a specific position, and reading its contents. It asserts that the file behaves as expected in each case.
+
+### `TestStore_FetchWithECR`
+#### Description
+This test function verifies the functionality of the `Fetch` method when interacting with an AWS ECR private registry.
+
+#### Internal Logic
+The test sets up a stub ECR server and configures the `Store` to use AWS credentials for authentication. It then builds a bundle, copies it to the ECR stub, and attempts to fetch it using the `Fetch` method. It asserts that the fetch operation succeeds.
+
+### `layer`
+#### Description
+This helper function creates a new layer in the OCI store with the given namespace, payload, and media type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ns | string | The namespace key for the layer. |
+| payload | string | The content of the layer. |
+| mediaType | string | The media type of the layer. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v1.Descriptor |  | A descriptor representing the created layer. |
+
+### `testRepository`
+#### Description
+This helper function creates a temporary OCI repository directory and populates it with layers based on the provided layer functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| layerFuncs | ...func(*testing.T, oras.Target) v1.Descriptor | A list of functions that create layers in the repository. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| dir | string | The path to the created repository directory. |
+
+### `testEcrStub`
+#### Description
+This helper function sets up a stub server that simulates an AWS ECR private registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | testing.TB | The testing context. |
+| tokenTtl | time.Duration | The time-to-live for generated auth tokens. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| registry | string | The URL of the stub ECR registry. |
+| endpoint | string | The endpoint URL for authentication requests. |

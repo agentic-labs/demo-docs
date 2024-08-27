@@ -1,0 +1,78 @@
+---
+title: "tracing.go"
+---
+
+## High-level description
+This code defines the configuration structure and functionality for tracing in the Flipt application. It provides options for configuring different tracing exporters (Jaeger, Zipkin, OTLP) and sets up the necessary components for distributed tracing.
+
+## Code Structure
+The main symbols in this code are the `TracingConfig` struct and its associated methods, along with utility functions for creating tracing resources and exporters. The `TracingConfig` struct is used to store configuration options, while the other functions handle the setup and initialization of tracing components.
+
+## Symbols
+
+### `TracingConfig`
+#### Description
+This struct contains fields for configuring tracing telemetry output destinations.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Enabled | bool | Indicates if tracing is enabled |
+| Exporter | TracingExporter | Specifies the tracing exporter to use |
+| Propagators | []TracingPropagator | List of tracing propagators |
+| SamplingRatio | float64 | Sampling ratio for tracing |
+| Jaeger | JaegerTracingConfig | Jaeger-specific configuration |
+| Zipkin | ZipkinTracingConfig | Zipkin-specific configuration |
+| OTLP | OTLPTracingConfig | OTLP-specific configuration |
+
+#### Internal Logic
+The struct implements `setDefaults`, `validate`, and `deprecations` methods to handle default values, validation, and deprecation warnings respectively.
+
+### `NewProvider`
+#### Description
+Creates a new TracerProvider configured for Flipt tracing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+| fliptVersion | string | Version of Flipt |
+| cfg | config.TracingConfig | Tracing configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *tracesdk.TracerProvider | *tracesdk.TracerProvider | Configured tracer provider |
+| error | error | Any error encountered during creation |
+
+### `GetExporter`
+#### Description
+Retrieves a configured tracesdk.SpanExporter based on the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the operation |
+| cfg | *config.TracingConfig | Pointer to tracing configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tracesdk.SpanExporter | tracesdk.SpanExporter | Configured span exporter |
+| func(context.Context) error | function | Shutdown function for the exporter |
+| error | error | Any error encountered during creation |
+
+#### Internal Logic
+Uses a sync.Once to ensure the exporter is only created once. Supports Jaeger, Zipkin, and OTLP exporters. For OTLP, it handles different endpoint schemes (https, http, grpc) and configures the client accordingly.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| go.opentelemetry.io/otel/* | OpenTelemetry libraries for tracing |
+| go.flipt.io/flipt/internal/config | Internal configuration package |
+
+## Error Handling
+The code uses error returns to propagate errors up the call stack. It also includes error checking when parsing URLs and creating exporters.
+
+## Performance Considerations
+The use of `sync.Once` ensures that the exporter is only created once, which can help with performance in concurrent scenarios.

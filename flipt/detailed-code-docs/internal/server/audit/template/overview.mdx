@@ -1,0 +1,64 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a template-based audit logging system for Flipt. It provides a mechanism to send audit events to configurable webhook endpoints using predefined templates for the request body and headers. The main components are the `Sink` struct, which implements the `audit.Sink` interface, and the `webhookTemplate` struct, which handles the execution of individual webhook requests.
+
+## What does it do?
+The audit template system allows Flipt to send audit log data to external systems for further processing or storage. Here's a simplified workflow:
+
+1. The system is configured with one or more webhook templates, each specifying a target URL, request body template, and headers.
+2. When audit events occur in Flipt, they are passed to the `Sink`.
+3. The `Sink` iterates through each audit event and executes all configured webhook templates.
+4. Each webhook template constructs an HTTP POST request using the provided event data and sends it to the specified URL.
+5. The system handles retries with exponential backoff in case of network errors.
+6. Any errors encountered during this process are logged and collected.
+
+This allows Flipt administrators to integrate audit logging with their existing monitoring and alerting systems, providing flexibility in how audit data is processed and stored.
+
+## Key Files
+
+### executer.go
+This file defines the `webhookTemplate` struct and its methods. It's responsible for executing individual webhook requests. Key features include:
+- Custom template function `toJson` for JSON marshaling within templates.
+- Retry mechanism with exponential backoff for handling network errors.
+- Validation of JSON payload before sending.
+
+### template.go
+This file contains the main `Sink` implementation. It:
+- Initializes the sink with configured webhook templates.
+- Implements the `SendAudits` method to process multiple audit events.
+- Manages multiple webhook executors and aggregates errors.
+
+### leveled_logger.go
+This file provides a `LeveledLogger` implementation that wraps a `zap.Logger`. It's used to integrate Flipt's logging system with the retryable HTTP client used for webhook requests.
+
+## Dependencies
+- github.com/hashicorp/go-retryablehttp (v0.7.4): Used for creating a retryable HTTP client with built-in backoff and retry logic.
+- go.uber.org/zap (v1.24.0): Provides fast, structured logging capabilities.
+- go.flipt.io/flipt/internal/server/audit: Defines the `audit.Sink` interface and `audit.Event` struct.
+- go.flipt.io/flipt/internal/config: Provides configuration structures for webhook templates.
+
+## Configuration
+The audit template system is configured through `config.WebhookTemplate` structures, which specify:
+- URL: The target webhook endpoint.
+- Body: A Go template string for the request body.
+- Headers: A map of HTTP headers to include in the request.
+
+The maximum backoff duration for retries is also configurable when creating a new sink.
+
+Example configuration:
+```go
+webhookTemplates := []config.WebhookTemplate{
+    {
+        URL:     "https://example.com/audit",
+        Body:    `{"event": "{{ .Type }}", "action": "{{ .Action }}"}`,
+        Headers: map[string]string{"Authorization": "Bearer token123"},
+    },
+}
+maxBackoffDuration := 5 * time.Minute
+sink, err := NewSink(logger, webhookTemplates, maxBackoffDuration)
+```
+
+This system provides a flexible and robust way to integrate Flipt's audit logging with external systems, allowing for customized processing and storage of audit events.

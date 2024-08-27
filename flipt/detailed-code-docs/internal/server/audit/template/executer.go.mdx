@@ -1,0 +1,108 @@
+---
+title: "executer.go"
+---
+
+## High-level description
+The `executer.go` file defines the `webhookTemplate` struct and its methods, which are responsible for sending audit events to a configured webhook URL. It uses a `retryablehttp.Client` to handle retries with exponential backoff in case of network errors.
+
+## Code Structure
+The `webhookTemplate` struct holds the configuration for the webhook, including the URL, headers, and a template for the request body. The `Execute` method uses this configuration to construct and send an HTTP POST request containing the audit event data.
+
+## Symbols
+
+### `funcMap`
+#### Description
+`funcMap` is a variable of type `template.FuncMap` that defines a custom template function `toJson`. This function is used within the webhook body template to marshal data into JSON format.
+
+#### Inputs
+N/A - This is a variable, not a function.
+
+#### Outputs
+N/A - This is a variable, not a function.
+
+#### Internal Logic
+The `toJson` function takes an interface{} as input and uses `json.Marshal` to convert it into a JSON byte array. If successful, it returns the JSON data as a string; otherwise, it returns an error.
+
+### `webhookTemplate`
+#### Description
+The `webhookTemplate` struct represents a webhook configuration for sending audit events. It stores the target URL, HTTP headers, a template for the request body, and a `retryablehttp.Client` for handling retries.
+
+#### Inputs
+N/A - This is a struct, not a function.
+
+#### Outputs
+N/A - This is a struct, not a function.
+
+### `Executer`
+#### Description
+The `Executer` interface defines a contract for types that can execute an action based on an audit event. It has a single method, `Execute`, which takes a context and an `audit.Event` as input and returns an error.
+
+#### Inputs
+N/A - This is an interface, not a function.
+
+#### Outputs
+N/A - This is an interface, not a function.
+
+### `NewWebhookTemplate`
+#### Description
+The `NewWebhookTemplate` function is a constructor for the `webhookTemplate` struct. It takes a logger, URL, body template string, headers map, and maximum backoff duration as input. It parses the body template and creates a new `retryablehttp.Client` with a configured logger and retry policy.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger instance for recording events. |
+| url | string | The target webhook URL. |
+| body | string | The template string for the request body. |
+| headers | map[string]string | A map of HTTP headers to include in the request. |
+| maxBackoffDuration | time.Duration | The maximum backoff duration for retries. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Executer | `Executer` | An `Executer` instance configured with the provided parameters. |
+| error | error | An error if the template parsing or client creation fails. |
+
+#### Internal Logic
+1. Parses the provided `body` string as a Go template using the `funcMap`.
+2. Creates a new `retryablehttp.Client` and configures its logger and `RetryWaitMax` using the provided `logger` and `maxBackoffDuration`.
+3. Returns a new `webhookTemplate` instance with the parsed template, URL, headers, and configured HTTP client.
+
+### `(*webhookTemplate).Execute`
+#### Description
+The `Execute` method implements the `Executer` interface for `webhookTemplate`. It takes a context and an `audit.Event` as input. It executes the body template with the event data, constructs an HTTP POST request with the configured URL and headers, and sends the request using the `retryablehttp.Client`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| event | `audit.Event` | The audit event data to send. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the template execution, request creation, or sending fails. |
+
+#### Internal Logic
+1. Executes the `bodyTemplate` with the provided `event` data and writes the output to a buffer.
+2. Checks if the buffered data is valid JSON.
+3. Creates a new HTTP POST request with the configured `url`, buffered data as the body, and configured `headers`.
+4. Adds the `Content-Type: application/json` header if it's not already present.
+5. Sends the request using the `httpClient` (which handles retries).
+6. Closes the response body if the request is successful.
+7. Returns an error if any step fails.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| bytes | Used for creating and manipulating byte buffers. |
+| context | Used for managing the request context and cancellation. |
+| encoding/json | Used for JSON encoding and validation. |
+| fmt | Used for string formatting and error wrapping. |
+| github.com/hashicorp/go-retryablehttp | Used for creating a retryable HTTP client. |
+| go.flipt.io/flipt/internal/server/audit | Used for accessing the `audit.Event` type. |
+| go.uber.org/zap | Used for logging. |
+| net/http | Used for creating and sending HTTP requests. |
+| strings | Used for string manipulation. |
+| text/template | Used for parsing and executing Go templates. |
+| time | Used for defining the maximum backoff duration. |
+

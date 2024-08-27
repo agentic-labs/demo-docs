@@ -1,0 +1,69 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for running Flipt locally with a MySQL database. It specifies the configuration for two services: `mysql` for the database and `flipt` for the Flipt application itself.
+
+## Code Structure
+The `docker-compose.yml` file uses a YAML configuration to define two services: `mysql` and `flipt`. The `flipt` service depends on the `mysql` service, ensuring that the database is running before Flipt starts. Both services share a common network named `flipt_network`.
+
+## Symbols
+### `mysql`
+#### Description
+This section defines the configuration for the MySQL database service. It uses the official `mysql:latest` Docker image and sets up the required environment variables for database connection.
+
+#### Inputs
+N/A - This section defines a service, not a function with inputs.
+
+#### Outputs
+N/A - This section defines a service, not a function with outputs.
+
+#### Internal Logic
+- `image: mysql:latest`: Uses the latest official MySQL Docker image.
+- `networks: flipt_network`: Connects the service to the `flipt_network` network.
+- `environment`: Sets environment variables for the MySQL container:
+    - `MYSQL_DATABASE=flipt`: Sets the database name to `flipt`.
+    - `MYSQL_USER=mysql`: Sets the database username to `mysql`.
+    - `MYSQL_PASSWORD=password`: Sets the database password to `password`.
+    - `MYSQL_ALLOW_EMPTY_PASSWORD=true`: Allows an empty password for the `root` user (not recommended for production).
+
+### `flipt`
+#### Description
+This section defines the configuration for the Flipt application service. It builds the Flipt application from the current directory and connects to the running MySQL database.
+
+#### Inputs
+N/A - This section defines a service, not a function with inputs.
+
+#### Outputs
+N/A - This section defines a service, not a function with outputs.
+
+#### Internal Logic
+- `build: .`: Builds the Docker image for the Flipt application from the current directory.
+- `depends_on: mysql`: Ensures that the `mysql` service is started before starting the `flipt` service.
+- `ports: "8080:8080"`: Maps the container's port 8080 to the host's port 8080.
+- `networks: flipt_network`: Connects the service to the `flipt_network` network.
+- `environment`: Sets environment variables for the Flipt application:
+    - `FLIPT_DB_URL=mysql://mysql:password@mysql:3306/flipt`: Sets the database connection URL for Flipt to connect to the MySQL database running in the `mysql` service.
+    - `FLIPT_LOG_LEVEL=debug`: Sets the log level for Flipt to `debug`.
+    - `FLIPT_META_TELEMETRY_ENABLED=false`: Disables telemetry data collection.
+- `command: ["./tmp/wait-for-it.sh", "mysql:3306", "--", "./flipt", "--force-migrate"]`: Defines the command to run when the container starts. It uses a script `./tmp/wait-for-it.sh` to wait for the MySQL database to be ready before starting the Flipt application with the `--force-migrate` flag.
+
+### `networks`
+#### Description
+This section defines the network configuration for the Docker application.
+
+#### Inputs
+N/A - This section defines a network, not a function with inputs.
+
+#### Outputs
+N/A - This section defines a network, not a function with outputs.
+
+#### Internal Logic
+- `flipt_network:`: Defines a user-defined bridge network named `flipt_network` that allows communication between containers connected to it.
+
+## Dependencies
+- **mysql:latest Docker Image:** Provides the MySQL database server.
+
+## Error Handling
+This `docker-compose.yml` file does not implement specific error handling mechanisms. Standard Docker error handling and logging apply.

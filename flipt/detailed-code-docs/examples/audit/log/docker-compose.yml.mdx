@@ -1,0 +1,98 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for demonstrating Flipt's audit logging capabilities with Loki. It sets up Flipt, Loki, Promtail, and Grafana containers to collect, store, and visualize audit logs.
+
+## Code Structure
+The code defines several services that interact with each other:
+- `flipt`: The main Flipt application, configured to enable audit logging to a file.
+- `init`: An initialization container that sets up correct permissions for the Loki data volume.
+- `promtail`: Collects Flipt's audit logs and sends them to Loki.
+- `loki`: Stores the audit logs received from Promtail.
+- `grafana`: Provides a visual dashboard for exploring the audit logs stored in Loki.
+
+## Symbols
+### `services`
+#### Description
+This section defines the different containers that make up the application.
+
+#### Internal Logic
+Each service is defined with its image, commands, volumes, ports, environment variables, and network connections.
+
+### `flipt`
+#### Description
+This service runs the Flipt application.
+
+#### Internal Logic
+- It uses the `flipt/flipt:latest` image.
+- Runs the `./flipt --force-migrate` command on startup.
+- Mounts the `./loki/` directory to `/var/log/` for sharing logs with Loki.
+- Exposes port 8080.
+- Sets environment variables to enable debug logging, audit log sinking to a file (`/var/log/flipt/audit.log`), and disable telemetry.
+- Connects to the `flipt_network`.
+
+### `init`
+#### Description
+This service is an initialization container that runs before other services to ensure correct file permissions for Loki.
+
+#### Internal Logic
+- Uses the `grafana/loki:2.7.3` image.
+- Runs as the `root` user.
+- Executes `chown 10001:10001 /loki` to change ownership of the `/loki` directory to the user used by Loki.
+- Mounts the `./loki` directory to `/loki`.
+- Connects to the `flipt_network`.
+
+### `promtail`
+#### Description
+This service collects logs from Flipt and sends them to Loki.
+
+#### Internal Logic
+- Uses the `grafana/promtail:2.7.4` image.
+- Mounts the `./loki/` directory to `/var/log/` for reading logs.
+- Mounts the `./promtail.yml` file to `/etc/promtail/promtail.yml` for configuration.
+- Exposes port 9080.
+- Runs Promtail with the configuration file specified.
+- Connects to the `flipt_network`.
+
+### `loki`
+#### Description
+This service runs Loki, which stores the logs received from Promtail.
+
+#### Internal Logic
+- Uses the `grafana/loki:2.7.3` image.
+- Mounts the `./loki/` directory to `/loki` for data persistence.
+- Exposes port 3100.
+- Runs Loki with the configuration file at `/etc/loki/local-config.yaml`.
+- Depends on the `init` and `promtail` services to start after them.
+- Connects to the `flipt_network`.
+
+### `grafana`
+#### Description
+This service runs Grafana, which provides a visual dashboard for exploring the logs stored in Loki.
+
+#### Internal Logic
+- Sets environment variables for Grafana configuration, including enabling anonymous authentication and setting the default data source to Loki.
+- Uses a custom entrypoint script to:
+    - Create the provisioning directory for Grafana.
+    - Define a Loki data source in `/etc/grafana/provisioning/datasources/ds.yaml`.
+    - Run the default Grafana startup script.
+- Uses the `grafana/grafana:latest` image.
+- Exposes port 3000.
+- Connects to the `flipt_network`.
+
+### `networks`
+#### Description
+This section defines the network used by the services to communicate with each other.
+
+#### Internal Logic
+- Defines a single network named `flipt_network`.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| flipt/flipt:latest | Provides the Flipt application. |
+| grafana/loki:2.7.3 | Provides the Loki log aggregation system. |
+| grafana/promtail:2.7.4 | Provides the Promtail log shipper. |
+| grafana/grafana:latest | Provides the Grafana visualization tool. | 

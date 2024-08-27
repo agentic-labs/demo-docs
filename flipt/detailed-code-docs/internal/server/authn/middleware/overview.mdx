@@ -1,0 +1,118 @@
+---
+title: "Overview"
+---
+
+## High-level description
+
+This directory contains middleware implementations for authentication and authorization in the Flipt server. It includes both gRPC and HTTP middleware, providing a comprehensive solution for securing API endpoints. The middleware handles various authentication methods, including JWT, client tokens, and OIDC, as well as authorization checks based on email patterns and namespace matching.
+
+## What does it do?
+
+The middleware in this directory performs several key functions:
+
+1. Authentication:
+   - Validates JWT tokens in request headers
+   - Authenticates requests using client tokens
+   - Supports OIDC authentication
+   - Manages authentication cookies for HTTP requests
+
+2. Authorization:
+   - Checks if authenticated users' emails match allowed patterns
+   - Verifies if users have access to requested namespaces
+
+3. Request processing:
+   - Extracts authentication information from request metadata (gRPC) or cookies (HTTP)
+   - Adds authentication data to the request context
+   - Enforces authentication requirements on protected endpoints
+
+4. Error handling:
+   - Returns appropriate error codes for authentication and authorization failures
+   - Clears authentication cookies for unauthenticated HTTP responses
+
+5. Logout handling:
+   - Intercepts logout requests and clears all authentication-related cookies
+
+## Entry points
+
+The main entry points for this middleware are:
+
+1. gRPC middleware (in `grpc/middleware.go`):
+   - `AuthenticationRequiredInterceptor`
+   - `JWTAuthenticationInterceptor`
+   - `ClientTokenAuthenticationInterceptor`
+   - `EmailMatchingInterceptor`
+   - `NamespaceMatchingInterceptor`
+
+2. HTTP middleware (in `http/middleware.go`):
+   - `NewHTTPMiddleware`
+
+The gRPC middleware is designed to be chained together using the `grpc-ecosystem/go-grpc-middleware` package, while the HTTP middleware integrates with the standard Go HTTP server.
+
+## Key Files
+
+1. `common/common.go`:
+   - Defines the `TokenCookieKey` constant used for storing the Flipt client token in HTTP cookies
+
+2. `grpc/middleware.go`:
+   - Contains the core implementation of gRPC interceptors
+   - Includes utility functions for extracting and managing authentication data
+
+3. `grpc/middleware_test.go`:
+   - Comprehensive unit tests for the gRPC interceptors and utility functions
+
+4. `http/middleware.go`:
+   - Implements HTTP middleware for cookie management and logout handling
+   - Includes error handling for unauthenticated responses
+
+5. `http/middleware_test.go`:
+   - Unit tests for the HTTP middleware implementation
+
+## Dependencies
+
+The middleware relies on several external libraries:
+
+1. `go.uber.org/zap`: For structured logging
+2. `google.golang.org/grpc`: For gRPC server and client interactions
+3. `github.com/grpc-ecosystem/go-grpc-middleware`: For chaining multiple gRPC interceptors
+4. `go.flipt.io/flipt/rpc/flipt/auth`: For authentication-related message types
+5. `github.com/grpc-ecosystem/grpc-gateway/v2/runtime`: For gRPC-Gateway runtime utilities
+
+## Configuration
+
+The middleware can be configured using the following:
+
+1. gRPC middleware:
+   - `InterceptorOptions` struct for customizing authentication behavior
+   - JWT validation rules
+   - Allowed email patterns for OIDC authentication
+
+Example configuration for gRPC middleware:
+
+```go
+options := []containers.Option[InterceptorOptions]{
+    WithServerSkipsAuthentication(myServer),
+}
+
+jwtInterceptor := JWTAuthenticationInterceptor(
+    logger,
+    jwtValidator,
+    jwt.Expected{Issuer: "https://example.com"},
+    options...,
+)
+```
+
+2. HTTP middleware:
+   - `config.AuthenticationSession` for cookie domain and lifetime settings
+
+Example configuration for HTTP middleware:
+
+```go
+authSessionConfig := config.AuthenticationSession{
+    CookieDomain: "example.com",
+    Lifetime:     3600, // in seconds
+}
+
+httpMiddleware := NewHTTPMiddleware(authSessionConfig)
+```
+
+The middleware provides a flexible and robust authentication and authorization layer for both gRPC and HTTP endpoints in the Flipt server, ensuring secure access to API resources.

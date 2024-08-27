@@ -1,0 +1,240 @@
+---
+title: "segment.go"
+---
+
+## High-level description
+The `segment.go` file provides the SQL implementation for managing segments within the Flipt feature flag system. It defines methods for creating, retrieving, updating, deleting, and listing segments and their associated constraints.
+
+## Code Structure
+The `Store` struct implements the `storage.SegmentStore` interface, providing all the necessary methods for interacting with segments in the database. The `GetSegment`, `ListSegments`, `CreateSegment`, `UpdateSegment`, and `DeleteSegment` methods handle the basic CRUD operations for segments. The `CreateConstraint`, `UpdateConstraint`, and `DeleteConstraint` methods manage the constraints associated with a segment.
+
+## Symbols
+
+### `(*Store) GetSegment`
+#### Description
+Retrieves a single segment from the database based on the provided namespace and key. It also fetches and appends any associated constraints to the returned segment object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | storage.ResourceRequest | Contains the namespace and key of the segment to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Segment |  | The retrieved segment object, or nil if not found. |
+| error |  | An error if one occurred during the retrieval process. |
+
+#### Internal Logic
+1. Executes a SELECT query to retrieve the segment data from the `segments` table based on the provided namespace key and segment key.
+2. If the segment is not found, returns an `errs.ErrNotFoundf` error.
+3. If the segment is found, executes another SELECT query to retrieve all constraints associated with the segment from the `constraints` table.
+4. Iterates over the retrieved constraints, appending each constraint to the `Constraints` field of the segment object.
+5. Returns the populated segment object.
+
+### `(*Store) ListSegments`
+#### Description
+Retrieves a list of segments within a specific namespace, handling pagination and sorting based on the provided request parameters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storage.ListRequest[storage.NamespaceRequest] | Contains the namespace, pagination, and sorting options for retrieving segments. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| storage.ResultSet[*flipt.Segment] |  | A result set containing the list of segments and pagination information. |
+| error |  | An error if one occurred during the retrieval process. |
+
+#### Internal Logic
+1. Constructs a SELECT query to retrieve segment data from the `segments` table based on the provided namespace.
+2. Applies sorting, limit, and offset to the query based on the request parameters.
+3. If a page token is provided, decodes it to determine the offset.
+4. Executes the query and iterates over the rows, populating a list of `flipt.Segment` objects.
+5. Calls `setConstraints` to fetch and populate the constraints for each retrieved segment.
+6. Constructs the `storage.ResultSet` object, including the list of segments, next page token (if applicable), and any errors encountered.
+
+### `(*Store) setConstraints`
+#### Description
+Helper function to retrieve and populate the constraints for a list of segments.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| namespaceKey | string | The namespace of the segments. |
+| segmentsByKey | map[string]*flipt.Segment | A map of segments keyed by their keys. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error |  | An error if one occurred during the retrieval process. |
+
+#### Internal Logic
+1. Builds a SELECT query to retrieve all constraints associated with the provided segment keys from the `constraints` table.
+2. Executes the query and iterates over the rows, populating `flipt.Constraint` objects.
+3. For each constraint, appends it to the `Constraints` field of the corresponding segment in the `segmentsByKey` map.
+
+### `(*Store) CountSegments`
+#### Description
+Counts the total number of segments within a specific namespace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| ns | storage.NamespaceRequest | Contains the namespace for which to count segments. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uint64 |  | The total count of segments. |
+| error |  | An error if one occurred during the counting process. |
+
+#### Internal Logic
+1. Executes a SELECT query with `COUNT(*)` to count the number of rows in the `segments` table for the given namespace.
+2. Returns the count.
+
+### `(*Store) CreateSegment`
+#### Description
+Creates a new segment in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.CreateSegmentRequest | Contains the data for the new segment. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Segment |  | The created segment object. |
+| error |  | An error if one occurred during the creation process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Creates a new `flipt.Segment` object with provided data and timestamps.
+3. Executes an INSERT query to insert the new segment into the `segments` table.
+4. Calls `setVersion` to update the namespace version.
+5. Returns the created segment object.
+
+### `(*Store) UpdateSegment`
+#### Description
+Updates an existing segment in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.UpdateSegmentRequest | Contains the updated data for the segment. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Segment |  | The updated segment object. |
+| error |  | An error if one occurred during the update process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Builds an UPDATE query to update the segment in the `segments` table based on the provided namespace key and segment key.
+3. Executes the query and checks if exactly one row was affected.
+4. If no rows were affected, returns an `errs.ErrNotFoundf` error.
+5. Calls `GetSegment` to retrieve the updated segment object.
+6. Calls `setVersion` to update the namespace version.
+7. Returns the updated segment object.
+
+### `(*Store) DeleteSegment`
+#### Description
+Deletes a segment from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.DeleteSegmentRequest | Contains the namespace and key of the segment to delete. |
+
+#### Outputs
+| Name | Type | Description |
+| error |  | An error if one occurred during the deletion process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Executes a DELETE query to remove the segment from the `segments` table based on the provided namespace key and segment key.
+3. Calls `setVersion` to update the namespace version.
+
+### `(*Store) CreateConstraint`
+#### Description
+Creates a new constraint associated with a specific segment.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.CreateConstraintRequest | Contains the data for the new constraint. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Constraint |  | The created constraint object. |
+| error |  | An error if one occurred during the creation process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Creates a new `flipt.Constraint` object with a generated ID, provided data, and timestamps.
+3. Unsets the constraint value if the operator doesn't require it.
+4. Executes an INSERT query to insert the new constraint into the `constraints` table.
+5. Calls `setVersion` to update the namespace version.
+6. Returns the created constraint object.
+
+### `(*Store) UpdateConstraint`
+#### Description
+Updates an existing constraint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.UpdateConstraintRequest | Contains the updated data for the constraint. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Constraint |  | The updated constraint object. |
+| error |  | An error if one occurred during the update process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Unsets the constraint value if the operator doesn't require it.
+3. Builds an UPDATE query to update the constraint in the `constraints` table based on the provided ID, segment key, and namespace key.
+4. Executes the query and checks if exactly one row was affected.
+5. If no rows were affected, returns an `errs.ErrNotFoundf` error.
+6. Retrieves the updated constraint data from the database.
+7. Calls `setVersion` to update the namespace version.
+8. Returns the updated constraint object.
+
+### `(*Store) DeleteConstraint`
+#### Description
+Deletes a constraint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.DeleteConstraintRequest | Contains the ID, segment key, and namespace key of the constraint to delete. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error |  | An error if one occurred during the deletion process. |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Executes a DELETE query to remove the constraint from the `constraints` table based on the provided ID, segment key, and namespace key.
+3. Calls `setVersion` to update the namespace version.
+
+## Side Effects
+- Modifies the database by creating, updating, or deleting segments and constraints.
+- Updates the namespace version in the database after each modification.

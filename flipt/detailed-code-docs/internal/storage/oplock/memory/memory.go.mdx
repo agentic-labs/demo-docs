@@ -1,0 +1,82 @@
+---
+title: "memory.go"
+---
+
+## High-level description
+The `memory` package provides an in-memory implementation of the `oplock.Service` interface. This implementation is suitable for single-instance or in-process use cases where multiple Flipt instances don't need to coordinate access to shared resources.
+
+## Code Structure
+The `Service` struct holds a mutex (`mu`) to protect concurrent access to the in-memory map (`ops`) that stores lock entries. The `TryAcquire` method uses this mutex to ensure thread safety when checking and updating lock entries.
+
+## References
+- `oplock.Operation`: Represents a unique operation name for locking.
+- `oplock.LockEntry`: Represents information about an acquired lock.
+
+## Symbols
+
+### `Service`
+#### Description
+The `Service` struct represents the in-memory implementation of the operation lock service. It stores lock entries in a map protected by a mutex.
+
+#### Inputs
+This struct has no inputs.
+
+#### Outputs
+This struct has no outputs.
+
+#### Internal Logic
+The `Service` struct uses a mutex (`mu`) to protect concurrent access to its internal map (`ops`) of lock entries.
+
+### `New`
+#### Description
+The `New` function constructs and initializes a new `Service` instance with an empty map of lock entries.
+
+#### Inputs
+This function has no inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| (unnamed) | *Service | A pointer to a new `Service` instance. |
+
+#### Internal Logic
+The function initializes a new `Service` struct with an empty map of `oplock.Operation` to `oplock.LockEntry`.
+
+### `TryAcquire`
+#### Description
+The `TryAcquire` method attempts to acquire a lock for a given operation and duration. It checks if the lock is available and, if so, creates a new lock entry or updates an existing one.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| operation | oplock.Operation | The name of the operation to acquire a lock for. |
+| duration | time.Duration | The desired duration of the lock. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| acquired | bool | True if the lock was acquired successfully, false otherwise. |
+| entry | oplock.LockEntry | The lock entry associated with the operation. |
+| err | error | An error if one occurred, nil otherwise. |
+
+#### Internal Logic
+1. Acquires a mutex to ensure exclusive access to the lock entries.
+2. Checks if a lock entry exists for the given operation.
+   - If no entry exists, creates a new entry with the current time as the last acquired time and the calculated acquired until time.
+   - If an entry exists and its `AcquiredUntil` time is before the current time, the lock is considered expired. The entry is updated with a new version, the current time as the last acquired time, and the calculated acquired until time.
+   - If an entry exists and its `AcquiredUntil` time is after the current time, the lock is considered acquired by another process.
+3. Releases the mutex.
+4. Returns the acquired flag, the lock entry, and any errors encountered.
+
+## Side Effects
+This code modifies the internal state of the `Service` instance by adding or updating lock entries in its map.
+
+## Dependencies
+- `context`: Provides a mechanism for carrying request-scoped data and cancellation signals.
+- `sync`: Provides basic synchronization primitives like mutexes.
+- `time`: Provides functionality for measuring and displaying time.
+- `go.flipt.io/flipt/internal/storage/oplock`: Defines the `Operation` and `LockEntry` types and the `Service` interface.
+
+## Error Handling
+This code does not implement specific error handling beyond returning an error value from the `TryAcquire` method.

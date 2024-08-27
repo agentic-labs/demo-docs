@@ -1,0 +1,142 @@
+---
+title: "config.go"
+---
+
+## High-level description
+
+This code represents the configuration and implementation of Flipt, a feature flag management system. It includes various components such as authentication, authorization, database management, metrics collection, tracing, and API endpoints. The code is organized into multiple packages and files, each responsible for specific functionalities within the Flipt system.
+
+## Code Structure
+
+The main symbols in the code relate to each other as follows:
+
+1. The `config` package defines the configuration structure for Flipt.
+2. The `cmd` package contains the main entry point and command-line interface for Flipt.
+3. The `internal` package houses the core implementation of Flipt's features.
+4. The `storage` package handles database interactions and migrations.
+5. The `server` package implements the gRPC and HTTP servers for Flipt's API.
+6. The `authn` and `authz` packages handle authentication and authorization respectively.
+7. The `metrics` and `tracing` packages provide observability features.
+
+These components interact to provide a complete feature flag management system with various authentication methods, storage options, and API endpoints.
+
+## Symbols
+
+### Config
+
+#### Description
+The `Config` struct in the `config` package defines the configuration options for Flipt.
+
+#### Internal Logic
+It uses struct tags to map configuration fields to various sources (JSON, YAML, environment variables) and includes nested configurations for different components of the system.
+
+### NewGRPCServer
+
+#### Description
+This function in the `cmd` package sets up and configures the gRPC server for Flipt.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the server |
+| logger | *zap.Logger | Logger instance |
+| cfg | *config.Config | Configuration for the server |
+| info | info.Flipt | Information about the Flipt instance |
+| forceMigrate | bool | Flag to force database migrations |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *GRPCServer | *GRPCServer | The configured gRPC server |
+| error | error | Any error encountered during setup |
+
+#### Internal Logic
+1. Sets up the gRPC listener
+2. Configures the storage backend
+3. Sets up metrics and tracing if enabled
+4. Configures authentication and authorization
+5. Registers gRPC services and middleware
+
+### NewHTTPServer
+
+#### Description
+This function in the `cmd` package sets up and configures the HTTP server for Flipt.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the server |
+| logger | *zap.Logger | Logger instance |
+| cfg | *config.Config | Configuration for the server |
+| conn | *grpc.ClientConn | gRPC client connection |
+| info | info.Flipt | Information about the Flipt instance |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *HTTPServer | *HTTPServer | The configured HTTP server |
+| error | error | Any error encountered during setup |
+
+#### Internal Logic
+1. Sets up the HTTP router
+2. Configures CORS if enabled
+3. Mounts various API endpoints
+4. Sets up authentication middleware
+5. Configures the UI serving
+
+### Open
+
+#### Description
+This function in the `sql` package opens a database connection based on the provided configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | config.Config | Database configuration |
+| opts | ...Option | Additional options for opening the database |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *sql.DB | *sql.DB | The opened database connection |
+| Driver | Driver | The database driver used |
+| error | error | Any error encountered during opening |
+
+#### Internal Logic
+1. Parses the database URL or configuration
+2. Determines the appropriate database driver
+3. Opens the database connection with the specified options
+4. Configures connection pooling
+
+## Dependencies
+- github.com/spf13/cobra: Command-line interface framework
+- go.uber.org/zap: Logging library
+- google.golang.org/grpc: gRPC framework
+- github.com/grpc-ecosystem/grpc-gateway: gRPC to HTTP proxy
+- github.com/go-chi/chi: HTTP router
+- github.com/Masterminds/squirrel: SQL query builder
+- go.opentelemetry.io/otel: OpenTelemetry SDK for metrics and tracing
+
+## Error Handling
+The code uses a combination of error wrapping and custom error types. It often returns errors with additional context using `fmt.Errorf` and the `%w` verb for wrapping. Custom error types are defined for specific scenarios, such as authentication or validation errors.
+
+## Logging
+Logging is done using the `zap` library. The logger is typically passed down from the main application to various components. Log levels and output formats are configurable.
+
+## API/Interface Reference
+The main API is exposed through gRPC and HTTP endpoints. The gRPC service definitions are likely defined in `.proto` files (not shown in the provided code snippets). The HTTP API is a RESTful wrapper around the gRPC services, implemented using the grpc-gateway project.
+
+Key endpoints include:
+- Flag management (CRUD operations)
+- Segment management
+- Evaluation endpoints
+- Authentication endpoints
+- Metrics and health check endpoints
+
+## TODOs
+There are several TODOs scattered throughout the code, indicating areas for future improvement or features to be implemented. Some examples include:
+- Support for additional configuration options in OTLP tracing
+- Improvements to error handling in specific areas
+- Potential enhancements to authentication and authorization mechanisms
+
+This documentation provides an overview of the main components and functionality of the Flipt system based on the provided code snippets. For more detailed information on specific components or functions, refer to the individual file documentation or inline comments in the source code.

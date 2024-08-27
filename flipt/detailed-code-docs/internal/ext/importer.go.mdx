@@ -1,0 +1,79 @@
+---
+title: "importer.go"
+---
+
+Here's a high-level description and documentation of the `importer.go` file:
+
+## High-level description
+
+This file implements an `Importer` struct and associated methods for importing Flipt feature flag configurations from various file formats (YAML, JSON) into a Flipt storage backend. It supports importing namespaces, flags, variants, segments, rules, distributions, and rollouts.
+
+## Code Structure
+
+The main components are:
+
+1. `Importer` struct: Holds the creator interface for storing imported data.
+2. `Import` method: The main entry point for importing data from a reader.
+3. Helper functions for creating and updating various Flipt entities (flags, variants, segments, etc.).
+4. Version checking and compatibility logic for different import file versions.
+
+## Symbols
+
+### `Importer`
+#### Description
+The main struct responsible for importing Flipt configurations.
+
+#### Inputs
+- `creator`: An interface that defines methods for creating and updating Flipt entities in storage.
+
+### `Import`
+#### Description
+The main method for importing Flipt configurations from a reader.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the import operation |
+| enc | Encoding | The encoding format of the input (YAML or JSON) |
+| r | io.Reader | The reader containing the import data |
+| skipExisting | bool | Whether to skip existing entities during import |
+
+#### Internal Logic
+1. Decodes the input data into `Document` structs.
+2. Checks the version compatibility of the import file.
+3. Creates or updates namespaces, flags, variants, segments, rules, distributions, and rollouts.
+4. Handles existing entities based on the `skipExisting` flag.
+
+### `createFlag`
+#### Description
+Creates a new flag in the Flipt storage.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| f | *Flag | The flag to be created |
+| namespaceKey | string | The namespace key for the flag |
+
+#### Internal Logic
+1. Prepares the `CreateFlagRequest` with the provided flag data.
+2. Calls the creator's `CreateFlag` method to store the flag.
+3. Handles metadata if present.
+
+Similar patterns are followed for other entity creation methods like `createVariant`, `createSegment`, `createRule`, `createDistribution`, and `createRollout`.
+
+## Dependencies
+The code relies on several Flipt-specific packages and external libraries:
+
+- `github.com/gofrs/uuid`: For generating UUIDs
+- `go.flipt.io/flipt/errors`: For error handling
+- `go.flipt.io/flipt/rpc/flipt`: For Flipt's RPC definitions
+- `google.golang.org/protobuf/types/known/structpb`: For working with protobuf structs
+
+## Error Handling
+The code uses custom error types and error wrapping to provide context-specific error messages throughout the import process.
+
+## Version Compatibility
+The importer supports different versions of the import file format, with checks to ensure compatibility and proper handling of version-specific features.
+
+This importer provides a flexible way to populate a Flipt instance with predefined configurations, supporting various entity types and relationships within the Flipt feature flagging system.

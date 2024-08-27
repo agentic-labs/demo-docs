@@ -1,0 +1,55 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This code defines a Docker Compose configuration for running a Flipt application with a CockroachDB database. It sets up two services: `crdb` for the CockroachDB instance and `flipt` for the Flipt application.
+
+## Code Structure
+The code defines a Docker Compose file with two services: `crdb` and `flipt`. The `flipt` service depends on the `crdb` service being healthy before starting. Both services are connected to a common Docker network named `flipt_network`.
+
+## Symbols
+### `crdb`
+#### Description
+This service defines the configuration for the CockroachDB instance.
+
+#### Inputs
+None
+
+#### Outputs
+- Exposes port 26257 for CockroachDB client connections.
+- Creates a volume at `${PWD}/data:/cockroach/cockroach-data` for persistent storage of database data.
+
+#### Internal Logic
+- Uses the `cockroachdb/cockroach:latest-v21.2` image.
+- Starts CockroachDB in single-node mode with insecure settings for development purposes.
+- Defines a health check that curls the `/health?ready=1` endpoint to determine service health.
+
+### `flipt`
+#### Description
+This service defines the configuration for the Flipt application.
+
+#### Inputs
+- Environment variable `FLIPT_DB_URL`: Connection string for the CockroachDB database.
+- Environment variable `FLIPT_LOG_LEVEL`: Log level for the Flipt application.
+- Environment variable `FLIPT_META_TELEMETRY_ENABLED`: Flag to enable or disable telemetry.
+
+#### Outputs
+- Exposes port 8080 for accessing the Flipt application.
+
+#### Internal Logic
+- Builds the Flipt application image from the current directory.
+- Waits for the `crdb` service to be healthy before starting.
+- Runs the Flipt application with the specified environment variables and the `--force-migrate` flag.
+
+### `flipt_network`
+#### Description
+This section defines a Docker network named `flipt_network` to allow communication between the `crdb` and `flipt` services.
+
+## Dependencies
+- `cockroachdb/cockroach:latest-v21.2` Docker image for the CockroachDB instance.
+
+## Configuration
+- `FLIPT_DB_URL`: Connection string for the CockroachDB database. Defaults to `cockroach://root@crdb:26257/defaultdb?sslmode=disable`.
+- `FLIPT_LOG_LEVEL`: Log level for the Flipt application. Defaults to `debug`.
+- `FLIPT_META_TELEMETRY_ENABLED`: Flag to enable or disable telemetry. Defaults to `false`.

@@ -1,0 +1,149 @@
+---
+title: "verify.go"
+---
+
+## High-level description
+The `verify.go` file in the `internal/server/authn/method/kubernetes` package defines the `kubernetesOIDCVerifier` type, which is responsible for verifying Kubernetes service account tokens using the OpenID Connect (OIDC) protocol. It leverages the local system's service account token and the cluster's CA certificate to securely obtain OIDC configuration and JWKS key material from the Kubernetes API server.
+
+## Code Structure
+The `kubernetesOIDCVerifier` struct is the main component, holding the logger, configuration, and an OIDC provider instance. The `newKubernetesOIDCVerifier` function initializes this struct, loading the CA certificate, creating an HTTP client with the necessary TLS configuration, and initializing the OIDC provider. The `verify` method uses the provider to verify the JWT token and extract claims.
+
+## References
+- `github.com/coreos/go-oidc/v3/oidc`: Used for OIDC configuration and token verification.
+- `go.flipt.io/flipt/internal/config`: Provides access to the Kubernetes authentication configuration.
+
+## Symbols
+
+### `kubernetesOIDCVerifier`
+#### Description
+A struct representing a verifier for Kubernetes service account tokens using OIDC.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+#### Internal Logic
+The struct stores the logger, configuration, and an OIDC provider instance used for token verification.
+
+### `newKubernetesOIDCVerifier`
+#### Description
+Initializes a new `kubernetesOIDCVerifier` with the provided logger and configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | The logger instance to use. |
+| config | `config.AuthenticationMethodKubernetesConfig` | The Kubernetes authentication configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*kubernetesOIDCVerifier` |  | A pointer to the initialized `kubernetesOIDCVerifier`. |
+| `error` |  | An error if initialization fails. |
+
+#### Internal Logic
+1. Reads the CA certificate from the configured path.
+2. Creates a root CA certificate pool and appends the loaded certificate.
+3. Creates an HTTP transport using the configured CA certificate for TLS communication.
+4. Creates an HTTP client that injects the service account token from the configured path into each request.
+5. Resolves the token issuer URL from the Kubernetes API server's discovery endpoint.
+6. Creates an OIDC provider using the resolved issuer URL and the configured discovery URL.
+7. Returns a new `kubernetesOIDCVerifier` instance with the initialized logger, configuration, and provider.
+
+### `(*kubernetesOIDCVerifier) verify`
+#### Description
+Verifies the provided JWT token using the OIDC provider and extracts claims.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| jwt | `string` | The JWT token to verify. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `claims` |  | The extracted claims from the verified token. |
+| `error` |  | An error if verification or claims extraction fails. |
+
+#### Internal Logic
+1. Uses the OIDC provider's verifier to verify the JWT token, skipping client ID checks.
+2. Extracts the token expiry time into the claims.
+3. Unmarshals the token claims into the provided `claims` struct.
+4. Returns the extracted claims and any encountered error.
+
+### `transportFunc`
+#### Description
+A type representing a function that performs an HTTP round trip.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*http.Request` |  | The HTTP request to perform. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*http.Response` |  | The HTTP response received. |
+| `error` |  | An error if the round trip fails. |
+
+### `(transportFunc) RoundTrip`
+#### Description
+Implements the `http.RoundTripper` interface for `transportFunc`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*http.Request` |  | The HTTP request to perform. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*http.Response` |  | The HTTP response received. |
+| `error` |  | An error if the round trip fails. |
+
+#### Internal Logic
+Invokes the wrapped `transportFunc` with the provided request.
+
+### `resolveTokenIssuer`
+#### Description
+Resolves the token issuer URL from the Kubernetes API server's discovery endpoint.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| client | `*http.Client` | The HTTP client to use for the request. |
+| discoveryURL | `string` | The URL of the Kubernetes API server's discovery endpoint. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `string` |  | The resolved token issuer URL. |
+| `error` |  | An error if resolving the issuer URL fails. |
+
+#### Internal Logic
+1. Constructs an HTTP GET request to the OIDC configuration endpoint derived from the discovery URL.
+2. Performs the request using the provided HTTP client.
+3. Reads and parses the JSON response body, extracting the `issuer` field.
+4. Returns the extracted issuer URL and any encountered error.
+
+## Dependencies
+- `context`
+- `crypto/tls`
+- `crypto/x509`
+- `encoding/json`
+- `fmt`
+- `io`
+- `net/http`
+- `os`
+- `strings`
+- `time`
+- `github.com/coreos/go-oidc/v3/oidc`
+- `go.flipt.io/flipt/internal/config`
+- `go.uber.org/zap`
+
+## Error Handling
+The code uses `error` values for error propagation and returns them from functions. Specific error messages are provided for clarity.

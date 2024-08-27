@@ -1,0 +1,64 @@
+---
+title: "otel-collector-config.yaml"
+---
+
+## High-level description
+This YAML file defines the configuration for an OpenTelemetry Collector instance. It sets up the collector to receive trace data via gRPC, process it in batches, and export it to various backends including logging, Zipkin, and Jaeger. It also enables several extensions for monitoring and debugging.
+
+## Code Structure
+The configuration is structured into sections for `receivers`, `exporters`, `processors`, `extensions`, and `service`. Each section defines specific components and their settings. The `service` section ties these components together into pipelines that define the flow of telemetry data.
+
+## Symbols
+### `receivers`
+#### Description
+This section defines the telemetry data receiving endpoints.
+
+#### Internal Logic
+- **`otlp`**:  Configures the collector to receive data using the OpenTelemetry Protocol (OTLP) over gRPC.
+    - **`protocols`**: Specifies the supported protocols.
+        - **`grpc`**: Enables the gRPC receiver.
+            - **`endpoint`**: Sets the listening address and port for gRPC traffic (port 4317).
+
+### `exporters`
+#### Description
+This section defines the destinations where the collected telemetry data will be exported.
+
+#### Internal Logic
+- **`logging`**:  Configures the collector to output traces to the console.
+- **`zipkin`**: Configures the collector to export traces to a Zipkin server.
+    - **`endpoint`**: Specifies the URL of the Zipkin API endpoint.
+    - **`format`**: Sets the data format to "proto" (Protobuf).
+- **`jaeger`**: Configures the collector to export traces to a Jaeger instance.
+    - **`endpoint`**: Specifies the address and port of the Jaeger agent.
+    - **`tls`**: Configures TLS settings.
+        - **`insecure`**: Disables TLS encryption for communication with Jaeger (not recommended for production).
+
+### `processors`
+#### Description
+This section defines data processing steps applied to telemetry data before exporting.
+
+#### Internal Logic
+- **`batch`**: Configures the batch processor, which aggregates multiple spans into batches before exporting, improving efficiency.
+
+### `extensions`
+#### Description
+This section defines additional components that provide functionalities like health checks, profiling, and debugging.
+
+#### Internal Logic
+- **`health_check`**: Enables the health check extension, allowing probes to check the collector's status.
+- **`pprof`**: Enables the pprof extension, providing profiling data accessible via HTTP.
+    - **`endpoint`**: Sets the listening address and port for pprof (port 1888).
+- **`zpages`**: Enables the zpages extension, offering internal metrics and debugging information via HTTP.
+    - **`endpoint`**: Sets the listening address and port for zpages (port 55679).
+
+### `service`
+#### Description
+This section defines how the collector's components are connected and configured.
+
+#### Internal Logic
+- **`extensions`**: Lists the enabled extensions (`pprof`, `zpages`, `health_check`).
+- **`pipelines`**: Defines data processing pipelines.
+    - **`traces`**:  A pipeline for handling trace data.
+        - **`receivers`**: Specifies the receivers used in this pipeline (`otlp`).
+        - **`processors`**: Specifies the processors applied in this pipeline (`batch`).
+        - **`exporters`**: Specifies the exporters used in this pipeline (`logging`, `zipkin`, `jaeger`).

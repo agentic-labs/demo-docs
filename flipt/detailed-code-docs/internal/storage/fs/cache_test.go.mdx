@@ -1,0 +1,83 @@
+---
+title: "cache_test.go"
+---
+
+## High-level description
+The code defines a `SnapshotCache` struct and its associated methods, which implement an in-memory cache for snapshots with a fixed size and LRU eviction policy. It's used to cache snapshots retrieved from different storage backends, improving performance by reducing the need to repeatedly fetch the same snapshot data.
+
+## Code Structure
+The `SnapshotCache` struct uses a `sync.Map` to store snapshots, keyed by a combination of reference and revision. It also maintains a doubly linked list to track the recency of accessed snapshots for eviction purposes. The `AddFixed`, `Get`, and `AddOrBuild` methods interact with the cache, adding, retrieving, and building snapshots as needed.
+
+## Symbols
+
+### `Test_SnapshotCache`
+#### Description
+This function is a test suite for the `SnapshotCache` struct. It tests various scenarios like adding fixed references, adding or building new references with existing/new revisions, handling cache evictions, and concurrent access to the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | Testing object used for assertions and reporting. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | | |
+
+#### Internal Logic
+The test suite uses a mock `snapshotBuilder` to simulate building snapshots from revisions. It performs a series of operations on the `SnapshotCache` and asserts the expected behavior, including:
+- Adding fixed references to the cache.
+- Adding or building new references with existing and new revisions.
+- Verifying that the cache returns the correct snapshots for given references.
+- Checking that the cache evicts the least recently used entries when exceeding its capacity.
+- Ensuring that concurrent access to the cache doesn't lead to inconsistencies.
+
+### `Test_SnapshotCache_Concurrently`
+#### Description
+This function is a test for the `SnapshotCache` struct, specifically focusing on its behavior under concurrent access. It simulates multiple goroutines concurrently adding and retrieving snapshots from the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | Testing object used for assertions and reporting. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| None | | |
+
+#### Internal Logic
+The test creates a `SnapshotCache` with a fixed size and a mock `snapshotBuilder`. It then launches multiple goroutines, each attempting to add or build snapshots with different references and revisions. The test ensures that all goroutines can successfully interact with the cache without errors and that the cache maintains its integrity under concurrent access. It also verifies that the mock builder's build counts reflect the expected cache behavior, with frequently accessed revisions being built fewer times due to caching.
+
+### `snapshotBuiler`
+#### Description
+The `snapshotBuiler` is a helper struct used in the tests to simulate building snapshots from revisions. It keeps track of how many times each revision has been built, allowing the tests to verify the cache's behavior.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| snaps | map[string]*Snapshot | A map of revisions to their corresponding snapshots. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *snapshotBuiler | | A pointer to the initialized `snapshotBuiler`. |
+
+#### Internal Logic
+The `snapshotBuiler` stores a map of revisions to snapshots and a map of revisions to their build counts. The `build` method simulates building a snapshot for a given revision by incrementing its build count and returning the corresponding snapshot from the `snaps` map.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Used for managing the lifecycle of goroutines and requests. |
+| errors | Used for creating and handling errors. |
+| math/rand | Used for generating random numbers in the concurrent test. |
+| sync | Used for synchronization primitives like mutexes. |
+| testing | Used for writing and running tests. |
+| time | Used for time-related operations like sleeping and measuring durations. |
+| github.com/stretchr/testify/assert | Used for making assertions in tests. |
+| github.com/stretchr/testify/require | Used for making assertions that, if failed, stop the test execution. |
+| go.flipt.io/flipt/internal/ext | Used for accessing Flipt's internal extensions and types. |
+| go.uber.org/zap/zaptest | Used for creating a test logger. |
+| golang.org/x/sync/errgroup | Used for managing concurrent goroutines and collecting their errors. |
+| google.golang.org/protobuf/types/known/timestamppb | Used for working with protobuf timestamp types. | 

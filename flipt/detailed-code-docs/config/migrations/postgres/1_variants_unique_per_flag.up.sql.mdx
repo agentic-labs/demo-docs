@@ -1,0 +1,41 @@
+---
+title: "1_variants_unique_per_flag.up.sql"
+---
+
+## High-level description
+This SQL script modifies the `variants` table in a PostgreSQL database. It removes an existing unique constraint on the `key` column and adds a new composite unique constraint on the `flag_key` and `key` columns together.
+
+## Symbols
+
+### ALTER TABLE variants DROP CONSTRAINT IF EXISTS variants_key_key;
+#### Description
+This SQL statement removes an existing unique constraint named `variants_key_key` from the `variants` table if it exists.
+
+#### Internal Logic
+1. The `IF EXISTS` clause ensures that the statement won't throw an error if the constraint doesn't exist.
+2. This operation allows duplicate values in the `key` column, which was previously enforced to be unique.
+
+### ALTER TABLE variants ADD UNIQUE(flag_key, key);
+#### Description
+This SQL statement adds a new composite unique constraint to the `variants` table, ensuring that the combination of `flag_key` and `key` is unique.
+
+#### Internal Logic
+1. Creates a unique index on the `flag_key` and `key` columns together.
+2. Enforces that no two rows in the `variants` table can have the same combination of `flag_key` and `key` values.
+
+## Side Effects
+- Removes the uniqueness requirement for the `key` column alone.
+- Enforces uniqueness for the combination of `flag_key` and `key`.
+- May cause an error if there are existing duplicate combinations of `flag_key` and `key` in the table.
+
+## Performance Considerations
+- Adding a new unique constraint will create an index, which may slightly impact insert and update performance but will improve query performance when searching by `flag_key` and `key` together.
+- Removing the old constraint and adding a new one may take some time on large tables.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| PostgreSQL | This SQL script is specific to PostgreSQL database systems |
+
+## Error Handling
+The `IF EXISTS` clause in the first statement prevents errors if the constraint doesn't exist. However, the second statement may fail if there are existing duplicate combinations of `flag_key` and `key`.

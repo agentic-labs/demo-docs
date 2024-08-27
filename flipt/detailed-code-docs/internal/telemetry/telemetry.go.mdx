@@ -1,0 +1,126 @@
+---
+title: "telemetry.go"
+---
+
+## High-level description
+The `telemetry.go` file defines the telemetry reporting functionality for Flipt. It periodically collects and sends anonymous usage data to a Segment backend, including system information, configuration settings, and feature usage. This data helps the Flipt team understand how the software is being used and improve future versions.
+
+## Code Structure
+The code defines a `Reporter` struct that handles telemetry reporting. It uses a `segment.Client` to communicate with the Segment API and a local file to store the last report timestamp and a unique identifier for the Flipt instance. The `report` method is responsible for collecting the telemetry data, sending it to Segment, and updating the local state file.
+
+## Symbols
+
+### `Reporter`
+#### Description
+The `Reporter` struct is responsible for collecting and sending telemetry data to Segment.
+
+#### Inputs
+This struct does not have explicit inputs. It relies on its fields being initialized with the necessary configuration and dependencies.
+
+#### Outputs
+This struct does not have explicit outputs. Its primary function is to send telemetry data to Segment.
+
+#### Internal Logic
+The `Reporter` struct has a `Run` method that starts a ticker to periodically report telemetry data. The `report` method collects the data, sends it to Segment, and updates the local state file.
+
+### `NewReporter`
+#### Description
+`NewReporter` is a constructor function that creates a new `Reporter` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | `config.Config` | The Flipt configuration. |
+| logger | `*zap.Logger` | The logger instance. |
+| analyticsKey | `string` | The Segment analytics key. |
+| analyticsEndpoint | `string` | The Segment analytics endpoint. |
+| info | `info.Flipt` | The Flipt version information. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| reporter | `*Reporter` | A pointer to the newly created `Reporter` instance. |
+| err | `error` | An error if the reporter could not be created. |
+
+#### Internal Logic
+The function initializes a new `segment.Client` with the provided analytics key and endpoint. It then creates a new `Reporter` instance with the provided configuration, logger, client, and version information.
+
+### `Reporter.Run`
+#### Description
+The `Run` method starts the telemetry reporting loop.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the reporting loop. |
+
+#### Outputs
+This method does not return any values.
+
+#### Internal Logic
+The method starts a ticker that triggers a telemetry report every 4 hours. It also listens for the shutdown signal and the context cancellation signal. If the maximum number of consecutive reporting failures is reached, the loop will stop.
+
+### `Reporter.Shutdown`
+#### Description
+The `Shutdown` method stops the telemetry reporting loop and closes the connection to the Segment API.
+
+#### Inputs
+This method does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the Segment client could not be closed. |
+
+#### Internal Logic
+The method closes the shutdown channel and calls the `Close` method on the `segment.Client`.
+
+### `Reporter.report`
+#### Description
+The `report` method collects the telemetry data, sends it to Segment, and updates the local state file.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the reporting operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the telemetry data could not be reported. |
+
+#### Internal Logic
+The method opens the local state file and reads the last report timestamp and the unique identifier. It then collects the telemetry data, including system information, configuration settings, and feature usage. The data is then sent to Segment using the `segment.Client`. Finally, the last report timestamp is updated in the local state file.
+
+### `Reporter.ping`
+#### Description
+The `ping` method sends a ping event to Segment with the collected telemetry data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the ping operation. |
+| f | `file` | The file interface for reading and writing the state. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| err | `error` | An error if the ping event could not be sent. |
+
+#### Internal Logic
+The method first checks if telemetry is enabled. If not, it returns nil. It then reads the state from the provided file interface. If the state is empty, it creates a new state. It then collects the telemetry data, including system information, configuration settings, and feature usage. The data is then marshaled into JSON, unmarshaled into `segment.Properties`, and enqueued to be sent to Segment using the `segment.Client`. Finally, the state is updated with the current version and timestamp, and written back to the provided file interface.
+
+### `newState`
+#### Description
+The `newState` function creates a new state with a unique identifier and the current version.
+
+#### Inputs
+This function does not take any inputs.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| state | `state` | The newly created state. |
+
+#### Internal Logic
+The function generates a new UUID and uses it to create a new state with the current version. If the UUID generation fails, it uses "unknown" as the UUID.

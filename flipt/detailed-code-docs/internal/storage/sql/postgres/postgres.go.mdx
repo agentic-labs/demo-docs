@@ -1,0 +1,334 @@
+---
+title: "postgres.go"
+---
+
+## High-level description
+The `postgres.go` file implements the `storage.Store` interface for a PostgreSQL database. It defines methods for creating, updating, and retrieving Flipt resources like namespaces, flags, variants, segments, constraints, rollouts, rules, and distributions. This file specifically handles PostgreSQL-related error codes and ensures data integrity by enforcing database constraints.
+
+## Code Structure
+The `postgres.go` file defines a `Store` struct that embeds a `common.Store` struct. The `Store` struct implements the `storage.Store` interface by providing PostgreSQL-specific implementations for the interface's methods. The `common.Store` struct contains shared logic for interacting with the database, such as executing SQL queries and managing transactions.
+
+## Symbols
+
+### `constraintForeignKeyErr`
+#### Description
+A constant string representing the PostgreSQL error code for a foreign key constraint violation.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `constraintUniqueErr`
+#### Description
+A constant string representing the PostgreSQL error code for a unique constraint violation.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `Store`
+#### Description
+A struct representing a PostgreSQL storage backend for Flipt. It embeds a `common.Store` for shared database interaction logic.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewStore`
+#### Description
+A function that creates a new instance of the `Store` struct.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | A pointer to a SQL database connection. |
+| builder | `sq.StatementBuilderType` | A Squirrel SQL statement builder. |
+| logger | `*zap.Logger` | A Zap logger instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | `*Store` | A pointer to a new `Store` instance. |
+
+#### Internal Logic
+- Creates a new `Store` instance.
+- Initializes the embedded `common.Store` with the provided database connection, statement builder, and logger.
+
+### `(*Store) String`
+#### Description
+A method that returns a string representation of the storage backend type, which is "postgres".
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string "postgres". |
+
+### `(*Store) CreateNamespace`
+#### Description
+A method that creates a new namespace in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateNamespaceRequest` | A pointer to a CreateNamespaceRequest proto message containing the namespace data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| namespace | `*flipt.Namespace` | A pointer to the created Namespace proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateNamespace` method of the embedded `common.Store` to handle the namespace creation.
+- If the creation fails due to a unique constraint violation, returns an `errs.ErrInvalidf` error indicating that the namespace key is not unique.
+- Otherwise, returns the result from the `common.Store.CreateNamespace` method.
+
+### `(*Store) CreateFlag`
+#### Description
+A method that creates a new flag in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateFlagRequest` | A pointer to a CreateFlagRequest proto message containing the flag data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| flag | `*flipt.Flag` | A pointer to the created Flag proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateFlag` method of the embedded `common.Store` to handle the flag creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the namespace does not exist.
+- If the creation fails due to a unique constraint violation, returns an `errs.ErrInvalidf` error indicating that the flag key is not unique within the namespace.
+- Otherwise, returns the result from the `common.Store.CreateFlag` method.
+
+### `(*Store) UpdateFlag`
+#### Description
+A method that updates an existing flag in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.UpdateFlagRequest` | A pointer to an UpdateFlagRequest proto message containing the updated flag data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| flag | `*flipt.Flag` | A pointer to the updated Flag proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `UpdateFlag` method of the embedded `common.Store` to handle the flag update.
+- If the update fails due to a foreign key constraint violation, returns an `errs.ErrInvalidf` error indicating that either the flag or its default variant does not exist.
+- Otherwise, returns the result from the `common.Store.UpdateFlag` method.
+
+### `(*Store) CreateVariant`
+#### Description
+A method that creates a new variant for a flag in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateVariantRequest` | A pointer to a CreateVariantRequest proto message containing the variant data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| variant | `*flipt.Variant` | A pointer to the created Variant proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateVariant` method of the embedded `common.Store` to handle the variant creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the flag does not exist.
+- If the creation fails due to a unique constraint violation, returns an `errs.ErrInvalidf` error indicating that the variant key is not unique within the flag.
+- Otherwise, returns the result from the `common.Store.CreateVariant` method.
+
+### `(*Store) UpdateVariant`
+#### Description
+A method that updates an existing variant in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.UpdateVariantRequest` | A pointer to an UpdateVariantRequest proto message containing the updated variant data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| variant | `*flipt.Variant` | A pointer to the updated Variant proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `UpdateVariant` method of the embedded `common.Store` to handle the variant update.
+- If the update fails due to a unique constraint violation, returns an `errs.ErrInvalidf` error indicating that the variant key is not unique within the flag.
+- Otherwise, returns the result from the `common.Store.UpdateVariant` method.
+
+### `(*Store) CreateSegment`
+#### Description
+A method that creates a new segment in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateSegmentRequest` | A pointer to a CreateSegmentRequest proto message containing the segment data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| segment | `*flipt.Segment` | A pointer to the created Segment proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateSegment` method of the embedded `common.Store` to handle the segment creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the namespace does not exist.
+- If the creation fails due to a unique constraint violation, returns an `errs.ErrInvalidf` error indicating that the segment key is not unique within the namespace.
+- Otherwise, returns the result from the `common.Store.CreateSegment` method.
+
+### `(*Store) CreateConstraint`
+#### Description
+A method that creates a new constraint for a segment in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateConstraintRequest` | A pointer to a CreateConstraintRequest proto message containing the constraint data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| constraint | `*flipt.Constraint` | A pointer to the created Constraint proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateConstraint` method of the embedded `common.Store` to handle the constraint creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the segment does not exist.
+- Otherwise, returns the result from the `common.Store.CreateConstraint` method.
+
+### `(*Store) CreateRollout`
+#### Description
+A method that creates a new rollout for a flag in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateRolloutRequest` | A pointer to a CreateRolloutRequest proto message containing the rollout data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rollout | `*flipt.Rollout` | A pointer to the created Rollout proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateRollout` method of the embedded `common.Store` to handle the rollout creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that either the flag or the segment does not exist.
+- Otherwise, returns the result from the `common.Store.CreateRollout` method.
+
+### `(*Store) CreateRule`
+#### Description
+A method that creates a new rule for a flag in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateRuleRequest` | A pointer to a CreateRuleRequest proto message containing the rule data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rule | `*flipt.Rule` | A pointer to the created Rule proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateRule` method of the embedded `common.Store` to handle the rule creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that either the flag or the segment does not exist.
+- Otherwise, returns the result from the `common.Store.CreateRule` method.
+
+### `(*Store) UpdateRule`
+#### Description
+A method that updates an existing rule in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.UpdateRuleRequest` | A pointer to an UpdateRuleRequest proto message containing the updated rule data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| rule | `*flipt.Rule` | A pointer to the updated Rule proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `UpdateRule` method of the embedded `common.Store` to handle the rule update.
+- If the update fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the rule does not exist.
+- Otherwise, returns the result from thethe `common.Store.UpdateRule` method.
+
+### `(*Store) CreateDistribution`
+#### Description
+A method that creates a new distribution for a rule in the PostgreSQL database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| r | `*flipt.CreateDistributionRequest` | A pointer to a CreateDistributionRequest proto message containing the distribution data. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| distribution | `*flipt.Distribution` | A pointer to the created Distribution proto message, or nil if an error occurred. |
+| error | `error` | An error object indicating the outcome of the operation. |
+
+#### Internal Logic
+- Calls the `CreateDistribution` method of the embedded `common.Store` to handle the distribution creation.
+- If the creation fails due to a foreign key constraint violation, returns an `errs.ErrNotFoundf` error indicating that the variant, rule, or flag does not exist.
+- Otherwise, returns the result from the `common.Store.CreateDistribution` method.
+
+## Dependencies
+The `postgres.go` file depends on several external packages:
+
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | For handling request contexts. |
+| `database/sql` | For database operations. |
+| `errors` | For error handling. |
+| `github.com/Masterminds/squirrel` | For SQL query building. |
+| `github.com/jackc/pgx/v5/pgconn` | For PostgreSQL-specific error handling. |
+| `go.flipt.io/flipt/errors` | For custom error types. |
+| `go.flipt.io/flipt/internal/storage` | For storage interfaces. |
+| `go.flipt.io/flipt/internal/storage/sql/common` | For common SQL storage operations. |
+| `go.flipt.io/flipt/rpc/flipt` | For Flipt protobuf message types. |
+| `go.uber.org/zap` | For logging. |
+
+## Error Handling
+The `postgres.go` file implements specific error handling for PostgreSQL constraint violations. It checks for foreign key and unique constraint errors and translates them into appropriate `errs.ErrNotFoundf` or `errs.ErrInvalidf` errors with descriptive messages.
+
+## Performance Considerations
+The `postgres.go` file doesn't implement any specific performance optimizations beyond what's provided by the underlying `common.Store`. However, it uses prepared statements (via Squirrel) which can help improve query performance.
+
+## TODOs
+There are no explicit TODOs in the code.
+
+This documentation provides a comprehensive overview of the `postgres.go` file, its purpose, structure, and implementation details. It should help developers understand how PostgreSQL-specific storage operations are handled in the Flipt project.

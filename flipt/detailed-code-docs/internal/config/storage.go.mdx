@@ -1,0 +1,115 @@
+---
+title: "storage.go"
+---
+
+## High-level description
+This code defines the configuration structure and validation logic for various storage backends in the Flipt feature flag management system. It supports multiple storage types including database, local filesystem, Git repositories, object storage (S3, Azure Blob, Google Cloud Storage), and OCI (Open Container Initiative) registries.
+
+## Code Structure
+The main `StorageConfig` struct contains fields for different storage types and implements `defaulter` and `validator` interfaces. Each storage type has its own configuration struct with specific fields. The code also includes authentication configurations and utility functions for setting defaults and validation.
+
+## Symbols
+
+### `StorageConfig`
+#### Description
+The main configuration struct for Flipt's storage backend.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Type | StorageType | The type of storage backend |
+| Local | *StorageLocalConfig | Configuration for local storage |
+| Git | *StorageGitConfig | Configuration for Git storage |
+| Object | *StorageObjectConfig | Configuration for object storage |
+| OCI | *StorageOCIConfig | Configuration for OCI storage |
+| ReadOnly | *bool | Flag to set storage as read-only |
+
+#### Internal Logic
+- Implements `defaulter` and `validator` interfaces
+- Sets default values based on the storage type
+- Validates the configuration based on the storage type
+
+### `setDefaults`
+#### Description
+Sets default values for the storage configuration based on the storage type.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| v | *viper.Viper | Viper configuration object |
+
+#### Internal Logic
+- Sets default values for different storage types (Local, Git, Object, OCI)
+- Handles special cases for Git authentication and OCI configuration
+
+### `validate`
+#### Description
+Validates the storage configuration based on the storage type.
+
+#### Internal Logic
+- Checks for required fields based on the storage type
+- Validates specific configurations for Git, Local, Object, and OCI storage types
+- Ensures read-only mode is only set for database storage
+
+### `StorageGitConfig`
+#### Description
+Configuration struct for Git storage backend.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Repository | string | Git repository URL |
+| Backend | GitBackend | Git backend configuration |
+| Ref | string | Git reference (branch, tag, or commit) |
+| RefType | GitRefType | Type of Git reference (static or semver) |
+| Directory | string | Directory within the repository |
+| CaCertBytes | string | CA certificate bytes |
+| CaCertPath | string | Path to CA certificate |
+| InsecureSkipTLS | bool | Flag to skip TLS verification |
+| PollInterval | time.Duration | Interval for polling Git repository |
+| Authentication | Authentication | Git authentication configuration |
+
+#### Internal Logic
+- Validates the configuration, ensuring only one of `CaCertPath` or `CaCertBytes` is provided
+- Checks for valid `RefType`
+
+### `StorageObjectConfig`
+#### Description
+Configuration struct for object storage backends (S3, Azure Blob, Google Cloud Storage).
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Type | ObjectSubStorageType | Type of object storage |
+| S3 | *S3Storage | S3 storage configuration |
+| AZBlob | *AZBlobStorage | Azure Blob storage configuration |
+| GS | *GSStorage | Google Cloud Storage configuration |
+
+#### Internal Logic
+- Validates the configuration based on the object storage type
+- Ensures required fields are provided for each storage type
+
+### `StorageOCIConfig`
+#### Description
+Configuration struct for OCI (Open Container Initiative) storage backend.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Repository | string | OCI repository URL |
+| BundlesDirectory | string | Directory for storing local bundles |
+| Authentication | *OCIAuthentication | OCI authentication configuration |
+| PollInterval | time.Duration | Interval for polling OCI repository |
+| ManifestVersion | OCIManifestVersion | OCI manifest version |
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/spf13/viper | Configuration management |
+| go.flipt.io/flipt/internal/oci | OCI-related functionality |
+
+## Error Handling
+The code uses Go's standard error handling mechanisms, returning errors for various validation and configuration issues.
+
+## Configuration
+The code defines various configuration options for different storage types, including local filesystem, Git repositories, object storage, and OCI registries. These options are set using the Viper configuration library.

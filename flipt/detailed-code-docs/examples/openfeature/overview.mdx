@@ -1,0 +1,84 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains an example implementation of a Go application that demonstrates the integration of Flipt (a feature flag management system) with OpenFeature and OpenTelemetry. The example showcases how to use feature flags in a REST API while also implementing distributed tracing.
+
+## What does it do?
+The example sets up a simple REST API with a single endpoint ("/api/greeting") that returns a greeting message in different languages based on a feature flag. The application uses Flipt to manage feature flags, OpenFeature as a standardized API for feature flag evaluation, and OpenTelemetry for distributed tracing. The entire setup is containerized using Docker, allowing for easy deployment and testing.
+
+The workflow is as follows:
+1. The application initializes, setting up tracing with Jaeger and configuring the Flipt OpenFeature provider.
+2. When a request is made to the "/api/greeting" endpoint, the application evaluates a feature flag to determine the language for the greeting.
+3. The response is returned to the user, and the entire process is traced using OpenTelemetry, with the trace data being sent to Jaeger for visualization and analysis.
+
+## Entry points
+The main entry point for the application is the `main.go` file, which sets up the server, initializes the OpenFeature client with the Flipt provider, and defines the API endpoint.
+
+The `docker-compose.yml` file is the entry point for running the entire system, including the Flipt server, Jaeger for tracing, and the example application itself.
+
+## Key Files
+1. `main.go`: Contains the main application logic, including the API endpoint, OpenFeature setup, and tracing configuration.
+2. `flipt.yml`: Defines the feature flags and segments used by Flipt for this example.
+3. `Dockerfile`: Specifies how to build the Docker image for the example application.
+4. `docker-compose.yml`: Orchestrates the entire system, including Flipt, Jaeger, and the example application.
+
+## Dependencies
+The example relies on several external libraries and services:
+
+1. Flipt (latest version): Used for feature flag management.
+2. OpenFeature Go SDK: Provides a standardized API for feature flag evaluation.
+3. Flipt OpenFeature Provider: Allows OpenFeature to interact with Flipt.
+4. OpenTelemetry: Used for distributed tracing and instrumentation.
+5. Jaeger (version 1): Distributed tracing system for visualizing traces.
+6. Gorilla Mux: HTTP router and dispatcher for the API.
+
+## Configuration
+The application can be configured using command-line flags:
+
+- `server`: Address of the Flipt backend server (default: "flipt:9000")
+- `jaeger`: Address of the Jaeger server (default: "jaeger:4317")
+
+The `flipt.yml` file contains the configuration for feature flags and segments used in the example:
+
+```yaml
+namespace: default
+flags:
+  - key: language
+    name: Language
+    description: The language of the user
+    enabled: true
+    variants:
+      - key: es
+        name: Spanish
+      - key: en
+        name: English
+      - key: fr
+        name: French
+    rules:
+      - segment: all
+        distributions:
+          - variant: es
+            rollout: 33.33
+          - variant: en
+            rollout: 33.33
+          - variant: fr
+            rollout: 33.34
+segments:
+  - key: all
+    name: all
+    match_type: ALL_MATCH_TYPE
+```
+
+This configuration sets up a "language" feature flag with three variants (Spanish, English, and French) and a rule that distributes these variants equally across all users.
+
+To run the example, use the following command from the `examples/openfeature` directory:
+
+```
+docker-compose up
+```
+
+This will start all the necessary services, including Flipt, Jaeger, and the example application. You can then access the API at `http://localhost:8000/api/greeting`, the Flipt UI at `http://localhost:8080`, and the Jaeger UI at `http://localhost:16686`.
+
+The example demonstrates how to integrate feature flagging with distributed tracing in a microservices architecture, providing insights into both feature flag evaluations and the overall system performance and behavior.

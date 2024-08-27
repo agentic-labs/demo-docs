@@ -1,0 +1,73 @@
+---
+title: "adapted_driver.go"
+---
+
+## High-level description
+The code defines an adapted Postgres driver that wraps the standard `pgx` driver and a custom adapter. This allows for customizing connection errors and preventing the leakage of sensitive credentials.
+
+## Code Structure
+The code defines three main symbols: `adaptedDriver`, `adaptedConnector`, and `newAdaptedPostgresDriver`. 
+- `newAdaptedPostgresDriver` is a function that creates a new instance of `adaptedDriver`. 
+- `adaptedDriver` implements the `driver.Driver` and `driver.DriverContext` interfaces, providing methods for opening a connection and a connector. 
+- `adaptedConnector` implements the `driver.Connector` interface and is responsible for establishing the actual connection to the database.
+
+## Symbols
+
+### `newAdaptedPostgresDriver`
+#### Description
+This function creates a new instance of the `adaptedDriver` struct, which wraps the standard `pgx` driver and a custom adapter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| d | `Driver` | The custom adapter that implements the `Driver` interface. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| driver.Driver | An instance of the `adaptedDriver` struct, wrapped as a `driver.Driver`. |
+
+#### Internal Logic
+The function simply creates a new `adaptedDriver` struct, initializing its `origin` field with a new `pgx.Driver` and its `adapter` field with the provided custom adapter.
+
+### `adaptedDriver`
+#### Description
+This struct implements the `driver.Driver` and `driver.DriverContext` interfaces, providing methods for opening a connection and a connector. It wraps the standard `pgx` driver and a custom adapter to customize connection errors and prevent credential leakage.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+#### Internal Logic
+The struct defines two methods:
+- `Open`: This method opens a new connection to the database. It first calls `OpenConnector` to obtain a `driver.Connector` and then uses it to establish the connection with a timeout. Any errors returned by the connector are adapted using the custom adapter.
+- `OpenConnector`: This method creates a new `adaptedConnector` instance, wrapping the underlying connector obtained from the `pgx` driver. Any errors returned by the underlying driver are adapted using the custom adapter.
+
+### `adaptedConnector`
+#### Description
+This struct implements the `driver.Connector` interface and is responsible for establishing the actual connection to the database. It wraps the underlying connector obtained from the `pgx` driver and adapts any errors returned.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+#### Internal Logic
+The struct defines two methods:
+- `Driver`: This method simply returns the `adaptedDriver` instance associated with this connector.
+- `Connect`: This method calls the `Connect` method of the underlying connector obtained from the `pgx` driver. Any errors returned by the underlying connector are adapted using the custom adapter.
+
+## References
+- `Driver`: This is a custom interface defined in the same package, likely providing methods for adapting errors.
+- `pgx.Driver`: This is the standard Postgres driver provided by the `github.com/jackc/pgx/v5/stdlib` package.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `database/sql/driver` | Provides the standard interfaces for interacting with SQL databases in Go. |
+| `github.com/jackc/pgx/v5/stdlib` | Provides the `pgx` Postgres driver. |
+| `context` | Used for setting a timeout when opening a connection. |
+| `time` | Used for defining the timeout duration. |

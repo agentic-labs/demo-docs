@@ -1,0 +1,58 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains an example implementation of using LibSQL, a fork of SQLite created by Turso, with Flipt, a feature flagging service. The example demonstrates how to set up a primary-replica database cluster using LibSQL's `sqld` service and connect multiple instances of Flipt to it, showcasing data replication and synchronization.
+
+## What does it do?
+This example sets up a distributed database system using LibSQL, which is designed to extend SQLite's capabilities for use cases that require network-based access and replication. It creates a primary database node and a replica node, then connects two separate instances of the Flipt feature flagging service to these database nodes.
+
+The workflow allows users to:
+1. Start up the entire system using Docker Compose
+2. Access two separate Flipt user interfaces
+3. Create and modify feature flags in either UI
+4. Observe that changes made in one UI are reflected in the other, demonstrating successful data replication between the primary and replica databases
+
+This setup illustrates how LibSQL can be used to create a distributed, replicated database system that maintains SQLite compatibility while adding features like HTTP interfaces and replication.
+
+## Entry points
+The main entry point for this example is the `docker-compose.yml` file, which defines the entire infrastructure. It sets up four services:
+
+1. `sqld-primary`: The primary LibSQL database node
+2. `sqld-replica`: A replica LibSQL database node
+3. `flipt-one`: A Flipt instance connected to the primary database
+4. `flipt-two`: Another Flipt instance connected to the replica database
+
+The `README.md` file provides instructions on how to run the example and explains the overall structure and purpose of the setup.
+
+## Configuration
+The configuration for this example is primarily done through the `docker-compose.yml` file and environment variables set within it. Key configuration points include:
+
+1. Database URLs:
+   - Primary: `http://sqld-primary:8000`
+   - Replica: `http://sqld-replica:8080`
+
+2. Flipt configuration:
+   - `flipt-one` uses the primary database URL
+   - `flipt-two` uses the replica database URL
+
+3. Data persistence:
+   - Primary data is stored in `/tmp/data.db` on the host
+   - Replica data is stored in `/tmp/replica.db` on the host
+
+4. Port mappings:
+   - Flipt UI 1: `http://localhost:8080`
+   - Flipt UI 2: `http://localhost:8081`
+   - sqld-primary HTTP: 8000
+   - sqld-primary gRPC: 5000
+   - sqld-replica HTTP: 8080 (mapped from container's 8000)
+
+Environment variables used in the configuration:
+- `SQLD_NODE`: Set to 'primary' or 'replica' to define the node type
+- `SQLD_HTTP_LISTEN_ADDR`: Defines the HTTP listening address for sqld
+- `SQLD_GRPC_LISTEN_ADDR`: Defines the gRPC listening address for sqld
+- `SQLD_PRIMARY_URL`: Used by the replica to connect to the primary node
+- `FLIPT_DB_URL`: Used by Flipt instances to connect to their respective databases
+
+This configuration allows for a flexible and scalable setup that demonstrates the capabilities of LibSQL in a distributed environment, while also showcasing its integration with a real-world application like Flipt.

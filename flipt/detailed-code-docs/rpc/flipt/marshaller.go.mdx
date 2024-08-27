@@ -1,0 +1,58 @@
+---
+title: "marshaller.go"
+---
+
+## High-level description
+This code defines a custom marshaller adapter called `V1toV2MarshallerAdapter` that bridges the gap between gRPC-gateway v1 and v2 marshallers. It's designed to handle a backwards compatibility issue where `null` map values are not allowed by the proto spec in v2 but were handled by the v1 marshaller.
+
+## Code Structure
+The main symbol is the `V1toV2MarshallerAdapter` struct, which implements the `grpc_gateway_v2.Marshaler` interface. It wraps a `grpc_gateway_v1.JSONPb` marshaller and includes a logger. The `decoderInterceptor` struct is used internally to intercept and modify error handling during JSON decoding.
+
+## Symbols
+
+### V1toV2MarshallerAdapter
+#### Description
+A custom marshaller adapter that implements the `grpc_gateway_v2.Marshaler` interface, bridging v1 and v2 gRPC-gateway marshallers.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| JSONPb | *grpc_gateway_v1.JSONPb | The v1 JSON Protocol Buffer marshaller |
+| logger | *zap.Logger | A logger for error reporting |
+
+#### Internal Logic
+The adapter implements methods required by the `grpc_gateway_v2.Marshaler` interface, delegating most of the work to the underlying v1 marshaller. It includes custom error handling in the `NewDecoder` method.
+
+### NewV1toV2MarshallerAdapter
+#### Description
+Constructor function for creating a new `V1toV2MarshallerAdapter`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | *zap.Logger | A logger for error reporting |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| adapter | *V1toV2MarshallerAdapter | The newly created adapter |
+
+### decoderInterceptor
+#### Description
+An internal struct that wraps a `grpc_gateway_v1.Decoder` to provide custom error handling during JSON decoding.
+
+#### Internal Logic
+The `Decode` method intercepts errors from the underlying decoder. If a `json.UnmarshalTypeError` is encountered, it returns a more generic error message.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| encoding/json | JSON encoding and decoding |
+| errors | Error handling |
+| io | I/O operations |
+| github.com/grpc-ecosystem/grpc-gateway/runtime | gRPC-gateway v1 runtime |
+| github.com/grpc-ecosystem/grpc-gateway/v2/runtime | gRPC-gateway v2 runtime |
+| go.uber.org/zap | Logging |
+
+## TODOs
+- Remove this custom marshaller for Flipt API v2 as we want to use the default v2 marshaller directly.

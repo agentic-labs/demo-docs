@@ -1,0 +1,66 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/storage/fs` directory contains the implementation of a file system-based storage backend for Flipt. It provides functionality for reading and managing feature flag configurations stored in files, supporting various storage types including local file systems, Git repositories, object storage, and OCI (Open Container Initiative) repositories.
+
+## What does it do?
+This package implements a storage layer that:
+
+1. Reads feature flag configurations from various file system sources.
+2. Parses and validates these configurations against a schema.
+3. Provides a consistent snapshot view of the configuration data.
+4. Supports different storage backends (local, Git, object storage, OCI).
+5. Implements caching mechanisms for improved performance.
+6. Handles file indexing and filtering based on include/exclude patterns.
+7. Provides a read-only interface to the stored data, conforming to the `storage.Store` interface.
+
+## Entry points
+The main entry points for this package are:
+
+1. `NewStore` function in `store/store.go`: Creates a new `storage.Store` instance based on the provided configuration.
+2. `SnapshotFromFS` function in `snapshot.go`: Constructs a `Snapshot` from a file system implementation.
+3. `NewSnapshotCache` function in `cache.go`: Creates a new cache for storing snapshots.
+
+## Key Files
+1. `snapshot.go`: Defines the `Snapshot` struct, which represents a read-only view of the feature flag configuration.
+2. `cache.go`: Implements a caching mechanism for snapshots.
+3. `store.go`: Provides a read-only implementation of the `storage.Store` interface.
+4. `index.go`: Handles file indexing and filtering based on `.flipt.yml` configuration.
+5. `poll.go`: Implements a polling mechanism for detecting changes in the underlying storage.
+
+## Dependencies
+The package relies on several external libraries and internal packages:
+
+1. `github.com/go-git/go-git/v5`: For Git operations.
+2. `github.com/gobwas/glob`: For glob pattern matching.
+3. `gocloud.dev/blob`: For object storage operations.
+4. `oras.land/oras-go/v2`: For OCI repository interactions.
+5. `go.uber.org/zap`: For logging.
+6. Various internal Flipt packages for common functionality and interfaces.
+
+## Configuration
+The storage backend can be configured through the `config.Config` struct, which allows specifying:
+
+1. Storage type (local, Git, object, OCI)
+2. Storage-specific options (e.g., Git repository URL, object storage bucket)
+3. Polling intervals for detecting changes
+4. File include/exclude patterns
+
+Example configuration for Git storage:
+
+```go
+cfg := &config.Config{
+    Storage: config.Storage{
+        Type: "git",
+        Git: config.Git{
+            Repository: "https://github.com/example/flipt-config.git",
+            Ref:        "main",
+            PollInterval: 30 * time.Second,
+        },
+    },
+}
+```
+
+This package plays a crucial role in Flipt's architecture by providing a flexible and extensible storage layer that can adapt to various deployment scenarios and storage requirements while maintaining a consistent interface for the rest of the application to interact with feature flag configurations.

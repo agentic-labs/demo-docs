@@ -1,0 +1,144 @@
+---
+title: "store.go"
+---
+
+## High-level description
+The `SnapshotStore` struct implements a read-only storage backend for Flipt feature flags, backed by an OCI (Open Container Initiative) repository. It periodically polls the repository for updates and constructs a new snapshot of the feature flag data whenever a change is detected.
+
+## Code Structure
+The `SnapshotStore` struct embeds a `storagefs.Poller` to handle periodic updates. It uses an `oci.Store` to interact with the OCI repository and stores the latest snapshot in a `storage.ReadOnlyStore`. A read-write mutex (`mu`) ensures thread safety during updates.
+
+## References
+* `storagefs.SnapshotStore`: An interface for read-only storage backends that provide snapshots of data.
+* `oci.Store`: A struct for interacting with OCI repositories.
+* `oci.Reference`: A struct representing a reference to an OCI artifact.
+* `storage.ReadOnlyStore`: An interface for read-only access to feature flag data.
+* `containers.Option[storagefs.Poller]` : Options for configuring the poller.
+
+## Symbols
+
+### `SnapshotStore`
+#### Description
+The `SnapshotStore` struct represents a read-only storage backend for Flipt feature flags, backed by an OCI repository.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `View`
+#### Description
+The `View` method provides read-only access to the latest snapshot of the feature flag data. It accepts a function that takes a `storage.ReadOnlyStore` as an argument and executes it within a read lock. This ensures that the snapshot remains consistent for the duration of the function call.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| fn | func(storage.ReadOnlyStore) error | The function to execute with read-only access to the snapshot. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error, if any occurred during the operation. |
+
+#### Internal Logic
+1. Acquires a read lock on the `mu` mutex.
+2. Executes the provided function `fn`, passing the current `snap` (snapshot) as an argument.
+3. Releases the read lock.
+4. Returns the error returned by the `fn` function, if any.
+
+### `NewSnapshotStore`
+#### Description
+The `NewSnapshotStore` function constructs and configures a new `SnapshotStore` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger instance to use. |
+| store | *oci.Store | The `oci.Store` instance to use for interacting with the OCI repository. |
+| ref | oci.Reference | The `oci.Reference` representing the OCI artifact to use as the source of feature flag data. |
+| opts | ...containers.Option[SnapshotStore] | Optional configuration options for the `SnapshotStore`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *SnapshotStore | *SnapshotStore | A pointer to the newly created `SnapshotStore` instance. |
+| error | error | An error, if any occurred during the operation. |
+
+#### Internal Logic
+1. Initializes a new `SnapshotStore` struct with the provided logger, store, and reference.
+2. Applies any provided options using `containers.ApplyAll`.
+3. Calls the `update` method to fetch the initial snapshot.
+4. Creates a new `storagefs.Poller` instance with the `update` method as the update function and any provided poll options.
+5. Starts the poller in a separate goroutine.
+6. Returns the new `SnapshotStore` instance.
+
+### `WithPollOptions`
+#### Description
+The `WithPollOptions` function is a configuration option that allows setting options for the embedded `storagefs.Poller`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...containers.Option[storagefs.Poller] | The options to apply to the poller. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[SnapshotStore] | containers.Option[SnapshotStore] | A function that applies the provided options to a `SnapshotStore` instance. |
+
+### `String`
+#### Description
+The `String` method returns a string representation of the `SnapshotStore`, which is always "oci".
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The string representation of the `SnapshotStore`. |
+
+### `update`
+#### Description
+The `update` method fetches the latest state of the target OCI repository and updates the snapshot if necessary.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | bool | A boolean value indicating whether the snapshot was updated (true) or not (false). |
+| error | error | An error, if any occurred during the operation. |
+
+#### Internal Logic
+1. Attempts to fetch the manifest of the target OCI artifact using the `oci.Store.Fetch` method, passing the last observed digest (`lastDigest`) as the `If-None-Match` condition.
+2. If the fetch operation returns a match (`resp.Matched`), it means the artifact has not changed since the last update, so the method returns `false` (not modified) and no error.
+3. If the fetch operation is successful and the artifact has changed, it creates a new snapshot from the fetched files using the `storagefs.SnapshotFromFiles` function.
+4. If the snapshot creation is successful, it acquires a write lock on the `mu` mutex, updates the `lastDigest` and `snap` fields with the new values, and releases the lock.
+5. Returns `true` (modified) and no error if the update was successful.
+6. If any error occurs during the process, the method returns `false` (not modified) and the error.
+
+## Side Effects
+* Modifies the internal state of the `SnapshotStore` by updating the `lastDigest` and `snap` fields.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/opencontainers/go-digest | Digest calculation and comparison. |
+| go.flipt.io/flipt/internal/containers | Utility functions for working with containers. |
+| go.flipt.io/flipt/internal/oci | Functions for interacting with OCI repositories. |
+| go.flipt.io/flipt/internal/storage | Interfaces and types for Flipt storage backends. |
+| go.flipt.io/flipt/internal/storage/fs | File system-based storage backend implementation. |
+| go.uber.org/zap | Logging library. |
+
+## Error Handling
+The `update` method handles errors by returning them to the caller. The `View` method handles errors by returning the error returned by the provided function.
+
+## Logging
+The `SnapshotStore` uses a `zap.Logger` instance for logging.

@@ -1,0 +1,90 @@
+---
+title: "analytics_test.go"
+---
+
+## High-level description
+This file contains a test suite, `AnalyticsDBTestSuite`, for testing the analytics database interactions in the Flipt server. It specifically tests the functionality of recording and retrieving flag evaluation counts.
+
+## Code Structure
+The `AnalyticsDBTestSuite` uses a `clickhouse.Client` to interact with a ClickHouse database. The test suite sets up a connection to the database and then defines test cases that exercise the `IncrementFlagEvaluationCounts` and `GetFlagEvaluationsCount` functions of the client.
+
+## References
+- `panalytics.EvaluationResponse`: Represents the response from a flag evaluation, used for recording evaluation counts.
+- `analytics.GetFlagEvaluationsCountRequest`: Represents the request for retrieving flag evaluation counts.
+
+## Symbols
+
+### `AnalyticsDBTestSuite`
+#### Description
+A test suite that tests the analytics database interactions, specifically focusing on flag evaluation counts.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+This test suite doesn't have any direct inputs or outputs. It defines test cases that interact with the database.
+
+### `TestAnalyticsDBTestSuite`
+#### Description
+This function is a test function that checks if the `FLIPT_ANALYTICS_DATABASE_PROTOCOL` environment variable is set before running the `AnalyticsDBTestSuite`. If the environment variable is not set, the test is skipped.
+
+#### Inputs
+- `t *testing.T`: The testing object.
+
+#### Outputs
+None
+
+#### Internal Logic
+- It checks if the `FLIPT_ANALYTICS_DATABASE_PROTOCOL` environment variable is set.
+- If the environment variable is set, it runs the `AnalyticsDBTestSuite` using `suite.Run(t, new(AnalyticsDBTestSuite))`.
+- If the environment variable is not set, it skips the test using `t.Skip("please provide an analytics database protocol to run tests")`.
+
+### `(a *AnalyticsDBTestSuite) SetupSuite()`
+#### Description
+This function sets up the test suite by establishing a connection to the ClickHouse database.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- It uses `analyticstesting.Open()` to open a connection to the test database.
+- It creates a new `clickhouse.Client` with the obtained database connection.
+- It assigns the created client to the `a.client` field.
+
+### `(a *AnalyticsDBTestSuite) TestAnalyticsMutationAndQuery()`
+#### Description
+This function tests the functionality of recording flag evaluation counts and then retrieving them.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+#### Internal Logic
+- **Arrange:**
+    - It generates a timestamp `now`.
+    - It iterates 5 times, each time incrementing the flag evaluation count for the flag "flag1" in the namespace "default" by 5. This is done by calling `a.client.IncrementFlagEvaluationCounts` with a slice of `panalytics.EvaluationResponse` objects.
+- **Act:**
+    - It calls `a.client.GetFlagEvaluationsCount` to retrieve the evaluation count for the same flag and namespace within the last hour.
+- **Assert:**
+    - It asserts that there is only one value returned, representing the count for the specified period.
+    - It asserts that the returned count is 25 (5 iterations * 5 increments per iteration).
+
+## Dependencies
+- `github.com/stretchr/testify/assert`
+- `github.com/stretchr/testify/require`
+- `github.com/stretchr/testify/suite`
+- `go.flipt.io/flipt/internal/server/analytics`
+- `go.flipt.io/flipt/internal/server/analytics/clickhouse`
+- `go.flipt.io/flipt/internal/server/analytics/testing`
+- `go.flipt.io/flipt/rpc/flipt/analytics`
+
+## Error Handling
+The test suite uses `require.Nil(t, err)` to check for errors returned by the database client functions. If an error occurs, the test will fail.

@@ -1,0 +1,169 @@
+---
+title: "kafka.go"
+---
+
+## High-level description
+The `kafka.go` file implements a Kafka sink for Flipt's audit logs. This allows audit events to be published to a Kafka topic for further processing or analysis.
+
+## Code Structure
+The code defines a `Sink` struct that represents the Kafka sink. It uses the `franz-go` library to interact with Kafka and supports encoding events in Protobuf or Avro format. The `NewSink` function creates a new `Sink` instance, while the `SendAudits` method publishes audit events to the configured Kafka topic.
+
+## References
+This code references the `audit.Event` type from the `go.flipt.io/flipt/internal/server/audit` package.
+
+## Symbols
+
+### `Sink`
+#### Description
+The `Sink` struct represents a Kafka sink for audit events. It holds references to a logger, a Kafka client, and an encoding function.
+
+#### Inputs
+This struct does not have any explicit input parameters.
+
+#### Outputs
+This struct does not have any explicit output values.
+
+#### Internal Logic
+The `Sink` struct is used to store the configuration and dependencies for the Kafka sink. It doesn't contain any complex logic itself.
+
+### `NewSink`
+#### Description
+The `NewSink` function creates a new Kafka sink instance. It configures the Kafka client, sets up the encoder based on the provided configuration, and returns a new `Sink` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| logger | *zap.Logger | The logger to use for logging. |
+| cfg | config.KafkaSinkConfig | The configuration for the Kafka sink. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| audit.Sink |  | An interface representing the audit sink. |
+| error |  | An error if the sink creation failed. |
+
+#### Internal Logic
+1. Creates a new logger with the "kafka" sink type.
+2. Configures the Kafka client using the provided configuration options, including bootstrap servers, topic, TLS settings, and authentication.
+3. Creates an encoder based on the configured encoding type (Protobuf or Avro).
+4. If schema registry is enabled, sets up the schema registry client and registers the schema.
+5. Returns a new `Sink` instance with the configured client, logger, and encoding function.
+
+### `setupSchemaRegistryEncoder`
+#### Description
+The `setupSchemaRegistryEncoder` function sets up the schema registry client, registers the schema for the audit event, and returns an encoding function that uses the registered schema.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| cfg | config.KafkaSinkConfig | The configuration for the Kafka sink. |
+| encoder | Encoder | The encoder to use for encoding the event. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| encodingFn |  | An encoding function that uses the registered schema. |
+| error |  | An error if the schema registry setup failed. |
+
+#### Internal Logic
+1. Creates a new schema registry client using the provided URL.
+2. Creates a new schema in the registry for the audit event using the provided topic and encoder schema.
+3. Registers the schema with the `sr.Serde` instance, associating it with the `audit.Event` type and the encoder's encoding function.
+4. Returns the `sr.Serde`'s `Encode` function, which will now use the registered schema for encoding.
+
+### `newEncoder`
+#### Description
+The `newEncoder` function creates a new encoder based on the encoding type specified in the configuration.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| cfg | config.KafkaSinkConfig | The configuration for the Kafka sink. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| Encoder |  | An interface for encoding data and providing the schema. |
+| error |  | An error if the encoding type is unsupported. |
+
+#### Internal Logic
+1. Checks the configured encoding type.
+2. If the encoding type is "protobuf", it returns a new Protobuf encoder.
+3. If the encoding type is "avro", it returns a new Avro encoder.
+4. If the encoding type is not supported, it returns an error.
+
+### `Close`
+#### Description
+The `Close` method closes the Kafka client connection.
+
+#### Inputs
+This method does not take any input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error |  | An error if closing the client failed. |
+
+#### Internal Logic
+This method simply calls the `Close` method of the Kafka client.
+
+### `SendAudits`
+#### Description
+The `SendAudits` method publishes a batch of audit events to the configured Kafka topic.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| events | []audit.Event | The slice of audit events to publish. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error |  | An error if publishing any of the events failed. |
+
+#### Internal Logic
+1. Creates a new `kgo.AbortingFirstErrPromise` to handle errors during asynchronous production.
+2. Iterates over the provided audit events.
+3. Encodes each event using the configured encoding function.
+4. Creates a new Kafka record with the encoded event as the value and the event type as the key.
+5. Produces the record to the Kafka client asynchronously, using the promise to track errors.
+6. Flushes the Kafka client to ensure all records are sent.
+7. Checks for any errors from the promise and logs them if present.
+
+### `String`
+#### Description
+The `String` method returns a string representation of the sink type, which is always "kafka".
+
+#### Inputs
+This method does not take any input parameters.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string |  | The string "kafka". |
+
+#### Internal Logic
+This method simply returns the string "kafka".
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Used for managing the lifecycle of goroutines and operations. |
+| crypto/tls | Used for configuring TLS connections to the Kafka broker. |
+| fmt | Used for formatting strings. |
+| github.com/twmb/franz-go/pkg/kgo | The Kafka client library used to interact with the Kafka broker. |
+| github.com/twmb/franz-go/pkg/sasl/scram | Used for configuring SCRAM authentication for the Kafka client. |
+| github.com/twmb/franz-go/pkg/sr | Used for interacting with the schema registry. |
+| github.com/twmb/franz-go/plugin/kzap | Used for integrating the Kafka client's logger with the `zap` logging library. |
+| go.flipt.io/flipt/internal/config | Used for accessing the configuration for the Kafka sink. |
+| go.flipt.io/flipt/internal/server/audit | Used for accessing the `audit.Event` type and the `audit.Sink` interface. |
+| go.uber.org/zap | The logging library used for structured logging. |
+
+## Error Handling
+The code uses the `kgo.AbortingFirstErrPromise` type to handle errors during asynchronous record production. If any error occurs during encoding or producing a record, it is logged, and the promise is aborted. The `SendAudits` method checks for errors from the promise and returns an error if any occurred.
+
+## Logging
+The code uses the `zap` logging library for structured logging. It logs errors encountered during Kafka client setup, event encoding, and record publishing. It also logs debug information about the configured Kafka client and encoder.

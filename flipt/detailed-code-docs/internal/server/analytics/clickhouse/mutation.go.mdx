@@ -1,0 +1,71 @@
+---
+title: "mutation.go"
+---
+
+## High-level description
+This code defines a function `IncrementFlagEvaluationCounts` that takes a list of flag evaluation responses and inserts them into a ClickHouse database table for analytics purposes. It formats the data and constructs an SQL INSERT statement to efficiently batch insert multiple records.
+
+## References
+- `analytics.EvaluationResponse`: This struct is assumed to be defined in the `go.flipt.io/flipt/internal/server/analytics` package and represents the data structure of a flag evaluation response.
+- `c.Conn`: This is assumed to be a ClickHouse database connection object associated with the `Client` struct.
+- `counterAnalyticsTable`: This string variable is assumed to hold the name of the ClickHouse table where analytics data is stored.
+- `counterAnalyticsName`: This string variable is assumed to hold a constant value representing the name of the analytics counter.
+
+## Symbols
+
+### `IncrementFlagEvaluationCounts`
+#### Description
+This function takes a list of flag evaluation responses and inserts them into a ClickHouse database table. It first checks if the list is empty. If not, it iterates through each response, formats the data, and constructs an SQL INSERT statement with placeholders for the values. Finally, it executes the statement using the ClickHouse connection.
+
+#### Inputs
+| Name      | Type                                  | Description                               |
+|:----------|:--------------------------------------|:------------------------------------------|
+| `ctx`     | `context.Context`                     | The context for the database operation. |
+| `responses` | `[]*analytics.EvaluationResponse` | A slice of flag evaluation responses.    |
+
+#### Outputs
+| Name | Type   | Description                                                                      |
+|:-----|:-------|:----------------------------------------------------------------------------------|
+| `err` | `error` | An error object if the database insertion fails, otherwise nil.                 |
+
+#### Internal Logic
+1. Checks if the `responses` slice is empty. If so, returns nil immediately.
+2. Initializes two slices: `valuePlaceHolders` to store SQL value placeholders and `valueArgs` to store the actual values from the responses.
+3. Iterates through each `response` in the `responses` slice:
+    - Appends a placeholder string `(toDateTime(?, 'UTC'),?,?,?,?,?,?,?,?,?)` to `valuePlaceHolders`.
+    - Appends the following values from the `response` to `valueArgs`:
+        - Timestamp formatted as a DateTime string
+        - `counterAnalyticsName`
+        - NamespaceKey
+        - FlagKey
+        - FlagType
+        - Reason
+        - Match
+        - EvaluationValue
+        - EntityId
+        - 1 (presumably a counter increment)
+4. Constructs the SQL INSERT statement using `fmt.Sprintf` with `counterAnalyticsTable` and the joined string of `valuePlaceHolders`.
+5. Executes the SQL statement using `c.Conn.ExecContext` with the provided context and `valueArgs`.
+6. Returns the error returned by `ExecContext`.
+
+## Side Effects
+This function modifies the ClickHouse database by inserting new records into the `counterAnalyticsTable`.
+
+## Dependencies
+| Dependency | Purpose                                                                         |
+|:-----------|:---------------------------------------------------------------------------------|
+| `context`  | Provides a mechanism for carrying request-scoped values and cancellation signals. |
+| `fmt`      | Implements formatted I/O with functions analogous to C's printf and scanf.     |
+| `strings` | Provides functions for manipulating UTF-8 encoded strings.                     |
+| `time`     | Provides functionality for measuring and displaying time.                       |
+
+```go
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"go.flipt.io/flipt/internal/server/analytics"
+)
+```

@@ -1,0 +1,150 @@
+---
+title: "cloud.go"
+---
+
+## High-level description
+The `cloud.go` file defines data structures and functions for fetching authorization policies and data from a remote Flipt cloud instance. It implements the `source.PolicySource` and `source.DataSource` interfaces, allowing the Rego authorization engine to retrieve and update policies and data from the cloud.
+
+## Code Structure
+The code defines two main structs: `CloudPolicySource` and `CloudDataSource`, both of which implement the `Get` method from the `source` package's interfaces. The `fetch` function is a helper used by both structs to make HTTP requests to the Flipt cloud API.
+
+## References
+- `source.Hash`: Represents a hash value used for caching and change detection.
+- `source.ErrNotModified`: An error indicating that the requested resource has not been modified since the provided hash.
+
+## Symbols
+
+### `CloudPolicySource`
+#### Description
+This struct represents a source for authorization policies fetched from a Flipt cloud instance.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `PolicySourceFromCloud`
+#### Description
+This function creates a new `CloudPolicySource` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| host | string | The host address of the Flipt cloud instance. |
+| apiKey | string | The API key for authenticating with the Flipt cloud instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *CloudPolicySource | *CloudPolicySource | A pointer to the newly created `CloudPolicySource` instance. |
+
+#### Internal Logic
+The function simply initializes a new `CloudPolicySource` struct with the provided host and API key.
+
+### `(*CloudPolicySource) Get`
+#### Description
+This method fetches the authorization policy from the Flipt cloud instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| seen | source.Hash | The hash of the previously fetched policy, used for caching. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []byte | []byte | The fetched policy as a byte slice. |
+| source.Hash | source.Hash | The hash of the fetched policy. |
+| error | error | An error, if any occurred during the fetch process. |
+
+#### Internal Logic
+The method constructs the API endpoint URL and calls the `fetch` function to retrieve the policy. If the request is successful, it returns the policy and its ETag as the hash. If the server returns a "304 Not Modified" status, it returns `source.ErrNotModified`.
+
+### `CloudDataSource`
+#### Description
+This struct represents a source for authorization data fetched from a Flipt cloud instance.
+
+#### Inputs
+N/A - This is a struct definition.
+
+#### Outputs
+N/A - This is a struct definition.
+
+### `DataSourceFromCloud`
+#### Description
+This function creates a new `CloudDataSource` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| host | string | The host address of the Flipt cloud instance. |
+| apiKey | string | The API key for authenticating with the Flipt cloud instance. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *CloudDataSource | *CloudDataSource | A pointer to the newly created `CloudDataSource` instance. |
+
+#### Internal Logic
+The function simply initializes a new `CloudDataSource` struct with the provided host and API key.
+
+### `(*CloudDataSource) Get`
+#### Description
+This method fetches the authorization data from the Flipt cloud instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| seen | source.Hash | The hash of the previously fetched data, used for caching. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| map[string]any | map[string]any | The fetched data as a map. |
+| source.Hash | source.Hash | The hash of the fetched data. |
+| error | error | An error, if any occurred during the fetch process. |
+
+#### Internal Logic
+The method constructs the API endpoint URL and calls the `fetch` function to retrieve the data. If the request is successful, it unmarshals the JSON response into a map and returns it along with the ETag as the hash. If the server returns a "304 Not Modified" status, it returns `source.ErrNotModified`.
+
+### `fetch`
+#### Description
+This function makes an HTTP GET request to the specified URL with the provided API key and optional If-None-Match header.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| seen | source.Hash | The hash used for the If-None-Match header. |
+| url | string | The URL to make the request to. |
+| apiKey | string | The API key for authentication. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| []byte | []byte | The response body as a byte slice. |
+| source.Hash | source.Hash | The ETag header value as a byte slice. |
+| error | error | An error, if any occurred during the request. |
+
+#### Internal Logic
+The function creates a new HTTP request with the provided context, URL, and headers. It then sends the request using an HTTP client with a 30-second timeout. If the response status code is 200 (OK), it reads and returns the response body and ETag header. If the status code is 304 (Not Modified), it returns `source.ErrNotModified`. Any other status code or error during the process results in an error being returned.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | Provides a way to pass request-scoped values and cancellation signals. |
+| encoding/json | Used for unmarshalling JSON responses. |
+| fmt | Used for string formatting and error wrapping. |
+| io | Used for reading the response body. |
+| net/http | Used for making HTTP requests. |
+| time | Used for setting the HTTP client timeout. |
+| go.flipt.io/flipt/internal/server/authz/engine/rego/source | Provides the `Hash` type and `ErrNotModified` error. |
+
+## Error Handling
+The code uses the `error` interface for error handling. Errors are wrapped using `fmt.Errorf` to provide more context. The `source.ErrNotModified` error is specifically handled to indicate that the requested resource has not changed.
+
+## Logging
+This code does not implement any logging.

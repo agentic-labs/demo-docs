@@ -1,0 +1,142 @@
+---
+title: "evaluation.go"
+---
+
+## High-level description
+The `evaluation.go` file implements the OpenFeature Remote Evaluation Protocol (OFREP) for Flipt. It defines two gRPC methods, `EvaluateFlag` and `EvaluateBulk`, which allow clients to evaluate feature flags remotely using the OFREP specification. These methods act as a bridge between the OFREP interface and Flipt's internal flag evaluation logic.
+
+## Code Structure
+The `evaluation.go` file defines a `Server` struct that implements the `ofrep.OFREPServiceServer` interface. This struct contains a logger, cache configuration, and a `Bridge` interface for interacting with Flipt's internal flag evaluation logic. The `EvaluateFlag` and `EvaluateBulk` methods of the `Server` struct handle incoming OFREP requests, delegate the actual flag evaluation to the `Bridge`, and transform the results into OFREP responses.
+
+## References
+- `ofrep`: This package defines the gRPC service and message types for the OpenFeature Remote Evaluation Protocol.
+- `rpcevaluation`: This package defines the gRPC service and message types for Flipt's internal flag evaluation logic.
+- `Bridge`: This interface defines the methods for interacting with Flipt's internal flag evaluation logic.
+
+## Symbols
+
+### `(*Server) EvaluateFlag`
+#### Description
+This method handles incoming `EvaluateFlag` requests from OFREP clients. It extracts the flag key, targeting key, and evaluation context from the request, delegates the flag evaluation to the `Bridge`, and transforms the result into an `EvaluatedFlag` response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *ofrep.EvaluateFlagRequest | The `EvaluateFlag` request message. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.EvaluatedFlag | The `EvaluatedFlag` response message. |
+| error | error | An error, if any occurred during the evaluation. |
+
+#### Internal Logic
+1. Logs the incoming request for debugging.
+2. Validates that the flag key is present in the request.
+3. Extracts the targeting key from the request context.
+4. Calls the `OFREPFlagEvaluation` method of the `Bridge` to evaluate the flag.
+5. Transforms the evaluation result into an `EvaluatedFlag` response.
+6. Logs the response for debugging.
+
+### `(*Server) EvaluateBulk`
+#### Description
+This method handles incoming `EvaluateBulk` requests from OFREP clients. It extracts the flag keys, targeting key, and evaluation context from the request, delegates the flag evaluations to the `Bridge`, and transforms the results into a `BulkEvaluationResponse`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *ofrep.EvaluateBulkRequest | The `EvaluateBulkRequest` message. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.BulkEvaluationResponse | The `BulkEvaluationResponse` message. |
+| error | error | An error, if any occurred during the evaluation. |
+
+#### Internal Logic
+1. Logs the incoming request for debugging.
+2. Extracts the targeting key from the request context.
+3. Retrieves the flag keys from the request context.
+4. Iterates over the flag keys and evaluates each flag using the `OFREPFlagEvaluation` method of the `Bridge`.
+5. Collects the evaluation results into a slice of `EvaluatedFlag` messages.
+6. Constructs a `BulkEvaluationResponse` message containing the evaluated flags.
+7. Logs the response for debugging.
+
+### `transformOutput`
+#### Description
+This function transforms an `EvaluationBridgeOutput` into an `EvaluatedFlag` message.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output | EvaluationBridgeOutput | The output from the `Bridge`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ofrep.EvaluatedFlag | The `EvaluatedFlag` message. |
+| error | error | An error, if any occurred during the transformation. |
+
+#### Internal Logic
+1. Converts the flag value to a `structpb.Value`.
+2. Converts the flag metadata to a `structpb.Struct`.
+3. Constructs an `EvaluatedFlag` message with the transformed values.
+
+### `getTargetingKey`
+#### Description
+This function retrieves the targeting key from the evaluation context. If the targeting key is not present, it generates a new UUID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| context | map[string]string | The evaluation context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | The targeting key. |
+
+### `getNamespace`
+#### Description
+This function retrieves the namespace from the request context. If the namespace is not present, it defaults to "default".
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | The namespace. |
+
+### `transformReason`
+#### Description
+This function transforms an `rpcevaluation.EvaluationReason` into an `ofrep.EvaluateReason`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| reason | rpcevaluation.EvaluationReason | The evaluation reason. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ofrep.EvaluateReason | The transformed evaluation reason. |
+
+### `transformError`
+#### Description
+This function transforms an error returned by the `Bridge` into an appropriate OFREP error.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The flag key. |
+| err | error | The error returned by the `Bridge`. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | The transformed error. |

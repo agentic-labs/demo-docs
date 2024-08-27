@@ -1,0 +1,71 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains code for implementing a cloud authentication flow using an OAuth-like Web Application approach. It consists of two main files: `local_server.go` and `web_flow.go`. These files work together to create a seamless authentication process that involves generating a browser URL, handling the OAuth callback, and managing a local server to receive the authentication token.
+
+## What does it do?
+The code in this directory facilitates a secure cloud authentication process. Here's a simplified explanation of how it works:
+
+1. The system generates a unique URL for the user to visit in their web browser.
+2. When the user visits this URL, they are prompted to authenticate with the cloud service.
+3. After successful authentication, the cloud service redirects the user back to a local server running on the user's machine.
+4. This local server receives the authentication token and safely stores it.
+5. The process then completes, allowing the application to use the received token for authenticated requests to the cloud service.
+
+This flow ensures that the user's credentials are never directly handled by the application, enhancing security.
+
+## Key Files
+
+### local_server.go
+This file implements a temporary HTTP server that runs on the user's local machine. Its primary purpose is to receive the OAuth callback after the user has authenticated with the cloud service. Key features include:
+
+- Creating a server that listens on a random available port to avoid conflicts.
+- Handling the incoming callback request and extracting the authentication token.
+- Providing a customizable success page to display to the user after successful authentication.
+- Safely managing the lifecycle of the server, including proper shutdown after receiving the token.
+
+### web_flow.go
+This file manages the overall authentication flow. It works closely with the local server to create a complete authentication process. Key functionalities include:
+
+- Initializing the authentication flow by setting up the local server and generating a unique state for security.
+- Creating the URL that the user needs to visit to start the authentication process.
+- Managing the state of the authentication process.
+- Providing methods to start the local server, wait for the authentication to complete, and retrieve the access token.
+
+## Dependencies
+The code primarily relies on Go's standard library, using packages such as:
+
+- `net/http` for HTTP server functionality
+- `crypto/rand` for generating secure random strings
+- `context` for managing cancellation and timeouts
+- `encoding/hex` for encoding random bytes to hexadecimal strings
+- `net/url` for URL parsing and manipulation
+
+No external third-party libraries are used, which keeps the dependencies minimal and the code portable.
+
+## Configuration
+The code doesn't rely on external configuration files. Instead, it uses runtime configuration through function parameters and struct fields. For example:
+
+- The `Flow` struct in `web_flow.go` allows customization of the authentication flow.
+- The `localServer` struct in `local_server.go` has a `WriteSuccessHTML` field that can be set to customize the success page shown to the user.
+
+The lack of external configuration makes the code more self-contained and easier to integrate into different environments.
+
+## Error Handling
+Both files implement robust error handling using Go's standard error mechanisms. Most functions return an error as their last return value, allowing the caller to handle errors appropriately. For example:
+
+```go
+func InitFlow() (*Flow, error) {
+    server, err := bindLocalServer()
+    if err != nil {
+        return nil, err
+    }
+    // ... rest of the function
+}
+```
+
+This approach allows for flexible error handling at different levels of the application.
+
+In conclusion, this directory provides a secure and flexible implementation of a cloud authentication flow. It's designed to be easily integrated into larger applications that require cloud service authentication, with a focus on security, simplicity, and user experience.

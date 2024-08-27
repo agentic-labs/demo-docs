@@ -1,0 +1,75 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains examples demonstrating different ways to gather analytical data using Flipt, a feature flag management system. The primary focus is on showcasing various analytics configurations, with a specific example using ClickHouse as the backend data store for analytics.
+
+## What does it do?
+The examples in this directory illustrate how to set up and use Flipt with different analytics backends. The main workflow demonstrated is:
+
+1. Setting up a Flipt instance with a specific analytics backend (e.g., ClickHouse).
+2. Configuring feature flags, segments, and other Flipt settings.
+3. Performing flag evaluations.
+4. Storing evaluation data in the chosen analytics backend.
+5. Querying and analyzing flag evaluation data using Flipt's analytics features.
+
+This allows users to understand how to integrate Flipt with various analytics solutions and leverage the data for insights into feature flag usage and performance.
+
+## Key Files
+1. `README.md`: Provides an overview of the analytics examples and directs users to specific implementations.
+
+2. `clickhouse/` subdirectory: Contains a complete example of using Flipt with ClickHouse for analytics. Key files in this subdirectory include:
+   - `Dockerfile`: Builds a custom Flipt image with additional tools.
+   - `README.md`: Instructions for running the ClickHouse example.
+   - `docker-compose.yml`: Defines the multi-container application setup for Flipt and ClickHouse.
+
+## Dependencies
+The ClickHouse example relies on the following external dependencies:
+
+1. Docker: Used to containerize and run the services.
+2. docker-compose: Used to define and manage the multi-container application.
+3. ClickHouse: Version not specified, but uses the `clickhouse/clickhouse-server` image.
+4. Flipt: Uses the latest version (`flipt/flipt:latest`) as the base image.
+
+These dependencies are chosen to provide a containerized, easy-to-setup environment for demonstrating Flipt's analytics capabilities with ClickHouse.
+
+## Configuration
+The ClickHouse example in the `clickhouse/` subdirectory uses a `docker-compose.yml` file for configuration:
+
+1. ClickHouse configuration:
+   ```yaml
+   clickhouse:
+     image: clickhouse/clickhouse-server
+     ports:
+       - "8123:8123"
+       - "9000:9000"
+     environment:
+       - CLICKHOUSE_DB=flipt_analytics
+     ulimits:
+       nofile:
+         soft: 262144
+         hard: 262144
+   ```
+
+2. Flipt configuration:
+   ```yaml
+   flipt:
+     build: .
+     ports:
+       - "8080:8080"
+     environment:
+       - FLIPT_LOG_LEVEL=debug
+       - FLIPT_ANALYTICS_STORAGE_CLICKHOUSE_ENABLED=true
+       - FLIPT_ANALYTICS_STORAGE_CLICKHOUSE_URL=clickhouse://clickhouse:9000/flipt_analytics
+       - FLIPT_META_TELEMETRY_ENABLED=false
+     depends_on:
+       - clickhouse
+     command: ["./wait-for-it.sh", "clickhouse:9000", "--", "/flipt"]
+   ```
+
+This configuration sets up Flipt to use ClickHouse for analytics storage, disables telemetry, and ensures proper startup order of services.
+
+To run the ClickHouse example, users need to navigate to the `clickhouse/` directory and execute `docker-compose up`. They can then access the Flipt UI at `http://localhost:8080`, create sample data, perform evaluations, and explore the analytics features.
+
+The examples in this directory provide a practical demonstration of how to integrate Flipt with different analytics backends, allowing users to choose and implement the most suitable solution for their specific use case.

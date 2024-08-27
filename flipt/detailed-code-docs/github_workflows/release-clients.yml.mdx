@@ -1,0 +1,51 @@
+---
+title: "release-clients.yml"
+---
+
+## High-level description
+This GitHub Actions workflow `release-clients.yml` is designed to trigger updates to various Flipt GRPC client libraries (Go, Ruby, and .NET) based on either a successful completion of the `Release` workflow or a manual dispatch event. It uses a GitHub App token for authentication and triggers the `proto-upgrade.yml` workflow in the respective client repositories.
+
+## Code Structure
+The workflow consists of a single job `release_client` that runs on Ubuntu. It first generates a GitHub App token. Then, depending on the trigger event (`workflow_dispatch` or successful `workflow_run`), it extracts the release tag and triggers the `proto-upgrade.yml` workflow in the Go, Ruby, and .NET client repositories.
+
+## References
+- `proto-upgrade.yml`: This workflow is triggered in the client repositories to perform the actual updates.
+
+## Symbols
+### `release-clients.yml`
+#### Description
+This workflow defines the steps to trigger updates to GRPC clients when a new release is created or manually dispatched.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tag | string | (Optional, for `workflow_dispatch`) The Flipt release version tag to use for the update. |
+
+#### Internal Logic
+1. **Generate Token:**
+   - Uses the `tibdex/github-app-token@v2` action to generate a GitHub App token for authentication.
+   - Requires the following secrets:
+     - `FLIPT_RELEASE_BOT_APP_ID`
+     - `FLIPT_RELEASE_BOT_APP_PEM`
+     - `FLIPT_RELEASE_BOT_INSTALLATION_ID`
+
+2. **Trigger Workflow (Dispatch):**
+   - This step runs only if the workflow was triggered manually using `workflow_dispatch`.
+   - Extracts the `tag` input provided during dispatch.
+   - Uses the generated GitHub App token to trigger the `proto-upgrade.yml` workflow in the Go, Ruby, and .NET client repositories, passing the `tag` as an input.
+
+3. **Trigger Workflow (Release):**
+   - This step runs only if the workflow was triggered by the successful completion of the `Release` workflow.
+   - Extracts the release tag from the `GITHUB_REF_NAME` environment variable.
+   - Uses the generated GitHub App token to trigger the `proto-upgrade.yml` workflow in the Go, Ruby, and .NET client repositories, passing the extracted tag as an input.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| tibdex/github-app-token@v2 | GitHub Action to generate a GitHub App token for authentication. |
+
+## Side Effects
+- Triggers the `proto-upgrade.yml` workflow in the `flipt-io/flipt-grpc-go`, `flipt-io/flipt-grpc-ruby`, and `flipt-io/flipt-grpc-dotnet` repositories.
+
+## Error Handling
+This workflow does not implement specific error handling. Any failures in the steps will result in the workflow failing.

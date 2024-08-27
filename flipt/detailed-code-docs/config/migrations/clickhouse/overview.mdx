@@ -1,0 +1,67 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains SQL migration scripts for setting up and modifying ClickHouse tables used for analytics in the Flipt feature flagging system. The scripts create and alter tables designed to store and aggregate data related to feature flag evaluations.
+
+## What does it do?
+These migration scripts set up the database structure for storing and analyzing feature flag usage in Flipt. They create two main tables:
+
+1. `flipt_counter_analytics`: Stores detailed data about each feature flag evaluation, including timestamps, flag details, evaluation reasons, and results.
+
+2. `flipt_counter_aggregated_analytics`: Stores aggregated data summarizing feature flag usage over time.
+
+The scripts also create a materialized view to automatically aggregate data from the detailed table into the aggregated table, and add an `entity_id` column to the detailed table for additional tracking capabilities.
+
+## Key Files
+
+1. `0_initial_clickhouse.up.sql`: Creates the `flipt_counter_analytics` table for storing detailed evaluation data.
+
+2. `1_default_aggregated.up.sql`: Creates the `flipt_counter_aggregated_analytics` table for storing aggregated analytics data.
+
+3. `2_default_aggregated_view.up.sql`: Creates a materialized view `flipt_counter_aggregated_analytics_mv` that automatically aggregates data from `flipt_counter_analytics` into `flipt_counter_aggregated_analytics`.
+
+4. `3_alter_add_entity_id.up.sql`: Alters the `flipt_counter_analytics` table to add an `entity_id` column for additional tracking.
+
+## Dependencies
+These scripts are designed for ClickHouse, a column-oriented database management system. ClickHouse is chosen for its high performance in handling large volumes of analytics data and its ability to efficiently perform real-time aggregations.
+
+## Configuration
+The scripts include several important configuration details:
+
+1. Time-to-Live (TTL): Both main tables are configured with a TTL of one week, automatically deleting data older than this to manage storage and maintain performance.
+
+2. Table Engines:
+   - `flipt_counter_analytics` uses the MergeTree engine, optimized for insert and select queries.
+   - `flipt_counter_aggregated_analytics` uses the SummingMergeTree engine, which automatically sums the `value` column during background merges.
+
+3. Data Types:
+   - Extensive use of `LowCardinality(String)` in the aggregated table to optimize storage and query performance for columns with a low number of distinct values.
+   - `DateTime('UTC')` is used for timestamp columns to ensure consistent time representation.
+
+4. Primary Keys:
+   - `flipt_counter_analytics` is ordered by `timestamp`.
+   - `flipt_counter_aggregated_analytics` is ordered by all columns except `value`.
+
+Here's a sample of how the `flipt_counter_analytics` table is created:
+
+```sql
+CREATE TABLE flipt_counter_analytics
+(
+    `timestamp` DateTime('UTC'),
+    `analytic_name` String,
+    `namespace_key` String,
+    `flag_key` String,
+    `flag_type` Enum('Variant' = 1, 'Boolean' = 2),
+    `reason` Enum('Unknown' = 0, 'Match' = 1, 'Default' = 2, 'Error' = 3),
+    `match` Nullable(Bool),
+    `evaluation_value` Nullable(String),
+    `value` UInt32
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+TTL timestamp + INTERVAL 1 WEEK;
+```
+
+These scripts provide a robust foundation for storing and analyzing feature flag usage data in Flipt, with considerations for performance, storage efficiency, and data retention.

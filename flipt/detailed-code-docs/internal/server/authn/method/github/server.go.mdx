@@ -1,0 +1,188 @@
+---
+title: "server.go"
+---
+
+## High-level description
+The `github` package implements the server-side handling of Github authentication for Flipt. It uses OAuth2 flow to authenticate users against Github and retrieves user information to create an authentication token in Flipt. It also supports restricting access based on Github organizations and teams.
+
+## Code Structure
+The `Server` struct is the main component, handling authorization URL generation and callback processing. It utilizes an `OAuth2Client` interface for communication with Github's OAuth2 provider. The `api` function is a helper for making requests to the Github API. The `getUserOrgs` and `getUserTeamsByOrg` functions are used to retrieve and validate user's organization and team memberships.
+
+## References
+This code references the following symbols:
+- `config.AuthenticationConfig`: Used to configure the Github authentication method, including client ID, secret, redirect address, and allowed organizations/teams.
+- `storageauth.Store`: Used to interact with the authentication store, creating new authentications based on Github user data.
+- `method.CallbackValidateState`: Used to validate the OAuth state parameter.
+
+## Symbols
+
+### `Server`
+#### Description
+The `Server` struct implements the `auth.AuthenticationMethodGithubServiceServer` interface, handling Github authentication requests.
+
+#### Inputs
+This struct doesn't have explicit input parameters. It relies on the configuration provided during initialization.
+
+#### Outputs
+This struct doesn't return any values directly. Its methods return responses to gRPC requests.
+
+#### Internal Logic
+The `Server` struct uses the OAuth2 flow to authenticate users with Github. It generates an authorization URL, handles the callback from Github, exchanges the authorization code for an access token, and retrieves user information from Github API. It then creates an authentication token in Flipt's authentication store based on the retrieved user data.
+
+### `NewServer`
+#### Description
+The `NewServer` function constructs a new `Server` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | Logger instance for recording events. |
+| store | `storageauth.Store` | Authentication store for managing authentication tokens. |
+| config | `config.AuthenticationConfig` | Configuration for the Github authentication method. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Server` |  | A pointer to the newly created `Server` instance. |
+
+#### Internal Logic
+The function initializes the `Server` struct with the provided logger, store, and configuration. It also creates an `oauth2.Config` instance based on the provided configuration, which is used for communicating with Github's OAuth2 provider.
+
+### `AuthorizeURL`
+#### Description
+The `AuthorizeURL` method generates an authorization URL for the client to initiate the OAuth2 flow with Github.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context of the request. |
+| req | `*auth.AuthorizeURLRequest` | Request containing the OAuth state parameter. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*auth.AuthorizeURLResponse` |  | Response containing the generated authorization URL. |
+| `error` |  | Error if any occurred during the process. |
+
+#### Internal Logic
+The method uses the `oauth2.Config` instance to generate the authorization URL with the provided state parameter.
+
+### `Callback`
+#### Description
+The `Callback` method handles the OAuth2 callback from Github after the user authorizes the application.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context of the request. |
+| r | `*auth.CallbackRequest` | Request containing the OAuth code and state parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*auth.CallbackResponse` |  | Response containing the Flipt client token and authentication details. |
+| `error` |  | Error if any occurred during the process. |
+
+#### Internal Logic
+1. Validates the OAuth state parameter.
+2. Exchanges the authorization code for an access token using the `oauth2.Config` instance.
+3. Retrieves user information (name, email, avatar URL, ID) from Github API using the access token.
+4. Optionally, retrieves and validates user's organization and team memberships against the allowed list in the configuration.
+5. Creates an authentication token in Flipt's authentication store with the retrieved user information.
+6. Returns the Flipt client token and authentication details in the response.
+
+### `api`
+#### Description
+The `api` function is a helper function for making requests to the Github API.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context of the request. |
+| token | `*oauth2.Token` | OAuth2 access token for authentication. |
+| apiURL | `string` | Base URL of the Github API. |
+| endpoint | `endpoint` | API endpoint to call. |
+| v | `any` | Pointer to a variable to store the decoded response. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | Error if any occurred during the request or decoding. |
+
+#### Internal Logic
+The function constructs an HTTP request with the provided context, access token, API URL, and endpoint. It then sends the request, decodes the response into the provided variable, and returns any errors encountered.
+
+### `getUserOrgs`
+#### Description
+The `getUserOrgs` function retrieves the list of organizations the user belongs to.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context of the request. |
+| token | `*oauth2.Token` | OAuth2 access token for authentication. |
+| apiURL | `string` | Base URL of the Github API. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `map[string]bool` |  | A map of organization logins the user belongs to. |
+| `error` |  | Error if any occurred during the request or decoding. |
+
+#### Internal Logic
+The function calls the `api` function to retrieve the list of organizations from the `/user/orgs` endpoint and returns a map of organization logins.
+
+### `getUserTeamsByOrg`
+#### Description
+The `getUserTeamsByOrg` function retrieves the list of teams the user belongs to, grouped by organization.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | Context of the request. |
+| token | `*oauth2.Token` | OAuth2 access token for authentication. |
+| apiURL | `string` | Base URL of the Github API. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `map[string]map[string]bool` |  | A map of organization logins to a map of team slugs the user belongs to. |
+| `error` |  | Error if any occurred during the request or decoding. |
+
+#### Internal Logic
+The function calls the `api` function to retrieve the list of teams from the `/user/teams` endpoint and returns a nested map of organization logins to team slugs.
+
+## Side Effects
+This code has side effects related to:
+- **Network Communication:** It makes API calls to Github for user authorization and information retrieval.
+- **Authentication Store Modification:** It creates new authentication tokens in the configured authentication store.
+
+## Dependencies
+This code depends on the following external libraries:
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a mechanism for carrying request-scoped values and cancellation signals. |
+| `encoding/json` | Used for encoding and decoding JSON data. |
+| `fmt` | Used for formatted printing and error formatting. |
+| `net/http` | Used for making HTTP requests to the Github API. |
+| `slices` | Used for operations on slices. |
+| `strings` | Used for string manipulation. |
+| `time` | Used for time-related operations. |
+| `go.flipt.io/flipt/errors` | Provides custom error types and utilities. |
+| `go.flipt.io/flipt/internal/config` | Provides access to Flipt's configuration. |
+| `go.flipt.io/flipt/internal/server/authn/method` | Provides common utilities for authentication methods. |
+| `go.flipt.io/flipt/internal/storage/authn` | Provides interfaces for interacting with the authentication store. |
+| `go.flipt.io/flipt/rpc/flipt/auth` | Defines the gRPC service and message types for authentication. |
+| `go.uber.org/zap` | Provides structured logging capabilities. |
+| `golang.org/x/oauth2` | Provides OAuth2 client implementation. |
+| `google.golang.org/grpc` | Provides gRPC server and client implementations. |
+| `google.golang.org/protobuf/types/known/timestamppb` | Provides utilities for working with protobuf timestamp types. |
+
+## Error Handling
+The code uses the following error handling mechanisms:
+- **Error Return Values:** Most functions return an `error` value to indicate success or failure.
+- **Custom Error Types:** The code utilizes custom error types from the `go.flipt.io/flipt/errors` package for specific error conditions.
+- **HTTP Status Codes:** The `api` function checks the HTTP status code of the response and returns an error if it's not `http.StatusOK`.
+
+## Logging
+The code uses the `go.uber.org/zap` library for structured logging. The `logger` field in the `Server` struct is used to record events and debug information.

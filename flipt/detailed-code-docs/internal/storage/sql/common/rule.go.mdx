@@ -1,0 +1,300 @@
+---
+title: "rule.go"
+---
+
+## High-level description
+The `rule.go` file in the `internal/storage/sql/common` package provides the implementation for managing rules within the Flipt feature flag system. It defines functions for creating, retrieving, updating, deleting, and ordering rules, as well as managing their associated distributions.
+
+## Code Structure
+The `Store` struct, defined in a separate file, provides the database connection and other shared resources. The functions in `rule.go` use this struct to interact with the database. The functions are generally independent, but some share helper functions like `setDistributions` and `distributionValidationHelper`.
+
+## References
+- `storage.NamespaceRequest`: Used to identify a specific namespace.
+- `storage.ListRequest`: Used for listing rules with pagination and filtering.
+- `flipt.Rule`: Represents a rule in the Flipt system.
+- `flipt.Distribution`: Represents a distribution associated with a rule.
+
+## Symbols
+
+### `GetRule`
+#### Description
+Retrieves a single rule from the database based on its ID and namespace. It also fetches the associated distributions for the rule.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| ns | storage.NamespaceRequest | Namespace of the rule |
+| id | string | ID of the rule |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rule |  | The retrieved rule, or nil if not found |
+| error | error | An error if one occurred during the retrieval process |
+
+#### Internal Logic
+1. Queries the `rules` table for a rule matching the provided ID and namespace.
+2. If found, retrieves the rule's details.
+3. Queries the `rule_segments` table to get the associated segment keys.
+4. Queries the `distributions` table to get the associated distributions.
+5. Populates the `Rule` struct with the retrieved data.
+6. Returns the `Rule` struct and any error encountered.
+
+### `ListRules`
+#### Description
+Retrieves a list of rules for a specific flag within a namespace. Supports pagination and ordering.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| req | *storage.ListRequest[storage.ResourceRequest] | Request containing the flag key, namespace, and pagination/ordering options |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| storage.ResultSet[*flipt.Rule] |  | A result set containing the list of rules and pagination information |
+| error | error | An error if one occurred during the retrieval process |
+
+#### Internal Logic
+1. Builds a query to select rules from the `rules` table based on the provided flag key and namespace.
+2. Applies ordering, limit, and offset to the query based on the request parameters.
+3. Executes the query and iterates over the results.
+4. For each rule, retrieves the associated segment keys from the `rule_segments` table.
+5. Calls `setDistributions` to fetch and populate the distributions for each rule.
+6. Constructs the `ResultSet` with the retrieved rules and pagination information.
+7. Returns the `ResultSet` and any error encountered.
+
+### `setDistributions`
+#### Description
+Helper function to retrieve and populate the distributions for a list of rules.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| rulesById | map[string]*flipt.Rule | Map of rules keyed by their IDs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the retrieval process |
+
+#### Internal Logic
+1. Builds a query to select distributions from the `distributions` table for the provided rule IDs.
+2. Executes the query and iterates over the results.
+3. For each distribution, finds the corresponding rule in the `rulesById` map.
+4. Appends the distribution to the rule's `Distributions` field.
+5. Returns any error encountered.
+
+### `CountRules`
+#### Description
+Counts the total number of rules for a specific flag within a namespace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| flag | storage.ResourceRequest | Request containing the flag key and namespace |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uint64 |  | The total count of rules |
+| error | error | An error if one occurred during the counting process |
+
+#### Internal Logic
+1. Builds a query to count rules from the `rules` table based on the provided flag key and namespace.
+2. Executes the query and retrieves the count.
+3. Returns the count and any error encountered.
+
+### `CreateRule`
+#### Description
+Creates a new rule in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.CreateRuleRequest | Request containing the rule details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rule |  | The created rule |
+| error | error | An error if one occurred during the creation process |
+
+#### Internal Logic
+1. Generates a new UUID for the rule ID.
+2. Sets the namespace to the default namespace if empty.
+3. Inserts the rule into the `rules` table.
+4. Inserts the associated segment keys into the `rule_segments` table.
+5. Returns the created rule and any error encountered.
+
+### `UpdateRule`
+#### Description
+Updates an existing rule in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.UpdateRuleRequest | Request containing the updated rule details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rule |  | The updated rule |
+| error | error | An error if one occurred during the update process |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Updates the rule's segment operator in the `rules` table.
+3. Deletes existing segment keys for the rule from the `rule_segments` table.
+4. Inserts the updated segment keys into the `rule_segments` table.
+5. Retrieves and returns the updated rule using `GetRule`.
+
+### `DeleteRule`
+#### Description
+Deletes a rule from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.DeleteRuleRequest | Request containing the rule ID and namespace |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the deletion process |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Deletes the rule from the `rules` table.
+3. Reorders the remaining rules for the flag by updating their ranks.
+
+### `OrderRules`
+#### Description
+Updates the order of rules for a specific flag within a namespace.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.OrderRulesRequest | Request containing the ordered list of rule IDs, flag key, and namespace |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the ordering process |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Updates the rank of each rule in the `rules` table based on the provided order.
+
+### `orderRules`
+#### Description
+Helper function to update the rank of rules in the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| runner | sq.BaseRunner | Database runner for executing the query |
+| namespaceKey | string | Namespace of the rules |
+| flagKey | string | Flag key of the rules |
+| ruleIDs | []string | Ordered list of rule IDs |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the ordering process |
+
+#### Internal Logic
+1. Iterates over the provided list of rule IDs.
+2. For each rule ID, updates the rule's rank in the `rules` table.
+
+### `distributionValidationHelper`
+#### Description
+Helper function to validate if a distribution can be created or updated for a given rule, variant, and flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| distributionRequest | interface { GetFlagKey() string; GetNamespaceKey() string; GetVariantId() string; GetRuleId() string } | Request containing the flag key, namespace, variant ID, and rule ID |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the validation fails, or nil if successful |
+
+#### Internal Logic
+1. Queries the database to check if a rule, variant, and flag combination exists for the given request.
+2. If no matching combination is found, returns an `sql.ErrNoRows` error.
+3. If a matching combination is found, returns nil, indicating successful validation.
+
+### `CreateDistribution`
+#### Description
+Creates a new distribution for a rule.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.CreateDistributionRequest | Request containing the distribution details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Distribution |  | The created distribution |
+| error | error | An error if one occurred during the creation process |
+
+#### Internal Logic
+1. Generates a new UUID for the distribution ID.
+2. Sets the namespace to the default namespace if empty.
+3. Validates if the distribution can be created using `distributionValidationHelper`.
+4. Inserts the distribution into the `distributions` table.
+5. Returns the created distribution and any error encountered.
+
+### `UpdateDistribution`
+#### Description
+Updates an existing distribution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.UpdateDistributionRequest | Request containing the updated distribution details |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Distribution |  | The updated distribution |
+| error | error | An error if one occurred during the update process |
+
+#### Internal Logic
+1. Sets the namespace to the default namespace if empty.
+2. Validates if the distribution can be updated using `distributionValidationHelper`.
+3. Updates the distribution in the `distributions` table.
+4. Retrieves and returns the updated distribution.
+
+### `DeleteDistribution`
+#### Description
+Deletes a distribution.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | Context for the request |
+| r | *flipt.DeleteDistributionRequest | Request containing the distribution ID, rule ID, and variant ID |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the deletion process |
+
+#### Internal Logic
+1. Deletes the distribution from the `distributions` table based on the provided IDs.

@@ -1,0 +1,83 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile defines a multi-stage build process for the Flipt application. It creates a lightweight Alpine-based Docker image with the Flipt binary, necessary configurations, and runtime dependencies. The build process compiles the Go application and sets up the environment for running Flipt.
+
+## Code Structure
+The Dockerfile consists of two main stages: the build stage and the final stage. The build stage compiles the Flipt application, while the final stage creates the runtime environment.
+
+## Symbols
+
+### Build Stage
+#### Description
+This stage sets up the build environment, compiles the Flipt application, and prepares the binary for the final image.
+
+#### Internal Logic
+1. Uses `golang:1.22-alpine3.19` as the base image
+2. Sets the working directory to `/home/flipt`
+3. Installs necessary build dependencies
+4. Clones and builds the Mage build tool
+5. Copies Go module files and specific directories
+6. Downloads Go module dependencies
+7. Copies the entire project to the container
+8. Builds the Flipt application using Mage
+
+### Final Stage
+#### Description
+This stage creates the final, lightweight runtime image for Flipt.
+
+#### Internal Logic
+1. Uses `alpine:3.19` as the base image
+2. Adds labels for maintainer information and image metadata
+3. Installs runtime dependencies
+4. Creates necessary directories for Flipt
+5. Copies the Flipt binary from the build stage
+6. Copies configuration files
+7. Creates a non-root user and group for running Flipt
+8. Sets appropriate permissions for Flipt directories
+9. Exposes ports 8080 and 9000
+10. Sets the user to `flipt`
+11. Defines the command to run Flipt
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| golang:1.22-alpine3.19 | Base image for building the application |
+| alpine:3.19 | Base image for the final runtime container |
+| npm | Build dependency |
+| git | Used to clone Mage repository |
+| bash | Build dependency |
+| gcc | Build dependency |
+| build-base | Build dependency |
+| binutils-gold | Build dependency |
+| postgresql-client | Runtime dependency for database connectivity |
+| openssl | Runtime dependency for SSL/TLS support |
+| ca-certificates | Runtime dependency for SSL/TLS certificate validation |
+
+## Configuration
+The Dockerfile copies configuration files from `config/*.yml` to `/etc/flipt/config/` in the final image.
+
+## Error Handling
+No specific error handling mechanisms are implemented in the Dockerfile. The build process will fail if any step encounters an error.
+
+## Logging
+No specific logging configuration is present in the Dockerfile. Logging behavior would be determined by the Flipt application itself.
+
+## API/Interface Reference
+The Dockerfile exposes two ports:
+| Port | Purpose |
+|:-----|:--------|
+| 8080 | Likely for the main application interface |
+| 9000 | Possibly for metrics or administrative interface |
+
+## Performance Considerations
+1. Multi-stage build is used to minimize the final image size by excluding build dependencies.
+2. Alpine-based images are used for both build and runtime stages, which are known for their small footprint.
+3. The application is built with CGO enabled (`CGO_ENABLED=1`), which may impact performance and portability.
+
+## Security Considerations
+1. A non-root user `flipt` is created and used to run the application, following the principle of least privilege.
+2. Permissions are set appropriately for Flipt directories.
+3. The latest Alpine 3.19 is used, which should include recent security updates.

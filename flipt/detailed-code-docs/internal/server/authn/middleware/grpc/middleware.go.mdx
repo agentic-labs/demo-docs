@@ -1,0 +1,333 @@
+---
+title: "middleware.go"
+---
+
+## High-level description
+The code in `middleware.go` defines a set of gRPC interceptors for authentication and authorization in the Flipt server. These interceptors handle different authentication methods like JWT, client tokens, and OIDC, and enforce authentication and authorization rules based on configuration.
+
+## Code Structure
+The code defines several constants, types, and functions related to authentication and authorization. It uses the `grpc-ecosystem/go-grpc-middleware` package for implementing interceptors. The interceptors are designed to be chained together to provide a layered approach to authentication and authorization.
+
+## References
+- `go.flipt.io/flipt/errors`: Used for custom error types like `ErrUnauthenticated`.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines the `Authentication` message and related types.
+- `google.golang.org/grpc`: Used for gRPC server and client interactions.
+- `google.golang.org/grpc/metadata`: Used for accessing and manipulating gRPC metadata.
+
+## Symbols
+
+### `authenticationScheme`
+#### Description
+An enumeration representing different authentication schemes supported by the middleware.
+
+#### Internal Logic
+Defines three schemes:
+- `authenticationSchemeBearer`: Represents the "Bearer" scheme for client tokens.
+- `authenticationSchemeJWT`: Represents the "JWT" scheme for JWT tokens.
+
+### `errUnauthenticated`
+#### Description
+A custom error type representing an unauthenticated request.
+
+### `authenticationContextKey`
+#### Description
+A private type used as a key for storing the `Authentication` message in the context.
+
+### `ClientTokenAuthenticator`
+#### Description
+An interface defining the minimum functionality required by the middleware to authenticate requests using client tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| clientToken | `string` | The client token extracted from the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *authrpc.Authentication | `*authrpc.Authentication` | The `Authentication` message representing the authenticated user. |
+| error | `error` | An error if authentication fails. |
+
+### `GetAuthenticationFrom`
+#### Description
+A utility function for extracting the `Authentication` message from the context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *authrpc.Authentication | `*authrpc.Authentication` | The `Authentication` message stored in the context, or `nil` if not found. |
+
+### `ContextWithAuthentication`
+#### Description
+A utility function for adding an `Authentication` message to the context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| a | `*authrpc.Authentication` | The `Authentication` message to add to the context. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| context.Context | `context.Context` | The context with the added `Authentication` message. |
+
+### `InterceptorOptions`
+#### Description
+A struct defining options for configuring the authentication and authorization interceptors.
+
+### `skipped`
+#### Description
+A helper function that determines whether authentication should be skipped for a given request.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The request context. |
+| info | `*grpc.UnaryServerInfo` | Information about the gRPC unary server call. |
+| o | `InterceptorOptions` | The interceptor options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| bool | `bool` | `true` if authentication should be skipped, `false` otherwise. |
+
+### `WithServerSkipsAuthentication`
+#### Description
+A function that returns an option for configuring an interceptor to skip authentication for a specific server instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | `any` | The server instance for which authentication should be skipped. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[InterceptorOptions] | `containers.Option[InterceptorOptions]` | An option for configuring the interceptor. |
+
+### `ScopedAuthenticationServer`
+#### Description
+An interface defining a gRPC server that allows for namespace-scoped authentication.
+
+### `SkipsAuthenticationServer`
+#### Description
+An interface defining a gRPC server that should always skip authentication.
+
+### `AuthenticationRequiredInterceptor`
+#### Description
+A gRPC unary server interceptor that requires all requests to have an `Authentication` message in the context.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| o | `...containers.Option[InterceptorOptions]` | Options for configuring the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor | `grpc.UnaryServerInterceptor` | The configured interceptor. |
+
+#### Internal Logic
+- Checks if authentication should be skipped based on the interceptor options and the server instance.
+- Extracts the `Authentication` message from the context.
+- Returns an error if authentication is required but no `Authentication` message is found.
+
+### `JWTInterceptorSelector`
+#### Description
+A function that returns a matcher for selecting requests that contain a JWT in the authorization header.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| selector.Matcher | `selector.Matcher` | A matcher for selecting requests with JWT tokens. |
+
+#### Internal Logic
+- Checks if the request metadata contains an authorization header.
+- Attempts to extract a JWT token from the authorization header.
+- Returns `true` if a JWT token is found, `false` otherwise.
+
+### `JWTAuthenticationInterceptor`
+#### Description
+A gRPC unary server interceptor that authenticates requests using JWT tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| validator | `jwt.Validator` | A JWT validator instance. |
+| expected | `jwt.Expected` | Expected JWT claims. |
+| o | `...containers.Option[InterceptorOptions]` | Options for configuring the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor | `grpc.UnaryServerInterceptor` | The configured interceptor. |
+
+#### Internal Logic
+- Checks if authentication should be skipped based on the interceptor options and the server instance.
+- Extracts the JWT token from the authorization header in the request metadata.
+- Validates the JWT token using the provided validator and expected claims.
+- Creates an `Authentication` message from the validated JWT claims and adds it to the context.
+- Returns an error if authentication fails.
+
+### `ClientTokenInterceptorSelector`
+#### Description
+A function that returns a matcher for selecting requests that contain a client token in the authorization header or cookie.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| selector.Matcher | `selector.Matcher` | A matcher for selecting requests with client tokens. |
+
+#### Internal Logic
+- Checks if the request metadata contains an authorization header or a cookie with the client token.
+- Attempts to extract a client token from the authorization header or cookie.
+- Returns `true` if a client token is found, `false` otherwise.
+
+### `ClientTokenAuthenticationInterceptor`
+#### Description
+A gRPC unary server interceptor that authenticates requests using client tokens.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| authenticator | `ClientTokenAuthenticator` | An instance of `ClientTokenAuthenticator` for retrieving authentication information. |
+| o | `...containers.Option[InterceptorOptions]` | Options for configuring the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor | `grpc.UnaryServerInterceptor` | The configured interceptor. |
+
+#### Internal Logic
+- Checks if authentication should be skipped based on the interceptor options and the server instance.
+- Extracts the client token from the authorization header or cookie in the request metadata.
+- Retrieves authentication information using the provided `ClientTokenAuthenticator`.
+- Creates an `Authentication` message from the retrieved information and adds it to the context.
+- Returns an error if authentication fails.
+
+### `EmailMatchingInterceptor`
+#### Description
+A gRPC unary server interceptor that checks if the authenticated user's email matches a list of allowed email patterns. This interceptor is used in conjunction with OIDC authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| rgxs | `[]*regexp.Regexp` | A list of regular expressions representing allowed email patterns. |
+| o | `...containers.Option[InterceptorOptions]` | Options for configuring the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor | `grpc.UnaryServerInterceptor` | The configured interceptor. |
+
+#### Internal Logic
+- Checks if authentication should be skipped based on the interceptor options and the server instance.
+- Extracts the `Authentication` message from the context.
+- Checks if the authentication method is OIDC.
+- Extracts the user's email from the authentication metadata.
+- Checks if the email matches any of the allowed email patterns.
+- Returns an error if the email does not match any allowed patterns.
+
+### `NamespaceMatchingInterceptor`
+#### Description
+A gRPC unary server interceptor that checks if the authenticated user's namespace matches the namespace specified in the request. This interceptor is used in conjunction with token authentication.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance. |
+| o | `...containers.Option[InterceptorOptions]` | Options for configuring the interceptor. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| grpc.UnaryServerInterceptor | `grpc.UnaryServerInterceptor` | The configured interceptor. |
+
+#### Internal Logic
+- Checks if authentication should be skipped based on the interceptor options and the server instance.
+- Extracts the `Authentication` message from the context.
+- Checks if the authentication method is token-based.
+- Extracts the user's namespace from the authentication metadata.
+- Checks if the request implements either `flipt.Namespaced` or `flipt.BatchNamespaced` interfaces.
+- Extracts the namespace from the request.
+- Compares the user's namespace with the request namespace.
+- Returns an error if the namespaces do not match.
+
+### `clientTokenFromMetadata`
+#### Description
+A helper function that extracts the client token from the request metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| md | `metadata.MD` | The request metadata. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The extracted client token. |
+| error | `error` | An error if the client token is not found or invalid. |
+
+### `cookieFromMetadata`
+#### Description
+A helper function that extracts a cookie from the request metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| md | `metadata.MD` | The request metadata. |
+| key | `string` | The cookie key. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *http.Cookie | `*http.Cookie` | The extracted cookie. |
+| error | `error` | An error if the cookie is not found or invalid. |
+
+### `jwtFromMetadata`
+#### Description
+A helper function that extracts the JWT token from the request metadata.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| md | `metadata.MD` | The request metadata. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The extracted JWT token. |
+| error | `error` | An error if the JWT token is not found or invalid. |
+
+### `fromAuthorization`
+#### Description
+A helper function that extracts the token from the authorization header based on the specified authentication scheme.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| auth | `string` | The authorization header value. |
+| scheme | `authenticationScheme` | The authentication scheme. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The extracted token. |
+| error | `error` | An error if the token is not found or invalid. |
+
+## Error Handling
+The interceptors return gRPC errors with appropriate status codes based on the type of error encountered. For example, `errUnauthenticated` is returned with the `codes.Unauthenticated` status code.
+
+## Logging
+The interceptors use a `*zap.Logger` instance for logging debug and error messages.

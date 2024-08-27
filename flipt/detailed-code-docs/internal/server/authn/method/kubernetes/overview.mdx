@@ -1,0 +1,59 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of the Kubernetes authentication method for Flipt. It provides functionality to verify Kubernetes service account tokens and generate Flipt client tokens for authenticated services within the same Kubernetes cluster.
+
+## What does it do?
+The Kubernetes authentication method allows services running in the same Kubernetes cluster as Flipt to authenticate using their service account tokens. The main workflow is as follows:
+
+1. A service sends its Kubernetes service account token to Flipt for verification.
+2. Flipt verifies the token using the Kubernetes API server's OIDC (OpenID Connect) endpoint.
+3. If the token is valid, Flipt extracts identity information from the token claims.
+4. Flipt generates a client token with an expiration matching the service account token and associates it with the extracted identity.
+5. The client token is returned to the service, which can then use it for subsequent requests to Flipt.
+
+This method grants access to any service in the cluster upon successful token verification, simplifying authentication for Kubernetes-based deployments.
+
+## Key Files
+
+### server.go
+This file contains the core implementation of the Kubernetes authentication method. Key components include:
+
+- `Server` struct: Implements the gRPC server for the Kubernetes authentication method.
+- `VerifyServiceAccount` method: Verifies service account tokens and generates Flipt client tokens.
+
+### verify.go
+This file handles the verification of Kubernetes service account tokens using OIDC. Key components include:
+
+- `kubernetesOIDCVerifier` struct: Responsible for verifying tokens using the Kubernetes API server's OIDC endpoint.
+- `newKubernetesOIDCVerifier` function: Initializes the verifier with the necessary configuration.
+- `verify` method: Performs the actual token verification and claim extraction.
+
+### testing/grpc.go and testing/http.go
+These files provide testing utilities for the Kubernetes authentication method:
+
+- `GRPCServer` and `HTTPServer` structs: Represent test servers for gRPC and HTTP protocols.
+- `StartGRPCServer` and `StartHTTPServer` functions: Initialize and start test servers for integration testing.
+
+## Dependencies
+The Kubernetes authentication method relies on several key dependencies:
+
+- `github.com/coreos/go-oidc/v3/oidc`: Used for OIDC token verification.
+- `go.flipt.io/flipt/internal/config`: Provides configuration settings for authentication.
+- `go.flipt.io/flipt/internal/storage/authn`: Offers storage and management for authentication data.
+- `go.flipt.io/flipt/rpc/flipt/auth`: Defines the gRPC service for authentication.
+- `go.uber.org/zap`: Provides logging functionality.
+- `google.golang.org/grpc`: Enables gRPC server and client implementations.
+
+## Configuration
+The Kubernetes authentication method uses the following configuration options:
+
+- CA Certificate Path: Path to the Kubernetes cluster's CA certificate.
+- Service Account Token Path: Path to the local service account token file.
+- Discovery URL: URL for the Kubernetes API server's OIDC discovery endpoint.
+
+These settings are typically provided through the `config.AuthenticationMethodKubernetesConfig` struct.
+
+In summary, this directory implements a secure and efficient authentication method for Flipt when deployed in a Kubernetes environment, leveraging the cluster's built-in security mechanisms to simplify service-to-service authentication.

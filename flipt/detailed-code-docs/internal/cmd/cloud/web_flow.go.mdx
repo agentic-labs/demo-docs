@@ -1,0 +1,125 @@
+---
+title: "web_flow.go"
+---
+
+## High-level description
+This code implements an OAuth-like Web Application flow for cloud authentication. It manages the state of the authentication process, generates a browser URL for user interaction, and handles the local server for receiving the callback with the access token.
+
+## Code Structure
+The main symbol is the `Flow` struct, which encapsulates the state and methods for the authentication flow. Other functions and methods interact with this struct to initialize the flow, generate URLs, manage the local server, and retrieve the access token.
+
+## Symbols
+
+### `Flow`
+#### Description
+`Flow` is a struct that holds the state for the steps of the OAuth-like Web Application flow.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| server | *localServer | A pointer to the local server instance |
+| state | string | A random string used for state verification |
+
+### `InitFlow()`
+#### Description
+Initializes a new `Flow` instance by detecting a locally available port number and generating a random state string.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Flow | *Flow | A pointer to the initialized Flow instance |
+| error | error | An error if initialization fails |
+
+#### Internal Logic
+1. Binds a local server using `bindLocalServer()`
+2. Generates a random state string
+3. Creates and returns a new `Flow` instance
+
+### `BrowserURL(baseURL string)`
+#### Description
+Generates the URL that the user should navigate to in their web browser by appending GET query parameters to the provided base URL.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| baseURL | string | The base URL to which parameters will be appended |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The complete URL for the user to navigate to |
+| error | error | An error if URL generation fails |
+
+### `StartServer(writeSuccess func(io.Writer))`
+#### Description
+Starts the localhost server and blocks until it receives the web redirect. The `writeSuccess` function can be used to render an HTML page to the user upon completion.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| writeSuccess | func(io.Writer) | A function to write the success HTML |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if the server fails to start or serve |
+
+### `Close()`
+#### Description
+Stops the local server.
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if closing the server fails |
+
+### `Wait(ctx context.Context)`
+#### Description
+Blocks until the browser flow has completed and returns the access token.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The access token |
+| error | error | An error if waiting fails or state mismatch occurs |
+
+### `randomString(length int)`
+#### Description
+Generates a random string of the specified length.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| length | int | The desired length of the random string |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The generated random string |
+
+#### Internal Logic
+1. Generates random bytes
+2. Encodes the bytes to a hexadecimal string
+3. Returns the resulting string
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | For handling context in the Wait method |
+| crypto/rand | For generating random bytes |
+| encoding/hex | For encoding random bytes to hexadecimal string |
+| errors | For error handling |
+| fmt | For string formatting |
+| io | For writing success HTML |
+| net/url | For URL parsing and manipulation |
+
+## Error Handling
+The code uses Go's standard error handling mechanisms. Most methods return an error as their last return value, which should be checked by the caller.
+
+## Performance Considerations
+The `randomString` function uses cryptographically secure random number generation, which may be slower than non-secure alternatives but is necessary for security in this context.

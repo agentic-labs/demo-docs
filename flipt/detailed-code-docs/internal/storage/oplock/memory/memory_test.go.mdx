@@ -1,0 +1,49 @@
+---
+title: "memory_test.go"
+---
+
+## High-level description
+The `memory_test.go` file contains a single test function, `Test_Harness`, which verifies the functionality of the in-memory implementation of the `oplock.Service` interface. This test ensures that the locking mechanism behaves as expected under concurrent access.
+
+## References
+- `oplocktesting.Harness`: This function, defined in `oplock/testing/testing.go`, provides a reusable test harness for any implementation of the `oplock.Service` interface.
+
+## Symbols
+### `Test_Harness`
+#### Description
+This test function utilizes the `oplocktesting.Harness` to validate the behavior of the in-memory `oplock.Service` implementation. It specifically checks if the lock acquisition happens sequentially with the defined interval under concurrent requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | *testing.T | Testing object used for reporting test results and logging. |
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Initialization:**
+    - Sets up a channel `acquiredAt` to track lock acquisition timestamps.
+    - Defines the lock interval (`interval`) as 2 seconds.
+    - Creates a test operation (`op`) named "test".
+    - Initializes a cancellable context (`ctx`) for managing goroutines.
+2. **Concurrent Lock Acquisition:**
+    - Launches five goroutines using an `errgroup` to simulate concurrent lock acquisition attempts.
+    - Each goroutine repeatedly tries to acquire the lock for the "test" operation with a 2-second interval.
+    - Upon successful acquisition, the timestamp is sent to the `acquiredAt` channel.
+3. **Validation:**
+    - After all goroutines have finished or the context is canceled, the test verifies the following:
+        - **Total Acquisition Time:** Ensures that acquiring the lock five times took at least 8 seconds (4 intervals).
+        - **Sequential Acquisition:** Asserts that the lock acquisitions occurred in strictly ascending order of timestamps.
+        - **Interval Adherence:** Confirms that each acquisition happened at least 2 seconds after the previous one.
+4. **Cleanup:**
+    - Cancels the context to stop the goroutines.
+    - Waits for all goroutines to finish and checks for unexpected errors.
+    - Closes the `acquiredAt` channel.
+
+## Dependencies
+This test file depends on the following packages:
+| Dependency | Purpose |
+|:-----------|:--------|
+| "testing" | Provides testing framework functionalities. |
+| "go.flipt.io/flipt/internal/storage/oplock/testing" | Imports the `oplocktesting` package for using the shared test harness. |

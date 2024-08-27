@@ -1,0 +1,125 @@
+---
+title: "0_initial.up.sql"
+---
+
+## High-level description
+This SQL script defines the initial database schema for a feature flag management system using CockroachDB. It creates six tables: flags, segments, variants, constraints, rules, and distributions, which together form the structure for managing feature flags, user segments, and flag distribution rules.
+
+## Code Structure
+The script creates six interconnected tables, each with its own primary key and foreign key relationships. The tables are designed to work together to support a feature flag system with segmentation and distribution capabilities.
+
+## Symbols
+
+### Table: flags
+#### Description
+Stores information about feature flags.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | VARCHAR(255) | Primary key, unique identifier for the flag |
+| name | VARCHAR(255) | Name of the flag |
+| description | TEXT | Detailed description of the flag |
+| enabled | BOOLEAN | Flag to indicate if the feature is enabled (default: false) |
+| created_at | TIMESTAMP | Timestamp of flag creation |
+| updated_at | TIMESTAMP | Timestamp of last flag update |
+
+### Table: segments
+#### Description
+Stores information about user segments for targeting feature flags.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | VARCHAR(255) | Primary key, unique identifier for the segment |
+| name | VARCHAR(255) | Name of the segment |
+| description | TEXT | Detailed description of the segment |
+| match_type | INTEGER | Type of matching for the segment (default: 0) |
+| created_at | TIMESTAMP | Timestamp of segment creation |
+| updated_at | TIMESTAMP | Timestamp of last segment update |
+
+### Table: variants
+#### Description
+Stores different variants of a feature flag.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key, unique identifier for the variant |
+| flag_key | VARCHAR(255) | Foreign key referencing the flags table |
+| key | VARCHAR(255) | Variant key |
+| name | VARCHAR(255) | Name of the variant |
+| description | TEXT | Detailed description of the variant |
+| attachment | JSONB | JSON data associated with the variant |
+| created_at | TIMESTAMP | Timestamp of variant creation |
+| updated_at | TIMESTAMP | Timestamp of last variant update |
+
+#### Constraints
+- Foreign key relationship with the flags table (ON DELETE CASCADE)
+- Unique constraint on (flag_key, key) pair
+
+### Table: constraints
+#### Description
+Stores constraints for user segments.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key, unique identifier for the constraint |
+| segment_key | VARCHAR(255) | Foreign key referencing the segments table |
+| type | INTEGER | Type of constraint (default: 0) |
+| property | VARCHAR(255) | Property to be constrained |
+| operator | VARCHAR(255) | Operator for the constraint |
+| value | TEXT | Value for the constraint |
+| created_at | TIMESTAMP | Timestamp of constraint creation |
+| updated_at | TIMESTAMP | Timestamp of last constraint update |
+
+#### Constraints
+- Foreign key relationship with the segments table (ON DELETE CASCADE)
+
+### Table: rules
+#### Description
+Stores rules for applying feature flags to segments.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key, unique identifier for the rule |
+| flag_key | VARCHAR(255) | Foreign key referencing the flags table |
+| segment_key | VARCHAR(255) | Foreign key referencing the segments table |
+| rank | INTEGER | Rank of the rule (default: 1) |
+| created_at | TIMESTAMP | Timestamp of rule creation |
+| updated_at | TIMESTAMP | Timestamp of last rule update |
+
+#### Constraints
+- Foreign key relationships with both flags and segments tables (ON DELETE CASCADE)
+
+### Table: distributions
+#### Description
+Stores distribution information for flag variants within rules.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | VARCHAR(255) | Primary key, unique identifier for the distribution |
+| rule_id | VARCHAR(255) | Foreign key referencing the rules table |
+| variant_id | VARCHAR(255) | Foreign key referencing the variants table |
+| rollout | float | Rollout percentage for the variant (default: 0) |
+| created_at | TIMESTAMP | Timestamp of distribution creation |
+| updated_at | TIMESTAMP | Timestamp of last distribution update |
+
+#### Constraints
+- Foreign key relationships with both rules and variants tables (ON DELETE CASCADE)
+
+## Dependencies
+This SQL script is designed for CockroachDB, which is compatible with PostgreSQL. It uses CockroachDB-specific features such as:
+| Dependency | Purpose |
+|:-----------|:--------|
+| CockroachDB | Database system for storing and managing feature flag data |
+
+## Performance Considerations
+- The script uses primary keys and foreign keys to ensure data integrity and enable efficient querying.
+- The use of VARCHAR(255) for key fields allows for flexible identifiers while maintaining good performance.
+- JSONB type is used for the `attachment` field in the `variants` table, allowing for efficient storage and querying of JSON data.
+
+This schema provides a solid foundation for a feature flag management system, allowing for complex flag configurations, user segmentation, and variant distribution rules.

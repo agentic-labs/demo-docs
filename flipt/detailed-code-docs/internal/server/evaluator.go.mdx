@@ -1,0 +1,93 @@
+---
+title: "evaluator.go"
+---
+
+## High-level description
+The `evaluator.go` file in the `internal/server` package defines the evaluation logic for Flipt, a feature flag management system. It handles both single and batch evaluation requests for different flag types, including boolean and variant flags. 
+
+The code interacts with a storage layer to retrieve flag configurations and delegates the actual evaluation process to an evaluator instance. It also integrates with OpenTelemetry for distributed tracing and logging for debugging and monitoring purposes.
+
+## Code Structure
+The `evaluator.go` file defines two main functions: `Evaluate` and `BatchEvaluate`, which handle single and batch evaluation requests respectively. Both functions retrieve flag configurations from the storage and delegate the evaluation logic to the `evaluator.Evaluate` function. The `batchEvaluate` function iterates through a list of evaluation requests and calls `evaluator.Evaluate` for each one.
+
+## References
+- `s.store`: This refers to an instance of a storage interface, likely defined in the `go.flipt.io/flipt/internal/storage` package. It's used to interact with the underlying storage to retrieve flag configurations.
+- `s.evaluator`: This refers to an instance of an evaluator, likely defined in the `go.flipt.io/flipt/internal/server/evaluation` package. It's responsible for the actual evaluation logic based on the flag type and configuration.
+- `s.logger`: This refers to a logger instance, likely using the `go.uber.org/zap` package. It's used for logging debug information and errors during the evaluation process.
+
+## Symbols
+
+### `Evaluate`
+#### Description
+This function handles a single evaluation request for a given flag and entity. It retrieves the flag configuration from the storage, performs the evaluation using the evaluator instance, and returns the evaluation result.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *flipt.EvaluationRequest | The evaluation request containing the flag key, entity ID, and other relevant information. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.EvaluationResponse | The evaluation response containing the evaluation result, reason, and other metadata. |
+| error | error | An error if any occurred during the evaluation process. |
+
+#### Internal Logic
+1. Logs the evaluation request for debugging.
+2. Retrieves the flag configuration from the storage using `s.store.GetFlag`.
+3. If the flag is not found, returns an error with `FLAG_NOT_FOUND_EVALUATION_REASON`.
+4. Calls the `s.evaluator.Evaluate` function to perform the actual evaluation.
+5. If the evaluation is successful, adds OpenTelemetry attributes to the span for tracing.
+6. Logs the evaluation response for debugging.
+7. Returns the evaluation response and any error encountered.
+
+### `BatchEvaluate`
+#### Description
+This function handles a batch evaluation request for multiple flags and entities. It iterates through the list of requests, performs the evaluation for each one, and returns a batch evaluation response.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *flipt.BatchEvaluationRequest | The batch evaluation request containing a list of evaluation requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.BatchEvaluationResponse | The batch evaluation response containing a list of evaluation responses. |
+| error | error | An error if any occurred during the batch evaluation process. |
+
+#### Internal Logic
+1. Logs the batch evaluation request for debugging.
+2. If the namespace key is empty, sets it to the default namespace.
+3. Calls the `batchEvaluate` function to perform the actual batch evaluation.
+4. Logs the batch evaluation response for debugging.
+5. Returns the batch evaluation response and any error encountered.
+
+### `batchEvaluate`
+#### Description
+This function performs the actual batch evaluation by iterating through the list of evaluation requests and calling the `evaluator.Evaluate` function for each one.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The request context. |
+| r | *flipt.BatchEvaluationRequest | The batch evaluation request containing a list of evaluation requests. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.BatchEvaluationResponse | The batch evaluation response containing a list of evaluation responses. |
+| error | error | An error if any occurred during the batch evaluation process. |
+
+#### Internal Logic
+1. Creates a new `flipt.BatchEvaluationResponse` to store the responses.
+2. Iterates through the list of evaluation requests in `r.GetRequests()`.
+3. For each request:
+    - Ensures all requests have the same namespace key.
+    - Retrieves the flag configuration from the storage using `s.store.GetFlag`.
+    - If the flag is not found and `r.GetExcludeNotFound()` is true, skips the current request.
+    - Calls the `s.evaluator.Evaluate` function to perform the evaluation.
+    - Appends the evaluation response to the `flipt.BatchEvaluationResponse`.
+4. Returns the `flipt.BatchEvaluationResponse` and any error encountered.

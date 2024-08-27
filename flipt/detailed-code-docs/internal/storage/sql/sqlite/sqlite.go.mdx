@@ -1,0 +1,73 @@
+---
+title: "sqlite.go"
+---
+
+## High-level description
+The `sqlite.go` file provides a SQLite-specific implementation of the `storage.Store` interface, which is responsible for interacting with a SQLite database to manage Flipt resources like namespaces, flags, variants, segments, and rules. It handles database operations and error management tailored to SQLite's behavior.
+
+## Code Structure
+The `sqlite.go` file defines a `Store` struct that embeds a `common.Store` from a common SQL package. This structure allows it to inherit common SQL operations and implement SQLite-specific logic for certain operations. The file primarily consists of methods attached to the `Store` struct, each handling a specific database interaction.
+
+## References
+- `github.com/mattn/go-sqlite3`: This package provides the SQLite driver for Go.
+- `go.flipt.io/flipt/errors`: This package defines custom error types used within the Flipt codebase.
+- `go.flipt.io/flipt/internal/storage`: This package defines the `storage.Store` interface.
+- `go.flipt.io/flipt/internal/storage/sql/common`: This package likely contains common SQL-related logic and types.
+
+## Symbols
+
+### `Store`
+#### Description
+The `Store` struct represents a SQLite-specific implementation of the `storage.Store` interface. It manages interactions with a SQLite database for Flipt resource management.
+
+#### Inputs
+This struct doesn't have explicit inputs. It's initialized with a database connection and other dependencies.
+
+#### Outputs
+This struct doesn't have explicit outputs. Its methods return operation results or errors.
+
+#### Internal Logic
+The `Store` struct itself doesn't contain complex internal logic. Its methods leverage the embedded `common.Store` and SQLite-specific error handling.
+
+### `NewStore`
+#### Description
+The `NewStore` function creates and initializes a new `sqlite.Store` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | `*sql.DB` | A pointer to a SQL database connection. |
+| builder | `sq.StatementBuilderType` | A statement builder for constructing SQL queries. |
+| logger | `*zap.Logger` | A logger instance for recording events. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | `*Store` | A pointer to the newly created `sqlite.Store` instance. |
+
+### `(*Store) String`
+#### Description
+The `String` method returns a string representation of the store, which is simply "sqlite".
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string "sqlite" representing the store type. |
+
+### Datastore Interaction Methods
+The `sqlite.go` file includes a series of methods like `CreateNamespace`, `CreateFlag`, `UpdateFlag`, `CreateVariant`, etc. Each of these methods corresponds to a specific database operation related to managing Flipt resources. These methods typically:
+
+1.  Call the corresponding method of the embedded `common.Store` to perform the SQL operation.
+2.  Handle SQLite-specific errors, particularly constraint violations, and wrap them in Flipt's custom error types for better context.
+3.  Return the result of the operation or an error if one occurred.
+
+For example, the `CreateFlag` method attempts to create a new flag in the database. If a constraint violation occurs due to a duplicate flag key, it returns an `errs.ErrInvalidf` error indicating that the flag is not unique.
+
+## Error Handling
+The code extensively uses SQLite's error codes to identify specific constraint violations, such as primary key and foreign key constraints. It wraps these errors using Flipt's custom error types (`errs` package) to provide more meaningful error messages.
+
+## Side Effects
+The code interacts with a SQLite database, leading to side effects like data modification (creation, updates, deletions) and potentially database file changes.

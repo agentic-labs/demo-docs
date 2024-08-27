@@ -1,0 +1,102 @@
+---
+title: "tracing.go"
+---
+
+Here's a comprehensive documentation for the `internal/tracing/tracing.go` file:
+
+## High-level description
+This file implements tracing functionality for the Flipt application using OpenTelemetry. It provides functions to create a new tracing resource, a new tracing provider, and to get an exporter based on the provided configuration.
+
+## Code Structure
+The main components of this file are:
+1. `newResource`: Creates a new tracing resource with Flipt-specific attributes.
+2. `NewProvider`: Creates a new TracerProvider configured for Flipt tracing.
+3. `GetExporter`: Retrieves a configured tracesdk.SpanExporter based on the provided configuration.
+
+These functions work together to set up and configure tracing for the Flipt application.
+
+## Symbols
+
+### `newResource`
+#### Description
+Constructs a trace resource with Flipt-specific attributes, incorporating schema URL, service name, service version, and OTLP environment data.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| fliptVersion | string | The version of Flipt |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *resource.Resource | *resource.Resource | The created resource |
+| error | error | Any error encountered during resource creation |
+
+#### Internal Logic
+1. Creates a new resource using `resource.New`
+2. Adds various attributes to the resource, including service name, version, environment data, telemetry SDK info, container info, host info, and process runtime info
+
+### `NewProvider`
+#### Description
+Creates a new TracerProvider configured for Flipt tracing.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| fliptVersion | string | The version of Flipt |
+| cfg | config.TracingConfig | The tracing configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *tracesdk.TracerProvider | *tracesdk.TracerProvider | The created TracerProvider |
+| error | error | Any error encountered during provider creation |
+
+#### Internal Logic
+1. Calls `newResource` to create a tracing resource
+2. Creates a new TracerProvider using `tracesdk.NewTracerProvider`
+3. Configures the provider with the created resource and a sampler based on the configuration
+
+### `GetExporter`
+#### Description
+Retrieves a configured tracesdk.SpanExporter based on the provided configuration. Supports Jaeger, Zipkin, and OTLP exporters.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation |
+| cfg | *config.TracingConfig | The tracing configuration |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| tracesdk.SpanExporter | tracesdk.SpanExporter | The configured span exporter |
+| func(context.Context) error | func(context.Context) error | A function to shut down the exporter |
+| error | error | Any error encountered during exporter creation |
+
+#### Internal Logic
+1. Uses a `sync.Once` to ensure the exporter is only created once
+2. Switches on the configured exporter type (Jaeger, Zipkin, or OTLP)
+3. For each exporter type, creates and configures the appropriate exporter
+4. For OTLP, handles different endpoint schemes (https, http, grpc)
+5. Returns the created exporter, a shutdown function, and any error encountered
+
+## Dependencies
+- `go.opentelemetry.io/otel/exporters/jaeger`
+- `go.opentelemetry.io/otel/exporters/otlp/otlptrace`
+- `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`
+- `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`
+- `go.opentelemetry.io/otel/exporters/zipkin`
+- `go.opentelemetry.io/otel/sdk/resource`
+- `go.opentelemetry.io/otel/sdk/trace`
+- `go.opentelemetry.io/otel/semconv/v1.26.0`
+
+## Error Handling
+The code uses error propagation, returning errors from lower-level functions to be handled by the caller.
+
+## TODOs
+- In the OTLP exporter configuration, there are TODOs for supporting additional configuration options and TLS support.
+
+This file plays a crucial role in setting up tracing for the Flipt application, allowing for flexible configuration of different tracing backends and ensuring proper instrumentation of the application.

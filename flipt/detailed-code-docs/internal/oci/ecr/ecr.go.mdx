@@ -1,0 +1,183 @@
+---
+title: "ecr.go"
+---
+
+## High-level description
+The `ecr.go` file provides functionality for interacting with both private and public Amazon ECR (Elastic Container Registry) repositories. It implements a mechanism to retrieve and manage authorization tokens required for authentication when pushing or pulling images from ECR.
+
+## Code Structure
+The code defines three main interfaces: `PrivateClient`, `PublicClient`, and `Client`. Both `PrivateClient` and `PublicClient` have concrete implementations (`privateClient` and `publicClient`) that satisfy the `Client` interface. This allows for a unified way to get authorization tokens regardless of the ECR type. The `Credential` function acts as an adapter to integrate ECR authentication with the `oras` library.
+
+## Symbols
+
+### `ErrNoAWSECRAuthorizationData`
+#### Description
+This variable represents an error that is returned when no authorization data is received from ECR.
+
+### `Credential`
+#### Description
+This function takes a `CredentialsStore` and returns an `auth.CredentialFunc` that can be used by the `oras` library to authenticate with ECR.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| store | \*CredentialsStore | A pointer to a `CredentialsStore` that is used to retrieve credentials. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| credentialFunc | auth.CredentialFunc | A function that takes a hostport string and returns an `auth.Credential` and an error. |
+
+#### Internal Logic
+The function returns a closure that captures the provided `CredentialsStore`. When invoked with a hostport, the closure calls the `Get` method of the `CredentialsStore` to retrieve the corresponding credentials.
+
+### `PrivateClient`
+#### Description
+This interface defines a method for interacting with a private Amazon ECR registry.
+
+### `GetAuthorizationToken`
+#### Description
+This method retrieves an authorization token for accessing a private ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| params | \*ecr.GetAuthorizationTokenInput | Parameters for the GetAuthorizationToken operation. |
+| optFns | ...func(\*ecr.Options) | Options to customize the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output | \*ecr.GetAuthorizationTokenOutput | The authorization token and its expiration time. |
+| err | error | An error, if any occurred. |
+
+### `PublicClient`
+#### Description
+This interface defines a method for interacting with a public Amazon ECR registry.
+
+### `GetAuthorizationToken`
+#### Description
+This method retrieves an authorization token for accessing a public ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| params | \*ecrpublic.GetAuthorizationTokenInput | Parameters for the GetAuthorizationToken operation. |
+| optFns | ...func(\*ecrpublic.Options) | Options to customize the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| output | \*ecrpublic.GetAuthorizationTokenOutput | The authorization token and its expiration time. |
+| err | error | An error, if any occurred. |
+
+### `Client`
+#### Description
+This interface defines a generic method for getting an authorization token from either a private or public ECR registry.
+
+### `GetAuthorizationToken`
+#### Description
+This method retrieves an authorization token for accessing an ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The authorization token. |
+| expiresAt | time.Time | The expiration time of the token. |
+| err | error | An error, if any occurred. |
+
+### `NewPublicClient`
+#### Description
+This function creates a new `Client` for interacting with a public ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| endpoint | string | The endpoint of the public ECR registry. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | Client | A new `Client` instance. |
+
+#### Internal Logic
+The function creates a new `publicClient` instance and initializes its `endpoint` field.
+
+### `publicClient`
+#### Description
+This struct represents a client for interacting with a public ECR registry.
+
+### `GetAuthorizationToken`
+#### Description
+This method retrieves an authorization token for accessing the public ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The authorization token. |
+| expiresAt | time.Time | The expiration time of the token. |
+| err | error | An error, if any occurred. |
+
+#### Internal Logic
+The method first checks if the `client` field is initialized. If not, it loads the default AWS configuration and creates a new `ecrpublic.Client`. It then calls the `GetAuthorizationToken` method of the `ecrpublic.Client` to retrieve the token. If the token is retrieved successfully, it returns the token and its expiration time. Otherwise, it returns an error.
+
+### `NewPrivateClient`
+#### Description
+This function creates a new `Client` for interacting with a private ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| endpoint | string | The endpoint of the private ECR registry. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| client | Client | A new `Client` instance. |
+
+#### Internal Logic
+The function creates a new `privateClient` instance and initializes its `endpoint` field.
+
+### `privateClient`
+#### Description
+This struct represents a client for interacting with a private ECR registry.
+
+### `GetAuthorizationToken`
+#### Description
+This method retrieves an authorization token for accessing the private ECR registry.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| token | string | The authorization token. |
+| expiresAt | time.Time | The expiration time of the token. |
+| err | error | An error, if any occurred. |
+
+#### Internal Logic
+The method first checks if the `client` field is initialized. If not, it loads the default AWS configuration and creates a new `ecr.Client`. It then calls the `GetAuthorizationToken` method of the `ecr.Client` to retrieve the token. If the token is retrieved successfully, it returns the token and its expiration time. Otherwise, it returns an error.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| github.com/aws/aws-sdk-go-v2/config | Used to load AWS configuration. |
+| github.com/aws/aws-sdk-go-v2/service/ecr | Used to interact with private ECR repositories. |
+| github.com/aws/aws-sdk-go-v2/service/ecrpublic | Used to interact with public ECR repositories. |
+| oras.land/oras-go/v2/registry/remote/auth | Used for handling container image registry authentication. |
+

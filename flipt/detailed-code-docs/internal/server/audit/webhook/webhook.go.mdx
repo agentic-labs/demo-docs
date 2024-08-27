@@ -1,0 +1,113 @@
+---
+title: "webhook.go"
+---
+
+## High-level description
+The `webhook.go` file defines a sink for Flipt's audit logs that sends audit events to a configured webhook URL. This allows integrating Flipt's audit trail with external systems for monitoring, alerting, or further processing.
+
+## Code Structure
+The `Sink` struct implements the `audit.Sink` interface, which defines methods for sending audit events and closing the sink. The `NewSink` function creates a new `Sink` instance with a configured logger and webhook client. The `SendAudits` method iterates over the provided audit events and sends each event to the webhook using the configured client.
+
+## References
+- `audit.Sink`: Interface for audit log sinks.
+- `Client`: Interface for sending HTTP requests to the webhook.
+
+## Symbols
+
+### `sinkType`
+#### Description
+A constant string representing the type of the sink, which is "webhook".
+
+#### Internal Logic
+This constant is used for logging and identification purposes.
+
+### `Sink`
+#### Description
+A struct representing a webhook sink for audit logs. It holds a logger and a webhook client.
+
+#### Inputs
+N/A
+
+#### Outputs
+N/A
+
+#### Internal Logic
+The `Sink` struct implements the `audit.Sink` interface.
+
+### `NewSink`
+#### Description
+A constructor function that creates a new `Sink` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance for logging events. |
+| webhookClient | `Client` | A client for sending HTTP requests to the webhook. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| audit.Sink | `audit.Sink` | A new `Sink` instance that implements the `audit.Sink` interface. |
+
+#### Internal Logic
+The function creates a new `Sink` instance with the provided logger and webhook client.
+
+### `Sink.SendAudits`
+#### Description
+This method sends a batch of audit events to the configured webhook URL.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | `context.Context` | The context for the request. |
+| events | `[]audit.Event` | A slice of audit events to be sent. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | An error if any of the events fail to send. |
+
+#### Internal Logic
+The method iterates over the provided audit events and sends each event to the webhook using the `webhookClient`. If any errors occur during sending, they are appended to a `multierror` and returned.
+
+### `Sink.Close`
+#### Description
+This method closes the webhook sink.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | `error` | Always returns nil as there's no actual connection to close. |
+
+#### Internal Logic
+This method currently does nothing and always returns nil.
+
+### `Sink.String`
+#### Description
+This method returns a string representation of the sink type.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | `string` | The string "webhook", representing the sink type. |
+
+#### Internal Logic
+This method returns the value of the `sinkType` constant.
+
+## Dependencies
+- `context`
+- `github.com/hashicorp/go-multierror`: For collecting and returning multiple errors.
+- `go.flipt.io/flipt/internal/server/audit`: For the `audit.Sink` interface and `audit.Event` type.
+- `go.uber.org/zap`: For structured logging.
+
+## Error Handling
+The `SendAudits` method uses `multierror` to collect and return multiple errors that may occur while sending individual audit events.
+
+## Logging
+The `Sink` uses a `zap.Logger` to log errors encountered while sending audit events to the webhook.

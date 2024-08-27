@@ -1,0 +1,98 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a metrics package for the Flipt feature flag system. It provides functionality for creating and managing various types of metrics (counters, histograms, etc.) using OpenTelemetry, and includes support for different metric exporters such as Prometheus and OTLP (OpenTelemetry Protocol).
+
+## What does it do?
+The metrics package allows the Flipt system to collect and export performance and usage data. It provides a way to:
+
+1. Create different types of metrics (int64 and float64) using OpenTelemetry.
+2. Configure and set up metric exporters (Prometheus or OTLP) based on the system configuration.
+3. Create OpenTelemetry resources with various attributes for better metric context.
+4. Manage the lifecycle of metric exporters, including initialization and shutdown.
+
+This enables developers and operators to monitor the performance and behavior of the Flipt system, helping with debugging, optimization, and understanding usage patterns.
+
+## Key Files
+
+### metrics.go
+This file contains the core implementation of the metrics package. Key components include:
+
+1. Meter interfaces and implementations for both int64 and float64 metrics.
+2. Functions for creating and managing metric exporters:
+   - `GetExporter`: Creates a metric exporter based on the provided configuration.
+   - `GetResources`: Creates OpenTelemetry resources with various attributes.
+3. Utility functions:
+   - `init()`: Initializes the global meter provider.
+   - `meter()`: Returns a memoized meter instance.
+   - `MustInt64()` and `MustFloat64()`: Return interfaces for creating int64 and float64 metrics, respectively.
+
+Example of creating an int64 counter:
+
+```go
+counter := metrics.MustInt64().Counter("my_counter", metric.WithDescription("A sample counter"))
+counter.Add(ctx, 1)
+```
+
+### metrics_test.go
+This file contains unit tests for the `GetExporter` function, covering various configurations for different metrics exporters. It ensures that:
+
+1. The correct exporter is created based on the configuration (Prometheus or OTLP).
+2. Different OTLP endpoint types (HTTP, HTTPS, GRPC) are handled correctly.
+3. Proper error handling for unsupported exporter types.
+
+Example test case:
+
+```go
+{
+    name: "prometheus exporter",
+    cfg: &config.MetricsConfig{
+        Exporter: config.PrometheusExporter,
+    },
+    wantErr: false,
+},
+```
+
+## Dependencies
+The metrics package relies on several external libraries and frameworks:
+
+1. OpenTelemetry SDK (go.opentelemetry.io/otel): Version 1.16.0
+   - Provides the core functionality for metrics creation and management.
+2. OpenTelemetry Exporters:
+   - OTLP (go.opentelemetry.io/otel/exporters/otlp/otlpmetric): Version 0.39.0
+   - Prometheus (go.opentelemetry.io/otel/exporters/prometheus): Version 0.39.0
+3. OpenTelemetry Metric API and SDK:
+   - go.opentelemetry.io/otel/metric: Version 1.16.0
+   - go.opentelemetry.io/otel/sdk/metric: Version 1.16.0
+4. OpenTelemetry Resource SDK (go.opentelemetry.io/otel/sdk/resource): Version 1.16.0
+   - Used for creating and managing OpenTelemetry resources.
+
+These dependencies were chosen to provide a standardized, flexible, and widely-supported approach to metrics collection and export in Go applications.
+
+## Configuration
+The metrics system is configured using a `config.MetricsConfig` struct. Key configuration options include:
+
+1. Exporter type: Prometheus or OTLP
+2. OTLP-specific settings:
+   - Endpoint: The URL for the OTLP exporter
+   - Headers: Custom headers for OTLP export requests
+
+Example configuration:
+
+```go
+cfg := &config.MetricsConfig{
+    Exporter: config.OTLPExporter,
+    OTLP: config.OTLPConfig{
+        Endpoint: "https://otel-collector:4317",
+        Headers: map[string]string{
+            "Authorization": "Bearer token",
+        },
+    },
+}
+```
+
+The `GetExporter` function uses this configuration to create the appropriate exporter at runtime.
+
+In conclusion, this metrics package provides a flexible and powerful way to instrument the Flipt system with OpenTelemetry metrics, supporting various export formats and configurations to suit different monitoring needs.

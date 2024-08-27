@@ -1,0 +1,42 @@
+---
+title: "0_initial_clickhouse.up.sql"
+---
+
+## High-level description
+This SQL script creates a table named `flipt_counter_analytics` in ClickHouse, a column-oriented database management system. The table is designed to store analytics data related to feature flag evaluations, including timestamps, flag details, evaluation reasons, and results.
+
+## Symbols
+
+### `flipt_counter_analytics` Table
+#### Description
+This table is designed to store analytics data for feature flag evaluations. It uses the MergeTree engine, which is optimized for insert and select queries, and includes a TTL (Time To Live) clause for data retention.
+
+#### Columns
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `timestamp` | DateTime('UTC') | The time of the event in UTC |
+| `analytic_name` | String | Name of the analytic event |
+| `namespace_key` | String | Key of the namespace |
+| `flag_key` | String | Key of the feature flag |
+| `flag_type` | Enum | Type of the flag (Variant or Boolean) |
+| `reason` | Enum | Reason for the evaluation result |
+| `match` | Nullable(Bool) | Whether there was a match (can be null) |
+| `evaluation_value` | Nullable(String) | The evaluated value (can be null) |
+| `value` | UInt32 | A numeric value associated with the event |
+
+#### Internal Logic
+1. The table uses the MergeTree engine, which is efficient for both inserts and reads.
+2. Data is ordered by the `timestamp` column, which can improve query performance for time-based queries.
+3. A TTL clause is set to automatically delete data older than one week, helping to manage storage and maintain relevance of the analytics data.
+
+## Configuration
+| Option | Type | Default | Description |
+|:-------|:-----|:--------|:------------|
+| Engine | MergeTree | N/A | The table engine used for efficient data storage and retrieval |
+| ORDER BY | timestamp | N/A | Specifies the primary key for data ordering |
+| TTL | timestamp + INTERVAL 1 WEEK | N/A | Sets the data retention period to one week |
+
+## Performance Considerations
+1. The MergeTree engine is optimized for insert and select queries, which is suitable for analytics data.
+2. Ordering by `timestamp` allows for efficient time-based queries and data management.
+3. The TTL clause automatically removes old data, preventing unbounded growth of the table and maintaining query performance over time.

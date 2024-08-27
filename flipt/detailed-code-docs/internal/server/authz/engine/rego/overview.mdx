@@ -1,0 +1,83 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/authz/engine/rego` directory contains the implementation of an authorization engine using Open Policy Agent (OPA) Rego for the Flipt server. It provides functionality to load, compile, and evaluate authorization policies against input data, supporting both local and cloud-based policy and data sources.
+
+## What does it do?
+This directory implements an authorization engine that:
+1. Loads policy definitions and data from configurable sources (local filesystem or cloud).
+2. Compiles the policy into an executable query using OPA's Rego package.
+3. Evaluates authorization requests against the loaded policy and data.
+4. Periodically polls for updates to both policy and data.
+5. Provides a flexible and extensible architecture for authorization in the Flipt server.
+
+The engine supports different user roles and permissions, allowing for fine-grained access control based on the defined policies.
+
+## Entry points
+The main entry point for this package is the `Engine` struct defined in `engine.go`. Key functions include:
+
+1. `NewEngine`: Creates a new authorization engine based on the provided configuration.
+2. `IsAllowed`: Evaluates an authorization request against the loaded policy and data.
+3. `Shutdown`: Gracefully shuts down the authorization engine.
+
+The `source` subdirectory provides implementations for policy and data sources, including both cloud-based and filesystem-based options.
+
+## Key Files
+1. `engine.go`: Contains the core implementation of the Rego authorization engine.
+2. `engine_test.go`: Provides unit tests for the Rego authorization engine.
+3. `source/cloud/cloud.go`: Implements cloud-based policy and data sources.
+4. `source/filesystem/filesystem.go`: Implements filesystem-based policy and data sources.
+5. `source/source.go`: Defines common types and errors used by both cloud and filesystem sources.
+
+## Dependencies
+- `github.com/open-policy-agent/opa/rego`: Used for Rego policy compilation and evaluation.
+- `github.com/open-policy-agent/opa/storage`: Provides storage interfaces for OPA.
+- `go.flipt.io/flipt/internal/config`: Used for configuration management.
+- `go.flipt.io/flipt/internal/containers`: Provides container options for dependency injection.
+- `go.uber.org/zap`: Used for structured logging.
+
+## Configuration
+The engine is configured through the `Authorization` section of the Flipt configuration. Key configuration options include:
+
+- `Backend`: Specifies the authorization backend (local or cloud).
+- For local backend:
+  - Policy file path
+  - Data file path
+- For cloud backend:
+  - Host URL
+  - API key
+  - Poll interval
+
+## Code Snippets
+
+Example of creating a new engine:
+
+```go
+engine, err := NewEngine(ctx, logger, cfg)
+if err != nil {
+    // Handle error
+}
+```
+
+Example of evaluating an authorization request:
+
+```go
+input := map[string]interface{}{
+    "user": "alice",
+    "action": "read",
+    "resource": "document1",
+}
+allowed, err := engine.IsAllowed(ctx, input)
+if err != nil {
+    // Handle error
+}
+if allowed {
+    // Perform authorized action
+} else {
+    // Handle unauthorized access
+}
+```
+
+The Rego authorization engine provides a powerful and flexible way to implement complex authorization rules in the Flipt server, supporting both local and cloud-based policy management.

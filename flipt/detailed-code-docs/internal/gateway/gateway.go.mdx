@@ -1,0 +1,47 @@
+---
+title: "gateway.go"
+---
+
+## High-level description
+The `gateway.go` file in the `internal/gateway` package defines a function `NewGatewayServeMux` that creates a new gRPC gateway serve mux with common options, including a custom marshaller adapter for backwards compatibility. This ensures that the gateway can handle requests and responses in both v1 and v2 API formats.
+
+## Symbols
+
+### `NewGatewayServeMux`
+#### Description
+This function creates and returns a new `runtime.ServeMux` instance configured with common options for handling gRPC gateway requests. It specifically addresses a backwards compatibility issue with `null` values in maps by using a custom marshaller adapter.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| logger | `*zap.Logger` | A logger instance for recording debug information. |
+| opts | `...runtime.ServeMuxOption` |  Variadic parameter for providing additional serve mux options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*runtime.ServeMux` |  | A new instance of a gRPC gateway serve mux configured with common options. |
+
+#### Internal Logic
+1.  The function uses a `sync.Once` to ensure that the common options are set only once, during the first call to `NewGatewayServeMux`.
+2.  It defines `commonMuxOptions` as a slice of `runtime.ServeMuxOption` containing:
+    *   `runtime.WithMarshalerOption(runtime.MIMEWildcard, flipt.NewV1toV2MarshallerAdapter(logger))`: This option registers the custom `V1toV2MarshallerAdapter` for all MIME types (`*`) to handle `null` values in maps.
+    *   `runtime.WithMarshalerOption("application/json+pretty", &runtime.JSONPb{...})`: This option registers a JSONPb marshaller with specific formatting options for the "application/json+pretty" MIME type.
+3.  Finally, it creates and returns a new `runtime.ServeMux` instance with the common options and any additional options provided via the `opts` parameter.
+
+## References
+- `flipt.NewV1toV2MarshallerAdapter`: This symbol is referenced from the `rpc/flipt` package and is responsible for creating the custom marshaller adapter.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `github.com/grpc-ecosystem/grpc-gateway/v2/runtime` | Provides the gRPC gateway runtime for handling gRPC-HTTP transcoding. |
+| `go.flipt.io/flipt/rpc/flipt` |  Contains the Flipt API definitions and the custom marshaller adapter. |
+| `go.uber.org/zap` | Provides a structured logging library. |
+| `google.golang.org/protobuf/encoding/protojson` | Provides utilities for encoding and decoding protocol buffers in JSON format. |
+
+## Error Handling
+The code does not implement specific error handling beyond basic exception raising within the `NewV1toV2MarshallerAdapter` function.
+
+## Logging
+The code uses the provided `*zap.Logger` instance to log debug information during the creation of the custom marshaller adapter.

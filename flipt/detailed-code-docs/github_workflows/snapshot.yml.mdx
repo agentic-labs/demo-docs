@@ -1,0 +1,87 @@
+---
+title: "snapshot.yml"
+---
+
+## High-level description
+This GitHub Actions workflow builds and releases snapshot builds of the Flipt application. It builds binaries for Linux and macOS, packages them using GoReleaser, and publishes them as artifacts.
+
+## Code Structure
+The workflow consists of two main jobs: `snapshot-build` and `snapshot-release`. The `snapshot-build` job builds the Flipt binaries for different operating systems and uploads them as artifacts. The `snapshot-release` job downloads the artifacts, uses GoReleaser to create a snapshot release, and uploads the release artifacts.
+
+## References
+This workflow references the following secrets:
+- `FLIPT_FORMBRICKS_ENVIRONMENT_ID`
+- `GORELEASER_KEY`
+- `GITHUB_TOKEN`
+- `ANALYTICS_WRITE_KEY`
+- `ANALYTICS_WRITE_ENDPOINT`
+- `QUILL_SIGN_P12`
+- `QUILL_SIGN_PASSWORD`
+
+## Symbols
+### `name: Release (Snapshot)`
+#### Description
+This line defines the name of the workflow as "Release (Snapshot)".
+
+### `on: workflow_dispatch:`
+#### Description
+This section specifies that the workflow can be triggered manually using the "workflow_dispatch" event.
+
+### `env: GO_VERSION: "1.22"`
+#### Description
+This section defines an environment variable `GO_VERSION` and sets it to "1.22", which specifies the Go version to be used in the workflow.
+
+### `jobs:`
+#### Description
+This section defines the jobs that will be executed in the workflow.
+
+### `snapshot-build:`
+#### Description
+This job builds the Flipt binaries for different operating systems.
+#### Internal Logic
+- It checks out the repository.
+- Sets up Go using the specified version.
+- Sets up Node.js.
+- Installs GCC for arm64 on Linux.
+- Installs Quill on macOS.
+- Installs Mage.
+- Runs `mage prep` to prepare the build.
+- Uses GoReleaser to build snapshot binaries for Linux and macOS.
+- Uploads the built binaries as artifacts.
+
+### `snapshot-release:`
+#### Description
+This job creates a snapshot release using GoReleaser.
+#### Internal Logic
+- It checks out the repository.
+- Sets up Go.
+- Sets up QEMU for cross-platform emulation.
+- Sets up Buildx for building multi-platform Docker images.
+- Downloads the snapshot artifacts built in the previous job.
+- Installs Syft for generating SBOMs.
+- Uses GoReleaser to create a snapshot release.
+- Uploads the release artifacts.
+
+## Dependencies
+This workflow uses the following external actions:
+| Dependency | Purpose |
+|:-----------|:--------|
+| actions/checkout@v4 | Checks out the repository. |
+| actions/setup-go@v5 | Sets up the Go environment. |
+| actions/cache@v4 | Caches dependencies to speed up builds. |
+| actions/setup-node@v4 | Sets up the Node.js environment. |
+| magefile/mage-action@v3 | Installs and runs Mage. |
+| goreleaser/goreleaser-action@v6 | Runs GoReleaser to build and release the application. |
+| actions/upload-artifact@v4 | Uploads artifacts. |
+| actions/download-artifact@v4 | Downloads artifacts. |
+| docker/setup-qemu-action@v3 | Sets up QEMU for cross-platform emulation. |
+| docker/setup-buildx-action@v3 | Sets up Buildx for building multi-platform Docker images. |
+
+## Configuration
+This workflow uses secrets for sensitive information like API keys and passwords. These secrets are defined in the GitHub repository settings.
+
+## Error Handling
+This workflow uses the `fail-fast: false` strategy for the `snapshot-build` job, which means that if one build fails, the others will continue to run. This allows for identifying issues on specific platforms without interrupting the entire workflow.
+
+## Logging
+This workflow uses the default logging mechanisms provided by GitHub Actions. Each step in the workflow logs its output, which can be viewed in the GitHub Actions workflow run logs.

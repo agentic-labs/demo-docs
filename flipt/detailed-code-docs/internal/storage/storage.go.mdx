@@ -1,0 +1,666 @@
+---
+title: "storage.go"
+---
+
+## High-level description
+The `storage.go` file defines interfaces and data structures for interacting with the Flipt feature flag storage backend. It outlines the contracts for managing namespaces, flags, segments, rules, rollouts, and evaluation data.
+
+## Code Structure
+The code defines a set of interfaces like `Store`, `ReadOnlyStore`, `EvaluationStore`, `NamespaceStore`, `FlagStore`, etc., each outlining methods for interacting with specific parts of the feature flag configuration. It also defines data structures like `EvaluationRule`, `EvaluationSegment`, `EvaluationConstraint`, etc., which represent the data model for feature flag evaluations.  These interfaces are used by other parts of the codebase, such as the server and importer packages, to interact with the storage layer.
+
+## References
+This code references the `flipt.io/flipt/rpc/flipt` package for data structures like `flipt.Namespace`, `flipt.Flag`, `flipt.Segment`, etc., indicating that the storage layer interacts with data models defined in the Flipt RPC definitions.
+
+## Symbols
+
+### `DefaultListLimit`
+#### Description
+`DefaultListLimit` is a constant that defines the default page size for list operations when a limit is not explicitly provided.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `MaxListLimit`
+#### Description
+`MaxListLimit` is a constant that defines the maximum allowed page size for list operations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationRule`
+#### Description
+`EvaluationRule` represents a rule and its associated constraints used to determine if a given flag key matches a segment.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationSegment`
+#### Description
+`EvaluationSegment` represents a segment within an `EvaluationRule`, defining the segment key, match type, and constraints.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationRollout`
+#### Description
+`EvaluationRollout` represents a rollout configuration used in the evaluation process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `RolloutThreshold`
+#### Description
+`RolloutThreshold` represents a percentage-based threshold used in rollout evaluations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `RolloutSegment`
+#### Description
+`RolloutSegment` represents a segment-based rule used in rollout evaluations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationConstraint`
+#### Description
+`EvaluationConstraint` represents a single constraint within an `EvaluationSegment`, defining the comparison type, property, operator, and value for the constraint.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationDistribution`
+#### Description
+`EvaluationDistribution` represents a rule distribution along with its associated variant, used in the evaluation process.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `QueryParams`
+#### Description
+`QueryParams` encapsulates parameters used for querying data from the storage, including limit, offset, page token, and order.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `Normalize`
+#### Description
+`Normalize` is a method on `QueryParams` that adjusts the query parameters to be within the enforced boundaries, ensuring the limit is within the allowed range and setting a default if not provided.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `QueryOption`
+#### Description
+`QueryOption` is a function type used to define options that can be applied when creating `QueryParams`.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewQueryParams`
+#### Description
+`NewQueryParams` constructs a new `QueryParams` object, applying any provided `QueryOption` functions to configure it.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...QueryOption | A variadic parameter accepting zero or more `QueryOption` functions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| params | QueryParams | The newly constructed `QueryParams` object. |
+
+### `WithLimit`
+#### Description
+`WithLimit` is a `QueryOption` function that sets the limit parameter for a `QueryParams` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| limit | uint64 | The desired limit value. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| QueryOption | func(*QueryParams) | A `QueryOption` function that sets the limit on the provided `QueryParams`. |
+
+### `WithOffset`
+#### Description
+`WithOffset` is a `QueryOption` function that sets the offset parameter for a `QueryParams` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| offset | uint64 | The desired offset value. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| QueryOption | func(*QueryParams) | A `QueryOption` function that sets the offset on the provided `QueryParams`. |
+
+### `WithPageToken`
+#### Description
+`WithPageToken` is a `QueryOption` function that sets the page token parameter for a `QueryParams` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| pageToken | string | The desired page token value. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| QueryOption | func(*QueryParams) | A `QueryOption` function that sets the page token on the provided `QueryParams`. |
+
+### `Order`
+#### Description
+`Order` is a type alias for `uint8`, representing the sorting order for list operations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `OrderAsc`
+#### Description
+`OrderAsc` is a constant representing ascending sort order.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `OrderDesc`
+#### Description
+`OrderDesc` is a constant representing descending sort order.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `String`
+#### Description
+`String` is a method on `Order` that returns the string representation of the sort order.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The string representation of the sort order ("ASC" or "DESC"). |
+
+### `WithOrder`
+#### Description
+`WithOrder` is a `QueryOption` function that sets the order parameter for a `QueryParams` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| order | Order | The desired sort order. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| QueryOption | func(*QueryParams) | A `QueryOption` function that sets the order on the provided `QueryParams`. |
+
+### `NamespaceVersionStore`
+#### Description
+`NamespaceVersionStore` is an interface defining a method for retrieving the version of a namespace.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlyStore`
+#### Description
+`ReadOnlyStore` is an interface defining methods for read-only access to Flipt's configuration data, including namespaces, flags, segments, rules, rollouts, and evaluation data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `Store`
+#### Description
+`Store` is an interface extending `ReadOnlyStore` with methods for writing and modifying Flipt's configuration data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ResultSet`
+#### Description
+`ResultSet` is a generic data structure representing the result of a list operation, including the retrieved results and a token for accessing the next page of results.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `DefaultNamespace`
+#### Description
+`DefaultNamespace` is a constant representing the default namespace key.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `EvaluationStore`
+#### Description
+`EvaluationStore` is an interface defining methods for retrieving data required for feature flag evaluations.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlyNamespaceStore`
+#### Description
+`ReadOnlyNamespaceStore` is an interface defining methods for read-only access to namespace data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NamespaceStore`
+#### Description
+`NamespaceStore` is an interface extending `ReadOnlyNamespaceStore` with methods for creating, updating, and deleting namespaces.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlyFlagStore`
+#### Description
+`ReadOnlyFlagStore` is an interface defining methods for read-only access to flag data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `FlagStore`
+#### Description
+`FlagStore` is an interface extending `ReadOnlyFlagStore` with methods for creating, updating, and deleting flags and variants.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlySegmentStore`
+#### Description
+`ReadOnlySegmentStore` is an interface defining methods for read-only access to segment data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `SegmentStore`
+#### Description
+`SegmentStore` is an interface extending `ReadOnlySegmentStore` with methods for creating, updating, and deleting segments and constraints.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlyRuleStore`
+#### Description
+`ReadOnlyRuleStore` is an interface defining methods for read-only access to rule data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `RuleStore`
+#### Description
+`RuleStore` is an interface extending `ReadOnlyRuleStore` with methods for creating, updating, deleting, and ordering rules and distributions.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReadOnlyRolloutStore`
+#### Description
+`ReadOnlyRolloutStore` is an interface defining methods for read-only access to rollout data.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `RolloutStore`
+#### Description
+`RolloutStore` is an interface extending `ReadOnlyRolloutStore` with methods for creating, updating, deleting, and ordering rollouts.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ListRequest`
+#### Description
+`ListRequest` is a generic data structure representing a request to list data, including a predicate for filtering and `QueryParams` for pagination.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ListOption`
+#### Description
+`ListOption` is a function type used to define options that can be applied when creating a `ListRequest`.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ListWithQueryParamOptions`
+#### Description
+`ListWithQueryParamOptions` is a function that takes a set of `QueryOption` functions and returns a `ListOption` function that applies those options to a `ListRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| opts | ...QueryOption | A variadic parameter accepting zero or more `QueryOption` functions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ListOption | func(*ListRequest) | A `ListOption` function that applies the provided `QueryOption` functions to a `ListRequest`. |
+
+### `PageParameter`
+#### Description
+`PageParameter` is an interface defining methods for accessing pagination parameters like limit and page token.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `OffsetPageParameter`
+#### Description
+`OffsetPageParameter` is an interface extending `PageParameter` with a method for accessing the offset parameter.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ListWithParameters`
+#### Description
+`ListWithParameters` is a function that constructs a new `ListRequest` using the pagination parameters from a `PageParameter` object.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | T | The predicate for the `ListRequest`. |
+| p | PageParameter | The `PageParameter` object containing pagination parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ListRequest[T] | *ListRequest[T] | The newly constructed `ListRequest`. |
+
+### `ListWithOptions`
+#### Description
+`ListWithOptions` is a function that constructs a new `ListRequest` using the provided `ListOption` functions.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | T | The predicate for the `ListRequest`. |
+| opts | ...ListOption[T] | A variadic parameter accepting zero or more `ListOption` functions. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *ListRequest[T] | *ListRequest[T] | The newly constructed `ListRequest`. |
+
+### `Reference`
+#### Description
+`Reference` is a type alias for `string`, representing a reference to a specific revision or a named reference.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `ReferenceRequest`
+#### Description
+`ReferenceRequest` is a data structure used to identify a request based on a revision reference.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `WithReference`
+#### Description
+`WithReference` is a function that sets the reference identifier on a `ReferenceRequest`.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The reference identifier to set. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| containers.Option[ReferenceRequest] | containers.Option[ReferenceRequest] | An option function that sets the reference on a `ReferenceRequest`. |
+
+### `ListWithReference`
+#### Description
+`ListWithReference` is a `ListOption` function that sets the reference on a `ListRequest` for `ReferenceRequest` predicates.
+
+#### Inputs
+| Name| Name | Type | Description |
+|:-----|:-----|:------------|
+| ref | string | The reference identifier to set. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ListOption[ReferenceRequest] | func(*ListRequest[ReferenceRequest]) | A `ListOption` function that sets the reference on a `ListRequest` for `ReferenceRequest` predicates. |
+
+### `NamespaceRequest`
+#### Description
+`NamespaceRequest` is a data structure used to identify a request based on both a revision reference and a namespace key.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewNamespace`
+#### Description
+`NewNamespace` constructs a new `NamespaceRequest` from the provided namespace key and optional reference options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| key | string | The namespace key. |
+| opts | ...containers.Option[ReferenceRequest] | Optional reference options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| NamespaceRequest | NamespaceRequest | The newly constructed `NamespaceRequest`. |
+
+### `String`
+#### Description
+`String` is a method on `NamespaceRequest` that returns the resolved target namespace key string.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The resolved namespace key. |
+
+### `Namespace`
+#### Description
+`Namespace` is a method on `NamespaceRequest` that returns the resolved target namespace key string.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The resolved namespace key. |
+
+### `ResourceRequest`
+#### Description
+`ResourceRequest` is a data structure used to identify a request based on revision, namespace, and a resource key.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewResource`
+#### Description
+`NewResource` constructs and configures a new `ResourceRequest` from the provided namespace and resource keys, with optional reference options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ns | string | The namespace key. |
+| key | string | The resource key. |
+| opts | ...containers.Option[ReferenceRequest] | Optional reference options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ResourceRequest | ResourceRequest | The newly constructed `ResourceRequest`. |
+
+### `String`
+#### Description
+`String` is a method on `ResourceRequest` that returns a representation of the combined resource namespace and key.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The combined namespace and resource key. |
+
+### `IDRequest`
+#### Description
+`IDRequest` is a data structure used to identify a request based on a unique random identifier.
+
+#### Inputs
+None
+
+#### Outputs
+None
+
+### `NewID`
+#### Description
+`NewID` constructs and configures a new `IDRequest` with the provided ID string and optional reference options.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| id | string | The unique identifier. |
+| opts | ...containers.Option[ReferenceRequest] | Optional reference options. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| IDRequest | IDRequest | The newly constructed `IDRequest`. |
+
+## Dependencies
+The code relies on the following external packages:
+| Dependency | Purpose |
+|:-----------|:--------|
+| context | For handling request contexts |
+| fmt | For string formatting |
+| path | For path manipulation |
+| go.flipt.io/flipt/internal/containers | For container utilities |
+| go.flipt.io/flipt/rpc/flipt | For Flipt RPC data structures |
+
+## Error Handling
+The code defines various interfaces and data structures but does not implement specific error handling. Error handling is expected to be implemented by the concrete implementations of these interfaces.
+
+## Performance Considerations
+The code defines constants `DefaultListLimit` and `MaxListLimit` to control the number of items returned in list operations, which can help manage performance and resource usage. The `Normalize` method on `QueryParams` ensures that list limits are within acceptable bounds.

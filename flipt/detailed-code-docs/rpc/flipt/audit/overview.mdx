@@ -1,0 +1,90 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains code related to the audit functionality of the Flipt system. It includes Protocol Buffer message definitions for audit events, as well as embedded schema files in both Avro and Protocol Buffers formats. The code provides the necessary structures and data for handling audit information within the Flipt application.
+
+## What does it do?
+The code in this directory enables the Flipt system to create, manage, and process audit events. These events capture important information about actions performed within the system, including details about the actor (user) who performed the action, metadata about the event, and the specific details of what occurred. 
+
+The audit system allows Flipt to maintain a record of significant activities, which can be useful for security monitoring, compliance, and troubleshooting purposes. By using standardized message formats (defined in Protocol Buffers) and providing schema definitions in multiple formats (Avro and Protocol Buffers), the audit system is designed to be flexible and interoperable with various data processing and storage systems.
+
+## Key Files
+
+1. `event.pb.go`:
+   This file contains the Go bindings for the Protocol Buffer message types used in the audit system. It defines three main structures:
+   - `Actor`: Represents the user or entity performing an action, including authentication and identification information.
+   - `Metadata`: Contains metadata about the audit event, including a reference to the Actor.
+   - `Event`: Represents a complete audit event, including all relevant details such as the type of action, timestamp, and payload data.
+
+   These structures provide a standardized way to represent audit information within the Flipt system.
+
+2. `schemas.go`:
+   This file embeds two schema definitions into the Go code:
+   - `AvroSchema`: Contains the Avro schema definition for audit events.
+   - `ProtoSchema`: Contains the Protocol Buffers schema definition for audit events.
+
+   By embedding these schemas, the code ensures that the audit event structure is consistently defined and easily accessible within the application.
+
+## Dependencies
+The code relies on several external libraries and frameworks:
+
+1. `google.golang.org/protobuf` (various packages):
+   - Purpose: Provides support for working with Protocol Buffers in Go.
+   - Used for: Reflection, runtime support, and handling specific Protocol Buffer types like `Struct` and `Timestamp`.
+
+2. `embed` package from the Go standard library:
+   - Purpose: Embeds the contents of external files into the Go binary at compile time.
+   - Used for: Including the Avro and Protocol Buffers schema definitions directly in the code.
+
+## Configuration
+While there are no explicit configuration files or environment variables mentioned in the provided code, the use of embedded schema files (`event.avsc` and `event.proto`) suggests that the audit event structure is configurable. These schema files likely define the exact fields and data types used in audit events, allowing for easy modification of the audit structure without changing the Go code directly.
+
+## Code Examples
+
+Here's an example of how an audit event might be created using the structures defined in `event.pb.go`:
+
+```go
+actor := &Actor{
+    Authentication: "oauth2",
+    Ip:             "192.168.1.100",
+    Email:          "user@example.com",
+    Name:           "John Doe",
+    Picture:        "https://example.com/profile.jpg",
+}
+
+metadata := &Metadata{
+    Actor: actor,
+}
+
+event := &Event{
+    Version:   "1.0",
+    Type:      "user_action",
+    Action:    "create_flag",
+    Metadata:  metadata,
+    Payload:   &structpb.Struct{/* ... */},
+    Timestamp: timestamppb.Now(),
+    Status:    proto.String("success"),
+}
+```
+
+This example demonstrates how the various components of an audit event (Actor, Metadata, and Event) are combined to create a complete record of an action within the system.
+
+The embedded schemas in `schemas.go` can be accessed as strings, which might be useful for schema validation or when integrating with external systems that require schema information:
+
+```go
+import "rpc/flipt/audit"
+
+func printSchemas() {
+    fmt.Println("Avro Schema:")
+    fmt.Println(audit.AvroSchema)
+
+    fmt.Println("\nProtocol Buffers Schema:")
+    fmt.Println(audit.ProtoSchema)
+}
+```
+
+This code would print out the full schema definitions for both Avro and Protocol Buffers formats, which could be useful for debugging or documentation purposes.
+
+In conclusion, this directory provides a robust foundation for handling audit events in the Flipt system, offering flexibility in data representation and integration with various data processing tools and systems.

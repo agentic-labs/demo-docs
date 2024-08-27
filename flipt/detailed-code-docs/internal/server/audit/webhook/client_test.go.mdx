@@ -1,0 +1,58 @@
+---
+title: "client_test.go"
+---
+
+## High-level description
+The `client_test.go` file contains unit tests for the `webhookClient` struct, which is responsible for sending audit events to a configured webhook URL. The tests cover the client's constructor and its ability to send audit events with and without a signing secret.
+
+## References
+- `go.flipt.io/flipt/internal/server/audit`: Provides the `Event` struct representing an audit event.
+- `go.flipt.io/flipt/rpc/flipt`: Defines the `SubjectFlag` and `ActionCreate` constants used for event type and action.
+
+## Symbols
+### `TestConstructorWebhookClient`
+#### Description
+This function tests the `NewWebhookClient` constructor, ensuring it correctly initializes a `webhookClient` with the provided parameters.
+
+#### Inputs
+This function takes a `*testing.t` as input, which is used for reporting test results.
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Arrange:** It calls `NewWebhookClient` with sample parameters (logger, URL, signing secret, max backoff duration).
+2. **Act:** It asserts that the returned client is not nil and can be type-asserted to `*webhookClient`.
+3. **Assert:** It verifies that the client's fields (URL, signing secret, retry wait max, and logger type) are set correctly.
+
+### `TestWebhookClient`
+#### Description
+This function tests the `SendAudit` method of the `webhookClient`, verifying its ability to send audit events to the configured webhook URL.
+
+#### Inputs
+This function takes a `*testing.t` as input, which is used for reporting test results.
+
+#### Outputs
+This function does not return any values.
+
+#### Internal Logic
+1. **Arrange:**
+    - It starts a test HTTP server that verifies the received request body, signature header, and responds with a 200 status code.
+    - It creates a new `webhookClient` with the test server's URL and a sample signing secret.
+2. **Act:** It calls the client's `SendAudit` method with a sample audit event.
+3. **Assert:**
+    - It asserts that the `SendAudit` call returns no error.
+    - It closes the response body to avoid resource leaks.
+
+## Dependencies
+- `github.com/hashicorp/go-retryablehttp`: Provides the `retryablehttp.Client` for sending HTTP requests with retries.
+- `github.com/stretchr/testify/assert`: Used for making assertions about values.
+- `github.com/stretchr/testify/require`: Used for making assertions that should immediately stop the test if they fail.
+- `go.uber.org/zap`: Provides a structured logger.
+- `net/http/httptest`: Used for creating a test HTTP server.
+
+## Error Handling
+The tests use `require.NoError` to check for errors during the test setup and execution. If an error occurs, the test will fail immediately.
+
+## Logging
+The tests use a `zap.NewNop()` logger, which discards all log messages. This is common in unit tests to avoid cluttering the test output.

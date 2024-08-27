@@ -1,0 +1,66 @@
+---
+title: "http.go"
+---
+
+## High-level description
+The `http.go` file in the `internal/server/authn/method/kubernetes/testing` package provides utilities for starting and stopping an HTTP server for testing purposes. This server is used to test the Kubernetes authentication method for Flipt.
+
+## Code Structure
+The `StartHTTPServer` function creates and starts an HTTP server. It utilizes the `GRPCServer` from the same package for the underlying gRPC communication. The `Stop` method gracefully stops the running HTTP server.
+
+## References
+- `GRPCServer`: This symbol, defined in the same package, represents the underlying gRPC server used by the HTTP server.
+
+## Symbols
+
+### `StartHTTPServer`
+#### Description
+This function creates, configures, and starts an HTTP server for testing the Kubernetes authentication method. It sets up a gateway ServeMux, registers the Kubernetes authentication service handler, and mounts the authentication routes.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| t | `*testing.T` | The testing object used for reporting test failures. |
+| ctx | `context.Context` | The context for the server. |
+| logger | `*zap.Logger` | The logger instance for recording server activity. |
+| conf | `config.AuthenticationConfig` | The authentication configuration for the server. |
+| router | `chi.Router` | The router to which the authentication routes are mounted. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*HTTPServer` |  | A pointer to the started HTTP server. |
+
+#### Internal Logic
+1. Creates a new `gateway.GatewayServeMux` and an `HTTPServer` instance, initializing its `GRPCServer` using the `StartGRPCServer` function.
+2. Registers the `auth.AuthenticationMethodKubernetesServiceHandler` with the ServeMux, connecting it to the gRPC server.
+3. Mounts the `/auth/v1` path on the provided router, pointing it to the configured ServeMux.
+4. Returns the initialized `HTTPServer` instance.
+
+### `(*HTTPServer).Stop`
+#### Description
+This method gracefully stops the running HTTP server by stopping its underlying `GRPCServer`.
+
+#### Inputs
+None
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` |  | An error object if the server fails to stop, otherwise nil. |
+
+#### Internal Logic
+1. Calls the `Stop` method of the embedded `GRPCServer` to gracefully shut it down.
+2. Returns the error returned by the `GRPCServer.Stop` method, if any.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a mechanism for carrying request-scoped data and cancellation signals. |
+| `testing` | Used for running tests and reporting test failures. |
+| `github.com/go-chi/chi/v5` | Provides a lightweight and flexible HTTP router. |
+| `github.com/stretchr/testify/require` | Offers assertion functions for testing. |
+| `go.flipt.io/flipt/internal/config` | Provides access to Flipt's configuration settings. |
+| `go.flipt.io/flipt/internal/gateway` | Offers utilities for setting up a gateway server. |
+| `go.flipt.io/flipt/rpc/flipt/auth` | Contains the gRPC service definitions and handlers for authentication. |
+| `go.uber.org/zap` | Provides a structured logging library. |

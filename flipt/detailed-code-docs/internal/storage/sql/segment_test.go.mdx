@@ -1,0 +1,381 @@
+---
+title: "segment_test.go"
+---
+
+## High-level description
+The `segment_test.go` file contains unit tests for the segment-related functionality of the SQL storage implementation in the Flipt API. It covers functions for creating, retrieving, updating, deleting, and listing segments and their associated constraints.
+
+## References
+This file references the following symbols from other parts of the codebase:
+- `storage.Store`: An interface that defines the methods for interacting with the storage backend.
+- `flipt.Segment`: A protobuf message representing a segment.
+- `flipt.Constraint`: A protobuf message representing a constraint.
+- `storage.Resource`: A struct representing a resource with a namespace and key.
+- `storage.ListRequest`: A struct representing a request to list resources.
+- `storage.ResultSet`: A struct representing a set of results from a list operation.
+
+## Symbols
+
+### `(s *DBTestSuite) TestGetSegment()`
+#### Description
+Tests that retrieving a segment using `GetSegment` returns the expected segment data when the segment exists.
+
+#### Internal Logic
+- **Arrange:** Creates a segment with a random key, name "foo", description "bar", and `MatchType_ALL_MATCH_TYPE`.
+- **Act:** Calls `GetSegment` with the created segment's key.
+- **Assert:** Verifies that the returned segment matches the created segment, including its namespace, key, name, description, timestamps, and match type.
+
+### `(s *DBTestSuite) TestGetSegmentNamespace()`
+#### Description
+Tests that retrieving a segment within a specific namespace using `GetSegment` returns the expected segment data.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace.
+- **Act:** Calls `GetSegment` with the created segment's namespace and key.
+- **Assert:** Verifies that the returned segment matches the created segment, including its namespace, key, name, description, timestamps, and match type.
+
+### `(s *DBTestSuite) TestGetSegment_NotFound()`
+#### Description
+Tests that `GetSegment` returns an `ErrNotFound` error when attempting to retrieve a non-existent segment.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `GetSegment` with a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestGetSegmentNamespace_NotFound()`
+#### Description
+Tests that `GetSegment` returns an `ErrNotFound` error when attempting to retrieve a non-existent segment within a specific namespace.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `GetSegment` with a specific namespace and a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestGetSegment_WithConstraint()`
+#### Description
+Tests that `GetSegment` correctly retrieves a segment and its associated constraint.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and a constraint associated with that segment.
+- **Act:** Calls `GetSegment` to retrieve the segment.
+- **Assert:** Verifies that the returned segment includes the created constraint.
+
+### `(s *DBTestSuite) TestListSegments()`
+#### Description
+Tests that listing segments using `ListSegments` returns the expected list of segments within the default namespace.
+
+#### Internal Logic
+- **Arrange:** Creates two segments with random keys.
+- **Act:** Calls `ListSegments` with no pagination parameters.
+- **Assert:** Verifies that the returned list contains the created segments and that each segment has the correct default namespace, creation timestamp, and update timestamp.
+
+### `(s *DBTestSuite) TestListSegmentsNamespace()`
+#### Description
+Tests that listing segments within a specific namespace using `ListSegments` returns the expected list of segments.
+
+#### Internal Logic
+- **Arrange:** Creates two segments within a specific namespace.
+- **Act:** Calls `ListSegments` with the specific namespace.
+- **Assert:** Verifies that the returned list contains the created segments and that each segment has the correct namespace, creation timestamp, and update timestamp.
+
+### `(s *DBTestSuite) TestListSegmentsPagination_LimitOffset()`
+#### Description
+Tests that `ListSegments` correctly handles pagination using limit and offset parameters.
+
+#### Internal Logic
+- **Arrange:** Creates three segments with random keys.
+- **Act:** Calls `ListSegments` with different limit and offset combinations to retrieve specific segments.
+- **Assert:** Verifies that the returned segments match the expected segments based on the provided limit and offset.
+
+### `(s *DBTestSuite) TestListSegmentsPagination_LimitWithNextPage()`
+#### Description
+Tests that `ListSegments` correctly handles pagination using limit and next page token.
+
+#### Internal Logic
+- **Arrange:** Creates three segments with random keys.
+- **Act:** Calls `ListSegments` with a limit of 1 and retrieves the next page token. Uses the next page token to retrieve subsequent pages.
+- **Assert:** Verifies that the returned segments match the expected segments based on the provided limit and page token.
+
+### `(s *DBTestSuite) TestListSegmentsPagination_FullWalk()`
+#### Description
+Tests that `ListSegments` correctly handles pagination when iterating through all segments.
+
+#### Internal Logic
+- **Arrange:** Creates nine segments with random keys and two constraints for each segment.
+- **Act:** Calls `ListSegments` with a page size of 3 and iterates through all pages using the next page token.
+- **Assert:** Verifies that all nine segments are retrieved and that the segment data, including constraints, is correct.
+
+### `(s *DBTestSuite) TestCreateSegment()`
+#### Description
+Tests that creating a segment using `CreateSegment` successfully creates a segment with the provided data.
+
+#### Internal Logic
+- **Arrange:** Defines a `CreateSegmentRequest` with a key, name "foo", description "bar", and `MatchType_ANY_MATCH_TYPE`.
+- **Act:** Calls `CreateSegment` with the request data.
+- **Assert:** Verifies that the returned segment has the expected key, name, description, match type, and timestamps.
+
+### `(s *DBTestSuite) TestCreateSegmentNamespace()`
+#### Description
+Tests that creating a segment within a specific namespace using `CreateSegment` successfully creates the segment.
+
+#### Internal Logic
+- **Arrange:** Defines a `CreateSegmentRequest` with a specific namespace, key, name "foo", description "bar", and `MatchType_ANY_MATCH_TYPE`.
+- **Act:** Calls `CreateSegment` with the request data.
+- **Assert:** Verifies that the returned segment has the expected namespace, key, name, description, match type, and timestamps.
+
+### `(s *DBTestSuite) TestCreateSegment_DuplicateKey()`
+#### Description
+Tests that attempting to create a segment with a duplicate key within the default namespace results in an error.
+
+#### Internal Logic
+- **Arrange:** Creates a segment with a specific key.
+- **Act:** Attempts to create another segment with the same key.
+- **Assert:** Verifies that the second `CreateSegment` call returns an error indicating a duplicate key violation.
+
+### `(s *DBTestSuite) TestCreateSegmentNamespace_DuplicateKey()`
+#### Description
+Tests that attempting to create a segment with a duplicate key within a specific namespace results in an error.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace.
+- **Act:** Attempts to create another segment with the same key within the same namespace.
+- **Assert:** Verifies that the second `CreateSegment` call returns an error indicating a duplicate key violation.
+
+### `(s *DBTestSuite) TestUpdateSegment()`
+#### Description
+Tests that updating a segment using `UpdateSegment` successfully updates the segment's data.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and then defines an `UpdateSegmentRequest` to modify its description and match type.
+- **Act:** Calls `UpdateSegment` with the request data.
+- **Assert:** Verifies that the returned segment reflects the updated description, match type, and updated timestamp.
+
+### `(s *DBTestSuite) TestUpdateSegmentNamespace()`
+#### Description
+Tests that updating a segment within a specific namespace using `UpdateSegment` successfully updates the segment's data.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace and then defines an `UpdateSegmentRequest` to modify its description and match type.
+- **Act:** Calls `UpdateSegment` with the request data.
+- **Assert:** Verifies that the returned segment reflects the updated description, match type, and updated timestamp.
+
+### `(s *DBTestSuite) TestUpdateSegment_NotFound()`
+#### Description
+Tests that `UpdateSegment` returns an `ErrNotFound` error when attempting to update a non-existent segment.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `UpdateSegment` with a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestUpdateSegmentNamespace_NotFound()`
+#### Description
+Tests that `UpdateSegment` returns an `ErrNotFound` error when attempting to update a non-existent segment within a specific namespace.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `UpdateSegment` with a specific namespace and a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestDeleteSegment()`
+#### Description
+Tests that deleting a segment using `DeleteSegment` successfully removes the segment.
+
+#### Internal Logic
+- **Arrange:** Creates a segment.
+- **Act:** Calls `DeleteSegment` with the segment's key.
+- **Assert:** Verifies that no error is returned.
+
+### `(s *DBTestSuite) TestDeleteSegmentNamespace()`
+#### Description
+Tests that deleting a segment within a specific namespace using `DeleteSegment` successfully removes the segment.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace.
+- **Act:** Calls `DeleteSegment` with the segment's namespace and key.
+- **Assert:** Verifies that no error is returned.
+
+### `(s *DBTestSuite) TestDeleteSegment_ExistingRule()`
+#### Description
+Tests that attempting to delete a segment that has an associated rule results in an error.
+
+#### Internal Logic
+- **Arrange:** Creates a segment, a flag, a variant, and a rule that associates the segment with the flag.
+- **Act:** Attempts to delete the segment using `DeleteSegment`.
+- **Assert:** Verifies that an error is returned indicating that a rule exists for the segment.
+
+### `(s *DBTestSuite) TestDeleteSegment_NotFound()`
+#### Description
+Tests that attempting to delete a non-existent segment using `DeleteSegment` does not return an error.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `DeleteSegment` with a non-existent segment key.
+- **Assert:** Verifies that no error is returned.
+
+### `(s *DBTestSuite) TestDeleteSegmentNamespace_NotFound()`
+#### Description
+Tests that attempting to delete a non-existent segment within a specific namespace using `DeleteSegment` does not return an error.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `DeleteSegment` with a specific namespace and a non-existent segment key.
+- **Assert:** Verifies that no error is returned.
+
+### `(s *DBTestSuite) TestCreateConstraint()`
+#### Description
+Tests that creating a constraint using `CreateConstraint` successfully creates a constraint associated with a segment.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and defines a `CreateConstraintRequest` with the segment's key, type, property, operator, and value.
+- **Act:** Calls `CreateConstraint` with the request data.
+- **Assert:** Verifies that the returned constraint has the expected ID, namespace, segment key, type, property, operator, value, and timestamps. Also, retrieves the segment and checks if the constraint is correctly associated with it.
+
+### `(s *DBTestSuite) TestCreateConstraintNamespace()`
+#### Description
+Tests that creating a constraint within a specific namespace using `CreateConstraint` successfully creates the constraint.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace and defines a `CreateConstraintRequest` with the segment's key, type, property, operator, and value.
+- **Act:** Calls `CreateConstraint` with the request data.
+- **Assert:** Verifies that the returned constraint has the expected ID, namespace, segment key, type, property, operator, value, and timestamps. Also retrieves the segment and checks if the constraint is correctly associated with it.
+
+### `(s *DBTestSuite) TestCreateConstraint_SegmentNotFound()`
+#### Description
+Tests that `CreateConstraint` returns an `ErrNotFound` error when attempting to create a constraint for a non-existent segment.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `CreateConstraint` with a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestCreateConstraintNamespace_SegmentNotFound()`
+#### Description
+Tests that `CreateConstraint` returns an `ErrNotFound` error when attempting to create a constraint for a non-existent segment within a specific namespace.
+
+#### Internal Logic
+- **Arrange:** No segment is created.
+- **Act:** Calls `CreateConstraint` with a specific namespace and a non-existent segment key.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestGetSegmentWithConstraintMultiNamespace()`
+#### Description
+Tests that retrieving a segment with a constraint works correctly when multiple namespaces are involved.
+
+#### Internal Logic
+-Certainly. I'll continue with the description of the `TestGetSegmentWithConstraintMultiNamespace()` function:
+
+### `(s *DBTestSuite) TestGetSegmentWithConstraintMultiNamespace()`
+#### Description
+Tests that retrieving a segment with a constraint works correctly when multiple namespaces are involved.
+
+#### Internal Logic
+- **Arrange:** Creates two segments with the same key but in different namespaces (default and custom). Each segment has a constraint with identical properties.
+- **Act:** Retrieves the segment from the default namespace using `GetSegment`.
+- **Assert:** Verifies that the retrieved segment has only one constraint and that the constraint belongs to the correct namespace (default). This ensures that constraints from different namespaces are not mixed.
+
+### `(s *DBTestSuite) TestUpdateConstraint()`
+#### Description
+Tests that updating a constraint using `UpdateConstraint` successfully updates the constraint's data.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and a constraint, then defines an `UpdateConstraintRequest` to modify the constraint's properties.
+- **Act:** Calls `UpdateConstraint` with the request data.
+- **Assert:** Verifies that the returned constraint reflects the updated properties and updated timestamp.
+
+### `(s *DBTestSuite) TestUpdateConstraintNamespace()`
+#### Description
+Tests that updating a constraint within a specific namespace using `UpdateConstraint` successfully updates the constraint's data.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and a constraint within a specific namespace, then defines an `UpdateConstraintRequest` to modify the constraint's properties.
+- **Act:** Calls `UpdateConstraint` with the request data.
+- **Assert:** Verifies that the returned constraint reflects the updated properties and updated timestamp.
+
+### `(s *DBTestSuite) TestUpdateConstraint_NotFound()`
+#### Description
+Tests that `UpdateConstraint` returns an `ErrNotFound` error when attempting to update a non-existent constraint.
+
+#### Internal Logic
+- **Arrange:** Creates a segment but no constraint.
+- **Act:** Calls `UpdateConstraint` with a non-existent constraint ID.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestUpdateConstraintNamespace_NotFound()`
+#### Description
+Tests that `UpdateConstraint` returns an `ErrNotFound` error when attempting to update a non-existent constraint within a specific namespace.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace but no constraint.
+- **Act:** Calls `UpdateConstraint` with a specific namespace and a non-existent constraint ID.
+- **Assert:** Verifies that the returned error is `ErrNotFound`.
+
+### `(s *DBTestSuite) TestDeleteConstraint()`
+#### Description
+Tests that deleting a constraint using `DeleteConstraint` successfully removes the constraint.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and a constraint.
+- **Act:** Calls `DeleteConstraint` with the constraint's ID and segment key.
+- **Assert:** Verifies that no error is returned and that the segment no longer has any constraints when retrieved.
+
+### `(s *DBTestSuite) TestDeleteConstraintNamespace()`
+#### Description
+Tests that deleting a constraint within a specific namespace using `DeleteConstraint` successfully removes the constraint.
+
+#### Internal Logic
+- **Arrange:** Creates a segment and a constraint within a specific namespace.
+- **Act:** Calls `DeleteConstraint` with the constraint's namespace, ID, and segment key.
+- **Assert:** Verifies that no error is returned and that the segment no longer has any constraints when retrieved.
+
+### `(s *DBTestSuite) TestDeleteConstraint_NotFound()`
+#### Description
+Tests that attempting to delete a non-existent constraint using `DeleteConstraint` does not return an error.
+
+#### Internal Logic
+- **Arrange:** Creates a segment but no constraint.
+- **Act:** Calls `DeleteConstraint` with a non-existent constraint ID and the segment key.
+- **Assert:** Verifies that no error is returned.
+
+### `(s *DBTestSuite) TestDeleteConstraintNamespace_NotFound()`
+#### Description
+Tests that attempting to delete a non-existent constraint within a specific namespace using `DeleteConstraint` does not return an error.
+
+#### Internal Logic
+- **Arrange:** Creates a segment within a specific namespace but no constraint.
+- **Act:** Calls `DeleteConstraint` with a specific namespace, a non-existent constraint ID, and the segment key.
+- **Assert:** Verifies that no error is returned.
+
+### `BenchmarkListSegments()`
+#### Description
+Benchmarks the performance of the `ListSegments` function under various conditions.
+
+#### Internal Logic
+- **Arrange:** Creates 1000 segments, each with 10 constraints.
+- **Act/Assert:** Runs multiple benchmark scenarios:
+  1. Listing segments without pagination
+  2. Listing segments with different page sizes (10, 25, 100, 500)
+  3. Listing segments with pagination (limit 500, offset 50, descending order)
+- Measures the time taken for each scenario.
+
+## Performance Considerations
+The `BenchmarkListSegments` function provides insights into the performance characteristics of the `ListSegments` operation under different conditions. This can be useful for identifying potential bottlenecks and optimizing the implementation for various use cases.
+
+## Dependencies
+This test file depends on several external libraries and internal packages:
+- `testing`: Go's standard testing package
+- `context`: For handling context in API calls
+- `encoding/base64`: For encoding/decoding page tokens
+- `encoding/json`: For JSON encoding/decoding
+- `fmt`: For string formatting
+- `time`: For time-related operations
+- `github.com/gofrs/uuid`: For generating UUIDs
+- `github.com/stretchr/testify/assert`: For test assertions
+- `github.com/stretchr/testify/require`: For test requirements
+- `go.flipt.io/flipt/internal/storage`: For storage-related types and interfaces
+- `go.flipt.io/flipt/internal/storage/sql`: For SQL-specific storage implementations
+- `go.flipt.io/flipt/internal/storage/sql/common`: For common SQL storage utilities
+- `go.flipt.io/flipt/rpc/flipt`: For Flipt's RPC types
+
+These tests provide comprehensive coverage of the segment and constraint-related functionality in the SQL storage implementation, ensuring that CRUD operations, pagination, and error handling work as expected across different namespaces and scenarios.

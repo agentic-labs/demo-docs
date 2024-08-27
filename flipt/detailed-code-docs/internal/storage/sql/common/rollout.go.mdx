@@ -1,0 +1,221 @@
+---
+title: "rollout.go"
+---
+
+## High-level description
+The `rollout.go` file defines the storage implementation for managing feature rollouts in Flipt. It provides functions for creating, retrieving, updating, deleting, and listing rollouts associated with feature flags. 
+
+Rollouts are used to gradually release features to users based on specific criteria, such as user segments or percentage-based thresholds. This file handles the persistence of rollout data, including their rules and configurations, in a SQL database.
+
+## Code Structure
+The `rollout.go` file defines several functions that interact with each other to manage rollouts in the Flipt system. Here's a brief overview of how they relate:
+
+- `GetRollout`: Retrieves a specific rollout by its ID and namespace.
+- `ListRollouts`: Fetches a list of rollouts based on provided criteria, such as flag key and namespace.
+- `CountRollouts`: Counts the total number of rollouts for a given flag.
+- `CreateRollout`: Creates a new rollout with its associated rule (segment-based or threshold-based).
+- `UpdateRollout`: Modifies an existing rollout, including its description and rule.
+- `DeleteRollout`: Removes a rollout and reorders the remaining rollouts for the associated flag.
+- `OrderRollouts`: Reorders the rollouts for a specific flag.
+
+These functions work together to provide a complete set of operations for managing feature rollouts within Flipt.
+
+## References
+This file references several other parts of the codebase, including:
+
+- `go.flipt.io/flipt/internal/storage`: Defines the interface for interacting with the storage layer.
+- `go.flipt.io/flipt/rpc/flipt`: Contains the protocol buffer definitions for Flipt's RPC API.
+- `github.com/Masterminds/squirrel`: Used for building SQL queries.
+- `github.com/gofrs/uuid`: Used for generating UUIDs.
+
+## Symbols
+
+### `(*Store) GetRollout`
+#### Description
+Retrieves a rollout from the database based on the provided namespace and rollout ID.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| ns | storage.NamespaceRequest | The namespace of the rollout. |
+| id | string | The ID of the rollout to retrieve. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rollout |  | The retrieved rollout, or nil if not found. |
+| error | error | An error if one occurred during the retrieval process. |
+
+#### Internal Logic
+1. Builds a SQL query to select the rollout based on the provided ID and namespace.
+2. Executes the query and scans the result into a `flipt.Rollout` struct.
+3. Depending on the rollout type (segment or threshold), retrieves the associated rule data from the corresponding table.
+4. Populates the `Rule` field of the `flipt.Rollout` struct with the retrieved rule data.
+5. Returns the populated `flipt.Rollout` struct or an error if any step fails.
+
+### `(*Store) ListRollouts`
+#### Description
+Retrieves a list of rollouts for a specific flag from the database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| req | *storage.ListRequest[storage.ResourceRequest] | The request containing the flag key, namespace, and pagination parameters. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| storage.ResultSet[*flipt.Rollout] |  | The result set containing the list of rollouts and pagination information. |
+| error | error | An error if one occurred during the retrieval process. |
+
+#### Internal Logic
+1. Builds a SQL query to select rollouts based on the provided flag key and namespace, ordered by rank.
+2. Applies pagination parameters (limit, offset) to the query.
+3. Executes the query and iterates over the results.
+4. For each rollout, retrieves the associated rule data based on its type (segment or threshold).
+5. Populates the `Rule` field of each `flipt.Rollout` struct with the retrieved rule data.
+6. Constructs a `storage.ResultSet` containing the list of rollouts and pagination information (next page token).
+7. Returns the `storage.ResultSet` or an error if any step fails.
+
+### `(*Store) CountRollouts`
+#### Description
+Counts the total number of rollouts associated with a specific flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| flag | storage.ResourceRequest | The request containing the flag key and namespace. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| uint64 |  | The total count of rollouts. |
+| error | error | An error if one occurred during the counting process. |
+
+#### Internal Logic
+1. Builds a SQL query to count rollouts based on the provided flag key and namespace.
+2. Executes the query and retrieves the count.
+3. Returns the count or an error if the query execution fails.
+
+### `(*Store) CreateRollout`
+#### Description
+Creates a new rollout for a specific flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.CreateRolloutRequest | The request containing the rollout data, including the rule type and configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rollout |  | The created rollout. |
+| error | error | An error if one occurred during the creation process. |
+
+#### Internal Logic
+1. Checks if a rollout with the same rank already exists for the given flag.
+2. Generates a new UUID for the rollout.
+3. Begins a database transaction.
+4. Inserts the rollout data into the `rollouts` table.
+5. Based on the rollout rule type (segment or threshold):
+    - Inserts the rule data into the corresponding table (`rollout_segments` or `rollout_percentages`).
+    - Populates the `Rule` field of the `flipt.Rollout` struct with the created rule data.
+6. Commits the transaction.
+7. Returns the created `flipt.Rollout` struct or an error if any step fails.
+
+### `(*Store) UpdateRollout`
+#### Description
+Updates an existing rollout.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.UpdateRolloutRequest | The request containing the updated rollout data, including the rule type and configuration. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *flipt.Rollout |  | The updated rollout. |
+| error | error | An error if one occurred during the update process. |
+
+#### Internal Logic
+1. Retrieves the existing rollout from the database.
+2. Begins a database transaction.
+3. Updates the rollout description in the `rollouts` table.
+4. Based on the rollout rule type (segment or threshold):
+    - Updates the rule data in the corresponding table (`rollout_segments` or `rollout_percentages`).
+5. Commits the transaction.
+6. Returns the updated `flipt.Rollout` struct or an error if any step fails.
+
+### `(*Store) DeleteRollout`
+#### Description
+Deletes a rollout and reorders the remaining rollouts for the associated flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.DeleteRolloutRequest | The request containing the rollout ID, flag key, and namespace. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the deletion process. |
+
+#### Internal Logic
+1. Begins a database transaction.
+2. Deletes the rollout from the `rollouts` table.
+3. Retrieves the remaining rollouts for the associated flag, ordered by rank.
+4. Reorders the remaining rollouts by updating their rank in the `rollouts` table.
+5. Commits the transaction.
+6. Returns an error if any step fails.
+
+### `(*Store) OrderRollouts`
+#### Description
+Reorders the rollouts for a specific flag.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the request. |
+| r | *flipt.OrderRolloutsRequest | The request containing the list of rollout IDs, flag key, and namespace. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| error | error | An error if one occurred during the reordering process. |
+
+#### Internal Logic
+1. Begins a database transaction.
+2. Iterates over the provided list of rollout IDs.
+3. For each rollout ID, updates its rank in the `rollouts` table based on its position in the list.
+4. Commits the transaction.
+5. Returns an error if any step fails.
+
+## Dependencies
+- `database/sql`: Provides the standard SQL database interface.
+- `encoding/base64`: Used for encoding and decoding page tokens.
+- `encoding/json`: Used for JSON encoding and decoding.
+- `errors`: Used for error handling.
+- `fmt`: Used for formatted printing.
+- `github.com/Masterminds/squirrel`: Used for building SQL queries.
+- `github.com/gofrs/uuid`: Used for generating UUIDs.
+- `go.flipt.io/flipt/errors`: Provides custom error types.
+- `go.flipt.io/flipt/internal/storage`: Defines the interface for interacting with the storage layer.
+- `go.flipt.io/flipt/internal/storage/sql`: Provides SQL-specific storage utilities.
+- `go.flipt.io/flipt/rpc/flipt`: Contains the protocol buffer definitions for Flipt's RPC API.
+
+## Error Handling
+The code uses the following error handling mechanisms:
+
+- Returning errors from functions: Most functions return an `error` value, allowing for error propagation and handling at higher levels.
+- Checking for specific error types: The code checks for specific error types, such as `sql.ErrNoRows`, to provide more informative error messages.
+- Using custom error types: The code uses custom error types defined in the `go.flipt.io/flipt/errors` package, such as `errs.ErrNotFoundf`, to represent specific error conditions.
+
+## Logging
+The code does not implement any explicit logging mechanisms. However, it is likely that the `s.logger` field of the `Store` struct, which is passed to some functions, is used for logging purposes.

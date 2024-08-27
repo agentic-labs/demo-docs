@@ -1,0 +1,124 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `testing.go` file within the `internal/storage/sql/testing` package provides utilities for setting up and tearing down test databases for different database protocols supported by Flipt. It leverages the `testcontainers-go` library to spin up Docker containers for databases like Postgres, CockroachDB, and MySQL, while using SQLite for a lightweight option.
+
+## Code Structure
+The code defines a `Database` struct that holds references to the database connection (`DB`), the database driver (`Driver`), and the Docker container (`Container`) if applicable. It also includes a `cleanup` function for resource cleanup. The `Open()` function is responsible for creating and initializing the test database based on environment variables or default settings. The `newMigrator()` function creates a `migrate.Migrate` instance to manage database migrations. The `DBContainer` struct represents a Docker container running a database, and `NewDBContainer()` sets up and starts the container.
+
+## References
+- `github.com/docker/go-connections/nat`: Used for mapping container ports to the host.
+- `github.com/golang-migrate/migrate/v4`: Used for managing database migrations.
+- `github.com/testcontainers/testcontainers-go`: Used for creating and managing Docker containers.
+- `go.flipt.io/flipt/config/migrations`: Provides access to Flipt's database migration files.
+- `go.flipt.io/flipt/internal/config`: Defines configuration structures used by Flipt.
+- `go.flipt.io/flipt/internal/storage/sql`: Provides the core SQL storage implementation for Flipt.
+
+## Symbols
+
+### `Database`
+#### Description
+The `Database` struct represents a test database instance. It holds a reference to the underlying `sql.DB` connection, the `fliptsql.Driver` used to connect to the database, and a `DBContainer` if the database is running in a Docker container.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+### `Open()  (*Database, error)`
+#### Description
+The `Open()` function creates and initializes a new test database instance based on the configured database protocol. It sets up the database connection, runs migrations, and returns a `*Database` instance.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *Database | *Database | A pointer to the initialized `Database` instance. |
+| error | error | An error if the database initialization fails. |
+
+#### Internal Logic
+1. Determine the database protocol from the `FLIPT_TEST_DATABASE_PROTOCOL` environment variable or default to SQLite.
+2. Create a configuration based on the chosen protocol.
+3. If using a test container (CockroachDB, Postgres, MySQL), create a new `DBContainer` and configure the connection details.
+4. Open a database connection using `fliptsql.Open()`.
+5. Create a `migrate.Migrate` instance using `newMigrator()`.
+6. Drop any existing database schema using `mm.Drop()`.
+7. Run database migrations using `mm.Up()`.
+8. Return the initialized `*Database` instance.
+
+### `newMigrator(*sql.DB, fliptsql.Driver) (*migrate.Migrate, error)`
+#### Description
+The `newMigrator()` function creates a new `migrate.Migrate` instance for the given database connection and driver.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| db | *sql.DB | A pointer to the database connection. |
+| driver | fliptsql.Driver | The database driver to use. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *migrate.Migrate | *migrate.Migrate | A pointer to the created `migrate.Migrate` instance. |
+| error | error | An error if the migrator creation fails. |
+
+#### Internal Logic
+1. Create a database-specific driver instance based on the provided `driver`.
+2. Create an `iofs.Source` instance to read migrations from the embedded `config/migrations` package.
+3. Create a new `migrate.Migrate` instance with the source driver and database driver.
+
+### `DBContainer`
+#### Description
+The `DBContainer` struct represents a Docker container running a database instance.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+### `NewDBContainer(context.Context, config.DatabaseProtocol) (*DBContainer, error)`
+#### Description
+The `NewDBContainer()` function creates and starts a new Docker container running the specified database.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| ctx | context.Context | The context for the operation. |
+| proto | config.DatabaseProtocol | The database protocol to use (e.g., config.DatabasePostgres). |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| *DBContainer | *DBContainer | A pointer to the created `DBContainer` instance. |
+| error | error | An error if the container creation or startup fails. |
+
+#### Internal Logic
+1. Define the container request based on the chosen database protocol.
+2. Create a new generic container using `testcontainers.GenericContainer()`.
+3. Start the container's log producer.
+4. If `FLIPT_TEST_DATABASE_VERBOSE` is set to true, print container logs to the console.
+5. Retrieve the mapped port and host IP of the container.
+6. Return the initialized `*DBContainer` instance.
+
+### `createTempDBPath() string`
+#### Description
+The `createTempDBPath()` function creates a temporary directory and returns the path to a temporary database file within that directory.
+
+#### Inputs
+N/A
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| string | string | The path to the temporary database file. |
+
+#### Internal Logic
+1. Create a temporary file with a prefix of "flipt_*.db" using `os.CreateTemp()`.
+2. Close the file.
+3. Return the file name, which represents the path to the temporary database file.

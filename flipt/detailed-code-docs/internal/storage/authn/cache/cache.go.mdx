@@ -1,0 +1,106 @@
+---
+title: "cache.go"
+---
+
+## High-level description
+The `cache` package provides a caching layer for the authentication storage, specifically for `Authentication` objects retrieved by client token. This helps improve performance by reducing the number of calls to the underlying authentication storage.
+
+## Code Structure
+The `Store` struct acts as a wrapper around the actual `authn.Store` and uses a `cache.Cacher` to store and retrieve authentication data. The `GetAuthenticationByClientToken` and `ExpireAuthenticationByID` methods interact with both the cache and the underlying store.
+
+## References
+- `authn.Store`: The underlying authentication storage interface.
+- `cache.Cacher`: The caching interface used for storing authentication data.
+- `authrpc.Authentication`: The Protobuf message representing authentication data.
+
+## Symbols
+### `Store`
+#### Description
+The `Store` struct represents the cached authentication storage. It holds a reference to the underlying `authn.Store`, a `cache.Cacher` for caching, and a logger.
+
+#### Inputs
+N/A - This is a struct definition, not a function.
+
+#### Outputs
+N/A - This is a struct definition, not a function.
+
+### `NewStore`
+#### Description
+`NewStore` is a constructor function that creates a new `Store` instance.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `store` | `authn.Store` | The underlying authentication storage. |
+| `cacher` | `cache.Cacher` | The caching mechanism to use. |
+| `logger` | `*zap.Logger` | A logger instance for recording events. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*Store` | `*Store` | A pointer to the newly created `Store` instance. |
+
+### `(*Store) GetAuthenticationByClientToken`
+#### Description
+This method retrieves an `Authentication` object by the provided client token. It first checks if the authentication data is available in the cache. If not, it retrieves it from the underlying storage and caches it for future requests.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `ctx` | `context.Context` | The request context. |
+| `clientToken` | `string` | The client token to retrieve the authentication for. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `*authrpc.Authentication` | `*authrpc.Authentication` | A pointer to the retrieved `Authentication` object, or nil if not found. |
+| `error` | `error` | An error object if an error occurred during the process. |
+
+#### Internal Logic
+1. Hashes the client token using `authn.HashClientToken`.
+2. Generates a cache key based on the hashed token.
+3. Attempts to retrieve the authentication data from the cache using the generated key.
+4. If found in the cache, unmarshals the data into an `authrpc.Authentication` object and returns it.
+5. If not found in the cache, retrieves the authentication data from the underlying storage using `s.Store.GetAuthenticationByClientToken`.
+6. If successful, caches the retrieved authentication data using both the token hash and the authentication ID as keys.
+7. Returns the retrieved `authrpc.Authentication` object.
+
+### `(*Store) ExpireAuthenticationByID`
+#### Description
+This method expires an authentication entry by its ID. It expires the entry in both the underlying storage and the cache.
+
+#### Inputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `ctx` | `context.Context` | The request context. |
+| `id` | `string` | The ID of the authentication entry to expire. |
+| `expireAt` | `*timestamppb.Timestamp` | The timestamp to set the expiration to. |
+
+#### Outputs
+| Name | Type | Description |
+|:-----|:-----|:------------|
+| `error` | `error` | An error object if an error occurred during the process. |
+
+#### Internal Logic
+1. Expires the authentication entry in the underlying storage using `s.Store.ExpireAuthenticationByID`.
+2. Generates a cache key based on the authentication ID.
+3. Attempts to retrieve the hashed token from the cache using the generated key.
+4. If found, generates a cache key based on the hashed token and deletes both the token and ID entries from the cache.
+
+## Side Effects
+- Modifies the cache by adding, updating, or deleting authentication data.
+
+## Dependencies
+| Dependency | Purpose |
+|:-----------|:--------|
+| `context` | Provides a mechanism for carrying request-scoped values. |
+| `fmt` | Used for string formatting. |
+| `go.flipt.io/flipt/internal/cache` | Provides the caching interface. |
+| `go.flipt.io/flipt/internal/storage/authn` | Provides the underlying authentication storage interface. |
+| `go.flipt.io/flipt/rpc/flipt/auth` | Provides the Protobuf definition for `Authentication`. |
+| `go.uber.org/zap` | Provides logging functionality. |
+| `google.golang.org/protobuf/proto` | Provides Protobuf serialization and deserialization. |
+| `google.golang.org/protobuf/types/known/timestamppb` | Provides the `Timestamp` Protobuf message type. |
+
+## Error Handling
+Errors encountered during cache interactions or underlying storage operations are logged using the provided logger. The functions return errors to the caller for further handling.

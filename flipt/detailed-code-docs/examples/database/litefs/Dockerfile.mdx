@@ -1,0 +1,51 @@
+---
+title: "Dockerfile"
+---
+
+## High-level description
+This Dockerfile builds a Docker image for running LiteFS, a distributed file system for SQLite, alongside Flipt, a feature flag management tool. It sets up the necessary directories, copies binaries and configuration files, installs dependencies, and defines the entry point for the container.
+
+## Code Structure
+The Dockerfile uses a multi-stage build process. It first copies binaries from two base images: `flyio/litefs:0.5` for LiteFS and `flipt/flipt:latest` for Flipt. Then, it sets up directories and copies configuration files for Flipt. Finally, it installs dependencies and defines the entry point as `litefs mount`.
+
+## Symbols
+
+### `FROM alpine`
+#### Description
+This line specifies the base image for the Dockerfile as `alpine`, a minimal Linux distribution known for its small size.
+
+### `COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs`
+#### Description
+This line copies the `litefs` binary from the `flyio/litefs:0.5` Docker image to `/usr/local/bin/litefs` in the current image.
+
+### `COPY --from=flipt/flipt:latest /flipt /usr/local/bin/flipt`
+#### Description
+This line copies the `flipt` binary from the `flipt/flipt:latest` Docker image to `/usr/local/bin/flipt` in the current image.
+
+### `RUN mkdir -p /etc/flipt/config && mkdir -p /var/opt/flipt`
+#### Description
+This line creates directories for Flipt's configuration and data: `/etc/flipt/config` and `/var/opt/flipt`.
+
+### `COPY --from=flipt/flipt:latest /etc/flipt/config/default.yml /etc/flipt/config/default.yml`
+#### Description
+This line copies the default Flipt configuration file (`default.yml`) from the `flipt/flipt:latest` Docker image to `/etc/flipt/config/default.yml` in the current image.
+
+### `RUN chown -R root:root /var/opt/flipt /etc/flipt`
+#### Description
+This line sets the owner and group of the Flipt directories (`/var/opt/flipt` and `/etc/flipt`) to `root:root`.
+
+### `ADD litefs.yml /etc/litefs.yml`
+#### Description
+This line adds the `litefs.yml` file from the build context to `/etc/litefs.yml` in the image. This file likely contains the configuration for LiteFS.
+
+### `RUN apk add bash fuse3 sqlite ca-certificates`
+#### Description
+This line installs necessary packages using the Alpine package manager (`apk`):
+- `bash`: Provides the Bash shell.
+- `fuse3`: Filesystem in Userspace, required for LiteFS to mount the SQLite database.
+- `sqlite`: The SQLite database engine itself.
+- `ca-certificates`: Root certificates for secure communication.
+
+### `ENTRYPOINT litefs mount`
+#### Description
+This line defines the entry point for the Docker container. When the container starts, it will execute the command `litefs mount`. This command likely mounts the SQLite database using LiteFS based on the configuration in `/etc/litefs.yml`.

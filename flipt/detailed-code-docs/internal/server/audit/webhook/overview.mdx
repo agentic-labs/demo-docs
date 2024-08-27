@@ -1,0 +1,45 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains the implementation of a webhook-based audit logging system for Flipt. It provides a client for sending audit events to a configured webhook URL and a sink that implements the `audit.Sink` interface. The webhook client signs payloads, handles retries, and sends HTTP POST requests with JSON-encoded audit events.
+
+## What does it do?
+The webhook audit system allows Flipt to send audit events to an external service via HTTP webhooks. Here's a breakdown of its functionality:
+
+1. It provides a `webhookClient` that can send individual audit events to a configured URL.
+2. The client supports payload signing for security, using a SHA256 HMAC signature.
+3. It uses a retryable HTTP client to handle temporary network issues or server unavailability.
+4. The `Sink` implementation batches audit events and sends them to the webhook URL.
+5. It integrates with Flipt's existing audit system, allowing for easy configuration and use.
+
+## Entry points
+The main entry points for this package are:
+
+1. `NewWebhookClient` in `client.go`: Creates a new webhook client for sending individual audit events.
+2. `NewSink` in `webhook.go`: Creates a new sink that implements the `audit.Sink` interface, used for batching and sending multiple audit events.
+
+The flow of data typically goes from Flipt's audit system to the `Sink`, which then uses the `webhookClient` to send events to the configured webhook URL.
+
+## Key Files
+1. `client.go`: Implements the `webhookClient` for sending individual audit events.
+2. `webhook.go`: Implements the `Sink` struct that batches and sends multiple audit events.
+3. `client_test.go` and `webhook_test.go`: Contain unit tests for the client and sink implementations.
+
+## Dependencies
+- `github.com/hashicorp/go-retryablehttp` (v0.7.2): Used for making HTTP requests with retry functionality.
+- `go.uber.org/zap` (v1.24.0): Used for structured logging.
+- `github.com/hashicorp/go-multierror` (v1.1.1): Used for collecting and returning multiple errors.
+
+These dependencies were likely chosen for their reliability, performance, and wide adoption in the Go community.
+
+## Configuration
+The webhook audit system is configured through the following parameters:
+
+1. Webhook URL: The endpoint where audit events will be sent.
+2. Signing Secret (optional): A secret used to sign the payload for added security.
+3. Max Backoff Duration: The maximum time to wait between retries for failed requests.
+4. Logger: A `zap.Logger` instance for logging.
+
+These parameters are typically set when creating a new webhook client or sink.

@@ -1,0 +1,86 @@
+---
+title: "Overview"
+---
+
+## High-level description
+This directory contains HTTP middleware functions for a gRPC gateway server. The middleware is designed to modify HTTP responses based on gRPC metadata and handle specific cases such as responses with no body content.
+
+## What does it do?
+The middleware in this directory performs two main functions:
+
+1. It modifies HTTP responses based on gRPC metadata. Specifically, it:
+   - Sets the `Etag` header in the HTTP response if an `x-etag` value is present in the gRPC metadata.
+   - Sets a custom HTTP status code if an `x-http-code` value is specified in the gRPC metadata.
+
+2. It handles responses with no body content for HTTP status codes 204 (No Content) and 304 (Not Modified). This ensures that no content is written to the response body for these specific status codes, as per HTTP specifications.
+
+These middleware functions allow for fine-grained control over HTTP responses in a gRPC gateway setup, enabling developers to customize response headers and status codes based on the gRPC service implementation.
+
+## Key Files
+
+### middleware.go
+This file contains the core middleware implementations:
+
+1. `HttpResponseModifier`: This function modifies HTTP responses based on gRPC metadata. It extracts metadata from the context and sets the `Etag` header and HTTP status code accordingly.
+
+   ```go
+   func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Message) error {
+       // Implementation details...
+   }
+   ```
+
+2. `HandleNoBodyResponse`: This function handles responses with no body content for specific HTTP status codes (204 and 304).
+
+   ```go
+   func HandleNoBodyResponse(next http.Handler) http.Handler {
+       // Implementation details...
+   }
+   ```
+
+3. `noBodyResponseWriter`: A custom HTTP response writer that intercepts `Write` and `WriteHeader` methods to handle responses with no body content.
+
+   ```go
+   type noBodyResponseWriter struct {
+       http.ResponseWriter
+       // Other fields...
+   }
+   ```
+
+### middleware_test.go
+This file contains unit tests for the `HttpResponseModifier` function. It includes two main test cases:
+
+1. Testing the handling of the `Etag` header when present in the gRPC metadata.
+2. Testing the setting of custom HTTP status codes based on gRPC metadata.
+
+The tests use the `httptest` package to simulate HTTP responses and the `google.golang.org/grpc/metadata` package to work with gRPC metadata.
+
+## Dependencies
+The middleware relies on the following external libraries:
+
+1. github.com/grpc-ecosystem/grpc-gateway/v2/runtime (version v2.x.x)
+   - Purpose: Provides utilities for working with gRPC-Gateway, including metadata handling.
+   - Chosen for its integration with gRPC-Gateway and support for runtime metadata manipulation.
+
+2. google.golang.org/protobuf/proto (version v1.x.x)
+   - Purpose: Used for working with protocol buffer messages.
+   - Chosen as it's the official protocol buffers library for Go.
+
+3. google.golang.org/grpc/metadata (version v1.x.x)
+   - Purpose: Provides functionality for working with gRPC metadata.
+   - Chosen as it's part of the official gRPC library for Go.
+
+For testing, additional dependencies are used:
+
+4. github.com/stretchr/testify/assert and github.com/stretchr/testify/require (version v1.x.x)
+   - Purpose: Provides assertion functions for writing cleaner and more expressive tests.
+   - Chosen for its popularity and extensive set of assertion functions.
+
+5. google.golang.org/protobuf/types/known/emptypb (version v1.x.x)
+   - Purpose: Provides an empty protocol buffer message type for testing.
+   - Chosen as it's part of the official protocol buffers library for Go.
+
+6. net/http/httptest
+   - Purpose: Provides utilities for HTTP testing, including a response recorder.
+   - Chosen as it's part of the Go standard library and specifically designed for HTTP testing.
+
+These dependencies were likely chosen for their robust support of gRPC and HTTP operations in Go, as well as their widespread use in the Go community for building and testing microservices.

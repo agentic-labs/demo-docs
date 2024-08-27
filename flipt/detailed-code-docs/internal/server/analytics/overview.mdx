@@ -1,0 +1,57 @@
+---
+title: "Overview"
+---
+
+## High-level description
+The `internal/server/analytics` directory contains the implementation of the analytics server for Flipt. It provides functionality for handling flag evaluation analytics, including recording and retrieving flag evaluation counts. The analytics server interacts with a Clickhouse database for data storage and retrieval.
+
+## What does it do?
+The analytics server performs several key functions:
+
+1. Flag Evaluation Counts: It provides methods to query the count of flag evaluations within a specified time range, allowing users to analyze the usage patterns of their feature flags over time.
+
+2. Data Recording: The server can record flag evaluation data into the Clickhouse database, incrementing counters for each evaluation event.
+
+3. Time-based Aggregation: It implements logic to determine appropriate time intervals for aggregating data based on the queried duration, allowing for efficient data retrieval and presentation.
+
+4. OpenTelemetry Integration: The server includes an analytics sink span exporter that processes OpenTelemetry spans, extracting evaluation responses from them and forwarding them to the analytics store.
+
+5. gRPC API: It exposes a gRPC API for retrieving analytics data, making it easy to integrate with other services.
+
+## Entry points
+The main entry points for the analytics server are:
+
+1. `server.go`: Defines the gRPC server for Flipt analytics, exposing the API for retrieving analytics data.
+
+2. `analytics.go`: Implements the server-side logic for handling requests related to flag evaluation analytics, specifically the `GetFlagEvaluationsCount` RPC method.
+
+3. `sink.go`: Defines the analytics sink span exporter, which processes OpenTelemetry spans and extracts evaluation responses for storage.
+
+The data flow typically starts with the gRPC server receiving requests, which are then processed by the analytics logic. The sink exporter continuously processes incoming spans, extracting and storing evaluation data. The stored data can then be queried through the gRPC API.
+
+## Key Files
+1. `server.go`: Defines the gRPC server structure and registration.
+2. `analytics.go`: Implements the core analytics logic for retrieving flag evaluation counts.
+3. `sink.go`: Contains the implementation of the analytics sink span exporter.
+4. `clickhouse/client.go`: Implements the Clickhouse client for database interactions.
+5. `clickhouse/mutation.go`: Handles data insertion into the Clickhouse database.
+
+## Dependencies
+The analytics server relies on several key dependencies:
+
+1. Clickhouse Driver: Used for connecting to and interacting with the Clickhouse database.
+2. OpenTelemetry: Used for processing spans and extracting evaluation data.
+3. gRPC: Used for exposing the analytics API.
+4. Zap: A structured logging library used throughout the module.
+
+## Configuration
+The analytics server uses configuration options provided by the `config.ClickhouseConfig` struct, which includes:
+
+- Database connection details (host, port, username, password)
+- Database name
+- Connection pool settings
+- SSL/TLS configuration options
+
+These options can be set through environment variables or configuration files, allowing for flexible deployment across different environments.
+
+In summary, the analytics server in the `internal/server/analytics` directory provides a comprehensive solution for recording, storing, and retrieving feature flag evaluation data within the Flipt ecosystem. It offers efficient data insertion, time-based querying, and integration with OpenTelemetry, making it a powerful tool for understanding feature flag usage patterns and performance.

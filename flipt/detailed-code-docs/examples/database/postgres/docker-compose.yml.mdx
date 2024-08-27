@@ -1,0 +1,53 @@
+---
+title: "docker-compose.yml"
+---
+
+## High-level description
+This `docker-compose.yml` file defines a multi-container Docker application for running Flipt locally with a PostgreSQL database. It sets up two services: `postgres` for the database and `flipt` for the Flipt application itself.
+
+## Code Structure
+The `flipt` service depends on the `postgres` service, ensuring the database is running before Flipt starts. Both services are connected to a shared network `flipt_network`.
+
+## Symbols
+### `version`
+#### Description
+Specifies the Docker Compose file format version. Here, it's version 3.
+
+### `services`
+#### Description
+Defines the services that make up the application. In this case, it defines two services: `postgres` and `flipt`.
+
+### `postgres`
+#### Description
+Configures the PostgreSQL database service.
+
+#### Internal Logic
+- `image`: Uses the official `postgres:12` image from Docker Hub.
+- `networks`: Connects to the `flipt_network`.
+- `environment`: Sets environment variables for the PostgreSQL container:
+    - `POSTGRES_DB`: Sets the database name to `flipt`.
+    - `POSTGRES_USER`: Sets the database user to `postgres`.
+    - `POSTGRES_PASSWORD`: Sets the database password to `password`.
+
+### `flipt`
+#### Description
+Configures the Flipt application service.
+
+#### Internal Logic
+- `build`: Builds the Flipt image from the current directory (`.`).
+- `depends_on`: Ensures the `postgres` service is started before starting the `flipt` service.
+- `ports`: Maps port `8080` of the container to port `8080` of the host machine.
+- `networks`: Connects to the `flipt_network`.
+- `environment`: Sets environment variables for the Flipt container:
+    - `FLIPT_DB_URL`: Sets the database connection string to connect to the PostgreSQL database running in the `postgres` container.
+    - `FLIPT_LOG_LEVEL`: Sets the log level to `debug`.
+    - `FLIPT_META_TELEMETRY_ENABLED`: Disables telemetry.
+- `command`: Overrides the default command of the Flipt image. It first waits for the `postgres` service to be available on port `5432` using the `wait-for-it.sh` script. Once available, it runs the `flipt` executable with the `--force-migrate` flag.
+
+### `networks`
+#### Description
+Defines the networks for the application.
+
+### `flipt_network`
+#### Description
+A user-defined bridge network that allows communication between the `postgres` and `flipt` containers.
